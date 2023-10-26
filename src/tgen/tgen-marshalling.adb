@@ -112,10 +112,11 @@ package body TGen.Marshalling is
    --  multidimensional ones.
 
    procedure Create_Tags_For_Discriminants
-     (D_Typ    : Discriminated_Record_Typ'Class;
+     (D_Typ    : Record_Typ'Class;
       Name_Tag : in out Tag;
       Typ_Tag  : in out Tag;
-      Pref_Tag : in out Tag);
+      Pref_Tag : in out Tag)
+   with Pre => Is_Discriminated (D_Typ);
    --  Compute the tags for the discriminant of a record type:
    --    * Name_Tag contains the names of the  discriminants: Discr, ...,
    --    * Typ_Tag contains their types: Discr_Ty ..., and
@@ -263,8 +264,8 @@ package body TGen.Marshalling is
 
          elsif Constraint.all in Discriminant_Constraints'Class then
             declare
-               D_Typ             : constant Discriminated_Record_Typ'Class :=
-                 Discriminated_Record_Typ'Class (Ancestor);
+               D_Typ             : constant Record_Typ'Class :=
+                 Record_Typ'Class (Ancestor);
                Discr_Constraints : constant Discriminant_Constraint_Map :=
                  Discriminant_Constraints (Constraint.all).Constraint_Map;
             begin
@@ -396,7 +397,7 @@ package body TGen.Marshalling is
    -----------------------------------
 
    procedure Create_Tags_For_Discriminants
-     (D_Typ    : Discriminated_Record_Typ'Class;
+     (D_Typ    : Record_Typ'Class;
       Name_Tag : in out Tag;
       Typ_Tag  : in out Tag;
       Pref_Tag : in out Tag) is
@@ -776,9 +777,7 @@ package body TGen.Marshalling is
 
          else
             declare
-               D_Typ : Discriminated_Record_Typ'Class renames
-                 Discriminated_Record_Typ'Class (Typ);
-
+               D_Typ : Record_Typ'Class renames Record_Typ'Class (Typ);
             begin
                --  Generate base functions for the discriminant types.
                --  TODO???: why is this commented out?
@@ -808,7 +807,6 @@ package body TGen.Marshalling is
                  6 => Assoc ("ADA_DIM", Ada_Dim_Tag),
                  7 => Assoc ("IS_ENUM", Is_Enum_Tag),
                  8 => Assoc ("ARR_LIMIT", Get_Array_Size_Limit)];
-
          begin
             Print_Header (Assocs);
          end;
@@ -963,10 +961,9 @@ package body TGen.Marshalling is
 
             --  Construct the calls for the variant part if any
 
-            if Typ in Discriminated_Record_Typ'Class then
+            if Typ in Record_Typ'Class then
                declare
-                  D_Typ : Discriminated_Record_Typ'Class renames
-                    Discriminated_Record_Typ'Class (Typ);
+                  D_Typ : Record_Typ'Class renames Record_Typ'Class (Typ);
                begin
                   if D_Typ.Variant /= null then
                      Collect_Info_For_Variants
@@ -1086,11 +1083,9 @@ package body TGen.Marshalling is
 
          --  Check specific components of discriminated records
 
-         if Typ in Discriminated_Record_Typ'Class then
+         if Typ in Record_Typ'Class then
             declare
-               D_Typ : Discriminated_Record_Typ'Class renames
-                 Discriminated_Record_Typ'Class (Typ);
-
+               D_Typ : Record_Typ'Class renames Record_Typ'Class (Typ);
             begin
                --  Check that the discriminant types are supported
 
@@ -1142,18 +1137,19 @@ package body TGen.Marshalling is
 
    function Needs_Header (Typ : TGen.Types.Typ'Class) return Boolean
    is (Typ in Unconstrained_Array_Typ'Class
-       or else (Typ in Discriminated_Record_Typ'Class
-                and then not Discriminated_Record_Typ'Class (Typ)
-                               .Constrained));
+       or else (Typ in Record_Typ'Class
+                and then Is_Discriminated (Record_Typ'Class (Typ))
+                and then not Record_Typ'Class (Typ).Constrained));
 
    --------------------
    -- Needs_Wrappers --
    --------------------
 
    function Needs_Wrappers (Typ : TGen.Types.Typ'Class) return Boolean
-   is (Typ in Discriminated_Record_Typ'Class
-       and then not Discriminated_Record_Typ'Class (Typ).Constrained
-       and then Discriminated_Record_Typ'Class (Typ).Mutable);
+   is (Typ in Record_Typ'Class
+       and then Is_Discriminated (Record_Typ'Class (Typ))
+       and then not Record_Typ'Class (Typ).Constrained
+       and then Record_Typ'Class (Typ).Mutable);
 
    ------------------
    -- String_Value --

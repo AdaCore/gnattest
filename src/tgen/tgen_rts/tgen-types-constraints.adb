@@ -344,30 +344,28 @@ package body TGen.Types.Constraints is
                  Index_Constraints => Index_Constraints (Cst).Constraint_Array,
                  others            => <>);
 
-         when Disc_Record_Kind =>
+         when Record_Kind =>
             Res :=
-              new Discriminated_Record_Typ'
-                (Constrained             => True,
-                 Component_Types         =>
-                   As_Discriminated_Record_Typ (Self.Named_Ancestor)
-                     .Component_Types
-                     .Copy,
-                 Mutable                 =>
-                   As_Discriminated_Record_Typ (Self.Named_Ancestor).Mutable,
-                 Discriminant_Types      =>
-                   As_Discriminated_Record_Typ (Self.Named_Ancestor)
-                     .Discriminant_Types
-                     .Copy,
-                 Variant                 =>
-                   Clone
-                     (As_Discriminated_Record_Typ (Self.Named_Ancestor)
-                        .Variant),
-                 Discriminant_Constraint =>
-                   Discriminant_Constraints (Cst).Constraint_Map.Copy,
-                 Static_Gen              =>
-                   As_Record_Typ (Self.Named_Ancestor).Static_Gen
-                   and then Self.Subtype_Constraints.Static,
-                 others                  => <>);
+              new Record_Typ'
+                 (Constrained             => True,
+                  Component_Types         =>
+                    As_Record_Typ (Self.Named_Ancestor).Component_Types.Copy,
+                  Mutable                 =>
+                    As_Record_Typ (Self.Named_Ancestor).Mutable,
+                  Discriminant_Types      =>
+                    As_Record_Typ (Self.Named_Ancestor)
+                      .Discriminant_Types
+                      .Copy,
+                  Variant                 =>
+                    Clone
+                      (As_Record_Typ (Self.Named_Ancestor)
+                         .Variant),
+                  Discriminant_Constraint =>
+                    Discriminant_Constraints (Cst).Constraint_Map.Copy,
+                  Static_Gen              =>
+                    As_Record_Typ (Self.Named_Ancestor).Static_Gen
+                    and then Self.Subtype_Constraints.Static,
+                  others                  => <>);
 
          when others =>
             Res :=

@@ -54,16 +54,108 @@ package TGen.Types.Record_Types is
    --  very likely result in an error, a named association should be used
    --  instead.
 
-   type Record_Typ is new Composite_Typ with record
+   type Abstract_Record_Typ is new Composite_Typ with record
       Component_Types : Component_Maps.Map;
       Static_Gen      : Boolean := False;
    end record;
 
+   function Image (Self : Abstract_Record_Typ) return String;
+
+   function Get_Diagnostics
+     (Self : Abstract_Record_Typ; Prefix : String := "") return String_Vector;
+
+   function Image_Internal
+     (Self : Abstract_Record_Typ; Padding : Natural := 0) return String;
+   --  Image of Self but allows to specify an optional indentation
+
+   function Supports_Gen (Self : Abstract_Record_Typ) return Boolean
+   is (for all Comp of Self.Component_Types => Comp.all.Supports_Gen);
+
+   overriding
+   function Default_Strategy
+     (Self : Abstract_Record_Typ) return Strategy_Type'Class;
+
+   function Encode
+     (Self : Abstract_Record_Typ; Val : JSON_Value) return JSON_Value;
+
+   function Default_Enum_Strategy
+     (Self : Abstract_Record_Typ) return Enum_Strategy_Type'Class;
+   --  Generate a default enumerative strategy for a discriminated record type.
+   --  See the documentation of the Disc_Record_Enum_Strat_Type type for more
+   --  information.
+
+   type Variant_Part;
+
+   type Variant_Part_Acc is access all Variant_Part;
+
+   type Variant_Choice is record
+      Alt_Set    : Alternatives_Set;
+      Components : Component_Maps.Map;
+
+      Variant : Variant_Part_Acc;
+      --  Variant part associated to this variant choice. Null if there is no
+      --  variant part in this variant choice.
+
+   end record;
+
+   procedure Free_Variant (Var : in out Variant_Part_Acc);
+
+   function Clone (Var : Variant_Part_Acc) return Variant_Part_Acc;
+   --  Duplicate Var, allocating new memory for the clones of Var and its
+   --  nested variant parts.
+
+   package Variant_Choice_Lists is new
+     Ada.Containers.Doubly_Linked_Lists (Element_Type => Variant_Choice);
+
+   type Variant_Part is record
+      Discr_Name      : Unbounded_String;
+      Variant_Choices : Variant_Choice_Lists.List;
+   end record;
+
+   type Record_Typ (Constrained : Boolean) is new Abstract_Record_Typ
+   with record
+
+      Mutable : Boolean := False;
+      --  Whether this is a mutable type or not.
+
+      Discriminant_Types : Component_Maps.Map;
+      --  Map from discriminant defining names to their type translation
+
+      Variant : Variant_Part_Acc;
+      --  Variant part associated with the record. Null if there is no variant
+      --  part in this record.
+
+      case Constrained is
+         when True =>
+            Discriminant_Constraint : Discriminant_Constraint_Maps.Map;
+            --  Constraints associated to this record type. Not all the
+            --  defining names in Discriminant_Types will be present in this
+            --  map, because discriminant correspondance (See RM 3.7 (18))
+            --  defined in type derivation are represented by simply "renaming"
+            --  one of the discriminants of the ancestor part, which is then
+            --  not constrained.
+
+         when others =>
+            null;
+      end case;
+   end record;
+   --  Record_Typ represents both discriminated and non-discriminated records.
+   --  A non-discriminated record is not mutable, has no discriminant types, no
+   --  variant part, and is not constrained.
+   --  The component Component_Types of a discriminated record is the set
+   --  of components that are always present no matter the values of the
+   --  discriminants (excluding discriminants which have their own map)
+
+   function Image (Self : Record_Typ) return String;
+
+   function Is_Discriminated (Self : Record_Typ) return Boolean
+   is (not Self.Discriminant_Types.Is_Empty);
+   --  Self is discriminated if it has at least one discriminant, i.e. the map
+   --  of discriminant types has at least one element.
+
    function Supports_Static_Gen (Self : Record_Typ) return Boolean
    is (Self.Static_Gen);
    --  Whether values for this Typ can be statically generated
-
-   function Image (Self : Record_Typ) return String;
 
    function Get_Diagnostics
      (Self : Record_Typ; Prefix : String := "") return String_Vector;
@@ -74,8 +166,7 @@ package TGen.Types.Record_Types is
 
    function Encode (Self : Record_Typ; Val : JSON_Value) return JSON_Value;
 
-   function Supports_Gen (Self : Record_Typ) return Boolean
-   is (for all Comp of Self.Component_Types => Comp.all.Supports_Gen);
+   function Supports_Gen (Self : Record_Typ) return Boolean;
 
    package Strategy_Maps is new
      Ada.Containers.Hashed_Maps
@@ -88,6 +179,7 @@ package TGen.Types.Record_Types is
 
    type Record_Strategy_Type is new Random_Strategy_Type with record
       T                : Typ_Access;
+      Disc_Strats      : Strategy_Map;
       Component_Strats : Strategy_Map;
    end record;
    --  Strategy to generate record / discriminated record types
@@ -98,9 +190,6 @@ package TGen.Types.Record_Types is
       return JSON_Value;
 
    overriding
-   function Default_Strategy (Self : Record_Typ) return Strategy_Type'Class;
-
-   overriding
    function Default_Enum_Strategy
      (Self : Record_Typ) return Enum_Strategy_Type'Class;
    --  Return an enumerative strategy for a record type (with discriminant
@@ -108,9 +197,16 @@ package TGen.Types.Record_Types is
    --  record values, using the component types' default enumerative strategy
    --  to generate component values.
 
+   function As_Abstract_Record_Typ
+     (Self : Typ_Access) return Abstract_Record_Typ'Class
+   is (Abstract_Record_Typ'Class (Self.all))
+   with
+     Pre => Self /= null and then Self.Kind in Record_Typ_Range;
+   pragma Inline (As_Abstract_Record_Typ);
+
    function As_Record_Typ (Self : Typ_Access) return Record_Typ'Class
    is (Record_Typ'Class (Self.all))
-   with Pre => Self /= null and then Self.all.Kind in Record_Typ_Range;
+   with Pre => Self /= null and then Self.Kind in Record_Kind;
    pragma Inline (As_Record_Typ);
 
    type Enum_Strat_Component_Info is record
@@ -155,139 +251,56 @@ package TGen.Types.Record_Types is
      (S : in out Enum_Record_Strategy_Type; Disc_Context : Disc_Value_Map)
       return JSON_Value;
 
-   type Nondiscriminated_Record_Typ is new Record_Typ with null record;
-
-   function Kind (Self : Nondiscriminated_Record_Typ) return Typ_Kind
-   is (Non_Disc_Record_Kind);
-
-   function As_Nondiscriminated_Record_Typ
-     (Self : Typ_Access) return Nondiscriminated_Record_Typ'Class
-   is (Nondiscriminated_Record_Typ'Class (Self.all))
-   with Pre => Self /= null and then Self.all.Kind in Non_Disc_Record_Kind;
-   pragma Inline (As_Nondiscriminated_Record_Typ);
-
-   type Variant_Part;
-
-   type Variant_Part_Acc is access all Variant_Part;
-
-   type Variant_Choice is record
-      Alt_Set    : Alternatives_Set;
-      Components : Component_Maps.Map;
-
-      Variant : Variant_Part_Acc;
-      --  Variant part associated to this variant choice. Null if there is no
-      --  variant part in this variant choice.
-
-   end record;
-
-   procedure Free_Variant (Var : in out Variant_Part_Acc);
-
-   function Clone (Var : Variant_Part_Acc) return Variant_Part_Acc;
-   --  Duplicate Var, allocating new memory for the clones of Var and its
-   --  nested variant parts.
-
-   package Variant_Choice_Lists is new
-     Ada.Containers.Doubly_Linked_Lists (Element_Type => Variant_Choice);
-
-   type Variant_Part is record
-      Discr_Name      : Unbounded_String;
-      Variant_Choices : Variant_Choice_Lists.List;
-   end record;
-
-   type Discriminated_Record_Typ (Constrained : Boolean) is new Record_Typ
-   with record
-
-      Mutable : Boolean := False;
-      --  Whether this is a mutable type or not.
-
-      Discriminant_Types : Component_Maps.Map;
-      --  Map from discriminant defining names to their type translation
-
-      Variant : Variant_Part_Acc;
-      --  Variant part associated with the record. Null if there is no variant
-      --  part in this record.
-
-      case Constrained is
-         when True =>
-            Discriminant_Constraint : Discriminant_Constraint_Maps.Map;
-            --  Constraints associated to this record type. Not all the
-            --  defining names in Discriminant_Types will be present in this
-            --  map, because discriminant correspondance (See RM 3.7 (18))
-            --  defined in type derivation are represented by simply "renaming"
-            --  one of the discriminants of the ancestor part, which is then
-            --  not constrained.
-
-         when False =>
-            null;
-      end case;
-   end record;
-   --  The component Component_Types of a Discriminated_Record_Typ is the set
-   --  of components that are always present no matter the values of the
-   --  discriminants (excluding discriminants which have their own map)
-
    function Constraints_Respected
-     (Self : Discriminated_Record_Typ; Discriminant_Values : Disc_Value_Map)
-      return Boolean;
+     (Self : Record_Typ; Discriminant_Values : Disc_Value_Map) return Boolean
+   with Pre => Is_Discriminated (Self);
    --  Check whether the values given for the discriminants in
    --  Discriminant_Values respect the constraints that may already exist for
    --  Self. If Self has any non-static constraints or constraints bound to
    --  a discriminant of an enclosing type, then they are always considered to
    --  be satisfied.
 
-   function Components
-     (Self : Discriminated_Record_Typ; Discriminant_Values : Disc_Value_Map)
-      return Component_Maps.Map;
+   function Components_For_Discriminants
+     (Self : Record_Typ; Discriminant_Values : Disc_Value_Map)
+      return Component_Maps.Map
+   with Pre => Is_Discriminated (Self);
    --  Given a set of Discriminant_Values for the discriminants of Self, return
    --  the set of components that are actually present in the record.
    --  Raises Discriminant_Value_Error if the unique set of components cannot
    --  be determined from the list of discriminant values.
 
-   function Image (Self : Discriminated_Record_Typ) return String;
-
-   function Get_Diagnostics
-     (Self : Discriminated_Record_Typ; Prefix : String := "")
-      return String_Vector;
-
    overriding
-   function Default_Strategy
-     (Self : Discriminated_Record_Typ) return Strategy_Type'Class;
+   function Default_Strategy (Self : Record_Typ) return Strategy_Type'Class;
    --  Generate a strategy to statically generate (in one pass) values for Self
 
-   function Get_All_Components
-     (Self : Discriminated_Record_Typ) return Component_Map;
+   function Get_All_Components (Self : Record_Typ) return Component_Map
+   with Pre => Is_Discriminated (Self);
    --  Aggregates all the components of a record (as two components of a record
    --  cannot have the same name, even if they are in a distinct variant
    --  choice).
 
-   function Image_Internal
-     (Self : Discriminated_Record_Typ; Padding : Natural := 0) return String;
+   function Kind (Self : Record_Typ) return Typ_Kind
+   is (Record_Kind);
 
-   function Kind (Self : Discriminated_Record_Typ) return Typ_Kind
-   is (Disc_Record_Kind);
-
-   procedure Free_Content (Self : in out Discriminated_Record_Typ);
+   procedure Free_Content (Self : in out Record_Typ);
    --  Helper for shared pointers
 
    overriding
-   function Is_Constrained (Self : Discriminated_Record_Typ) return Boolean
-   is (True);
+   function Is_Constrained (Self : Record_Typ) return Boolean
+   is (Is_Discriminated (Self));
    --  Whether Self has discriminants constraints
 
    procedure Disc_Constrains_Array
-     (Self       : Discriminated_Record_Typ;
+     (Self       : Record_Typ;
       Disc_Name  : Unbounded_String;
       Found      : out Boolean;
-      Constraint : out TGen.Types.Constraints.Index_Constraint);
+      Constraint : out TGen.Types.Constraints.Index_Constraint)
+   with Pre => Is_Discriminated (Self);
    --  Whether the discriminant Disc_Name constrains an array inside the
    --  record. Return the first occurrence found.
 
-   function Encode
-     (Self : Discriminated_Record_Typ; Val : JSON_Value) return JSON_Value;
-
-   function Supports_Gen (Self : Discriminated_Record_Typ) return Boolean;
-
    type Disc_Record_Strategy_Type is new Record_Strategy_Type with record
-      Disc_Strats : Strategy_Map;
+      Disc_Strats_FIXME : Strategy_Map;
    end record;
 
    overriding
@@ -337,18 +350,6 @@ package TGen.Types.Record_Types is
    function Generate
      (S : in out Disc_Record_Enum_Strat_Type; Disc_Context : Disc_Value_Map)
       return JSON_Value;
-
-   function Default_Enum_Strategy
-     (Self : Discriminated_Record_Typ) return Enum_Strategy_Type'Class;
-   --  Generate a default enumerative strategy for a discriminated record type.
-   --  See the documentation of the Disc_Record_Enum_Strat_Type type for more
-   --  information.
-
-   function As_Discriminated_Record_Typ
-     (Self : Typ_Access) return Discriminated_Record_Typ'Class
-   is (Discriminated_Record_Typ'Class (Self.all))
-   with Pre => Self /= null and then Self.all.Kind in Disc_Record_Kind;
-   pragma Inline (As_Discriminated_Record_Typ);
 
    type Parameter_Mode is (In_Mode, In_Out_Mode, Out_Mode);
 

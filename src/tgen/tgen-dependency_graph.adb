@@ -89,14 +89,27 @@ package body TGen.Dependency_Graph is
                end if;
             end loop;
 
-         when Non_Disc_Record_Kind =>
-            for Comp_Typ of As_Nondiscriminated_Record_Typ (T).Component_Types
-            loop
+         when Record_Kind =>
+            for Comp_Typ of As_Record_Typ (T).Component_Types loop
                Res.Include (Comp_Typ);
                if Transitive or else Comp_Typ.all.Kind = Anonymous_Kind then
                   Res.Union (Type_Dependencies (Comp_Typ, Transitive));
                end if;
             end loop;
+
+            if Is_Discriminated (As_Record_Typ (T)) then
+
+               --  Discriminant types are discrete types, and thus do not
+               --  depend on any type.
+
+               for Disc_Typ of As_Record_Typ (T).Discriminant_Types loop
+                  Res.Include (Disc_Typ);
+                  if Transitive or else Disc_Typ.Kind = Anonymous_Kind then
+                     Res.Union (Type_Dependencies (Disc_Typ, Transitive));
+                  end if;
+               end loop;
+               Inspect_Variant (As_Record_Typ (T).Variant);
+            end if;
 
          when Function_Kind =>
             for Param_Typ of As_Function_Typ (T).Component_Types loop
@@ -111,41 +124,6 @@ package body TGen.Dependency_Graph is
                   Res.Union (Type_Dependencies (Global_Typ, Transitive));
                end if;
             end loop;
-
-         when Disc_Record_Kind =>
-            for Comp_Typ of As_Discriminated_Record_Typ (T).Component_Types
-            loop
-               Res.Include (Comp_Typ);
-               if Transitive or else Comp_Typ.all.Kind = Anonymous_Kind then
-                  Res.Union (Type_Dependencies (Comp_Typ, Transitive));
-               end if;
-            end loop;
-
-            --  Discriminant types are discrete types, and thus do not depend
-            --  on any type.
-
-            for Disc_Typ of As_Discriminated_Record_Typ (T).Discriminant_Types
-            loop
-               Res.Include (Disc_Typ);
-               if Transitive or else Disc_Typ.all.Kind = Anonymous_Kind then
-                  Res.Union (Type_Dependencies (Disc_Typ, Transitive));
-               end if;
-            end loop;
-            Inspect_Variant (As_Discriminated_Record_Typ (T).Variant);
-
-         when Derived_Private_Subtype_Kind =>
-
-            --  A derived type depends on its parent and its parent
-            --  dependencies.
-
-            declare
-               Derived_Typ : constant Derived_Private_Subtype_Typ :=
-                 Derived_Private_Subtype_Typ (T.all);
-            begin
-               Res.Include (Derived_Typ.Parent_Type);
-               Res.Union (Type_Dependencies (Derived_Typ.Parent_Type));
-            end;
-
          when others =>
             null;
       end case;

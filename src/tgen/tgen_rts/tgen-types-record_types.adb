@@ -36,9 +36,6 @@ package body TGen.Types.Record_Types is
 
    Pad : constant Unbounded_String := 3 * ' ';
 
-   function PP_Variant
-     (Var : Variant_Part_Acc; Padding : Natural := 0) return Unbounded_String;
-
    procedure Fill_Components
      (Self        : Variant_Part;
       Constraints : Disc_Value_Map;
@@ -61,26 +58,119 @@ package body TGen.Types.Record_Types is
    -- Image --
    -----------
 
+   function Image (Self : Abstract_Record_Typ) return String
+   is (Image_Internal (Self, 0));
+
    function Image (Self : Record_Typ) return String
    is (Image_Internal (Self, 0));
 
-   --------------------
-   -- Image_Internal --
-   --------------------
+   function Image_Internal_Components
+     (Comp_Map      : Component_Map;
+      Padding       : Natural := 0;
+      Discriminated : Boolean;
+      Variant       : Variant_Part_Acc := null) return Unbounded_String;
+   --  FIXME
 
-   function Image_Internal
-     (Self : Record_Typ; Padding : Natural := 0) return String
+   -------------------------------
+   -- Image_Internal_Components --
+   -------------------------------
+
+   function Image_Internal_Components
+     (Comp_Map      : Component_Map;
+      Padding       : Natural := 0;
+      Discriminated : Boolean;
+      Variant       : Variant_Part_Acc := null) return Unbounded_String
    is
       use Component_Maps;
-      Str               : Unbounded_String :=
-        To_Unbounded_String (Typ (Self).Image);
+
+      function Image_Internal_Variant
+        (Var : Variant_Part_Acc; Padding : Natural := 0)
+         return Unbounded_String;
+      --  FIXME
+
+      ----------------------------
+      -- Image_Internal_Variant --
+      ----------------------------
+
+      function Image_Internal_Variant
+        (Var : Variant_Part_Acc; Padding : Natural := 0)
+         return Unbounded_String
+      is
+         Res      : Unbounded_String := (Padding * Pad) & "case ";
+         Comp_Cur : Component_Maps.Cursor;
+      begin
+         Res := Res & (+Var.Discr_Name) & " is" & LF;
+
+         for Var_Choice of Var.Variant_Choices loop
+            Res := Res & (Padding + 2) * Pad & "when ";
+            for Alt of Var_Choice.Alt_Set loop
+               Res :=
+                 Res
+                 & Big_Int.To_String (Alt.Min)
+                 & " .. "
+                 & Big_Int.To_String (Alt.Max);
+
+               if Alt /= Var_Choice.Alt_Set.Last_Element then
+                  Res := Res & " | ";
+               end if;
+            end loop;
+
+            Res := Res & " => " & LF;
+            Comp_Cur := Var_Choice.Components.First;
+            while Component_Maps.Has_Element (Comp_Cur) loop
+               Res :=
+                 Res
+                 & (Padding + 3) * Pad
+                 & (+Component_Maps.Key (Comp_Cur))
+                 & " : ";
+
+               if Component_Maps.Element (Comp_Cur).Kind
+                  in Record_Typ_Range
+               then
+                  Res :=
+                    Res
+                    & String'
+                        (As_Record_Typ (Component_Maps.Element (Comp_Cur))
+                           .Image_Internal (Padding + 3));
+               else
+                  Res := Res & Component_Maps.Element (Comp_Cur).Image;
+               end if;
+
+               Component_Maps.Next (Comp_Cur);
+               Res := Res & LF;
+            end loop;
+
+            if Var_Choice.Variant /= null then
+               Res :=
+                 Res
+                 & Image_Internal_Variant (Var_Choice.Variant, Padding + 3);
+            end if;
+         end loop;
+
+         return Res & (Padding + 1) * Pad & "end case" & LF;
+      end Image_Internal_Variant;
+
+      --  Local variables
+
+      Str               : Unbounded_String := To_Unbounded_String ("");
       Current_Component : Component_Maps.Cursor;
+
+      --  Start of Image_Internal_Components
+
    begin
-      if Self.Component_Types.Is_Empty then
-         Str := Str & ": null record";
+
+      if Comp_Map.Is_Empty then
+         Str :=
+           Str
+           & (if Discriminated and then Variant = null
+              then Padding * Pad & " no components" & LF
+              else To_Unbounded_String (": null record"));
       else
-         Str := Str & ": record" & LF;
-         Current_Component := Self.Component_Types.First;
+         if not Discriminated then
+            Str := Str & ": record" & LF;
+         end if;
+
+         Current_Component := Comp_Map.First;
          while Has_Element (Current_Component) loop
             Str :=
               Str & (Padding + 1) * Pad & (+Key (Current_Component)) & " : ";
@@ -94,11 +184,95 @@ package body TGen.Types.Record_Types is
             else
                Str := Str & Element (Current_Component).all.Image & LF;
             end if;
+
             Next (Current_Component);
          end loop;
-         Str := Str & "end record";
+
+         if Discriminated and then Variant /= null then
+            Str :=
+              Str
+              & (Padding + 1) * Pad
+              & Image_Internal_Variant (Variant, Padding + 1);
+         end if;
       end if;
-      return To_String (Str);
+
+      if Discriminated xor Comp_Map.Is_Empty then
+         Str := Str & "end record;";
+      end if;
+
+      return Str;
+   end Image_Internal_Components;
+
+   --------------------
+   -- Image_Internal --
+   --------------------
+
+   function Image_Internal
+     (Self : Abstract_Record_Typ; Padding : Natural := 0) return String
+   is (Typ (Self).Image
+       & To_String
+           (Image_Internal_Components
+              (Self.Component_Types,
+               Padding,
+               Discriminated => False,
+               Variant       => null)));
+
+   function Image_Internal
+     (Self : Record_Typ; Padding : Natural := 0) return String
+   is
+      use Component_Maps;
+
+      function Image_Internal_Discriminants return Unbounded_String;
+      --  FIXME
+
+      ----------------------------------
+      -- Image_Internal_Discriminants --
+      ----------------------------------
+
+      function Image_Internal_Discriminants return Unbounded_String is
+         Str               : Unbounded_String := To_Unbounded_String ("");
+         Current_Component : Component_Maps.Cursor;
+      begin
+         if not Is_Discriminated (Self) then
+            return Str;
+         end if;
+
+         Str :=
+           Str
+           & ": "
+           & (if Self.Mutable then "" else "non ")
+           & "mutable record (";
+
+         Current_Component := Self.Discriminant_Types.First;
+         loop
+            exit when not Has_Element (Current_Component);
+
+            Str :=
+              Str
+              & (+Key (Current_Component))
+              & ": "
+              & Element (Current_Component).Image;
+
+            Next (Current_Component);
+            exit when not Has_Element (Current_Component);
+
+            Str := Str & "; ";
+         end loop;
+
+         return Str & ")" & LF;
+      end Image_Internal_Discriminants;
+
+      --  Start of Image_Internal
+   begin
+      return
+        Typ (Self).Image
+        & To_String (Image_Internal_Discriminants)
+        & To_String
+            (Image_Internal_Components
+               (Self.Component_Types,
+                Padding,
+                Is_Discriminated (Self),
+                Self.Variant));
    end Image_Internal;
 
    ---------------------
@@ -124,31 +298,48 @@ package body TGen.Types.Record_Types is
    ---------------------
 
    function Get_Diagnostics
-     (Self : Record_Typ; Prefix : String := "") return String_Vector
+     (Self : Abstract_Record_Typ; Prefix : String := "") return String_Vector
    is
       Rec_Prefix : constant String := To_Ada (Self.Name);
    begin
       return Get_Diagnostics (Self.Component_Types, Prefix & Rec_Prefix & ".");
    end Get_Diagnostics;
 
+   procedure Encode_Components
+     (Components : in out JSON_Value; Comp_Map : Component_Map);
+   --  FIXME
+
+   -----------------------
+   -- Encode_Components --
+   -----------------------
+
+   procedure Encode_Components
+     (Components : in out JSON_Value; Comp_Map : Component_Map)
+   is
+      use Component_Maps;
+   begin
+      for Comp in Comp_Map.Iterate loop
+         declare
+            Comp_Name : constant String := To_String (Key (Comp));
+            Comp_Val  : constant JSON_Value := Components.Get (Comp_Name);
+         begin
+            Components.Set_Field
+              (Comp_Name, Element (Comp).Encode (Comp_Val));
+         end;
+      end loop;
+   end Encode_Components;
+
    ------------
    -- Encode --
    ------------
 
-   function Encode (Self : Record_Typ; Val : JSON_Value) return JSON_Value is
-      use Component_Maps;
-      Components : constant JSON_Value := Val.Get ("components").Clone;
+   function Encode
+     (Self : Abstract_Record_Typ; Val : JSON_Value) return JSON_Value
+   is
+      Components : JSON_Value := Val.Get ("components").Clone;
    begin
       return Res : constant JSON_Value := Create_Object do
-         for Cur in Self.Component_Types.Iterate loop
-            declare
-               Comp_Name : constant String := To_String (Key (Cur));
-               Comp_Val  : constant JSON_Value := Components.Get (Comp_Name);
-            begin
-               Components.Set_Field
-                 (Comp_Name, Element (Cur).all.Encode (Comp_Val));
-            end;
-         end loop;
+         Encode_Components (Components, Self.Component_Types);
          Res.Set_Field ("components", Components);
       end return;
    end Encode;
@@ -174,17 +365,19 @@ package body TGen.Types.Record_Types is
       return Result;
    end Generate;
 
-   ----------------------
-   -- Default_Strategy --
-   ----------------------
+   procedure Default_Strategy_Components
+     (Strat : in out Record_Strategy_Type'Class; Comp_Map : Component_Map);
 
-   function Default_Strategy (Self : Record_Typ) return Strategy_Type'Class is
+   ---------------------------------
+   -- Default_Strategy_Components --
+   ---------------------------------
+
+   procedure Default_Strategy_Components
+     (Strat : in out Record_Strategy_Type'Class; Comp_Map : Component_Map)
+   is
       use Component_Maps;
-
-      Strat : Record_Strategy_Type;
    begin
-      Strat.T := Self'Unrestricted_Access;
-      for Component in Self.Component_Types.Iterate loop
+      for Component in Comp_Map.Iterate loop
          declare
             Comp_Name : constant Unbounded_String := Key (Component);
          begin
@@ -192,10 +385,24 @@ package body TGen.Types.Record_Types is
               (Comp_Name,
                new Strategy_Type'Class'
                  (Strategy_Type'Class
-                    (Element (Component).all.Default_Strategy)));
+                    (Element (Component).Default_Strategy)));
          end;
       end loop;
-      return Strat;
+   end Default_Strategy_Components;
+
+   ----------------------
+   -- Default_Strategy --
+   ----------------------
+
+   function Default_Strategy
+     (Self  : Abstract_Record_Typ)
+      return Strategy_Type'Class
+   is
+   begin
+      return Strat : Record_Strategy_Type do
+         Strat.T := Self'Unrestricted_Access;
+         Default_Strategy_Components (Strat, Self.Component_Types);
+      end return;
    end Default_Strategy;
 
    --  Enumerated generation for record types
@@ -345,7 +552,7 @@ package body TGen.Types.Record_Types is
    ---------------------------
 
    function Default_Enum_Strategy
-     (Self : Record_Typ) return Enum_Strategy_Type'Class
+     (Self : Abstract_Record_Typ) return Enum_Strategy_Type'Class
    is
       Strat : Enum_Record_Strategy_Type;
    begin
@@ -366,7 +573,6 @@ package body TGen.Types.Record_Types is
             Strat.Component_Strats.Append (Comp_Info);
          end;
       end loop;
-
       return Strat;
    end Default_Enum_Strategy;
 
@@ -433,8 +639,7 @@ package body TGen.Types.Record_Types is
    ---------------------------
 
    function Constraints_Respected
-     (Self : Discriminated_Record_Typ; Discriminant_Values : Disc_Value_Map)
-      return Boolean
+     (Self : Record_Typ; Discriminant_Values : Disc_Value_Map) return Boolean
    is
       use Discriminant_Constraint_Maps;
       use Disc_Value_Maps;
@@ -462,12 +667,12 @@ package body TGen.Types.Record_Types is
       return True;
    end Constraints_Respected;
 
-   ----------------
-   -- Components --
-   ----------------
+   ----------------------------------
+   -- Components_For_Discriminants --
+   ----------------------------------
 
-   function Components
-     (Self : Discriminated_Record_Typ; Discriminant_Values : Disc_Value_Map)
+   function Components_For_Discriminants
+     (Self : Record_Typ; Discriminant_Values : Disc_Value_Map)
       return Component_Maps.Map
    is
       Res : Component_Maps.Map := Self.Component_Types.Copy;
@@ -476,7 +681,7 @@ package body TGen.Types.Record_Types is
          Fill_Components (Self.Variant.all, Discriminant_Values, Res);
       end if;
       return Res;
-   end Components;
+   end Components_For_Discriminants;
 
    ---------------------
    -- Fill_Components --
@@ -522,172 +727,51 @@ package body TGen.Types.Record_Types is
       end loop;
    end Fill_Components;
 
-   ----------------
-   -- PP_Variant --
-   ----------------
-
-   function PP_Variant
-     (Var : Variant_Part_Acc; Padding : Natural := 0) return Unbounded_String
-   is
-      Res      : Unbounded_String := (Padding * Pad) & "case ";
-      Comp_Cur : Component_Maps.Cursor;
-   begin
-      Res := Res & (+Var.Discr_Name) & " is" & LF;
-      for Var_Choice of Var.Variant_Choices loop
-         Res := Res & (Padding + 2) * Pad & "when ";
-         for Alt of Var_Choice.Alt_Set loop
-            Res :=
-              Res
-              & Big_Int.To_String (Alt.Min)
-              & " .. "
-              & Big_Int.To_String (Alt.Max);
-            if Alt /= Var_Choice.Alt_Set.Last_Element then
-               Res := Res & " | ";
-            end if;
-         end loop;
-         Res := Res & " => " & LF;
-         Comp_Cur := Var_Choice.Components.First;
-         while Component_Maps.Has_Element (Comp_Cur) loop
-            Res :=
-              Res
-              & (Padding + 3) * Pad
-              & (+Component_Maps.Key (Comp_Cur))
-              & " : ";
-            if Component_Maps.Element (Comp_Cur).all.Kind in Record_Typ_Range
-            then
-               Res :=
-                 Res
-                 & String'
-                     (As_Record_Typ (Component_Maps.Element (Comp_Cur))
-                        .Image_Internal (Padding + 3));
-            else
-               Res := Res & Component_Maps.Element (Comp_Cur).all.Image;
-            end if;
-            Component_Maps.Next (Comp_Cur);
-            Res := Res & LF;
-         end loop;
-         if Var_Choice.Variant /= null then
-            Res := Res & PP_Variant (Var_Choice.Variant, Padding + 3);
-         end if;
-      end loop;
-      Res := Res & (Padding + 1) * Pad & "end case" & LF;
-      return Res;
-   end PP_Variant;
-
-   -----------
-   -- Image --
-   -----------
-
-   function Image (Self : Discriminated_Record_Typ) return String
-   is (Image_Internal (Self, 0));
-
-   --------------------
-   -- Image_Internal --
-   --------------------
-
-   function Image_Internal
-     (Self : Discriminated_Record_Typ; Padding : Natural := 0) return String
-   is
-      use Component_Maps;
-      Str               : Unbounded_String :=
-        To_Unbounded_String (Typ (Self).Image);
-      Current_Component : Component_Maps.Cursor;
-   begin
-      --  First display the discriminants in line
-      Str :=
-        Str
-        & ": "
-        & (if Self.Mutable then "" else "non ")
-        & "mutable record (";
-      Current_Component := Self.Discriminant_Types.First;
-      loop
-         exit when not Has_Element (Current_Component);
-         Str :=
-           Str
-           & (+Key (Current_Component))
-           & ": "
-           & Element (Current_Component).all.Image;
-         Next (Current_Component);
-         exit when not Has_Element (Current_Component);
-         Str := Str & "; ";
-      end loop;
-      Str := Str & ")" & LF;
-      if Self.Component_Types.Is_Empty and Self.Variant = null then
-         Str := Str & Padding * Pad & " no components" & LF;
-      else
-         if not Self.Component_Types.Is_Empty then
-            Current_Component := Self.Component_Types.First;
-            while Has_Element (Current_Component) loop
-               Str :=
-                 Str
-                 & (Padding + 1) * Pad
-                 & (+Key (Current_Component))
-                 & " : ";
-               if Element (Current_Component).all.Kind in Record_Typ_Range then
-                  Str :=
-                    Str
-                    & String'
-                        (As_Record_Typ (Element (Current_Component))
-                           .Image_Internal (Padding + 1));
-               else
-                  Str := Str & Element (Current_Component).all.Image & LF;
-               end if;
-               Next (Current_Component);
-            end loop;
-         end if;
-
-         if Self.Variant /= null then
-            Str :=
-              Str
-              & (Padding + 1) * Pad
-              & PP_Variant (Self.Variant, Padding + 1);
-         end if;
-      end if;
-      Str := Str & "end record";
-      return To_String (Str);
-   end Image_Internal;
-
    ------------
    -- Encode --
    ------------
 
-   function Encode
-     (Self : Discriminated_Record_Typ; Val : JSON_Value) return JSON_Value
-   is
+   function Encode (Self : Record_Typ; Val : JSON_Value) return JSON_Value is
       use Component_Maps;
-      Disc_Values   : Disc_Value_Map;
-      Comp_Map      : Component_Map;
-      Discriminants : constant JSON_Value := Val.Get ("discriminants").Clone;
-      Components    : constant JSON_Value := Val.Get ("components").Clone;
-      Res           : constant JSON_Value := Create_Object;
-   begin
-      --  Encode the discriminants
 
-      for Cur in Self.Discriminant_Types.Iterate loop
+      Disc_Values   : Disc_Value_Map;
+      Res           : constant JSON_Value := Create_Object;
+      Discriminated : constant Boolean := Is_Discriminated (Self);
+   begin
+      if Discriminated then
+
+         --  Encode the discriminants
          declare
-            Disc_Val : constant JSON_Value :=
-              Discriminants.Get (To_String (Key (Cur)));
+            Discriminants : constant JSON_Value :=
+              Val.Get ("discriminants").Clone;
          begin
-            Disc_Values.Insert (Key (Cur), Disc_Val);
-            Discriminants.Set_Field
-              (To_String (Key (Cur)), Element (Cur).all.Encode (Disc_Val));
+            for Cur in Self.Discriminant_Types.Iterate loop
+               declare
+                  Disc_Val : constant JSON_Value :=
+                    Discriminants.Get (To_String (Key (Cur)));
+               begin
+                  Disc_Values.Insert (Key (Cur), Disc_Val);
+                  Discriminants.Set_Field
+                    (To_String (Key (Cur)),
+                     Element (Cur).Encode (Disc_Val));
+               end;
+            end loop;
+            Res.Set_Field ("discriminants", Discriminants);
          end;
-      end loop;
-      Res.Set_Field ("discriminants", Discriminants);
+      end if;
 
       --  Encode the components
+      declare
+         Components :          JSON_Value    := Val.Get ("components").Clone;
+         Comp_Map   : constant Component_Map :=
+           (if Discriminated
+            then Self.Components_For_Discriminants (Disc_Values)
+            else Self.Component_Types);
+      begin
+         Encode_Components (Components, Comp_Map);
+         Res.Set_Field ("components", Components);
+      end;
 
-      Comp_Map := Self.Components (Disc_Values);
-      for Cur in Comp_Map.Iterate loop
-         declare
-            Comp_Name : constant String := To_String (Key (Cur));
-         begin
-            Components.Set_Field
-              (Comp_Name,
-               Element (Cur).all.Encode (Components.Get (Comp_Name)));
-         end;
-      end loop;
-      Res.Set_Field ("components", Components);
       return Res;
    end Encode;
 
@@ -696,13 +780,14 @@ package body TGen.Types.Record_Types is
    ---------------------
 
    function Get_Diagnostics
-     (Self : Discriminated_Record_Typ; Prefix : String := "")
-      return String_Vector
+     (Self : Record_Typ; Prefix : String := "") return String_Vector
    is
       Rec_Prefix : constant String := To_Ada (Self.Name);
-      Res        : String_Vector := Record_Typ (Self).Get_Diagnostics (Prefix);
+      Res        : String_Vector :=
+        Abstract_Record_Typ (Self).Get_Diagnostics (Prefix);
 
-      function Inspect_Variant (Var : Variant_Part_Acc) return String_Vector;
+      function Inspect_Variant (Var : Variant_Part_Acc) return String_Vector
+      with Pre => Is_Discriminated (Self);
       --  Inspect the variant part for unsupported types, and return the first
       --  diagnostics found, if any.
 
@@ -716,6 +801,7 @@ package body TGen.Types.Record_Types is
          if Var = null then
             return String_Vectors.Empty_Vector;
          end if;
+
          for Choice of Var.Variant_Choices loop
             Res.Append_Vector
               (Get_Diagnostics (Choice.Components, Rec_Prefix & "."));
@@ -723,10 +809,13 @@ package body TGen.Types.Record_Types is
          end loop;
          return Res;
       end Inspect_Variant;
+
    begin
       Res.Append_Vector
         (Get_Diagnostics (Self.Discriminant_Types, Rec_Prefix & "."));
-      Res.Append_Vector (Inspect_Variant (Self.Variant));
+      Res.Append_Vector
+        ((if Is_Discriminated (Self) then Inspect_Variant (Self.Variant)
+          else String_Vectors.Empty_Vector));
       return Res;
    end Get_Diagnostics;
 
@@ -734,7 +823,7 @@ package body TGen.Types.Record_Types is
    -- Supports_Gen --
    ------------------
 
-   function Supports_Gen (Self : Discriminated_Record_Typ) return Boolean is
+   function Supports_Gen (Self : Record_Typ) return Boolean is
 
       function Inspect_Variant (Var : Variant_Part_Acc) return Boolean;
       --  Traverse the variant part tree to determine whether some type is not
@@ -750,26 +839,30 @@ package body TGen.Types.Record_Types is
          if Var = null then
             return True;
          end if;
+
          for Choice of Var.Variant_Choices loop
             Res := (for all Cmp of Choice.Components => Cmp.all.Supports_Gen);
             exit when not Res;
             Res := Inspect_Variant (Choice.Variant);
             exit when not Res;
          end loop;
+
          return Res;
       end Inspect_Variant;
+
+      Abstract_Supports_Gen : constant Boolean :=
+        Abstract_Record_Typ (Self).Supports_Gen;
    begin
-      if not Record_Typ (Self).Supports_Gen then
-         return False;
-      end if;
-      return Inspect_Variant (Self.Variant);
+      return
+        (if not Is_Discriminated (Self) then Abstract_Supports_Gen
+         else (Abstract_Supports_Gen and then Inspect_Variant (Self.Variant)));
    end Supports_Gen;
 
    ------------------
    -- Free_Content --
    ------------------
 
-   procedure Free_Content (Self : in out Discriminated_Record_Typ) is
+   procedure Free_Content (Self : in out Record_Typ) is
    begin
       if Self.Variant /= null then
          Free_Variant (Self.Variant);
@@ -780,9 +873,7 @@ package body TGen.Types.Record_Types is
    -- Get_All_Components --
    ------------------------
 
-   function Get_All_Components
-     (Self : Discriminated_Record_Typ) return Component_Map
-   is
+   function Get_All_Components (Self : Record_Typ) return Component_Map is
       Res : Component_Map := Self.Component_Types;
 
       procedure Get_All_Components_Rec (Variant_Part : Variant_Part_Acc);
@@ -819,9 +910,11 @@ package body TGen.Types.Record_Types is
       Comp_Strats : in out Strategy_Map;
       Disc_Values : Disc_Value_Map) return JSON_Value
    is
-      Rec : Record_Typ'Class renames Record_Typ'Class (T.all);
-      Res : constant JSON_Value := Create_Object;
       use Component_Maps;
+
+      Rec : Abstract_Record_Typ'Class
+        renames Abstract_Record_Typ'Class (T.all);
+      Res : constant JSON_Value := Create_Object;
    begin
       for Comp in Rec.Component_Types.Iterate loop
          declare
@@ -858,19 +951,23 @@ package body TGen.Types.Record_Types is
       Local_Ctx  : out Disc_Value_Map)
    with
      Pre =>
-       T.all.Kind in Disc_Record_Kind
-       and then As_Discriminated_Record_Typ (T).Constrained;
+       T.all.Kind in Record_Kind
+       and then Is_Discriminated (As_Record_Typ (T))
+       and then As_Record_Typ (T).Constrained;
    --  Given a global context, and a constrained discriminated record type,
    --  create a discriminant value map suitable for use as a local discriminant
    --  map.
+
+   ---------------------------------
+   -- Resolve_Disc_Value_From_Ctx --
+   ---------------------------------
 
    procedure Resolve_Disc_Value_From_Ctx
      (Global_Ctx : Disc_Value_Map;
       T          : Typ_Access;
       Local_Ctx  : out Disc_Value_Map)
    is
-      Disc_Record : Discriminated_Record_Typ renames
-        Discriminated_Record_Typ (T.all);
+      Disc_Record : Record_Typ renames Record_Typ (T.all);
    begin
       Local_Ctx.Clear;
       for Constraint_Cursor in Disc_Record.Discriminant_Constraint.Iterate loop
@@ -955,9 +1052,10 @@ package body TGen.Types.Record_Types is
    end Pick_Samples_For_Disc;
 
    function Pick_Strat_For_Disc
-     (Self      : Discriminated_Record_Typ;
+     (Self      : Record_Typ;
       Disc_Name : Unbounded_String;
-      Disc_Type : Discrete_Typ'Class) return Strategy_Type'Class;
+      Disc_Type : Discrete_Typ'Class) return Strategy_Type'Class
+   with Pre => Is_Discriminated (Self);
    --  Return a generation strategy for the given discriminant
 
    -------------------------
@@ -965,7 +1063,7 @@ package body TGen.Types.Record_Types is
    -------------------------
 
    function Pick_Strat_For_Disc
-     (Self      : Discriminated_Record_Typ;
+     (Self      : Record_Typ;
       Disc_Name : Unbounded_String;
       Disc_Type : Discrete_Typ'Class) return Strategy_Type'Class
    is
@@ -1026,8 +1124,7 @@ package body TGen.Types.Record_Types is
       return JSON_Value
    is
       T           : constant Typ'Class := S.T.all;
-      Disc_Record : constant Discriminated_Record_Typ :=
-        Discriminated_Record_Typ (T);
+      Disc_Record : constant Record_Typ := Record_Typ (T);
 
       use Disc_Value_Maps;
 
@@ -1084,9 +1181,15 @@ package body TGen.Types.Record_Types is
 
       declare
          Components : constant Component_Map :=
-           Disc_Record.Components (Current_Context);
-         R          : constant Nondiscriminated_Record_Typ :=
-           (Name               => Disc_Record.Name,
+           Disc_Record.Components_For_Discriminants (Current_Context);
+
+         --  Create the non discriminated record
+         R     : constant Record_Typ :=
+           (Constrained        => False,
+            Mutable            => False,
+            Discriminant_Types => Component_Maps.Empty_Map,
+            Variant            => null,
+            Name               => Disc_Record.Name,
             Last_Comp_Unit_Idx => Disc_Record.Last_Comp_Unit_Idx,
             Component_Types    => Components,
             Static_Gen         => Disc_Record.Static_Gen,
@@ -1108,40 +1211,30 @@ package body TGen.Types.Record_Types is
    -- Default_Strategy --
    ----------------------
 
-   function Default_Strategy
-     (Self : Discriminated_Record_Typ) return Strategy_Type'Class
-   is
-      Strat : Disc_Record_Strategy_Type;
+   function Default_Strategy (Self : Record_Typ) return Strategy_Type'Class is
       use Component_Maps;
+
+      Strat : Record_Strategy_Type;
    begin
+      Strat.T := Self'Unrestricted_Access;
 
-      --  Pick the strategy for each discriminant
-
-      for Disc in Self.Discriminant_Types.Iterate loop
-         declare
-            Disc_Name : constant Unbounded_String := Key (Disc);
-         begin
-            Strat.Disc_Strats.Insert
-              (Disc_Name,
-               new Strategy_Type'Class'
-                 (Self.Pick_Strat_For_Disc
-                    (Disc_Name, Discrete_Typ'Class (Element (Disc).all))));
-         end;
-      end loop;
+      if Is_Discriminated (Self) then
+         --  Pick the strategy for each discriminant
+         for Disc in Self.Discriminant_Types.Iterate loop
+            declare
+               Disc_Name : constant Unbounded_String := Key (Disc);
+            begin
+               Strat.Disc_Strats.Insert
+                 (Disc_Name,
+                  new Strategy_Type'Class'
+                    (Self.Pick_Strat_For_Disc
+                       (Disc_Name, Discrete_Typ'Class (Element (Disc).all))));
+            end;
+         end loop;
+      end if;
 
       --  Generate the strategies for the record components
-
-      Strat.T := Self'Unrestricted_Access;
-      for Component in Self.Get_All_Components.Iterate loop
-         declare
-            Comp_Name : constant Unbounded_String := Key (Component);
-         begin
-            Strat.Component_Strats.Insert
-              (Comp_Name,
-               new Strategy_Type'Class'
-                 (Element (Component).all.Default_Strategy));
-         end;
-      end loop;
+      Default_Strategy_Components (Strat, Self.Get_All_Components);
 
       return Strat;
    end Default_Strategy;
@@ -1234,8 +1327,9 @@ package body TGen.Types.Record_Types is
             end;
          end if;
 
-         if T_Ref.all.Kind in Disc_Record_Kind then
-
+         if T_Ref.all.Kind in Record_Kind
+           and then Is_Discriminated (As_Record_Typ (T_Ref))
+         then
             --  If there are constraints, they are necessarily discriminant
             --  constraints. Records the discriminant correspondence to have
             --  an index constraint that can be applied to the top-level record
@@ -1248,8 +1342,8 @@ package body TGen.Types.Record_Types is
 
                   New_Disc_Correspondence : UTT_Map;
 
-                  Sub_Record : constant Discriminated_Record_Typ'Class :=
-                    As_Discriminated_Record_Typ (T_Ref);
+                  Sub_Record : constant Record_Typ'Class :=
+                    As_Record_Typ (T_Ref);
 
                   Inspect_Subrecord       : Boolean := False;
                   Correspondent_Disc_Name : Unbounded_String;
@@ -1336,7 +1430,7 @@ package body TGen.Types.Record_Types is
    ---------------------------
 
    procedure Disc_Constrains_Array
-     (Self       : Discriminated_Record_Typ;
+     (Self       : Record_Typ;
       Disc_Name  : Unbounded_String;
       Found      : out Boolean;
       Constraint : out TGen.Types.Constraints.Index_Constraint)
@@ -1404,8 +1498,7 @@ package body TGen.Types.Record_Types is
      (S : in out Disc_Record_Enum_Strat_Type; Disc_Context : Disc_Value_Map)
       return JSON_Value
    is
-      Rec : Discriminated_Record_Typ renames
-        Discriminated_Record_Typ (S.T.all);
+      Rec : Record_Typ renames Record_Typ (S.T.all);
    begin
 
       --  There are two cases in which we can't generate a new value fro the
@@ -1455,7 +1548,7 @@ package body TGen.Types.Record_Types is
          declare
             use Component_Maps;
             Actual_Comps : constant Component_Map :=
-              Rec.Components (S.Current_Disc_Values);
+              Rec.Components_For_Discriminants (S.Current_Disc_Values);
          begin
             --  For each of the components that are present in the record,
             --  based on the current discriminant value, generate or re-use one
@@ -1525,11 +1618,15 @@ package body TGen.Types.Record_Types is
    ---------------------------
 
    function Default_Enum_Strategy
-     (Self : Discriminated_Record_Typ) return Enum_Strategy_Type'Class
+     (Self : Record_Typ) return Enum_Strategy_Type'Class
    is
       use Component_Maps;
       Res : Disc_Record_Enum_Strat_Type;
    begin
+      if not Is_Discriminated (Self) then
+         return Abstract_Record_Typ (Self).Default_Enum_Strategy;
+      end if;
+
       Res.T := Self'Unrestricted_Access;
       Res.Current_Comp_Strat.Component_Strats.Clear;
       Res.Current_Comp_Strat.Varying_Index := 2;
@@ -1683,7 +1780,7 @@ package body TGen.Types.Record_Types is
       --  Generate the parameter values + global values
 
       declare
-         FN_As_Rec_Typ     : Record_Typ;
+         FN_As_Rec_Typ     : Abstract_Record_Typ;
          FN_As_Rec_Typ_Ref : Typ_Access;
       begin
          FN_As_Rec_Typ.Component_Types := FN_Typ.Component_Types;

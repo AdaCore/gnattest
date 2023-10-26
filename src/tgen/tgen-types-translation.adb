@@ -58,9 +58,7 @@ package body TGen.Types.Translation is
 
    package LALCO renames Libadalang.Common;
 
-   type Nondiscriminated_Record_Typ_Access is
-     access Nondiscriminated_Record_Typ;
-   type Discriminated_Record_Typ_Access is access Discriminated_Record_Typ;
+   type Record_Typ_Access is access Record_Typ;
    type Function_Typ_Access is access Function_Typ;
 
    function New_Eval_As_Int
@@ -168,19 +166,20 @@ package body TGen.Types.Translation is
    with Pre => Decl.P_Root_Type.P_Full_View.P_Is_Record_Type;
 
    procedure Apply_Record_Subtype_Decl
-     (Decl : Subtype_Indication; Res : in out Discriminated_Record_Typ)
-   with Pre => Res.Constrained;
+     (Decl : Subtype_Indication; Res : in out Record_Typ)
+   with Pre => Is_Discriminated (Res) and then Res.Constrained;
    --  Record the discriminant constraints of Decl in Res. For this, the
    --  type on which you want to apply constraints must be able to accept
    --  them.
 
    function Apply_Record_Derived_Type_Decl
-     (Decl : Type_Decl'Class; From : in out Discriminated_Record_Typ)
-      return Discriminated_Record_Typ
+     (Decl : Type_Decl'Class; From : in out Record_Typ) return Record_Typ
    with
-     Pre =>
-       Kind (Decl.F_Type_Def) in Ada_Derived_Type_Def_Range
-       and then From.Constrained;
+     Pre  =>
+       Is_Discriminated (From)
+       and then Kind (Decl.F_Type_Def) in Ada_Derived_Type_Def_Range
+       and then From.Constrained,
+     Post => Is_Discriminated (Apply_Record_Derived_Type_Decl'Result);
    --  Apply the effects of the record type derivation defined in Decl.
    --  If any discriminant constraints are present, this filters out the
    --  incompatible shapes, and renames discriminant which correspond
@@ -1901,7 +1900,7 @@ package body TGen.Types.Translation is
    -------------------------------
 
    procedure Apply_Record_Subtype_Decl
-     (Decl : Subtype_Indication; Res : in out Discriminated_Record_Typ) is
+     (Decl : Subtype_Indication; Res : in out Record_Typ) is
    begin
       if Is_Null (Decl.F_Constraint) then
          return;
@@ -2057,8 +2056,7 @@ package body TGen.Types.Translation is
    ------------------------------------
 
    function Apply_Record_Derived_Type_Decl
-     (Decl : Type_Decl'Class; From : in out Discriminated_Record_Typ)
-      return Discriminated_Record_Typ
+     (Decl : Type_Decl'Class; From : in out Record_Typ) return Record_Typ
    is
 
       use Discriminant_Constraint_Maps;
@@ -2109,7 +2107,7 @@ package body TGen.Types.Translation is
       --  First build a discriminant constraint map to filter out
       --  the unachievable shapes.
 
-      return New_Typ : Discriminated_Record_Typ (Constrained => True) do
+      return New_Typ : Record_Typ (Constrained => True) do
          New_Typ.Mutable :=
            not Is_Null (Decl.F_Discriminants)
            and then not Is_Null
@@ -2559,7 +2557,8 @@ package body TGen.Types.Translation is
    is
 
       procedure Apply_Constraints
-        (Decl, Root : Base_Type_Decl; Res : in out Discriminated_Record_Typ);
+        (Decl, Root : Base_Type_Decl; Res : in out Record_Typ)
+      with Pre => Is_Discriminated (Res);
       --  Modify Res to include all the discriminant constraints present in
       --  the type derivation / subtype decl chain.
 
@@ -2568,7 +2567,7 @@ package body TGen.Types.Translation is
       -----------------------
 
       procedure Apply_Constraints
-        (Decl, Root : Base_Type_Decl; Res : in out Discriminated_Record_Typ) is
+        (Decl, Root : Base_Type_Decl; Res : in out Record_Typ) is
       begin
          --  The original Decl of a record is not constrained.
 
@@ -2640,8 +2639,13 @@ package body TGen.Types.Translation is
          Actual_Decl := Decl.P_Root_Type.P_Full_View.As_Type_Decl;
 
          declare
-            Trans_Res : constant Nondiscriminated_Record_Typ_Access :=
-              new Nondiscriminated_Record_Typ'(others => <>);
+            Trans_Res : constant Record_Typ_Access :=
+              new Record_Typ'
+                (Constrained        => False,
+                 Mutable            => False,
+                 Discriminant_Types => Component_Maps.Empty_Map,
+                 Variant            => null,
+                 others             => <>);
             Comp_List : constant Ada_Node_List :=
               Actual_Decl
                 .F_Type_Def
@@ -2653,15 +2657,16 @@ package body TGen.Types.Translation is
 
             Failure_Reason :=
               Translate_Component_Decl_List
-                (Comp_List, Trans_Res.all.Component_Types);
+                (Comp_List, Trans_Res.Component_Types);
 
             if Failure_Reason = Null_Unbounded_String then
-               Trans_Res.all.Static_Gen :=
-                 (for all Comp_Ref of Trans_Res.all.Component_Types =>
-                    Comp_Ref.all.Supports_Static_Gen);
+               Trans_Res.Static_Gen :=
+                 (for all Comp_Ref of Trans_Res.Component_Types
+                  => Comp_Ref.all.Supports_Static_Gen);
 
                return Res : Translation_Result (Success => True) do
-                  Res.Res := Typ_Access (Trans_Res);
+                  Res.Res :=
+                    Typ_Access (Trans_Res);
                end return;
 
             else
@@ -2675,11 +2680,12 @@ package body TGen.Types.Translation is
          Actual_Decl := Decl.P_Root_Type.P_Full_View.As_Type_Decl;
 
          declare
-            Trans_Res : constant Discriminated_Record_Typ_Access :=
-              new Discriminated_Record_Typ
-                    (Constrained =>
-                       Record_Constrained
-                         (Decl, Actual_Decl.As_Base_Type_Decl));
+            Is_Constrained : constant Boolean :=
+              Record_Constrained (Decl, Actual_Decl.As_Base_Type_Decl);
+            Trans_Res : constant Record_Typ_Access :=
+              (if Is_Constrained
+               then new Record_Typ'(Constrained => True, others => <>)
+               else new Record_Typ'(Constrained => False, others => <>));
 
             Discriminant_List : constant Discriminant_Spec_List :=
               Actual_Decl
@@ -2697,15 +2703,18 @@ package body TGen.Types.Translation is
                 .As_Record_Type_Def
                 .F_Record_Def
                 .F_Components;
-         begin
 
+         begin
             --  First translate the list of discriminants
 
             for Spec of Discriminant_List loop
+
                if not Is_Null (Spec.F_Default_Expr) then
-                  Trans_Res.all.Mutable := True;
+                  Trans_Res.Mutable := True;
                end if;
+
                Current_Type := Translate (Spec.F_Type_Expr, Verbose_Diag);
+
                if not Current_Type.Success then
                   Failure_Reason :=
                     "Failed to translate discriminant spec "
@@ -2714,18 +2723,19 @@ package body TGen.Types.Translation is
                     & Current_Type.Diagnostics;
                   goto Failed_Discr_Rec_Translation;
                end if;
+
                for Def_Name of Spec.F_Ids loop
-                  Trans_Res.all.Discriminant_Types.Insert
+                  Trans_Res.Discriminant_Types.Insert
                     (Key      => +Def_Name.As_Defining_Name.Text,
                      New_Item => Current_Type.Res);
                end loop;
             end loop;
 
-            --  Then the components always present
+            --  Then the always present components
 
             Failure_Reason :=
               Translate_Component_Decl_List
-                (Comp_Decl.F_Components, Trans_Res.all.Component_Types);
+                (Comp_Decl.F_Components, Trans_Res.Component_Types);
 
             if Failure_Reason /= Null_Unbounded_String then
                return (Success => False, Diagnostics => Failure_Reason);
@@ -2734,7 +2744,7 @@ package body TGen.Types.Translation is
             --  And then the variant part if any
 
             if not Comp_Decl.F_Variant_Part.Is_Null then
-               Trans_Res.all.Variant :=
+               Trans_Res.Variant :=
                  new Record_Types.Variant_Part'
                    (Translate_Variant_Part
                       (Comp_Decl.F_Variant_Part,
@@ -2744,7 +2754,7 @@ package body TGen.Types.Translation is
             --  If the record is actually a constrained type, record the
             --  constraints now.
 
-            if Trans_Res.all.Constrained then
+            if Is_Constrained then
                Apply_Constraints
                  (Decl, Actual_Decl.As_Base_Type_Decl, Trans_Res.all);
             end if;
@@ -2776,32 +2786,35 @@ package body TGen.Types.Translation is
                   --  static constraints that don't allow us to determine
                   --  what the final list of components is.
 
-                  if Trans_Res.all.Variant /= null then
-                     Free_Variant (Trans_Res.all.Variant);
+                  if Trans_Res.Variant /= null then
+                     Free_Variant (Trans_Res.Variant);
                   end if;
 
                   return Res : Translation_Result (Success => True) do
                      Res.Res :=
-                       new Nondiscriminated_Record_Typ'
-                         (Component_Types => Trans_Res.all.Component_Types,
-                          Static_Gen      => Trans_Res.all.Static_Gen,
-                          others          => <>);
+                       new Record_Typ'
+                          (Constrained        => False,
+                           Mutable            => False,
+                           Discriminant_Types => Component_Maps.Empty_Map,
+                           Variant            => null,
+                           Component_Types    => Trans_Res.Component_Types,
+                           Static_Gen         => Trans_Res.Static_Gen,
+                           others             => <>);
                   end return;
 
                else
                   return Res : Translation_Result (Success => True) do
                      declare
-                        Rec_Typ : constant Discriminated_Record_Typ_Access :=
-                          new Discriminated_Record_Typ'
-                            (Constrained => False, others => <>);
+                        Rec_Typ : constant Record_Typ_Access :=
+                          new Record_Typ'(Constrained => False, others => <>);
                      begin
-                        Rec_Typ.all.Component_Types.Move
-                          (Trans_Res.all.Component_Types);
-                        Rec_Typ.all.Discriminant_Types.Move
+                        Rec_Typ.Component_Types.Move
+                          (Trans_Res.Component_Types);
+                        Rec_Typ.Discriminant_Types.Move
                           (Trans_Res.Discriminant_Types);
-                        Rec_Typ.all.Variant := Trans_Res.all.Variant;
-                        Rec_Typ.all.Mutable := Trans_Res.all.Mutable;
-                        Rec_Typ.all.Static_Gen := Trans_Res.all.Static_Gen;
+                        Rec_Typ.Variant := Trans_Res.Variant;
+                        Rec_Typ.Mutable := Trans_Res.Mutable;
+                        Rec_Typ.Static_Gen := Trans_Res.Static_Gen;
                         Res.Res := Typ_Access (Rec_Typ);
                      end;
                   end return;
@@ -3717,8 +3730,8 @@ package body TGen.Types.Translation is
    function Translate_Globals
      (N : Expr; Verbose : Boolean) return Translation_Result
    is
-      Rec : constant Nondiscriminated_Record_Typ_Access :=
-        new Nondiscriminated_Record_Typ;
+      Rec : constant Record_Typ_Access :=
+        new Record_Typ'(Constrained => False, others => <>);
       --  Record_Typ encapsulating the globals (that are stored in
       --  Rec.Component_Types).
 
@@ -3755,7 +3768,7 @@ package body TGen.Types.Translation is
                        Translate (Global.As_Object_Decl.F_Type_Expr, Verbose);
                   begin
                      if Global_Typ_Translation.Success then
-                        Rec.all.Component_Types.Insert
+                        Rec.Component_Types.Insert
                           (+To_Ada
                               (Convert_Qualified_Name
                                  (N
@@ -3873,7 +3886,8 @@ package body TGen.Types.Translation is
    function Translate
      (N : LAL.Basic_Decl; Verbose : Boolean := False) return Translation_Result
    is
-      F_Typ         : constant Function_Typ_Access := new Function_Typ;
+      F_Typ         : constant Function_Typ_Access :=
+        new Function_Typ (Constrained => False);
       Result        : Translation_Result (Success => True);
       Comp_Unit_Idx : constant Positive :=
         Ultimate_Enclosing_Compilation_Unit (N)

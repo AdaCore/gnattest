@@ -733,28 +733,30 @@ package body TGen.Type_Representation is
 
          Anonymous_Typ_Inits, Anonymous_Typ_Decls : Unbounded_String;
       begin
-         if T in Discriminated_Record_Typ'Class then
+         if T in Record_Typ'Class then
             declare
-               Disc_T                     :
-                 constant Discriminated_Record_Typ'Class :=
-                   Discriminated_Record_Typ'Class (T);
+               Rec_T : constant Record_Typ'Class := T;
                Variant_Decl, Variant_Init : Unbounded_String;
             begin
-               Insert
-                 (Assocs, Assoc ("RECORD_TYP", "Discriminated_Record_Typ"));
-               Insert (Assocs, Assoc ("HAS_CONSTRAINTS", Disc_T.Constrained));
-               Insert (Assocs, Assoc ("MUTABLE", Disc_T.Mutable));
+               if T in Function_Typ'Class then
+                  Insert (Assocs, Assoc ("RECORD_TYP", "Function_Typ"));
+               else
+                  Insert (Assocs, Assoc ("RECORD_TYP", "Record_Typ"));
+               end if;
+
+               Insert (Assocs, Assoc ("HAS_CONSTRAINTS", Rec_T.Constrained));
+               Insert (Assocs, Assoc ("MUTABLE", Rec_T.Mutable));
 
                --  Start off by encoding the constraints
 
-               if Disc_T.Constrained then
+               if Is_Discriminated (Rec_T) and then Rec_T.Constrained then
                   declare
                      Constraint_Decl, Constraint_Init : Unbounded_String;
                   begin
                      Collect_Info_For_Constraint
                        (Ty_Prefix,
                         Discriminant_Constraints'
-                          (Constraint_Map => Disc_T.Discriminant_Constraint),
+                          (Constraint_Map => Rec_T.Discriminant_Constraint),
                         Constraint_Decl_Template,
                         Constraint_Init_Template,
                         Constraint_Decl,
@@ -764,60 +766,52 @@ package body TGen.Type_Representation is
                      Insert
                        (Assocs, Assoc ("CONSTRAINT_INIT", Constraint_Init));
                   end;
+
+                  if Rec_T.Variant /= null then
+                     Collect_Info_For_Variant
+                       (Variant      => Rec_T.Variant,
+                        Ty_Prefix    => Ty_Prefix,
+                        Variant_Decl => Variant_Decl,
+                        Variant_Init => Variant_Init);
+
+                     Insert (Assocs, Assoc ("HAS_VARIANT_PART", True));
+                     Insert (Assocs, Assoc ("VARIANT_SPEC", Variant_Decl));
+                     Insert (Assocs, Assoc ("VARIANT_INIT", Variant_Init));
+                     Insert (Assocs, Assoc ("VARIANT_NUMBER", 1));
+                  end if;
+
+                  for Cur in Rec_T.Discriminant_Types.Iterate loop
+                     declare
+                        use Component_Maps;
+                        Discr_Name : constant Unbounded_String := Key (Cur);
+                        Discr_Ty_Prefix    :  Unbounded_String;
+                        Anonymous_Typ_Init :  Unbounded_String;
+                        Anonymous_Typ_Decl :  Unbounded_String;
+                     begin
+                        Collect_Info_For_Component
+                          (Element (Cur).all,
+                           Anonymous_Typ_Decl,
+                           Anonymous_Typ_Init,
+                           Discr_Ty_Prefix);
+                        Anonymous_Typ_Inits :=
+                          Anonymous_Typ_Inits & Anonymous_Typ_Init;
+                        Anonymous_Typ_Decls :=
+                          Anonymous_Typ_Decls & Anonymous_Typ_Decl;
+                        Discr_Names := Discr_Names & Discr_Name;
+                        Discr_Types := Discr_Types & Discr_Ty_Prefix;
+                     end;
+                  end loop;
                end if;
-
-               --  Then encode the variants
-
-               if Disc_T.Variant /= null then
-                  Collect_Info_For_Variant
-                    (Variant      => Disc_T.Variant,
-                     Ty_Prefix    => Ty_Prefix,
-                     Variant_Decl => Variant_Decl,
-                     Variant_Init => Variant_Init);
-
-                  Insert (Assocs, Assoc ("HAS_VARIANT_PART", True));
-                  Insert (Assocs, Assoc ("VARIANT_SPEC", Variant_Decl));
-                  Insert (Assocs, Assoc ("VARIANT_INIT", Variant_Init));
-                  Insert (Assocs, Assoc ("VARIANT_NUMBER", 1));
-               end if;
-
-               for Cur in Disc_T.Discriminant_Types.Iterate loop
-                  declare
-                     use Component_Maps;
-                     Discr_Name                             :
-                       constant Unbounded_String := Key (Cur);
-                     Discr_Ty_Prefix                        : Unbounded_String;
-                     Anonymous_Typ_Init, Anonymous_Typ_Decl : Unbounded_String;
-                  begin
-                     Collect_Info_For_Component
-                       (Element (Cur).all,
-                        Anonymous_Typ_Decl,
-                        Anonymous_Typ_Init,
-                        Discr_Ty_Prefix);
-                     Anonymous_Typ_Inits :=
-                       Anonymous_Typ_Inits & Anonymous_Typ_Init;
-                     Anonymous_Typ_Decls :=
-                       Anonymous_Typ_Decls & Anonymous_Typ_Decl;
-                     Discr_Names := Discr_Names & Discr_Name;
-                     Discr_Types := Discr_Types & Discr_Ty_Prefix;
-                  end;
-               end loop;
             end;
-         elsif T in Nondiscriminated_Record_Typ'Class then
-            Insert
-              (Assocs, Assoc ("RECORD_TYP", "Nondiscriminated_Record_Typ"));
-         elsif T in Function_Typ'Class then
-            Insert (Assocs, Assoc ("RECORD_TYP", "Function_Typ"));
          end if;
 
-         --  Common processing for (discriminated)? record / function
-         --  types
+         --  Common processing for record / function types
 
          for Cur in T.Component_Types.Iterate loop
             declare
                use Component_Maps;
                Comp_Name                              :
-                 constant Unbounded_String := Key (Cur);
+               constant Unbounded_String := Key (Cur);
                Comp_Ty_Prefix                         : Unbounded_String;
                Anonymous_Typ_Init, Anonymous_Typ_Decl : Unbounded_String;
             begin

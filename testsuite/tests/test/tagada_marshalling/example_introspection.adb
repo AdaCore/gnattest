@@ -249,8 +249,8 @@ procedure Example_Introspection is
    procedure Test_Shape
    is
       use Component_Maps;
-      Rec_Typ : Discriminated_Record_Typ renames
-        Discriminated_Record_Typ (my_file_shape_typ_ref.all);
+      Rec_Typ : Record_Typ renames
+         Record_Typ (my_file_shape_typ_ref.all);
    begin
       Assert (Rec_Typ.Mutable);
 
@@ -601,8 +601,8 @@ procedure Example_Introspection is
 
    procedure Test_Small_Shape_Array is
       use Component_Maps;
-      Rec_Typ : Discriminated_Record_Typ renames
-        Discriminated_Record_Typ
+      Rec_Typ : Record_Typ renames
+        Record_Typ
           (my_file_small_shape_array_Typ_Ref.all);
    begin
       Assert (Rec_Typ.Discriminant_Types.Length = 1);
@@ -655,8 +655,8 @@ procedure Example_Introspection is
    procedure Test_R is
       use Component_Maps;
       Index : Positive := 1;
-      my_file_r_Typ : Nondiscriminated_Record_Typ renames
-        Nondiscriminated_Record_Typ
+      my_file_r_Typ : Record_Typ renames
+        Record_Typ
           (my_file_r_Typ_Ref.all);
    begin
       for Comp_Cur in my_file_r_Typ.Component_Types.Iterate loop
@@ -770,8 +770,8 @@ procedure Example_Introspection is
 
    procedure Test_R2 is
       use Component_Maps;
-      my_file_r2_typ : Nondiscriminated_Record_Typ renames
-        Nondiscriminated_Record_Typ (my_file_r2_Typ_Ref.all);
+      my_file_r2_typ : Record_Typ renames
+        Record_Typ (my_file_r2_Typ_Ref.all);
    begin
       Assert (my_file_r2_Typ.Component_Types.Length = 2);
       for Comp_Cur in my_file_r2_Typ.Component_Types.iterate loop

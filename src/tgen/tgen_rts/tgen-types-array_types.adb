@@ -604,7 +604,7 @@ package body TGen.Types.Array_Types is
    is
       Strat            : Array_Strategy_Type (Self.Num_Dims);
       Element_Strategy : constant Strategy_Type'Class :=
-        Self.Component_Type.all.Default_Strategy;
+        Self.Component_Type.Default_Strategy;
    begin
       Strat.Generate_Element_Strategy :=
         new Strategy_Type'Class'(Element_Strategy);
@@ -659,7 +659,7 @@ package body TGen.Types.Array_Types is
    is
       Strat            : Array_Strategy_Type (Self.Num_Dims);
       Element_Strategy : constant Strategy_Type'Class :=
-        Self.Component_Type.all.Default_Strategy;
+        Self.Component_Type.Default_Strategy;
    begin
       Strat.Generate_Element_Strategy :=
         new Strategy_Type'Class'(Element_Strategy);

@@ -90,8 +90,8 @@ package TGen.Types is
       Ptr_Kind,
       Unconstrained_Array_Kind,
       Constrained_Array_Kind,
-      Disc_Record_Kind,
-      Non_Disc_Record_Kind,
+      Abstract_Record_Kind,
+      Record_Kind,
       Function_Kind,
       Anonymous_Kind,
       Instance_Kind,
@@ -105,8 +105,8 @@ package TGen.Types is
    subtype Array_Typ_Range is
      Typ_Kind range Unconstrained_Array_Kind .. Constrained_Array_Kind;
 
-   subtype Record_Typ_Range is
-     Typ_Kind range Disc_Record_Kind .. Function_Kind;
+   subtype Record_Typ_Range
+     is Typ_Kind range Abstract_Record_Kind .. Function_Kind;
 
    subtype Big_Integer is Big_Int.Big_Integer;
 
