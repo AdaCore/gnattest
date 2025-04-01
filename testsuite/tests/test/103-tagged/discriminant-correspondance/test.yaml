@@ -1,0 +1,5 @@
+description:
+    Test that TGen is able to generate tests for a derived type of a
+    discriminated tagged record defined using discriminant correspondance.
+
+driver: shell_script

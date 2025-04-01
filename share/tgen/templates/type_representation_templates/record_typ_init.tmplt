@@ -11,6 +11,8 @@
 @@--  @_CONSTRAINT_INIT_@ Initialization code for constraints.
 @@--  @_ANONYMOUS_TYP_INIT_@ Initialization code for the record components
 @@--     that are of an anonymous type.
+@@--  @_ANCESTOR_TY_PREFIX_@ Ancestor of the record type for tagged derived
+@@--     records.
 @@--
    @_ANONYMOUS_TYP_INIT_@
 @@--  Set the component types
@@ -37,6 +39,10 @@
       (TGen.Strings."+" ("@_DISCR_NAME_@"),
        @_DISCR_TYPE_@_Typ_Ref);
 @@END_TABLE@@
+@@IF@@ @_ANCESTOR_TY_PREFIX_@ /= ""
+   @_TY_PREFIX_@_Typ.Ancestor := TGen.Types.Record_Types.Record_Typ_Access
+   (@_ANCESTOR_TY_PREFIX_@_Typ_Ref);
+@@END_IF@@
 @@END_IF@@
 
    @_TY_PREFIX_@_Typ_Ref := (@_TY_PREFIX_@_Typ'Access);

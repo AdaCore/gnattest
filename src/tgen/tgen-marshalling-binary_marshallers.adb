@@ -122,7 +122,8 @@ package body TGen.Marshalling.Binary_Marshallers is
          return
            Parse
              (Component_Read_Write_Template,
-              Assocs & Assoc ("ACTION", "Write"));
+              Assocs
+              & Assoc ("ACTION", "Write"));
       end Component_Write;
 
       --------------------

@@ -142,7 +142,8 @@ package body TGen.Types is
    begin
       Pack_Name.Delete
         (Index => Self.Last_Comp_Unit_Idx + 1,
-         Count => Count_Type (Self.Name.Last_Index - Self.Last_Comp_Unit_Idx));
+         Count =>
+           Count_Type (Self.Name.Last_Index - Self.Last_Comp_Unit_Idx));
       return Pack_Name;
    end Compilation_Unit_Name;
 

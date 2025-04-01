@@ -1,0 +1,5 @@
+description:
+    Test that TGen is able to generate test for a derived type of a tagged
+    record with a private component.
+
+driver: shell_script

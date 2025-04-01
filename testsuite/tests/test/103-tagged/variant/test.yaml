@@ -1,0 +1,5 @@
+description:
+    Test that TGen is able to generate tests for a tagged record with a variant
+    part.
+
+driver: shell_script

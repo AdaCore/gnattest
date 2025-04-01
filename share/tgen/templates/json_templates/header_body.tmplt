@@ -1,6 +1,8 @@
 @@--  Template for the body part of the header handling.
 @@--  @_GLOBAL_PREFIX_@ Prefix used to prefix all entities local to the unit.
 @@--  @_TY_PREFIX_@ Prefix used to prefix all entities for the current type.
+@@--  @_ANCESTOR_TY_PREFIX_@ Prefix used to prefix the ancestor of the current
+@@--       type (for record types).
 @@--  @_TY_NAME_@ Name of the current type.
 @@--  @_FIRST_NAME_@ Names of the components for the 'First attributes. Only
 @@--       set if the current type is an array.
@@ -9,6 +11,10 @@
 @@--  @_DISCR_NAME_@ Same as above for the discriminants of records.
 @@--  @_COMP_PREFIX_@ Prefixes used for all entity of the index types
 @@--       for arrays, and of the discriminants for records.
+@@--  @_ANCESTORS_DISCR_NAME_@ List of this type's ancestor's discriminants.
+@@--  @_ANCESTORS_COMP_PREFIX_@ Same as COMP_PREFIX, but for this type's
+@@--       ancestor's discriminants.
+@@--  @_HAS_DISCR_@ True if this type has discriminants (excluding ancestors).
 @@--
 @@INCLUDE@@ util.tmplt
    --  Input and Output subprograms for headers of type @_TY_NAME_@
@@ -44,16 +50,27 @@
 @@END_TABLE@@
    end;
 @@ELSE@@
-@@--  This is a discriminated record header. Read the discriminants values.
+@@--  This is a discriminated record header. Read the discriminants values of
+@@--  this type if there are any, otherwise read those of this type's
+@@--  ancestor.
      declare
         Discriminants : constant TGen.JSON.JSON_Value :=
            TGen.JSON.Get (@_GLOBAL_PREFIX_@_JSON, "discriminants");
       begin
+@@IF@@ @_ANCESTOR_TY_PREFIX_@ /= "" and not @_HAS_DISCR_@
+@@TABLE@@
+         @_ANCESTORS_COMP_PREFIX_@_Read
+           (TGen.JSON.Get (Discriminants, "@_ANCESTORS_DISCR_NAME_@"),
+            @_GLOBAL_PREFIX_@_V.@_ANCESTORS_DISCR_NAME_@);
+@@END_TABLE@@
+@@ELSE@@
 @@TABLE@@
          @_COMP_PREFIX_@_Read
            (TGen.JSON.Get (Discriminants, "@_DISCR_NAME_@"),
             @_GLOBAL_PREFIX_@_V.@_DISCR_NAME_@);
 @@END_TABLE@@
+@@END_IF@@
+         null;
       end;
 @@END_IF@@
    end @_TY_PREFIX_@_Read_Header;
@@ -96,6 +113,20 @@
          Discriminants : constant TGen.JSON.JSON_Value :=
             TGen.JSON.Create_Object;
       begin
+@@IF@@ @_ANCESTOR_TY_PREFIX_@ /= "" and not @_HAS_DISCR_@
+@@TABLE@@
+         declare
+            @_GLOBAL_PREFIX_@_JSON_Header : TGen.JSON.JSON_Value;
+         begin
+            @_ANCESTORS_COMP_PREFIX_@_Write
+              (@_GLOBAL_PREFIX_@_JSON_Header, @_GLOBAL_PREFIX_@_V.@_ANCESTORS_DISCR_NAME_@);
+            TGen.JSON.Set_Field
+               (Discriminants,
+                "@_ANCESTORS_DISCR_NAME_@",
+                @_GLOBAL_PREFIX_@_JSON_Header);
+        end;
+@@END_TABLE@@
+@@ELSE@@
 @@TABLE@@
          declare
             @_GLOBAL_PREFIX_@_JSON_Header : TGen.JSON.JSON_Value;
@@ -108,6 +139,7 @@
                 @_GLOBAL_PREFIX_@_JSON_Header);
          end;
 @@END_TABLE@@
+@@END_IF@@
          TGen.JSON.Set_Field
             (@_GLOBAL_PREFIX_@_JSON,
              "discriminants",
@@ -115,6 +147,39 @@
       end;
 @@END_IF@@
    end @_TY_PREFIX_@_Write_Header;
+
+@@IF@@ @_FIRST_NAME_@ = ""
+@@--  For record, create a Write_Header procedure for cases when it is an
+@@--  ancestor.
+   procedure @_TY_PREFIX_@_As_Ancestor_Write_Header
+     (@_GLOBAL_PREFIX_@_JSON : in out TGen.JSON.JSON_Value;
+      @_GLOBAL_PREFIX_@_V    : TGen.TGen_Std.@_TY_NAME_@)
+   is
+   begin
+      declare
+         Discriminants : constant TGen.JSON.JSON_Value :=
+            TGen.JSON.Create_Object;
+      begin
+@@TABLE@@
+         declare
+            @_GLOBAL_PREFIX_@_JSON_Header : TGen.JSON.JSON_Value;
+         begin
+            @_COMP_PREFIX_@_Write
+              (@_GLOBAL_PREFIX_@_JSON_Header, @_GLOBAL_PREFIX_@_V.@_DISCR_NAME_@);
+            TGen.JSON.Set_Field
+               (Discriminants,
+                "@_DISCR_NAME_@",
+                @_GLOBAL_PREFIX_@_JSON_Header);
+         end;
+@@END_TABLE@@
+         null;
+@@IF@@ @_ANCESTOR_TY_NAME_@ /= ""
+      @_ANCESTOR_TY_PREFIX_@_As_Ancestor_Write
+         (@_GLOBAL_PREFIX_@_JSON, TGen.TGen_Std.@_ANCESTOR_TY_NAME_@(@_GLOBAL_PREFIX_@_V));
+@@END_IF@@
+      end;
+   end @_TY_PREFIX_@_As_Ancestor_Write_Header;
+@@END_IF@@
 
    function @_TY_PREFIX_@_Input_Header
      (@_GLOBAL_PREFIX_@_JSON : TGen.JSON.JSON_Value)

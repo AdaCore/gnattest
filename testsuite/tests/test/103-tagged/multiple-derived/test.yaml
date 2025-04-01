@@ -1,0 +1,5 @@
+description:
+    Test that TGen is able to generate test for a derived type of a tagged
+    record with multiple ancestors with fields of different types.
+
+driver: shell_script

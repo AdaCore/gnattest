@@ -46,7 +46,8 @@ package body TGen.Types.Record_Types is
    function Generate_Record_Typ
      (T           : Typ_Access;
       Comp_Strats : in out Strategy_Map;
-      Disc_Values : Disc_Value_Map) return JSON_Value;
+      Disc_Values : Disc_Value_Map) return JSON_Value
+     with Pre => Kind (T.all) in Record_Kind | Base_Record_Kind;
    --  Generate a value for a record type by generating values for its
    --  components using the strategies defined by the Comp_Strats mapping.
 
@@ -58,7 +59,7 @@ package body TGen.Types.Record_Types is
    -- Image --
    -----------
 
-   function Image (Self : Abstract_Record_Typ) return String
+   function Image (Self : Base_Record_Typ) return String
    is (Image_Internal (Self, 0));
 
    function Image (Self : Record_Typ) return String
@@ -69,7 +70,6 @@ package body TGen.Types.Record_Types is
       Padding       : Natural := 0;
       Discriminated : Boolean;
       Variant       : Variant_Part_Acc := null) return Unbounded_String;
-   --  FIXME
 
    -------------------------------
    -- Image_Internal_Components --
@@ -86,7 +86,6 @@ package body TGen.Types.Record_Types is
       function Image_Internal_Variant
         (Var : Variant_Part_Acc; Padding : Natural := 0)
          return Unbounded_String;
-      --  FIXME
 
       ----------------------------
       -- Image_Internal_Variant --
@@ -208,7 +207,7 @@ package body TGen.Types.Record_Types is
    --------------------
 
    function Image_Internal
-     (Self : Abstract_Record_Typ; Padding : Natural := 0) return String
+     (Self : Base_Record_Typ; Padding : Natural := 0) return String
    is (Typ (Self).Image
        & To_String
            (Image_Internal_Components
@@ -223,7 +222,7 @@ package body TGen.Types.Record_Types is
       use Component_Maps;
 
       function Image_Internal_Discriminants return Unbounded_String;
-      --  FIXME
+      --  Image of Self's discriminants
 
       ----------------------------------
       -- Image_Internal_Discriminants --
@@ -298,7 +297,7 @@ package body TGen.Types.Record_Types is
    ---------------------
 
    function Get_Diagnostics
-     (Self : Abstract_Record_Typ; Prefix : String := "") return String_Vector
+     (Self : Base_Record_Typ; Prefix : String := "") return String_Vector
    is
       Rec_Prefix : constant String := To_Ada (Self.Name);
    begin
@@ -307,7 +306,7 @@ package body TGen.Types.Record_Types is
 
    procedure Encode_Components
      (Components : in out JSON_Value; Comp_Map : Component_Map);
-   --  FIXME
+   --  Encode the components in Comp_Map in the JSON value Components
 
    -----------------------
    -- Encode_Components --
@@ -334,7 +333,7 @@ package body TGen.Types.Record_Types is
    ------------
 
    function Encode
-     (Self : Abstract_Record_Typ; Val : JSON_Value) return JSON_Value
+     (Self : Base_Record_Typ; Val : JSON_Value) return JSON_Value
    is
       Components : JSON_Value := Val.Get ("components").Clone;
    begin
@@ -343,27 +342,6 @@ package body TGen.Types.Record_Types is
          Res.Set_Field ("components", Components);
       end return;
    end Encode;
-
-   --  Random generation for record types
-
-   --------------
-   -- Generate --
-   --------------
-
-   function Generate
-     (S : in out Record_Strategy_Type; Disc_Values : Disc_Value_Map)
-      return JSON_Value
-   is
-      Result : constant JSON_Value := Create_Object;
-   begin
-      --  Set the component values
-
-      Set_Field
-        (Result,
-         "components",
-         Generate_Record_Typ (S.T, S.Component_Strats, Disc_Values));
-      return Result;
-   end Generate;
 
    procedure Default_Strategy_Components
      (Strat : in out Record_Strategy_Type'Class; Comp_Map : Component_Map);
@@ -395,7 +373,7 @@ package body TGen.Types.Record_Types is
    ----------------------
 
    function Default_Strategy
-     (Self  : Abstract_Record_Typ)
+     (Self  : Base_Record_Typ)
       return Strategy_Type'Class
    is
    begin
@@ -552,7 +530,7 @@ package body TGen.Types.Record_Types is
    ---------------------------
 
    function Default_Enum_Strategy
-     (Self : Abstract_Record_Typ) return Enum_Strategy_Type'Class
+     (Self : Base_Record_Typ) return Enum_Strategy_Type'Class
    is
       Strat : Enum_Record_Strategy_Type;
    begin
@@ -676,10 +654,27 @@ package body TGen.Types.Record_Types is
       return Component_Maps.Map
    is
       Res : Component_Maps.Map := Self.Component_Types.Copy;
+      Cur_Ancestor : Record_Typ_Access := Self.Ancestor;
    begin
       if Self.Variant /= null then
          Fill_Components (Self.Variant.all, Discriminant_Values, Res);
       end if;
+
+      while Cur_Ancestor /= null loop
+         declare
+            use Component_Maps;
+
+            Ancestor_Res : constant Map :=
+              Components_For_Discriminants
+                (Cur_Ancestor.all, Discriminant_Values);
+         begin
+            for Comp in Ancestor_Res.Iterate loop
+               Res.Include (Key (Comp), Element (Comp));
+            end loop;
+         end;
+         Cur_Ancestor := Cur_Ancestor.Ancestor;
+      end loop;
+
       return Res;
    end Components_For_Discriminants;
 
@@ -784,7 +779,7 @@ package body TGen.Types.Record_Types is
    is
       Rec_Prefix : constant String := To_Ada (Self.Name);
       Res        : String_Vector :=
-        Abstract_Record_Typ (Self).Get_Diagnostics (Prefix);
+        Base_Record_Typ (Self).Get_Diagnostics (Prefix);
 
       function Inspect_Variant (Var : Variant_Part_Acc) return String_Vector
       with Pre => Is_Discriminated (Self);
@@ -851,12 +846,36 @@ package body TGen.Types.Record_Types is
       end Inspect_Variant;
 
       Abstract_Supports_Gen : constant Boolean :=
-        Abstract_Record_Typ (Self).Supports_Gen;
+        Base_Record_Typ (Self).Supports_Gen;
    begin
       return
         (if not Is_Discriminated (Self) then Abstract_Supports_Gen
          else (Abstract_Supports_Gen and then Inspect_Variant (Self.Variant)));
    end Supports_Gen;
+
+   ------------------------
+   -- Is_Valid_Component --
+   ------------------------
+
+   function Is_Valid_Component
+     (Self : Base_Record_Typ'Class; Comp_Name : Unbounded_String)
+      return Boolean
+   is
+      Found : Boolean := Self.Component_Types.Contains (Comp_Name);
+   begin
+      --  If it is not a component of this type and this is a derived type,
+      --  also check the components of all its ancestors.
+
+      if not Found
+        and then Self.Kind = Record_Kind
+        and then Record_Typ (Self).Is_Derived_Type
+      then
+         Found :=
+           Is_Valid_Component (Record_Typ (Self).Ancestor.all, Comp_Name);
+      end if;
+
+      return Found;
+   end Is_Valid_Component;
 
    ------------------
    -- Free_Content --
@@ -873,12 +892,15 @@ package body TGen.Types.Record_Types is
    -- Get_All_Components --
    ------------------------
 
-   function Get_All_Components (Self : Record_Typ) return Component_Map is
+   function Get_All_Components (Self : Record_Typ) return Component_Map
+   is
       Res : Component_Map := Self.Component_Types;
 
-      procedure Get_All_Components_Rec (Variant_Part : Variant_Part_Acc);
+      procedure Get_Variant_Components (Variant_Part : Variant_Part_Acc);
+      --  Recursive procedure inspecting (possibly nested) variants of Self to
+      --  retrieve all relevant components of this record.
 
-      procedure Get_All_Components_Rec (Variant_Part : Variant_Part_Acc) is
+      procedure Get_Variant_Components (Variant_Part : Variant_Part_Acc) is
       begin
          if Variant_Part /= null then
             for Choice of Variant_Part.Variant_Choices loop
@@ -892,12 +914,36 @@ package body TGen.Types.Record_Types is
                      Res.Insert (Comp_Name, Comp_Type);
                   end;
                end loop;
-               Get_All_Components_Rec (Choice.Variant);
+               Get_Variant_Components (Choice.Variant);
             end loop;
          end if;
-      end Get_All_Components_Rec;
+      end Get_Variant_Components;
    begin
-      Get_All_Components_Rec (Self.Variant);
+      Get_Variant_Components (Self.Variant);
+
+      --  If this is a tagged extension we must look for the components of all
+      --  its ancestors and append them to Res.
+
+      if Self.Ancestor /= null then
+         declare
+            use Component_Maps;
+
+            Ancestor_Components : constant Component_Map :=
+              Get_All_Components (Self.Ancestor.all);
+         begin
+            for Comp_Cursor in Ancestor_Components.Iterate loop
+               declare
+                  Dummy_Name : constant Unbounded_String :=
+                    Key (Comp_Cursor);
+                  Dummy_Type : constant Typ_Access := Element (Comp_Cursor);
+               begin
+                  null;
+               end;
+                  Res.Include (Key (Comp_Cursor), Element (Comp_Cursor));
+            end loop;
+         end;
+      end if;
+
       return Res;
    end Get_All_Components;
 
@@ -912,36 +958,55 @@ package body TGen.Types.Record_Types is
    is
       use Component_Maps;
 
-      Rec : Abstract_Record_Typ'Class
-        renames Abstract_Record_Typ'Class (T.all);
+      Rec : Base_Record_Typ'Class
+      renames Base_Record_Typ'Class (T.all);
+      --  The base record type for which we want to generate component values.
+
       Res : constant JSON_Value := Create_Object;
+
+      procedure Generate_Val
+        (Comp_Name : Unbounded_String; Comp_Strat : Strategy_Acc);
+      --  Generate a value for the component of name Comp_Name with strategy
+      --  Comp_Strat.
+
+      ------------------
+      -- Generate_Val --
+      ------------------
+
+      procedure Generate_Val
+        (Comp_Name : Unbounded_String; Comp_Strat : Strategy_Acc) is
+      begin
+         Set_Field
+           (Val        => Res,
+            Field_Name => +Comp_Name,
+            Field      => Comp_Strat.Generate (Disc_Values));
+      end Generate_Val;
+
    begin
-      for Comp in Rec.Component_Types.Iterate loop
-         declare
-            Comp_Name : constant Unbounded_String := Key (Comp);
+      --  Go through all components and generate a value for each
 
-            procedure Generate_Val
-              (Comp_Name : Unbounded_String; Comp_Strat : Strategy_Acc);
-
-            ------------------
-            -- Generate_Val --
-            ------------------
-
-            procedure Generate_Val
-              (Comp_Name : Unbounded_String; Comp_Strat : Strategy_Acc) is
-            begin
-               Set_Field
-                 (Val        => Res,
-                  Field_Name => +Comp_Name,
-                  Field      => Comp_Strat.Generate (Disc_Values));
-            end Generate_Val;
-         begin
-            --  Generate a value
-
-            Strategy_Maps.Query_Element
-              (Comp_Strats.Find (Comp_Name), Generate_Val'Access);
-         end;
+      for Component in Rec.Component_Types.Iterate loop
+         Strategy_Maps.Query_Element
+           (Comp_Strats.Find (Key (Component)), Generate_Val'Access);
       end loop;
+
+      --  If T is a record type derived from another we also must generate
+      --  values for all the components of its ancestor types.
+
+      if Kind (T.all) = Record_Kind
+        and then Record_Typ (T.all).Ancestor /= null
+      then
+         declare
+            Ancestor : constant Typ_Access :=
+              Typ_Access (Record_Typ_Access (T).Ancestor);
+            Ancestor_Res : constant JSON_Value :=
+              Generate_Record_Typ
+                (Ancestor, Comp_Strats, Disc_Value_Maps.Empty_Map);
+         begin
+            Res.Append (Ancestor_Res);
+         end;
+      end if;
+
       return Res;
    end Generate_Record_Typ;
 
@@ -1120,11 +1185,11 @@ package body TGen.Types.Record_Types is
    --------------
 
    function Generate
-     (S : in out Disc_Record_Strategy_Type; Disc_Context : Disc_Value_Map)
+     (S : in out Record_Strategy_Type; Disc_Values : Disc_Value_Map)
       return JSON_Value
    is
-      T           : constant Typ'Class := S.T.all;
-      Disc_Record : constant Record_Typ := Record_Typ (T);
+      T   : constant Typ'Class := S.T.all;
+      Rec : constant Record_Typ := Record_Typ (T);
 
       use Disc_Value_Maps;
 
@@ -1137,51 +1202,54 @@ package body TGen.Types.Record_Types is
    begin
       --  Start of by filling the discriminant context
 
-      if Disc_Record.Constrained then
+      if Rec.Is_Discriminated then
+         if Rec.Constrained then
 
-         --  If there are constraints, then we have to get their actual value
-         --  from the Disc_Values.
+            --  If there are constraints, then we have to get their actual
+            --  value from the Disc_Values.
 
-         Resolve_Disc_Value_From_Ctx
-           (Global_Ctx => Disc_Context,
-            T          => S.T,
-            Local_Ctx  => Current_Context);
-      else
-         for D_Strat_Cursor in S.Disc_Strats.Iterate loop
-            declare
-               procedure Generate_Val
-                 (Disc_Name : Unbounded_String; Disc_Strat : Strategy_Acc);
+            Resolve_Disc_Value_From_Ctx
+              (Global_Ctx => Disc_Values,
+               T          => S.T,
+               Local_Ctx  => Current_Context);
+         else
+            for D_Strat_Cursor in S.Disc_Strats.Iterate loop
+               declare
+                  procedure Generate_Val
+                    (Disc_Name : Unbounded_String; Disc_Strat : Strategy_Acc);
 
-               procedure Generate_Val
-                 (Disc_Name : Unbounded_String; Disc_Strat : Strategy_Acc) is
+                  procedure Generate_Val
+                    (Disc_Name : Unbounded_String; Disc_Strat : Strategy_Acc)
+                  is
+                  begin
+                     Current_Context.Insert
+                       (Disc_Name, Disc_Strat.Generate (Current_Context));
+                  end Generate_Val;
+
                begin
-                  Current_Context.Insert
-                    (Disc_Name, Disc_Strat.Generate (Current_Context));
-               end Generate_Val;
+                  Strategy_Maps.Query_Element
+                    (D_Strat_Cursor, Generate_Val'Access);
+               end;
+            end loop;
+         end if;
 
-            begin
-               Strategy_Maps.Query_Element
-                 (D_Strat_Cursor, Generate_Val'Access);
-            end;
+         --  Write the generated discriminant values; they are part of the
+         --  generated record value.
+
+         for Disc_Cursor in Current_Context.Iterate loop
+            Set_Field
+              (Val        => Discriminants,
+               Field_Name => +Key (Disc_Cursor),
+               Field      => Element (Disc_Cursor));
          end loop;
+         Set_Field (Result, "discriminants", Discriminants);
       end if;
-
-      --  Write the generated discriminant values; they are part of the
-      --  generated record value.
-
-      for Disc_Cursor in Current_Context.Iterate loop
-         Set_Field
-           (Val        => Discriminants,
-            Field_Name => +Key (Disc_Cursor),
-            Field      => Element (Disc_Cursor));
-      end loop;
-      Set_Field (Result, "discriminants", Discriminants);
 
       --  Now, generate values for the components
 
       declare
          Components : constant Component_Map :=
-           Disc_Record.Components_For_Discriminants (Current_Context);
+           Rec.Components_For_Discriminants (Current_Context);
 
          --  Create the non discriminated record
          R     : constant Record_Typ :=
@@ -1189,12 +1257,12 @@ package body TGen.Types.Record_Types is
             Mutable            => False,
             Discriminant_Types => Component_Maps.Empty_Map,
             Variant            => null,
-            Name               => Disc_Record.Name,
-            Last_Comp_Unit_Idx => Disc_Record.Last_Comp_Unit_Idx,
+            Name               => Rec.Name,
+            Last_Comp_Unit_Idx => Rec.Last_Comp_Unit_Idx,
             Component_Types    => Components,
-            Static_Gen         => Disc_Record.Static_Gen,
-            Fully_Private      => Disc_Record.Fully_Private,
-            Private_Extension  => Disc_Record.Private_Extension,
+            Static_Gen         => Rec.Static_Gen,
+            Fully_Private      => Rec.Fully_Private,
+            Private_Extension  => Rec.Private_Extension,
             others             => <>);
          R_Ref      : Typ_Access;
       begin
@@ -1218,22 +1286,22 @@ package body TGen.Types.Record_Types is
    begin
       Strat.T := Self'Unrestricted_Access;
 
-      if Is_Discriminated (Self) then
-         --  Pick the strategy for each discriminant
-         for Disc in Self.Discriminant_Types.Iterate loop
-            declare
-               Disc_Name : constant Unbounded_String := Key (Disc);
-            begin
-               Strat.Disc_Strats.Insert
-                 (Disc_Name,
-                  new Strategy_Type'Class'
-                    (Self.Pick_Strat_For_Disc
-                       (Disc_Name, Discrete_Typ'Class (Element (Disc).all))));
-            end;
-         end loop;
-      end if;
+      --  Pick the strategy for each discriminant
+
+      for Disc in Self.Discriminant_Types.Iterate loop
+         declare
+            Disc_Name : constant Unbounded_String := Key (Disc);
+         begin
+            Strat.Disc_Strats.Insert
+              (Disc_Name,
+               new Strategy_Type'Class'
+                 (Self.Pick_Strat_For_Disc
+                    (Disc_Name, Discrete_Typ'Class (Element (Disc).all))));
+         end;
+      end loop;
 
       --  Generate the strategies for the record components
+
       Default_Strategy_Components (Strat, Self.Get_All_Components);
 
       return Strat;
@@ -1624,7 +1692,7 @@ package body TGen.Types.Record_Types is
       Res : Disc_Record_Enum_Strat_Type;
    begin
       if not Is_Discriminated (Self) then
-         return Abstract_Record_Typ (Self).Default_Enum_Strategy;
+         return Base_Record_Typ (Self).Default_Enum_Strategy;
       end if;
 
       Res.T := Self'Unrestricted_Access;
@@ -1769,6 +1837,7 @@ package body TGen.Types.Record_Types is
       return JSON_Value
    is
       use Component_Maps;
+
       FN_Typ : constant Function_Typ'Class := As_Function_Typ (S.T);
       Result : constant JSON_Value := Create_Object;
 
@@ -1777,16 +1846,19 @@ package body TGen.Types.Record_Types is
       Param_Values  : constant JSON_Value := Create_Object;
       Global_Values : constant JSON_Value := Create_Object;
    begin
-      --  Generate the parameter values + global values
+      --  Generate the parameter values + global values by representing the
+      --  function's formals as an abstract record.
 
       declare
-         FN_As_Rec_Typ     : Abstract_Record_Typ;
+         FN_As_Rec_Typ     : Base_Record_Typ;
          FN_As_Rec_Typ_Ref : Typ_Access;
       begin
          FN_As_Rec_Typ.Component_Types := FN_Typ.Component_Types;
+
          for Cur in FN_Typ.Globals.Iterate loop
             FN_As_Rec_Typ.Component_Types.Insert (Key (Cur), Element (Cur));
          end loop;
+
          FN_As_Rec_Typ_Ref := FN_As_Rec_Typ'Unrestricted_Access;
          Generated_Value :=
            Generate_Record_Typ

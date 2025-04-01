@@ -1,6 +1,8 @@
 @@--  Template for the body part of the header handling.
 @@--  @_GLOBAL_PREFIX_@ Prefix used to prefix all entities local to the unit.
 @@--  @_TY_PREFIX_@ Prefix used to prefix all entities for the current type.
+@@--  @_ANCESTOR_TY_PREFIX_@ Prefix used to prefix the ancestor of the current
+@@--       type (for record types).
 @@--  @_TY_NAME_@ Name of the current type.
 @@--  @_FIRST_NAME_@ Names of the components for the 'First attributes. Only
 @@--       set if the current type is an array.
@@ -10,9 +12,13 @@
 @@--  @_DISCR_NAME_@ Same as above for the discriminants of records.
 @@--  @_COMP_PREFIX_@ Prefixes used for all entity of the index types
 @@--       for arrays, and of the discriminants for records.
+@@--  @_ANCESTORS_DISCR_NAME_@ List of this type's ancestor's discriminants.
+@@--  @_ANCESTORS_COMP_PREFIX_@ Same as COMP_PREFIX, but for this type's
+@@--       ancestor's discriminants.
 @@--  @_IS_ENUM_@ Boolean, indicates if the index type is an enumerated type
 @@--  @_ARR_LIMIT_@ Number of elements in one dimension beyond which the array
 @@--       instantiation should not be done.
+@@--  @_HAS_DISCR_@ True if this type has discriminants (excluding ancestors).
 @@--
 @@INCLUDE@@ util.tmplt
    --  Input and Output subprograms for headers of type @_TY_NAME_@
@@ -34,11 +40,20 @@
          @_GLOBAL_PREFIX_@_Offset, @_GLOBAL_PREFIX_@_V.@_LAST_NAME_@);
 @@END_TABLE@@
 @@ELSE@@
+
+@@IF@@ @_ANCESTOR_TY_PREFIX_@ /= "" and not @_HAS_DISCR_@
+@@TABLE@@
+      @_ANCESTORS_COMP_PREFIX_@_Read
+        (@_GLOBAL_PREFIX_@_Stream, @_GLOBAL_PREFIX_@_Buffer,
+         @_GLOBAL_PREFIX_@_Offset, @_GLOBAL_PREFIX_@_V.@_ANCESTORS_DISCR_NAME_@);
+@@END_TABLE@@
+@@ELSE@@
 @@TABLE@@
       @_COMP_PREFIX_@_Read
         (@_GLOBAL_PREFIX_@_Stream, @_GLOBAL_PREFIX_@_Buffer,
          @_GLOBAL_PREFIX_@_Offset, @_GLOBAL_PREFIX_@_V.@_DISCR_NAME_@);
 @@END_TABLE@@
+@@END_IF@@
 @@END_IF@@
    end @_TY_PREFIX_@_Read_Header;
 
@@ -59,6 +74,13 @@
          @_GLOBAL_PREFIX_@_Offset, @_GLOBAL_PREFIX_@_V'Last@_ADA_DIM_@);
 @@END_TABLE@@
 @@ELSE@@
+@@IF@@ @_ANCESTOR_TY_PREFIX_@ /= ""
+@@TABLE@@
+      @_ANCESTORS_COMP_PREFIX_@_Write
+        (@_GLOBAL_PREFIX_@_Stream, @_GLOBAL_PREFIX_@_Buffer,
+         @_GLOBAL_PREFIX_@_Offset, TGen.TGen_Std.@_ANCESTOR_TY_NAME_@(@_GLOBAL_PREFIX_@_V).@_ANCESTORS_DISCR_NAME_@);
+@@END_TABLE@@
+@@END_IF@@
 @@TABLE@@
       @_COMP_PREFIX_@_Write
         (@_GLOBAL_PREFIX_@_Stream, @_GLOBAL_PREFIX_@_Buffer,
@@ -99,9 +121,15 @@
             @_LPAR()_@@_GLOBAL_PREFIX_@_H.@_FIRST_NAME_@ .. @_GLOBAL_PREFIX_@_H.@_LAST_NAME_@@_RVPAR()_@
 @@END_TABLE@@
 @@ELSE@@
+@@IF@@ @_ANCESTOR_TY_PREFIX_@ /= "" and not @_HAS_DISCR_@
+@@TABLE'ALIGN_ON("=>")@@
+            @_LPAR()_@@_ANCESTORS_DISCR_NAME_@ => @_GLOBAL_PREFIX_@_H.@_ANCESTORS_DISCR_NAME_@@_RVPAR()_@
+@@END_TABLE@@
+@@ELSE@@
 @@TABLE'ALIGN_ON("=>")@@
             @_LPAR()_@@_DISCR_NAME_@ => @_GLOBAL_PREFIX_@_H.@_DISCR_NAME_@@_RVPAR()_@
 @@END_TABLE@@
+@@END_IF@@
 @@END_IF@@
       do
          null;
@@ -116,6 +144,7 @@
       @_GLOBAL_PREFIX_@_Buffer : Interfaces.Unsigned_8 := 0;
       @_GLOBAL_PREFIX_@_Offset : TGen.Marshalling_Lib.Offset_Type := 0;
    begin
+      null;
       return @_GLOBAL_PREFIX_@_V : @_TY_PREFIX_@_Header_Type do
         @_TY_PREFIX_@_Read_Header
            (@_GLOBAL_PREFIX_@_Stream, @_GLOBAL_PREFIX_@_Buffer,
@@ -150,6 +179,9 @@
 @@TABLE@@
          @_GLOBAL_PREFIX_@_Nb_Bits := @_GLOBAL_PREFIX_@_Nb_Bits + @_COMP_PREFIX_@_Size;
 @@END_TABLE@@
+@@IF@@ @_ANCESTOR_TY_PREFIX_@ /= ""
+         @_GLOBAL_PREFIX_@_Nb_Bits := @_GLOBAL_PREFIX_@_Nb_Bits + @_ANCESTOR_TY_PREFIX_@_Bit_Size_Header;
+@@END_IF@@
 @@END_IF@@
       end return;
    end @_TY_PREFIX_@_Bit_Size_Header;

@@ -24,7 +24,9 @@
 @@END_IF@@
    @_TY_PREFIX_@_Typ : aliased TGen.Types.Record_Types.@_RECORD_TYP_@ :=
       (Name       => TGen.Strings.To_Qualified_Name ("@_TY_NAME_@"),
+@@IF@@ @_MUTABLE_@ /= ""
        Mutable     => @_MUTABLE_@,
        Constrained => @_HAS_CONSTRAINTS_@,
+@@END_IF@@
        Static_Gen => True,
        others     => <>);

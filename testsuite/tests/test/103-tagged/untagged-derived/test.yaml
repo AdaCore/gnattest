@@ -1,0 +1,5 @@
+description:
+    Test that TGen is able to generate tests for a record derived from a
+    discriminated untagged record.
+
+driver: shell_script

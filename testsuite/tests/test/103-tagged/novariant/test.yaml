@@ -1,0 +1,5 @@
+description:
+    Test that TGen is able to generate tests for discriminated tagged
+    record with no variant part.
+
+driver: shell_script

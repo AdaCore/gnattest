@@ -87,6 +87,8 @@ package TGen.Templates is
         Template_Folder & "array_read_write.tmplt";
       Component_Write_Template         : constant String :=
         Template_Folder & "component_write.tmplt";
+      Ancestor_Component_Write_Template : constant String :=
+        Template_Folder & "ancestor_component_write.tmplt";
       Component_Read_Template          : constant String :=
         Template_Folder & "component_read.tmplt";
       Component_Read_Indexed_Template  : constant String :=
@@ -113,7 +115,7 @@ package TGen.Templates is
         Template_Folder & "scalar_read_write.tmplt";
       Variant_Read_Write_Template      : constant String :=
         Template_Folder & "variant_read_write.tmplt";
-      Function_TC_Dump_Template        : constant String :=
+      Function_TC_Dump_Template         : constant String :=
         Template_Folder & "function_tc_dump.tmplt";
       Derived_Private_Subtype_Template : constant String :=
         Template_Folder & "derived_private_subtype.tmplt";

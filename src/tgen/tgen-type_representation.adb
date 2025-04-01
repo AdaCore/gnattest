@@ -530,7 +530,7 @@ package body TGen.Type_Representation is
       --  Variant_Index is incremented every time this procedure is called.
 
       procedure Collect_Info_For_Record
-        (T               : Record_Typ'Class;
+        (T               : Base_Record_Typ'Class;
          Record_Typ_Decl : out Unbounded_String;
          Record_Typ_Init : out Unbounded_String);
       --  Return the specification and initialization for a record type
@@ -722,7 +722,7 @@ package body TGen.Type_Representation is
       -----------------------------
 
       procedure Collect_Info_For_Record
-        (T               : Record_Typ'Class;
+        (T               : Base_Record_Typ'Class;
          Record_Typ_Decl : out Unbounded_String;
          Record_Typ_Init : out Unbounded_String)
       is
@@ -732,40 +732,103 @@ package body TGen.Type_Representation is
          Comp_Types  : Vector_Tag;
 
          Anonymous_Typ_Inits, Anonymous_Typ_Decls : Unbounded_String;
+
+         Typ_Kind : constant String :=
+           (if Kind (T) = Record_Kind then "Record_Typ" else "Function_Typ");
+
+         procedure Handle_Components
+           (Comp_Map      : Component_Map;
+            Ancestor      : Record_Typ_Access := null;
+            Discriminants : Boolean := False);
+         --  Handle all components of Comp_Map. For record types that are
+         --  derived types, Ancestor will point to its ancestor's record type.
+         --  All components of the ancestor must be processed too.
+
+         procedure Handle_Components
+           (Comp_Map      : Component_Map;
+            Ancestor      : Record_Typ_Access := null;
+            Discriminants : Boolean := False)
+         is
+         begin
+            for Cur in Comp_Map.Iterate loop
+               declare
+                  use Component_Maps;
+
+                  Comp_Name : constant Unbounded_String := Key (Cur);
+                  Comp_Ty_Prefix     : Unbounded_String;
+                  Anonymous_Typ_Init : Unbounded_String;
+                  Anonymous_Typ_Decl : Unbounded_String;
+               begin
+                  Collect_Info_For_Component
+                    (Element (Cur).all,
+                     Anonymous_Typ_Decl,
+                     Anonymous_Typ_Init,
+                     Comp_Ty_Prefix);
+
+                  Anonymous_Typ_Inits :=
+                    Anonymous_Typ_Inits & Anonymous_Typ_Init;
+                  Anonymous_Typ_Decls :=
+                    Anonymous_Typ_Decls & Anonymous_Typ_Decl;
+
+                  if Discriminants then
+                     Discr_Names := Discr_Names & Comp_Name;
+                     Discr_Types := Discr_Types & Comp_Ty_Prefix;
+                  else
+                     Comp_Names := Comp_Names & Comp_Name;
+                     Comp_Types := Comp_Types & Comp_Ty_Prefix;
+                  end if;
+               end;
+            end loop;
+
+            if Ancestor /= null then
+               if Discriminants then
+                  Handle_Components
+                    (Ancestor.Discriminant_Types,
+                     Ancestor.Ancestor,
+                     Discriminants);
+               else
+                  Handle_Components
+                    (Ancestor.Component_Types, Ancestor.Ancestor);
+               end if;
+            end if;
+         end Handle_Components;
+
       begin
          if T in Record_Typ'Class then
             declare
-               Rec_T : constant Record_Typ'Class := T;
+               Rec_T : constant Record_Typ'Class := Record_Typ (T);
                Variant_Decl, Variant_Init : Unbounded_String;
             begin
-               if T in Function_Typ'Class then
-                  Insert (Assocs, Assoc ("RECORD_TYP", "Function_Typ"));
-               else
-                  Insert (Assocs, Assoc ("RECORD_TYP", "Record_Typ"));
-               end if;
-
                Insert (Assocs, Assoc ("HAS_CONSTRAINTS", Rec_T.Constrained));
                Insert (Assocs, Assoc ("MUTABLE", Rec_T.Mutable));
+               Insert (Assocs,
+                       Assoc
+                         ("ANCESTOR_TY_PREFIX",
+                          (if Rec_T.Ancestor /= null
+                           then Rec_T.Ancestor.Slug
+                           else "")));
 
                --  Start off by encoding the constraints
 
-               if Is_Discriminated (Rec_T) and then Rec_T.Constrained then
-                  declare
-                     Constraint_Decl, Constraint_Init : Unbounded_String;
-                  begin
-                     Collect_Info_For_Constraint
-                       (Ty_Prefix,
-                        Discriminant_Constraints'
-                          (Constraint_Map => Rec_T.Discriminant_Constraint),
-                        Constraint_Decl_Template,
-                        Constraint_Init_Template,
-                        Constraint_Decl,
-                        Constraint_Init);
-                     Insert
-                       (Assocs, Assoc ("CONSTRAINT_SPEC", Constraint_Decl));
-                     Insert
-                       (Assocs, Assoc ("CONSTRAINT_INIT", Constraint_Init));
-                  end;
+               if Is_Discriminated (Rec_T) then
+                  if Rec_T.Constrained then
+                     declare
+                        Constraint_Decl, Constraint_Init : Unbounded_String;
+                     begin
+                        Collect_Info_For_Constraint
+                          (Ty_Prefix,
+                           Discriminant_Constraints'
+                             (Constraint_Map => Rec_T.Discriminant_Constraint),
+                           Constraint_Decl_Template,
+                           Constraint_Init_Template,
+                           Constraint_Decl,
+                           Constraint_Init);
+                        Insert
+                          (Assocs, Assoc ("CONSTRAINT_SPEC", Constraint_Decl));
+                        Insert
+                          (Assocs, Assoc ("CONSTRAINT_INIT", Constraint_Init));
+                     end;
+                  end if;
 
                   if Rec_T.Variant /= null then
                      Collect_Info_For_Variant
@@ -780,52 +843,21 @@ package body TGen.Type_Representation is
                      Insert (Assocs, Assoc ("VARIANT_NUMBER", 1));
                   end if;
 
-                  for Cur in Rec_T.Discriminant_Types.Iterate loop
-                     declare
-                        use Component_Maps;
-                        Discr_Name : constant Unbounded_String := Key (Cur);
-                        Discr_Ty_Prefix    :  Unbounded_String;
-                        Anonymous_Typ_Init :  Unbounded_String;
-                        Anonymous_Typ_Decl :  Unbounded_String;
-                     begin
-                        Collect_Info_For_Component
-                          (Element (Cur).all,
-                           Anonymous_Typ_Decl,
-                           Anonymous_Typ_Init,
-                           Discr_Ty_Prefix);
-                        Anonymous_Typ_Inits :=
-                          Anonymous_Typ_Inits & Anonymous_Typ_Init;
-                        Anonymous_Typ_Decls :=
-                          Anonymous_Typ_Decls & Anonymous_Typ_Decl;
-                        Discr_Names := Discr_Names & Discr_Name;
-                        Discr_Types := Discr_Types & Discr_Ty_Prefix;
-                     end;
-                  end loop;
+                  --  Handle the type's discriminants
+                  Handle_Components
+                    (Rec_T.Discriminant_Types,
+                     Record_Typ (Rec_T).Ancestor,
+                     Discriminants => True);
                end if;
             end;
          end if;
 
-         --  Common processing for record / function types
-
-         for Cur in T.Component_Types.Iterate loop
-            declare
-               use Component_Maps;
-               Comp_Name                              :
-               constant Unbounded_String := Key (Cur);
-               Comp_Ty_Prefix                         : Unbounded_String;
-               Anonymous_Typ_Init, Anonymous_Typ_Decl : Unbounded_String;
-            begin
-               Collect_Info_For_Component
-                 (Element (Cur).all,
-                  Anonymous_Typ_Decl,
-                  Anonymous_Typ_Init,
-                  Comp_Ty_Prefix);
-               Anonymous_Typ_Inits := Anonymous_Typ_Inits & Anonymous_Typ_Init;
-               Anonymous_Typ_Decls := Anonymous_Typ_Decls & Anonymous_Typ_Decl;
-               Comp_Names := Comp_Names & Comp_Name;
-               Comp_Types := Comp_Types & Comp_Ty_Prefix;
-            end;
-         end loop;
+         --  Process all this record / function type's components.
+         Handle_Components
+           (T.Component_Types,
+            (if Kind (T) = Record_Kind
+             then Record_Typ (T).Ancestor
+             else null));
 
          --  If this type is a function type, also get the order of the
          --  components.
@@ -857,18 +889,20 @@ package body TGen.Type_Representation is
 
          --  Print the templates
 
+         Insert (Assocs, Assoc ("RECORD_TYP", Typ_Kind));
          Insert (Assocs, Assoc ("ANONYMOUS_TYP_SPEC", Anonymous_Typ_Decls));
          Insert (Assocs, Assoc ("ANONYMOUS_TYP_INIT", Anonymous_Typ_Inits));
          Insert (Assocs, Assoc ("COMP_NAME", Comp_Names));
          Insert (Assocs, Assoc ("COMP_TYPE", Comp_Types));
          Insert (Assocs, Assoc ("DISCR_NAME", Discr_Names));
          Insert (Assocs, Assoc ("DISCR_TYPE", Discr_Types));
+
          Record_Typ_Decl := Parse (Record_Typ_Decl_Template, Assocs);
-         if T in Function_Typ'Class then
-            Record_Typ_Init := Parse (Function_Typ_Init_Template, Assocs);
-         else
-            Record_Typ_Init := Null_Unbounded_String;
-         end if;
+         Record_Typ_Init :=
+           (if T in Function_Typ'Class
+            then Parse (Function_Typ_Init_Template, Assocs)
+            else Null_Unbounded_String);
+
          Record_Typ_Init :=
            Record_Typ_Init
            & Unbounded_String'(Parse (Record_Typ_Init_Template, Assocs));
@@ -1004,12 +1038,12 @@ package body TGen.Type_Representation is
          end;
       end if;
 
-      if Typ in Record_Typ'Class then
+      if Typ in Base_Record_Typ'Class then
          declare
             Record_Typ_Init, Record_Typ_Decl : Unbounded_String;
          begin
             Collect_Info_For_Record
-              (Record_Typ'Class (Typ), Record_Typ_Decl, Record_Typ_Init);
+              (Base_Record_Typ'Class (Typ), Record_Typ_Decl, Record_Typ_Init);
             Put_Line
               (F_Spec,
                "   " & Ty_Prefix & "_Typ_Ref : TGen.Types.Typ_Access;");

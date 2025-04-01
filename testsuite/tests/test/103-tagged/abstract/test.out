@@ -1,0 +1,25 @@
+Error during parameter translation of subprogram Pkg.Test_Root:
+pkg.test_root.Val: pkg.root is not supported (Abstract types are not supported)
+
+gnattest: Error while processing <SubpDecl ["Test_Root"] pkg.ads:15:4-15:37>:
+pkg.test_root.Val: pkg.root is not supported (Abstract types are not supported)
+
+gnattest: Error while processing <SubpDecl ["Test_Bar"] pkg.ads:21:3-21:34>:
+pkg.test_bar.Val: pkg.bar is not supported (Abstract types are not supported)
+
+gnattest: Error while processing <SubpDecl ["Test_Derived"] pkg.ads:27:4-27:43>:
+pkg.test_derived.Val: pkg.derived is not supported (Abstract types are not supported)
+
+Units remaining: 3     
+Units remaining: 2     
+Units remaining: 1     
+pkg.ads:8:4: info: corresponding test PASSED
+pkg.ads:8:4: info: corresponding test PASSED
+pkg.ads:8:4: info: corresponding test PASSED
+pkg.ads:8:4: info: corresponding test PASSED
+pkg.ads:8:4: info: corresponding test PASSED
+pkg.ads:27:4: error: corresponding test FAILED: Test not implemented. (pkg-derived_test_data-derived_tests.adb:45)
+pkg.ads:15:4: inherited at pkg.ads:23:4: error: corresponding test FAILED: Test not implemented. (pkg-root_test_data-root_tests.adb:45)
+pkg.ads:21:3: inherited at pkg.ads:23:4: error: corresponding test FAILED: Test not implemented. (pkg-root_test_data-root_tests.adb:66)
+pkg.ads:8:4: error: corresponding test FAILED: Test not implemented. (pkg-rec_test_data-rec_tests.adb:45)
+9 tests run: 5 passed; 4 failed; 0 crashed.

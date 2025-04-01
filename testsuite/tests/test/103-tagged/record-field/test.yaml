@@ -1,0 +1,5 @@
+description:
+    Test that TGen is able to generate tests for tagged types and derived types
+    with record extensions.
+
+driver: shell_script

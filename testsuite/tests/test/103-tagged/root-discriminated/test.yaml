@@ -1,0 +1,5 @@
+description:
+    Test that TGen is able to generate tests for a discriminated tagged record
+    with a non-discriminated type extension.
+
+driver: shell_script
