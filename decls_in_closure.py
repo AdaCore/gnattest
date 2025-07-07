@@ -84,7 +84,10 @@ for entry_point in args.subprogram:
                         yield n
                     else:
                         ref_decl = n.p_referenced_decl()
-                        if ref_decl and ref_decl.is_a(lal.TaskTypeDecl):
+                        if ref_decl and (
+                            ref_decl.is_a(lal.TaskTypeDecl)
+                            or ref_decl.is_a(lal.BaseSubpBody) # Maybe a function pointer
+                        ):
                             yield n
                 elif n.is_a(lal.GenericInstantiation):
                     yield n
@@ -140,8 +143,8 @@ for entry_point in args.subprogram:
         else:
             yield get_body(name)
 
-    def calls_helper(b):
-        for call in children_no_nested(b):
+    def subp_reference_helper(body):
+        for call in children_no_nested(body):
             yield from filter_none(filter_units(filter_none(bodies(call))))
 
     # Process a declaration, retrieving every reference to a subprogram,
@@ -150,25 +153,24 @@ for entry_point in args.subprogram:
         print(".... Processing " + body.p_fully_qualified_name)
 
         if body.is_a((lal.BodyNode, lal.GenericDecl)):
-            yield from calls_helper(body)
+            yield from subp_reference_helper(body)
         return []
-        
 
     subp_in_closure = {entry_point.unit: {entry_point}}
     processed_bodies = {entry_point}
     processed = set()
 
     while processed_bodies:
-        for call in get_subp_references(processed_bodies.pop()):
-            if call in processed:
+        for subp in get_subp_references(processed_bodies.pop()):
+            if subp in processed:
                 continue
-            processed.add(call)
-            if call.unit not in subp_in_closure or call not in subp_in_closure[unit]:
-                print("........ Found entry " + str(call.p_fully_qualified_name))
-                if call.unit not in subp_in_closure:
-                    subp_in_closure[call.unit] = set()
-                subp_in_closure[call.unit].add(call)
-                processed_bodies.add(call)
+            processed.add(subp)
+            if subp.unit not in subp_in_closure or subp not in subp_in_closure[unit]:
+                print("........ Found entry " + str(subp.p_fully_qualified_name))
+                if subp.unit not in subp_in_closure:
+                    subp_in_closure[subp.unit] = set()
+                subp_in_closure[subp.unit].add(subp)
+                processed_bodies.add(subp)
 
         # Now process all units, and retrieve anything that is a subprogram
         unit = context.get_from_file(filename)
