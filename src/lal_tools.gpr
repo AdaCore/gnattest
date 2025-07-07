@@ -24,12 +24,7 @@ library project LAL_Tools is
       for Implementation_Suffix ("Templates") use ".tmplt";
    end Naming;
 
-   for Excluded_Source_Files use
-     ("pp-main.adb",
-      "metrics-main.adb",
-      "stub-main.adb",
-      "test-main.adb",
-      "utils-var_length_ints-test.adb");
+   for Excluded_Source_Files use ("test-main.adb");
 
    package Compiler renames LAL_Tools_Common.Compiler;
 

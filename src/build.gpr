@@ -11,12 +11,7 @@ project Build is
    --  Even though there is currently no "wip" (unstable) tool, we keep this
    --  infrastructure for the development of new tools in the future.
 
-   Tools_Mains :=
-     ("pp-main.adb",
-      "metrics-main.adb",
-      "stub-main.adb",
-      "test-main.adb",
-      "utils-var_length_ints-test.adb");
+   Tools_Mains := ("test-main.adb");
 
    for Source_Dirs use (".", "tgen");
    for Object_Dir use "../obj";
@@ -28,9 +23,6 @@ project Build is
    package Compiler renames LAL_Tools_Common.Compiler;
 
    package Builder is
-      for Executable ("pp-main.adb") use "gnatpp";
-      for Executable ("metrics-main.adb") use "gnatmetric";
-      for Executable ("stub-main.adb") use "gnatstub";
       for Executable ("test-main.adb") use "gnattest";
    end Builder;
 
