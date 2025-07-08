@@ -1,6 +1,0 @@
-aggregate project Aggregate_Prj is
-
-   for Project_Files use ("simple.gpr", "simple2.gpr");
-   for Object_Dir use "obj";
-
-end Aggregate_Prj;

@@ -1,6 +1,0 @@
-aggregate project agg is
-   for External ("T") use "b_val";
-
-   for Project_Files use ("a.gpr");
-
-end agg;

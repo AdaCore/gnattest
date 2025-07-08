@@ -1,1 +1,0 @@
-gnatstub --help

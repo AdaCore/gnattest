@@ -1,7 +1,0 @@
-description:
-    gnatpp test
-
-driver: shell_script
-control:
-    - [XFAIL, 'windows',
-       'On Windows, the error message is missing the non-dash character']

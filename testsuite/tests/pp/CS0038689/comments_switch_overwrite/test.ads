@@ -1,5 +1,0 @@
-package Test is
-   -- Documentation
-   --    Something
-   type Process;
-end Test;

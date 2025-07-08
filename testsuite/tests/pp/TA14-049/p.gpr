@@ -1,4 +1,0 @@
-with "q.gpr";
-project P is
-   for Source_Dirs use ("p");
-end P;
