@@ -1,3 +1,0 @@
-#!/bin/sh
-
-valgrind -q $LIBADALANG_TOOLS/bin/gnatstub "$@"
