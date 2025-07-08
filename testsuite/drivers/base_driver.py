@@ -27,13 +27,7 @@ class BaseDriver(DiffTestDriver):
     WIP_TOOLS = set()
 
     # Name of test directories for all tools
-    ALL_TOOLS = {
-        "pp",
-        "metric",
-        "stub",
-        "test",
-        "laltools",
-    } | WIP_TOOLS
+    ALL_TOOLS = {"test"} | WIP_TOOLS
 
     @property
     def tool_dirname(self):
