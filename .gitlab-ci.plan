@@ -1,17 +1,17 @@
 def build_(qualifier={}):
     with defaults(qualifier=qualifier):
-        anod_build("libadalang-tools")
+        anod_build("gnattest")
 
 def test_(qualifier={}):
     with defaults(qualifier=qualifier):
         # Install the component built in the preceding CI build job
-        anod_install("libadalang-tools")
-        anod_test("libadalang-tools")
+        anod_install("gnattest")
+        anod_test("gnattest")
 
 def test_gnatfuzz_tests():
     # Install the component already built in previous stage
-    anod_install("libadalang-tools")
-    anod_test("libadalang-tools", qualifier={"gnatfuzz-tests": True})
+    anod_install("gnattest")
+    anod_test("gnattest", qualifier={"gnatfuzz-tests": True})
 
 # Edge
 
@@ -28,7 +28,7 @@ def test_edge():
 def test_als_(qualifier={}):
     with defaults(qualifier=qualifier):
         # This component below has been built by the build job of the CI
-        anod_install("libadalang-tools")
+        anod_install("gnattest")
 
         # Build and test the ALS
         anod_build("als")
