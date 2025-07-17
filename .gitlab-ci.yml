@@ -12,7 +12,7 @@ include:
   - component: $CI_SERVER_FQDN/eng/gitlab-templates/gnatformat@main
     inputs:
       stage: check
-      anod-spec: libadalang-tools
+      anod-spec: gnattest
       gnatformat-args: -P src/build.gpr --check
       install-gnatformat: true
       install-gnatformat-extra-anod-args: -Qedge
@@ -28,14 +28,14 @@ include:
   # Testing
   - component: $CI_SERVER_FQDN/eng/gitlab-templates/test@~latest
     inputs:
-      job-name: libadalang-tools
+      job-name: gnattest
       anod-args: run test_$ACI_TRACK
       image: pe-base
       cpus: 16
 
   - component: $CI_SERVER_FQDN/eng/gitlab-templates/test@~latest
     inputs:
-      job-name: laltools-gnatfuzz
+      job-name: gnattest-gnatfuzz
       anod-args: run test_gnatfuzz_tests
       image: pe-base
       cpus: 8
