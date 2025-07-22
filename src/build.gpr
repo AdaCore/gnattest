@@ -1,5 +1,5 @@
-with "lal_tools.gpr";
-with "lal_tools_common.gpr";
+with "gnattest.gpr";
+
 project Build is
 
    for Source_Dirs use (".", "tgen");
@@ -9,7 +9,7 @@ project Build is
 
    for Main use ("test-main.adb");
 
-   package Compiler renames LAL_Tools_Common.Compiler;
+   package Compiler renames GNATtest.Compiler;
 
    package Builder is
       for Executable ("test-main.adb") use "gnattest";
@@ -20,7 +20,7 @@ project Build is
    end Binder;
 
    package Linker is
-      for Default_Switches ("Ada") use LAL_Tools_Common.Linker'Switches ("Ada");
+      for Default_Switches ("Ada") use GNATtest.Linker'Switches ("Ada");
    end Linker;
 
 end Build;

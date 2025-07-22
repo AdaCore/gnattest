@@ -10,7 +10,7 @@ ALL_LIBRARY_TYPES = static static-pic relocatable
 ALL_BUILD_MODES = dev prod AddressSanitizer
 
 LIB_PROJECTS = \
-	src/lal_tools.gpr
+	src/gnattest.gpr
 
 BIN_PROJECTS = \
 	src/build.gpr
@@ -42,7 +42,7 @@ all:
 		$(GPRBUILD) \
 			-XLIBRARY_TYPE=$(LIBRARY_TYPE) \
 			-XXMLADA_BUILD=$(LIBRARY_TYPE) \
-			-XLALTOOLS_BUILD_MODE=$(BUILD_MODE) \
+			-XBUILD_MODE=$(BUILD_MODE) \
 			-P $$proj ; \
 	done
 
@@ -55,7 +55,7 @@ lib:
 			rm -f obj/lib/$$kind/*.lexch; \
 			$(GPRBUILD) \
 				-XLIBRARY_TYPE=$$kind \
-				-XLALTOOLS_BUILD_MODE=$(BUILD_MODE) \
+				-XBUILD_MODE=$(BUILD_MODE) \
 				-P $$proj ; \
 		done ; \
 	done
@@ -68,7 +68,7 @@ bin:
 		$(GPRBUILD) \
 			-XLIBRARY_TYPE=$(LIBRARY_TYPE) \
 			-XXMLADA_BUILD=$(LIBRARY_TYPE) \
-			-XLALTOOLS_BUILD_MODE=$(BUILD_MODE) \
+			-XBUILD_MODE=$(BUILD_MODE) \
 			-P $$proj ; \
 	done
 
@@ -80,7 +80,7 @@ testsuite_drivers:
 		$(GPRBUILD) \
 			-XLIBRARY_TYPE=$(LIBRARY_TYPE) \
 			-XXMLADA_BUILD=$(LIBRARY_TYPE) \
-			-XLALTOOLS_BUILD_MODE=$(BUILD_MODE) \
+			-XBUILD_MODE=$(BUILD_MODE) \
 			-P $$proj ; \
 	done
 
@@ -96,7 +96,7 @@ clean:
 			for library_type in $(ALL_LIBRARY_TYPES) ; do \
 				gprclean $(RELOCATE_BUILD) \
 					-XLIBRARY_TYPE=$$library_type \
-					-XLALTOOLS_BUILD_MODE=$$build_mode \
+					-XBUILD_MODE=$$build_mode \
 					-q -P $$proj; \
 			done ; \
 		done ; \
@@ -108,7 +108,7 @@ install-lib:
 		for kind in $(ALL_LIBRARY_TYPES) ; do \
 			gprinstall $(RELOCATE_BUILD) \
 				-XLIBRARY_TYPE=$$kind \
-				-XLALTOOLS_BUILD_MODE=$(BUILD_MODE) \
+				-XBUILD_MODE=$(BUILD_MODE) \
 				--prefix="$(DESTDIR)" \
 				--sources-subdir=include/$$(basename $$proj | cut -d. -f1) \
 				--build-name=$$kind \

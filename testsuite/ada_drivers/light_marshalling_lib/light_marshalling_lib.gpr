@@ -1,4 +1,4 @@
-with "../../../src/lal_tools.gpr";
+with "../../../src/gnattest.gpr";
 with "gnatcoll";
 with "libadalang";
 
@@ -7,5 +7,5 @@ project Light_Marshalling_Lib is
    for Exec_Dir use "../bin/";
    for Main use ("light_marshalling_lib.adb");
 
-   package Compiler renames lal_tools.Compiler;
+   package Compiler renames GNATtest.Compiler;
 end Light_Marshalling_Lib;
