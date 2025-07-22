@@ -3,7 +3,6 @@
 
 BUILD_MODE ?= dev
 LIBRARY_TYPE ?= static
-LALTOOLS_SET ?= all
 PROCESSORS ?= 0
 BUILD_ROOT ?=
 
@@ -44,7 +43,6 @@ all:
 			-XLIBRARY_TYPE=$(LIBRARY_TYPE) \
 			-XXMLADA_BUILD=$(LIBRARY_TYPE) \
 			-XLALTOOLS_BUILD_MODE=$(BUILD_MODE) \
-			-XLALTOOLS_SET=$(LALTOOLS_SET) \
 			-P $$proj ; \
 	done
 
@@ -71,7 +69,6 @@ bin:
 			-XLIBRARY_TYPE=$(LIBRARY_TYPE) \
 			-XXMLADA_BUILD=$(LIBRARY_TYPE) \
 			-XLALTOOLS_BUILD_MODE=$(BUILD_MODE) \
-			-XLALTOOLS_SET=$(LALTOOLS_SET) \
 			-P $$proj ; \
 	done
 
@@ -84,7 +81,6 @@ testsuite_drivers:
 			-XLIBRARY_TYPE=$(LIBRARY_TYPE) \
 			-XXMLADA_BUILD=$(LIBRARY_TYPE) \
 			-XLALTOOLS_BUILD_MODE=$(BUILD_MODE) \
-			-XLALTOOLS_SET=$(LALTOOLS_SET) \
 			-P $$proj ; \
 	done
 
