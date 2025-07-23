@@ -1,0 +1,74 @@
+with "libadalang.gpr";
+with "templates_parser.gpr";
+
+library project GNATtest is
+
+   type Target_Type is ("Windows_NT", "unix", "osx");
+   Target : Target_Type := external ("OS", "unix");
+
+   type Library_Type_Type is ("static", "static-pic", "relocatable");
+   Library_Type : Library_Type_Type := external ("LIBRARY_TYPE", "static");
+
+   type Build_Mode_Type is ("dev", "prod", "AddressSanitizer");
+   Build_Mode : Build_Mode_Type := external ("BUILD_MODE", "dev");
+
+   for Source_Dirs use
+     (".", "tgen", "tgen/tgen_rts",
+      "../share/tgen/templates",
+      "../share/tgen/templates/marshalling_templates",
+      "../share/tgen/templates/json_templates",
+      "../share/tgen/templates/type_representation_templates");
+
+   for Object_Dir use "../obj/" & Library_Type;
+   for Library_Kind use Library_Type;
+   for Library_Dir use "../lib/" & Library_Type;
+   for Library_Name use "gnattest";
+
+   for Languages use ("Ada", "Templates");
+
+   package Compiler is
+      for Driver ("Templates") use "";
+
+      Common_Switches := ("-fPIC", "-gnatX", "-gnatyg");
+      Dev_Switches :=
+        ("-gnatwae",
+         "-gnatw.u", -- warn inappropriate use of unordered enums
+         "-g",
+         "-O0",
+         "-gnata",
+         "-gnatVa");
+
+      case Build_Mode is
+         when "dev" =>
+            for Default_Switches ("Ada") use
+               Common_Switches & Dev_Switches & ("-gnatf");
+         when "prod" =>
+            for Default_Switches ("Ada") use Common_Switches &
+              ("-g",
+               "-Ofast",
+               --  T915-005: deactivate -gnatp, as this seems to cause
+               --  linking errors when linking the Ada Language Server
+               --  "-gnatp"
+               "-gnatn2");
+         when "AddressSanitizer" =>
+            for Default_Switches ("Ada") use
+               Common_Switches & Dev_Switches & ("-fsanitize=address");
+      end case;
+   end Compiler;
+
+   package Linker is
+      case Build_Mode is
+         when "AddressSanitizer" =>
+            for Switches ("Ada") use ("-fsanitize=address");
+         when others =>
+            null;
+      end case;
+   end Linker;
+
+   package Naming is
+      for Implementation_Suffix ("Templates") use ".tmplt";
+   end Naming;
+
+   for Excluded_Source_Files use ("test-main.adb");
+
+end GNATtest;

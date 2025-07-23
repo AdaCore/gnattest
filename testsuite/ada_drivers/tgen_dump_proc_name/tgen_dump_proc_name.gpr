@@ -1,4 +1,4 @@
-with "../../../src/lal_tools.gpr";
+with "../../../src/gnattest.gpr";
 with "libadalang.gpr";
 
 project TGen_Dump_Proc_Name is
@@ -7,5 +7,5 @@ project TGen_Dump_Proc_Name is
    for Exec_Dir use "../bin/";
    for Main use ("tgen_dump_proc_name.adb");
 
-   package Compiler renames LAL_Tools.Compiler;
+   package Compiler renames GNATtest.Compiler;
 end TGen_Dump_Proc_Name;

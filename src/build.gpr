@@ -1,26 +1,15 @@
-with "lal_tools.gpr";
-with "lal_tools_common.gpr";
+with "gnattest.gpr";
+
 project Build is
-
-   type Tools_Set_Type is ("all", "no-wip");
-   Tools_Set : Tools_Set_Type := external ("LALTOOLS_SET", "all");
-   --  This project has two modes: "all" will build all available tools, while
-   --  "no-wip" will build only the stable ones. This allows safe development
-   --  of unstable tools without disturbing the ones used in production.
-   --
-   --  Even though there is currently no "wip" (unstable) tool, we keep this
-   --  infrastructure for the development of new tools in the future.
-
-   Tools_Mains := ("test-main.adb");
 
    for Source_Dirs use (".", "tgen");
    for Object_Dir use "../obj";
    for Exec_Dir use "../bin";
-   for Source_Files use Tools_Mains;
+   for Source_Files use ("test-main.adb");
 
-   for Main use Tools_Mains;
+   for Main use ("test-main.adb");
 
-   package Compiler renames LAL_Tools_Common.Compiler;
+   package Compiler renames GNATtest.Compiler;
 
    package Builder is
       for Executable ("test-main.adb") use "gnattest";
@@ -31,19 +20,7 @@ project Build is
    end Binder;
 
    package Linker is
-      case LAL_Tools_Common.Target is
-         when "Windows_NT" =>
-            for Default_Switches ("Ada") use
-              --  V225-006: On Windows, increase the stack size to deal with
-              --  long files.
-              --  This can be removed once the proper fix is done in
-              --  Libadalang - see V810-011 for more info.
-              LAL_Tools_Common.Linker'Switches ("Ada")
-              & ("-Wl,--stack=0xF42400"); -- 16MB
-         when others =>
-            for Default_Switches ("Ada") use
-              LAL_Tools_Common.Linker'Switches ("Ada");
-      end case;
+      for Default_Switches ("Ada") use GNATtest.Linker'Switches ("Ada");
    end Linker;
 
 end Build;

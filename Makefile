@@ -3,18 +3,15 @@
 
 BUILD_MODE ?= dev
 LIBRARY_TYPE ?= static
-LALTOOLS_SET ?= all
 PROCESSORS ?= 0
 BUILD_ROOT ?=
 
 ALL_LIBRARY_TYPES = static static-pic relocatable
 ALL_BUILD_MODES = dev prod AddressSanitizer
 
-LIB_PROJECTS = \
-	src/lal_tools.gpr
+LIB_PROJECT = src/gnattest.gpr
 
-BIN_PROJECTS = \
-	src/build.gpr
+BIN_PROJECT = src/build.gpr
 
 TESTSUITE_PROJECTS ?= \
 	testsuite/ada_drivers/gen_marshalling_lib/tgen_marshalling.gpr \
@@ -22,7 +19,7 @@ TESTSUITE_PROJECTS ?= \
 	testsuite/ada_drivers/light_marshalling_lib/light_marshalling_lib.gpr
 
 ALL_PROJECTS = \
-	$(BIN_PROJECTS) $(LIB_PROJECTS) $(TESTSUITE_PROJECTS)
+	$(BIN_PROJECT) $(LIB_PROJECT) $(TESTSUITE_PROJECTS)
 
 ifeq ($(BUILD_ROOT),)
 RELOCATE_BUILD=
@@ -43,8 +40,7 @@ all:
 		$(GPRBUILD) \
 			-XLIBRARY_TYPE=$(LIBRARY_TYPE) \
 			-XXMLADA_BUILD=$(LIBRARY_TYPE) \
-			-XLALTOOLS_BUILD_MODE=$(BUILD_MODE) \
-			-XLALTOOLS_SET=$(LALTOOLS_SET) \
+			-XBUILD_MODE=$(BUILD_MODE) \
 			-P $$proj ; \
 	done
 
@@ -52,28 +48,23 @@ all:
 lib:
 	which gprbuild
 	which gcc
-	for proj in $(LIB_PROJECTS) ; do \
-		for kind in $(ALL_LIBRARY_TYPES) ; do \
-			rm -f obj/lib/$$kind/*.lexch; \
-			$(GPRBUILD) \
-				-XLIBRARY_TYPE=$$kind \
-				-XLALTOOLS_BUILD_MODE=$(BUILD_MODE) \
-				-P $$proj ; \
-		done ; \
-	done
+	for kind in $(ALL_LIBRARY_TYPES) ; do \
+		rm -f obj/lib/$$kind/*.lexch; \
+		$(GPRBUILD) \
+			-XLIBRARY_TYPE=$$kind \
+			-XBUILD_MODE=$(BUILD_MODE) \
+			-P $(LIB_PROJECT) ; \
+	done ;
 
 .PHONY: bin
 bin:
 	which gprbuild
 	which gcc
-	for proj in $(BIN_PROJECTS) ; do \
-		$(GPRBUILD) \
-			-XLIBRARY_TYPE=$(LIBRARY_TYPE) \
-			-XXMLADA_BUILD=$(LIBRARY_TYPE) \
-			-XLALTOOLS_BUILD_MODE=$(BUILD_MODE) \
-			-XLALTOOLS_SET=$(LALTOOLS_SET) \
-			-P $$proj ; \
-	done
+	$(GPRBUILD) \
+		-XLIBRARY_TYPE=$(LIBRARY_TYPE) \
+		-XXMLADA_BUILD=$(LIBRARY_TYPE) \
+		-XBUILD_MODE=$(BUILD_MODE) \
+		-P $(BIN_PROJECT) ; \
 
 .PHONY: testsuite_drivers
 testsuite_drivers:
@@ -83,14 +74,12 @@ testsuite_drivers:
 		$(GPRBUILD) \
 			-XLIBRARY_TYPE=$(LIBRARY_TYPE) \
 			-XXMLADA_BUILD=$(LIBRARY_TYPE) \
-			-XLALTOOLS_BUILD_MODE=$(BUILD_MODE) \
-			-XLALTOOLS_SET=$(LALTOOLS_SET) \
+			-XBUILD_MODE=$(BUILD_MODE) \
 			-P $$proj ; \
 	done
 
 .PHONY: test
 test: all
-	$(BIN)/utils-var_length_ints-test
 	testsuite/testsuite.py
 
 .PHONY: clean
@@ -100,7 +89,7 @@ clean:
 			for library_type in $(ALL_LIBRARY_TYPES) ; do \
 				gprclean $(RELOCATE_BUILD) \
 					-XLIBRARY_TYPE=$$library_type \
-					-XLALTOOLS_BUILD_MODE=$$build_mode \
+					-XBUILD_MODE=$$build_mode \
 					-q -P $$proj; \
 			done ; \
 		done ; \
@@ -108,18 +97,16 @@ clean:
 
 .PHONY: install-lib
 install-lib:
-	for proj in $(LIB_PROJECTS) ; do \
-		for kind in $(ALL_LIBRARY_TYPES) ; do \
-			gprinstall $(RELOCATE_BUILD) \
-				-XLIBRARY_TYPE=$$kind \
-				-XLALTOOLS_BUILD_MODE=$(BUILD_MODE) \
-				--prefix="$(DESTDIR)" \
-				--sources-subdir=include/$$(basename $$proj | cut -d. -f1) \
-				--build-name=$$kind \
-				--build-var=LIBRARY_TYPE --build-var=LAL_TOOLS_BUILD \
-				-P $$proj -p -f ; \
-		done ; \
-	done
+	for kind in $(ALL_LIBRARY_TYPES) ; do \
+		gprinstall $(RELOCATE_BUILD) \
+			-XLIBRARY_TYPE=$$kind \
+			-XBUILD_MODE=$(BUILD_MODE) \
+			--prefix="$(DESTDIR)" \
+			--sources-subdir=include/$$(basename $(LIB_PROJECT) | cut -d. -f1) \
+			--build-name=$$kind \
+			--build-var=LIBRARY_TYPE \
+			-P $(LIB_PROJECT) -p -f ; \
+	done ;
 
 .PHONY: install-bin-strip
 install-bin-strip:
