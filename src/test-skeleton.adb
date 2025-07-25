@@ -59,6 +59,7 @@ with Test.Harness;
 with Test.Skeleton.Source_Table; use Test.Skeleton.Source_Table;
 with Test.Mapping;               use Test.Mapping;
 with Test.Stub;
+with TGen.JSON.Test_Cases;
 with Utils.Command_Lines;        use Utils.Command_Lines;
 with Utils.Environment;
 with Utils.String_Utilities;
@@ -7062,6 +7063,9 @@ package body Test.Skeleton is
    is
       use TGen.Strings;
 
+      package TGen_JSON_TC renames TGen.JSON.Test_Cases;
+      use type TGen_JSON_TC.Subprogram_Test_Case;
+
       --  ??? TODO: Clean leftover generated tests if the hash of a given
       --  subprogram fails, also investigate possibility to have tests not be
       --  overwritten if the hash hasn't changed.
@@ -7082,10 +7086,11 @@ package body Test.Skeleton is
 
       Unit_Raw_Content : GNAT.Strings.String_Access;
 
-      Unit_Content  : JSON_Value := JSON_Null;
-      Subp_Content  : JSON_Value := JSON_Null;
-      Param_Values  : JSON_Array;
       Global_Values : JSON_Array;
+      Test_Cases    : TGen_JSON_TC.JSON_Test_Cases :=
+        TGen_JSON_TC.No_JSON_Test_Cases;
+      Subprogram_TC : TGen_JSON_TC.Subprogram_Test_Case;
+      Param_Values  : TGen_JSON_TC.Subprogram_Parameter_Vector;
 
       Diags : String_Vector;
       --  Diagnostics for TGen.Libgen.Include_Subp
@@ -7130,7 +7135,7 @@ package body Test.Skeleton is
          return False;
       end if;
 
-      Unit_Content := Read (Unit_Raw_Content.all, +JSON_Unit_File.Full_Name);
+      Test_Cases := TGen_JSON_TC.Load_From_File (+JSON_Unit_File.Full_Name);
 
       for Subp of Data.Subp_List loop
 
@@ -7142,16 +7147,15 @@ package body Test.Skeleton is
             Subp_Hash : constant String :=
               Test.Common.Mangle_Hash_16 (Subp => Subp.Subp_Declaration);
          begin
-            if Unit_Content.Has_Field (Subp_Hash) then
-               Subp_Content := Unit_Content.Get (Subp_Hash);
+            if TGen_JSON_TC.Has_Subprogram (Test_Cases, Subp_Hash) then
+               Subprogram_TC :=
+                 TGen_JSON_TC.Get_Subprogram (Test_Cases, Subp_Hash);
             else
-               Subp_Content := JSON_Null;
+               Subprogram_TC := TGen_JSON_TC.No_Subprogram_Test_Case;
             end if;
          end;
 
-         if Subp_Content = JSON_Null
-           or else Subp_Content.Get ("test_vectors") = Empty_Array
-         then
+         if Subprogram_TC = TGen_JSON_TC.No_Subprogram_Test_Case then
             goto Continue;
          end if;
 
@@ -7182,11 +7186,11 @@ package body Test.Skeleton is
 
          declare
             Generation_Complete : constant Boolean :=
-              Subp_Content.Get ("generation_complete");
+              TGen_JSON_TC.Is_Generation_Complete (Subprogram_TC);
             Is_Function         : constant Boolean :=
-              Subp_Content.Has_Field ("return_type");
+              TGen_JSON_TC.Is_Function (Subprogram_TC);
             Subp_FQN            : constant String :=
-              Subp_Content.Get ("fully_qualified_name");
+              TGen_JSON_TC.Get_Subprogram_Full_Qualified_Name (Subprogram_TC);
             Is_Operator         : constant Boolean :=
               Subp_FQN (Subp_FQN'Last) = '"';
             --  The subprogram is an operator IIF the subprogram name ends in a
@@ -7202,8 +7206,8 @@ package body Test.Skeleton is
                else "");
             --  Operator name, without surrounding double quotes
 
-            Subp_Vectors : constant JSON_Array :=
-              Subp_Content.Get ("test_vectors");
+            Subp_Vectors : constant TGen_JSON_TC.Subprogram_Test_Vector :=
+              TGen_JSON_TC.Get_Subprogram_Vector (Subprogram_TC);
             Test_Count   : Positive := 1;
 
             Com : constant String :=
@@ -7294,20 +7298,32 @@ package body Test.Skeleton is
                  (F,
                   Pad_Str
                   & "Std."
-                  & Subp_Content.Get ("fully_qualified_name")
-                  & (if Length (Param_Values) /= 0 then " (" else ""));
-               for Param_Id in Param_Values loop
-                  Put
-                    (F,
-                     Array_Element (Param_Values, Param_Id).Get ("name")
-                     & " => "
-                     & "Param_"
-                     & Array_Element (Param_Values, Param_Id).Get ("name"));
-                  if Array_Has_Element (Param_Values, Param_Id + 1) then
-                     Put (F, ", ");
-                  end if;
+                  & TGen_JSON_TC.Get_Subprogram_Full_Qualified_Name
+                      (Subprogram_TC)
+                  & (if TGen_JSON_TC.Subprogram_Parameter_Vector_Has_Element
+                          (Param_Values, Positive'First)
+                     then " ("
+                     else ""));
+               for I in Param_Values loop
+                  declare
+                     Parameter_Name : constant String :=
+                       TGen_JSON_TC.Get_Parameter_Name
+                         (TGen_JSON_TC.Subprogram_Parameter_Vector_Element
+                            (Param_Values, I));
+                  begin
+                     Put
+                       (F,
+                        Parameter_Name & " => " & "Param_" & Parameter_Name);
+                     if TGen_JSON_TC.Subprogram_Parameter_Vector_Has_Element
+                          (Param_Values, I + 1)
+                     then
+                        Put (F, ", ");
+                     end if;
+                  end;
                end loop;
-               if Length (Param_Values) /= 0 then
+               if TGen_JSON_TC.Subprogram_Parameter_Vector_Has_Element
+                    (Param_Values, Positive'First)
+               then
                   Put (F, ")");
                end if;
                Put (F, ";");
@@ -7320,21 +7336,24 @@ package body Test.Skeleton is
             procedure Pp_Operator_Call
               (F : File_Type; Initial_Pad : Natural := 0)
             is
-               Pad_Str   : constant String (1 .. Initial_Pad + 1) :=
+               use TGen_JSON_TC;
+               Pad_Str      : constant String (1 .. Initial_Pad + 1) :=
                  [others => ' '];
-               Param_Idx : Positive := Array_First (Param_Values);
+               Param_Idx    : Positive :=
+                 Subprogram_Parameter_Vector_First (Param_Values);
+               Param_Length : constant Natural :=
+                 Subprogram_Parameter_Vector_Length (Param_Values);
             begin
                Put (F, Pad_Str);
-               if Length (Param_Values) = 0 or else Length (Param_Values) > 2
-               then
+               if Param_Length = 0 or else Param_Length > 2 then
                   Report_Err
                     ("Error while loading JSON test inputs for"
                      & Subp_FQN
                      & ": Operator expects one or two parameters but found"
-                     & Natural'(Length (Param_Values))'Image
+                     & Natural'(Param_Length)'Image
                      & " parameters");
                   raise Program_Error;
-               elsif Length (Param_Values) = 2 then
+               elsif Param_Length = 2 then
                   Put (F, "Param_");
 
                   --  We need to find the actual parameter order as we can't
@@ -7343,8 +7362,9 @@ package body Test.Skeleton is
                   declare
                      First_JSON_Param_Name : constant String :=
                        To_Lower
-                         (Array_Element (Param_Values, Param_Idx).Get
-                            ("name"));
+                         (Get_Parameter_Name
+                            (Subprogram_Parameter_Vector_Element
+                               (Param_Values, Param_Idx)));
                      First_LAL_Param_Name  : constant String :=
                        To_Lower
                          (Node_Image
@@ -7357,16 +7377,18 @@ package body Test.Skeleton is
                                   .F_Ids,
                                 1)));
                   begin
-                     Param_Idx := Array_Next (Param_Values, Param_Idx);
+                     Param_Idx := Param_Idx + 1;
                      if To_Lower (First_JSON_Param_Name) = First_LAL_Param_Name
                      then
                         Put (F, First_JSON_Param_Name);
                      else
                         Put
                           (F,
-                           Array_Element (Param_Values, Param_Idx).Get
-                             ("name"));
-                        Param_Idx := Array_First (Param_Values);
+                           Get_Parameter_Name
+                             (Subprogram_Parameter_Vector_Element
+                                (Param_Values, Param_Idx)));
+                        Param_Idx :=
+                          Subprogram_Parameter_Vector_First (Param_Values);
                      end if;
                   end;
                   Put (F, " ");
@@ -7376,7 +7398,9 @@ package body Test.Skeleton is
                  (F,
                   Op_Name
                   & " Param_"
-                  & Array_Element (Param_Values, Param_Idx).Get ("name")
+                  & Get_Parameter_Name
+                      (Subprogram_Parameter_Vector_Element
+                         (Param_Values, Param_Idx))
                   & ";");
             end Pp_Operator_Call;
 
@@ -7529,10 +7553,11 @@ package body Test.Skeleton is
                   Origin            => Test_Case_Generated,
                   Subp              => Subp);
 
-               Param_Values := Test_Vec.Get ("param_values");
+               Param_Values :=
+                 TGen_JSON_TC.Get_Subprogram_Parameters (Test_Vec);
                Global_Values :=
-                 (if Test_Vec.Has_Field ("global_values")
-                  then Test_Vec.Get ("global_values")
+                 (if TGen_JSON_TC.Has_Global_Values (Test_Vec)
+                  then TGen_JSON_TC.Get_Subprogram_Global_Values (Test_Vec)
                   else TGen.JSON.Empty_Array);
 
                Put_Line
@@ -7603,7 +7628,8 @@ package body Test.Skeleton is
 
                      declare
                         Unparsed_JSON : constant JSON_Value :=
-                          TGen.JSON.Unparse.Unparse (Param.Get ("value"));
+                          TGen.JSON.Unparse.Unparse
+                            (TGen_JSON_TC.Get_Parameter_Value (Param));
                         Constraints   : Unbounded_String;
                         Value         : Unbounded_String;
                      begin
@@ -7616,10 +7642,11 @@ package body Test.Skeleton is
                           (Body_Kind,
                            Com
                            & "   Param_"
-                           & Param.Get ("name")
+                           & TGen_JSON_TC.Get_Parameter_Name (Param)
                            & " : Std."
                            & Utils.String_Utilities.Strip_Prefix
-                               (Param.Get ("type_name"), "standard.")
+                               (TGen_JSON_TC.Get_Parameter_Type_Name (Param),
+                                "standard.")
                            & " "
                            & (+Constraints)
                            & " := "
@@ -7633,7 +7660,8 @@ package body Test.Skeleton is
 
                      declare
                         use Utils.String_Utilities;
-                        LAL_Type : constant String := Param.Get ("type_name");
+                        LAL_Type : constant String :=
+                          TGen_JSON_TC.Get_Parameter_Type_Name (Param);
                         --  Fully qualified name LAL would return (i.e.
                         --  including standard. for type of that unit)
 
@@ -7650,12 +7678,15 @@ package body Test.Skeleton is
                           (Body_Kind,
                            Com
                            & "   Param_"
-                           & Param.Get ("name")
+                           & TGen_JSON_TC.Get_Parameter_Name (Param)
                            & " : "
                            & Ada_Type
                            & ":= "
                            & (+Value));
-                        Pp_JSON_Object_Lit (Body_Kind, Param.Get ("value"), 5);
+                        Pp_JSON_Object_Lit
+                          (Body_Kind,
+                           TGen_JSON_TC.Get_Parameter_Value (Param),
+                           5);
                         Put_Line (Body_Kind, "));");
                      end;
                   end if;
@@ -7724,7 +7755,9 @@ package body Test.Skeleton is
                      Com
                      & "      Ret_Val : Std."
                      & Utils.String_Utilities.Strip_Prefix
-                         (Subp_Content.Get ("return_type"), "standard.")
+                         (TGen_JSON_TC.Get_Subprogram_Return_Type
+                            (Subprogram_TC),
+                          "standard.")
                      & ":=");
                   Put (Files (Body_Kind), Com);
                   if Is_Operator then
@@ -7792,7 +7825,7 @@ package body Test.Skeleton is
                   & Utils.String_Utilities.Escape_String_Literal
                       (Subp.Subp_Name_Image.all)
                   & ", generated by "
-                  & Test_Vec.Get ("origin")
+                  & TGen_JSON_TC.Get_Subprogram_Origin (Test_Vec)
                   & ", crashed: "" & ASCII.LF & Ada.Exceptions.Exception_"
                   & "Information (Exc));");
                if not Generation_Complete then
