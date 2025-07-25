@@ -96,6 +96,7 @@ package TGen.Types is
       Anonymous_Kind,
       Instance_Kind,
       Derived_Private_Subtype_Kind,
+      Proxy_Kind,
       Unsupported);
 
    subtype Discrete_Typ_Range is Typ_Kind range Signed_Int_Kind .. Enum_Kind;
@@ -279,6 +280,13 @@ package TGen.Types is
 
    end record;
 
+   function Get_Diagnostics
+     (Self : Unsupported_Types; Prefix : String := "") return String_Vector
+   is (Self.Diags);
+
+   function Kind (Self : Unsupported_Types) return Typ_Kind
+   is (Unsupported);
+
    type Derived_Private_Subtype_Typ is new Typ with record
       Declaration_Type_Name : Ada_Qualified_Name;
       Parent_Type           : Typ_Access;
@@ -314,12 +322,50 @@ package TGen.Types is
      (Self : Derived_Private_Subtype_Typ; Val : JSON_Value) return JSON_Value;
    --  Inherits the parent type encode function.
 
-   function Get_Diagnostics
-     (Self : Unsupported_Types; Prefix : String := "") return String_Vector
-   is (Self.Diags);
+   type Proxy_Typ is new Typ with record
 
-   function Kind (Self : Unsupported_Types) return Typ_Kind
-   is (Unsupported);
+      Orig_Typ : Typ_Access;
+      --  Original type representation, without proxy.
+      --
+      --  TODO: Determine if this is actually useful?
+
+      Proxy_Subprogram : Typ_Access;
+      --  Type representation of the subprogram we are supposed to used to
+      --  create a value for this type.
+   end record;
+   --  This represents a type for which we will generate and unmarshall values
+   --  through a "proxy" subprogram. Instead of loading the values for its
+   --  components directly, we unmarshall the parameter values for the
+   --  parameters of the proxy, then call it to obtain the actual Ada value.
+   --
+   --  This can be unsupported types (e.g. class-wide types or access types)
+   --  or regular supported types, but for which we want to generate values
+   --  through a specific subprogram.
+   --
+   --  This cannot be represented as a custom strategy as we need some special
+   --  marshaller support to make this work.
+
+   function Kind (Self : Proxy_Typ) return Typ_Kind
+   is (Proxy_Kind);
+
+   function Get_Diagnostics
+     (Self : Proxy_Typ; Prefix : String := "") return String_Vector;
+   --  A proxy has diagnostics if the proxy subprogram's representation typ has
+   --  diagnostics, or if any of its parameters are of out mode.
+
+   function Default_Strategy
+     (Self : Proxy_Typ) return TGen.Strategies.Strategy_Type'Class;
+   --  Use the default strategy of the proxy subprogram as strategy for this
+   --  type.
+
+   function Default_Enum_Strategy
+     (Self : Proxy_Typ) return TGen.Strategies.Enum_Strategy_Type'Class;
+   --  Use the default enum strategy of the proxy subprogram as strategy for
+   --  this type.
+
+   function Encode (Self : Proxy_Typ; Val : JSON_Value) return JSON_Value;
+   --  Use the proxy's type representation to encode its value, forward the
+   --  proxy's UID as is.
 
 private
 

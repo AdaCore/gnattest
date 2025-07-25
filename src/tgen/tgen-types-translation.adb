@@ -21,11 +21,13 @@
 -- <http://www.gnu.org/licenses/>.                                          --
 ------------------------------------------------------------------------------
 
+with Ada.Containers.Vectors;
 with Ada.Exceptions;
 with Ada.Strings.Wide_Wide_Unbounded;
 with Ada.Text_IO; use Ada.Text_IO;
 
 with GNATCOLL.GMP.Integers;
+with GNATCOLL.Traces; use GNATCOLL.Traces;
 
 with Langkit_Support.Text; use Langkit_Support.Text;
 
@@ -46,6 +48,8 @@ with TGen.Numerics;
 with TGen.Strings;
 
 package body TGen.Types.Translation is
+
+   Me : constant Trace_Handle := Create ("TGen_Translation", Default => Off);
 
    Translation_Error : exception;
 
@@ -243,6 +247,26 @@ package body TGen.Types.Translation is
    --  Return whether N is fully private, i.e. whether the first declaration of
    --  N is in a private part, and can't thus be used outside the private parts
    --  of its declaration unit or child units.
+
+   function Translate_Proxy
+     (Decl       : Base_Type_Decl'Class;
+      FQN        : Ada_Qualified_Name;
+      Proxy_Name : LAL.Name'Class;
+      Ctx        : in out Translation_Ctx) return Translation_Result;
+   --  Translate Decl as if it had been annotated with
+   --  `TGen_Proxy => Proxy_Name`.
+
+   function Locate_Proxy_For_Decl
+     (Decl       : Base_Type_Decl'Class;
+      Proxy_Name : LAL.Name'Class;
+      Ctx        : in out Translation_Ctx) return Translation_Result;
+   --  Find the first suitable proxy subprogram for Decl, named Proxy_Name, for
+   --  as if it was annotated on `From`. This last point is important, as this
+   --  function only searches the lexical env visible from From.
+   --
+   --  If no valid proxy is found, the return value will contain a diagnostic
+   --  for why the closest candidate did not match. Otherwise it will contain
+   --  the reference to the translated subp representation.
 
    --------------
    -- PP_Cache --
@@ -3301,6 +3325,179 @@ package body TGen.Types.Translation is
       end return;
    end Translate_Discriminant_Constraints;
 
+   ---------------------------
+   -- Locate_Proxy_For_Decl --
+   ---------------------------
+
+   function Locate_Proxy_For_Decl
+     (Decl       : Base_Type_Decl'Class;
+      Proxy_Name : LAL.Name'Class;
+      Ctx        : in out Translation_Ctx) return Translation_Result
+   is
+      package Candidate_Vectors is new
+        Ada.Containers.Vectors
+          (Index_Type   => Positive,
+           Element_Type => Typ_Access);
+      subtype Candidate_Vec is Candidate_Vectors.Vector;
+
+      Candidates          : constant Ada_Node_Array :=
+        Proxy_Name.P_All_Env_Elements (Seq => False);
+      Filtered_Candidates : Candidate_Vec := Candidate_Vectors.Empty_Vector;
+
+      Found_A_Function : Boolean := False;
+      Ret_Type_Matches : Boolean := False;
+   begin
+      Me.Trace ("Searching proxy subprogram for " & Decl.Image);
+      Me.Trace
+        ("Lexical search found"
+         & Integer'(Candidates'Length)'Image
+         & " candidates");
+      for Candidate of Candidates loop
+         Me.Trace ("Processing " & Candidate.Image);
+
+         --  Check that the candidate is a subp decl..
+
+         if Candidate.Kind not in Ada_Subp_Decl then
+            Me.Trace ("   Not a subp");
+            goto Skip_Candidate;
+         end if;
+
+         --  .. That is a function
+
+         if Candidate.As_Subp_Decl.F_Subp_Spec.P_Returns.Is_Null then
+            Me.Trace ("   Not a function");
+            goto Skip_Candidate;
+         end if;
+         Found_A_Function := True;
+
+         --  .. For which the return type matches N
+
+         if not Candidate
+                  .As_Subp_Decl
+                  .F_Subp_Spec
+                  .P_Return_Type
+                  .P_Matching_Type (Decl)
+         then
+            Me.Trace ("   Does not return the expected type");
+            goto Skip_Candidate;
+         end if;
+         Ret_Type_Matches := True;
+
+         --  And for which we actually can generate values
+
+         declare
+            Candidate_Res : constant Translation_Result :=
+              Translate (Candidate.As_Basic_Decl, Ctx);
+         begin
+            if not Candidate_Res.Success
+              or else not Candidate_Res.Res.Get_Diagnostics.Is_Empty
+            then
+               Me.Trace ("   Candidate does not allow generation");
+               goto Skip_Candidate;
+            end if;
+
+            --  If we reach here we have found a good proxy subprogram
+            --  candidate! Add it to the list, we need to check if there
+            --  are multiple of them.
+
+            Filtered_Candidates.Append (Candidate_Res.Res);
+         end;
+         <<Skip_Candidate>>
+      end loop;
+      Me.Trace
+        ("After filtering there are"
+         & Filtered_Candidates.Length'Image
+         & " suitable proxies");
+      if not Filtered_Candidates.Is_Empty then
+
+         --  TODO??? how to warn about ambiguities / multiple possible choices?
+
+         return (Success => True, Res => Filtered_Candidates.First_Element);
+      elsif Ret_Type_Matches then
+         return
+           (Success     => False,
+            Diagnostics =>
+              To_Unbounded_String ("There are no functions named ")
+              & Image (Proxy_Name.Text)
+              & " for which TGen can generate input values");
+      elsif Found_A_Function then
+         return
+           (Success     => False,
+            Diagnostics =>
+              To_Unbounded_String ("There are no functions named ")
+              & Image (Proxy_Name.Text)
+              & " for which the return type matches "
+              & Image (Decl.P_Defining_Name.Text));
+      else
+         return
+           (Success     => False,
+            Diagnostics =>
+              To_Unbounded_String ("Could not find a function named ")
+              & Image (Proxy_Name.Text));
+      end if;
+   end Locate_Proxy_For_Decl;
+
+   ---------------------
+   -- Translate_Proxy --
+   ---------------------
+
+   function Translate_Proxy
+     (Decl       : Base_Type_Decl'Class;
+      FQN        : Ada_Qualified_Name;
+      Proxy_Name : LAL.Name'Class;
+      Ctx        : in out Translation_Ctx) return Translation_Result
+   is
+      Bare_Type_Trans : Translation_Result;
+   begin
+      --  Translate the type without proxy first, so that we don't end up in
+      --  a recursive translation cycle when processing the proxy
+      --  subprogram itself.
+
+      Ctx.Skip_Proxy_Set.Insert (FQN);
+      Bare_Type_Trans := Translate (Decl.As_Base_Type_Decl, Ctx);
+      Ctx.Skip_Proxy_Set.Delete (FQN);
+
+      --  If there was a proper translation error when translating the
+      --  original type, abort early.
+
+      if not Bare_Type_Trans.Success then
+         return Bare_Type_Trans;
+      end if;
+
+      --  Attempt to locate the proxy subprogram. We expect the proxy aspect
+      --  to only contain a (optionally qualified) name, denoting a function
+      --  for which the return type matches N.
+
+      declare
+         Proxy_Subp_Res : constant Translation_Result :=
+           Locate_Proxy_For_Decl (Decl, Proxy_Name, Ctx);
+      begin
+
+         if not Proxy_Subp_Res.Success then
+            return
+              (Success     => False,
+               Diagnostics =>
+                 "Failed to find a proxy subprogram for "
+                 & To_Ada (FQN)
+                 & ": "
+                 & Proxy_Subp_Res.Diagnostics);
+         end if;
+
+         --  Remove the non-proxy type from the cache, the proxy one is the
+         --  only one that really needs to be referenced.
+
+         Translation_Cache.Delete (FQN);
+
+         return
+           (Success => True,
+            Res     =>
+              new Proxy_Typ'
+                (Orig_Typ         => Bare_Type_Trans.Res,
+                 Proxy_Subprogram => Proxy_Subp_Res.Res,
+                 others           => <>));
+      end;
+   end Translate_Proxy;
+
    ---------------
    -- Translate --
    ---------------
@@ -3518,7 +3715,7 @@ package body TGen.Types.Translation is
          begin
             if Trans_Res.Success then
                Translation_Cache.Insert (FQN, Trans_Res.Res);
-               Type_Decl_Cache.Insert (FQN, Full_Decl);
+               Type_Decl_Cache.Include (FQN, Full_Decl);
             end if;
             return Trans_Res;
          end;
@@ -3560,6 +3757,9 @@ package body TGen.Types.Translation is
       --  First part of the declaration. Used to determine whether the type we
       --  are translating is private or not.
 
+      Proxy_Aspect : constant Aspect :=
+        N.P_Get_Aspect (Name => To_Unbounded_Text ("TGen_Proxy"));
+
       Specialized_Res : Translation_Result;
 
       Is_Opaque_Type_Def : constant Boolean :=
@@ -3581,7 +3781,42 @@ package body TGen.Types.Translation is
 
         and then not (Kind (N) in Ada_Discrete_Base_Subtype_Decl);
 
-      if Is_Null (Type_Name) then
+      --  First process types with a TGen_Proxy aspect (or pragma)
+
+      if Proxy_Aspect.Exists and then not Ctx.Skip_Proxy_Set.Contains (FQN)
+      then
+         --  Error out early if the annotation does not have the expected
+         --  structure.
+
+         if Proxy_Aspect.Value.Is_Null then
+            Specialized_Res :=
+              (Success     => False,
+               Diagnostics =>
+                 To_Unbounded_String
+                   ("Missing value for the ""TGen_Proxy"" aspect for type "
+                    & To_Ada (FQN)));
+            return Specialized_Res;
+         end if;
+
+         if Proxy_Aspect.Value.Kind not in Ada_Name then
+            Specialized_Res :=
+              (Success     => False,
+               Diagnostics =>
+                 To_Unbounded_String
+                   ("Incorrect expression kind for the ""TGen_Proxy"" aspect"
+                    & "  value, for type "
+                    & To_Ada (FQN)
+                    & ". Function name"
+                    & " expected."));
+            return Specialized_Res;
+         end if;
+
+         --  Get the translation
+
+         Specialized_Res :=
+           Translate_Proxy (N, FQN, Proxy_Aspect.Value.As_Name, Ctx);
+
+      elsif Is_Null (Type_Name) then
 
          --  Anonymous types at this level are either anonymous array
          --  declarations or anonymous access types, both of which we don't
@@ -4054,6 +4289,41 @@ package body TGen.Types.Translation is
          Subp_Spec : constant Base_Subp_Spec :=
            Designated_Decl.P_Subp_Spec_Or_Null;
       begin
+
+         --  Translate the return type first
+
+         if not Subp_Spec.P_Returns.Is_Null then
+            declare
+               Ret : constant Translation_Result :=
+                 Translate (Subp_Spec.P_Returns, Ctx);
+            begin
+               if not Ret.Success then
+                  return (False, Ret.Diagnostics);
+               end if;
+
+               F_Typ.Ret_Typ := Ret.Res;
+            end;
+         else
+            F_Typ.Ret_Typ := null;
+         end if;
+
+         --  If this subprogram can be used as proxy to generate values for its
+         --  return type, the translation for the return type will be a
+         --  Proxy_Typ, and the cache will already contain an entry for this
+         --  subprogram. If so, abort translation and use the type
+         --  representation already in the cache to ensure we only have a
+         --  single representation of this function.
+         --
+         --  TODO??? If in the future we introduce more circular references
+         --  between types it might be worth it to have all the type
+         --  representation be stored in an arena, and use indexes to ensure
+         --  unicity of the type translations.
+
+         if Translation_Cache.Contains (F_Typ.Name) then
+            return
+              (Success => True, Res => Translation_Cache.Element (F_Typ.Name));
+         end if;
+
          for Param of Subp_Spec.P_Params loop
             declare
                Current_Typ : constant Translation_Result :=
@@ -4080,21 +4350,6 @@ package body TGen.Types.Translation is
                end if;
             end;
          end loop;
-
-         if not Subp_Spec.P_Returns.Is_Null then
-            declare
-               Ret : constant Translation_Result :=
-                 Translate (Subp_Spec.P_Returns, Ctx);
-            begin
-               if not Ret.Success then
-                  return (False, Ret.Diagnostics);
-               end if;
-
-               F_Typ.Ret_Typ := Ret.Res;
-            end;
-         else
-            F_Typ.Ret_Typ := null;
-         end if;
       end;
 
       --  Function type was successfully translated

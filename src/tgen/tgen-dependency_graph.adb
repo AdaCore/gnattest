@@ -150,8 +150,17 @@ package body TGen.Dependency_Graph is
                  Derived_Private_Subtype_Typ (T.all);
             begin
                Res.Include (Derived_Typ.Parent_Type);
-               Res.Union (Type_Dependencies (Derived_Typ.Parent_Type));
+               if Transitive then
+                  Res.Union (Type_Dependencies (Derived_Typ.Parent_Type));
+               end if;
             end;
+
+         when Proxy_Kind                   =>
+            Res.Include (Proxy_Typ (T.all).Proxy_Subprogram);
+            if Transitive then
+               Res.Union
+                 (Type_Dependencies (Proxy_Typ (T.all).Proxy_Subprogram));
+            end if;
 
          when others                       =>
             null;

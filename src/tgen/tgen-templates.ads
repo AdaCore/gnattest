@@ -150,6 +150,10 @@ package TGen.Templates is
         Template_Folder & "derived_private_subtype.tmplt";
       Derived_Private_Subtype_Init_Template : constant String :=
         Template_Folder & "derived_private_subtype_init.tmplt";
+      Proxy_Type_Decl_Template              : constant String :=
+        Template_Folder & "proxy_typ_decl.tmplt";
+      Proxy_Type_Init_Template              : constant String :=
+        Template_Folder & "proxy_typ_init.tmplt";
    end Type_Representation;
 
    package Support_Library is

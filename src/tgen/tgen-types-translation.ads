@@ -99,6 +99,11 @@ private
 
    type Translation_Ctx is record
       Verbose : Boolean := False;
+
+      Skip_Proxy_Set : Ada_Qualified_Name_Set;
+      --  Global set containing the names of types for which we should ignore
+      --  the proxy aspect.
+
    end record;
    --  Context for translating type declarations from LAL to TGen's internal
    --  representation. It should be passed down at least to all subprograms
@@ -106,7 +111,8 @@ private
 
    function Make_Translation_Context
      (Verbose : Boolean := False) return Translation_Ctx
-   is ((Verbose => Verbose));
+   is ((Verbose        => Verbose,
+        Skip_Proxy_Set => Ada_Qualified_Name_Sets.Empty_Set));
 
    Anonymous_Typ_Index : Positive := 1;
    --  Index incremented each time we create an anonymous type, to uniquely

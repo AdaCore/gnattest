@@ -21,7 +21,7 @@
 @@--
 @@INCLUDE@@ util.tmplt
 
-   --  Test Case JSON dumper for @_PROC_NAME_@
+   --  Test Case JSON dumper for @_PROC_NAME_@ from Ada values
 
    procedure @_PROC_NAME_@_Dump_TC (
 @@TABLE'ALIGN_ON(":")@@

@@ -25,6 +25,7 @@ with Ada.Containers;
 with Ada.Strings.Equal_Case_Insensitive;
 
 with TGen.Strategies; use TGen.Strategies;
+with TGen.Types.Record_Types;
 
 package body TGen.Types is
 
@@ -264,5 +265,169 @@ package body TGen.Types is
    function Encode
      (Self : Derived_Private_Subtype_Typ; Val : JSON_Value) return JSON_Value
    is (Self.Parent_Type.Encode (Val));
+
+   ---------------------
+   -- Get_Diagnostics --
+   ---------------------
+
+   function Get_Diagnostics
+     (Self : Proxy_Typ; Prefix : String := "") return String_Vector
+   is
+      use TGen.Types.Record_Types;
+      Proxy : Function_Typ renames Function_Typ (Self.Proxy_Subprogram.all);
+      Res   : String_Vector := Proxy.Get_Diagnostics;
+   begin
+      --  A type with proxy only has diagnostics if there are any attached to
+      --  the parameter types of the proxy subprogram, or if any of its
+      --  parameters are of "out" mode.
+
+      if (for some Param_Mode of Proxy.Param_Modes => Param_Mode = Out_Mode)
+      then
+         Res.Append
+           (+"proxy subprogram "
+            & Proxy.FQN
+            & " has at least an out mode parameter");
+      end if;
+      return Res;
+   end Get_Diagnostics;
+
+   --  The generation strategies for proxy types "simply" leverage the
+   --  strategies of the proxy subprogram, and alter the representation to add
+   --  a header containing the hash of the proxy subprogram, to avoid
+   --  catastrophic decoding errors, should the proxy subprogram change between
+   --  two TGen invocation. The hash may also be useful in the future to
+   --  provision for potential support for more than 1 proxy program supported
+   --  at a time.
+
+   type Proxy_Random_Strategy is new Random_Strategy_Type with record
+      T           : Typ_Access;
+      Proxy_Strat : Strategy_Acc;
+   end record;
+
+   overriding
+   function Generate
+     (S : in out Proxy_Random_Strategy; Disc_Context : Disc_Value_Map)
+      return JSON_Value;
+
+   --------------
+   -- Generate --
+   --------------
+
+   overriding
+   function Generate
+     (S : in out Proxy_Random_Strategy; Disc_Context : Disc_Value_Map)
+      return JSON_Value
+   is
+      Res       : constant JSON_Value := Create_Object;
+      Proxy_Fun : TGen.Types.Record_Types.Function_Typ renames
+        TGen.Types.Record_Types.Function_Typ
+          (Proxy_Typ (S.T.all).Proxy_Subprogram.all);
+   begin
+      Res.Set_Field ("proxy_uid", Create (Proxy_Fun.Subp_UID));
+      Res.Set_Field ("proxy_values", S.Proxy_Strat.Generate (Disc_Context));
+      return Res;
+   end Generate;
+
+   ----------------------
+   -- Default_Strategy --
+   ----------------------
+
+   function Default_Strategy
+     (Self : Proxy_Typ) return TGen.Strategies.Strategy_Type'Class
+   is
+      Proxy_Strat : constant Strategy_Type'Class :=
+        Self.Proxy_Subprogram.Default_Strategy;
+   begin
+      return
+        Proxy_Random_Strategy'
+          (T           => Self'Unrestricted_Access,
+           Proxy_Strat => new Strategy_Type'Class'(Proxy_Strat));
+   end Default_Strategy;
+
+   type Proxy_Enum_Strategy is new Enum_Strategy_Type with record
+      T           : Typ_Access;
+      Proxy_Strat : Enum_Strategy_Type_Acc;
+   end record;
+
+   overriding
+   procedure Init (S : in out Proxy_Enum_Strategy);
+   --  Initializes the enum strategy of the proxy subprogram
+
+   overriding
+   function Has_Next (S : Proxy_Enum_Strategy) return Boolean;
+   --  Simply returns whether the proxy subprogram's strategy has a next
+   --  element to be generated.
+
+   overriding
+   function Generate
+     (S : in out Proxy_Enum_Strategy; Disc_Context : Disc_Value_Map)
+      return JSON_Value;
+
+   ----------
+   -- Init --
+   ----------
+
+   overriding
+   procedure Init (S : in out Proxy_Enum_Strategy) is
+   begin
+      S.Proxy_Strat.Init;
+   end Init;
+
+   --------------
+   -- Has_Next --
+   --------------
+
+   overriding
+   function Has_Next (S : Proxy_Enum_Strategy) return Boolean
+   is (S.Proxy_Strat.Has_Next);
+
+   --------------
+   -- Generate --
+   --------------
+
+   overriding
+   function Generate
+     (S : in out Proxy_Enum_Strategy; Disc_Context : Disc_Value_Map)
+      return JSON_Value
+   is
+      Res       : constant JSON_Value := Create_Object;
+      Proxy_Fun : TGen.Types.Record_Types.Function_Typ renames
+        TGen.Types.Record_Types.Function_Typ
+          (Proxy_Typ (S.T.all).Proxy_Subprogram.all);
+   begin
+      Res.Set_Field ("proxy_uid", Create (Proxy_Fun.Subp_UID));
+      Res.Set_Field ("proxy_values", S.Proxy_Strat.Generate (Disc_Context));
+      return Res;
+   end Generate;
+
+   ---------------------------
+   -- Default_Enum_Strategy --
+   ---------------------------
+
+   function Default_Enum_Strategy
+     (Self : Proxy_Typ) return TGen.Strategies.Enum_Strategy_Type'Class
+   is
+      Proxy_Strat : constant Enum_Strategy_Type'Class :=
+        Self.Proxy_Subprogram.Default_Enum_Strategy;
+   begin
+      return
+        Proxy_Enum_Strategy'
+          (T           => Self'Unrestricted_Access,
+           Proxy_Strat => new Enum_Strategy_Type'Class'(Proxy_Strat));
+   end Default_Enum_Strategy;
+
+   ------------
+   -- Encode --
+   ------------
+
+   function Encode (Self : Proxy_Typ; Val : JSON_Value) return JSON_Value is
+      Res : constant JSON_Value := Create_Object;
+   begin
+      Res.Set_Field ("proxy_uid", JSON_Value'(Val.Get ("proxy_uid")));
+      Res.Set_Field
+        ("proxy_values",
+         Self.Proxy_Subprogram.Encode (Val.Get ("proxy_values")));
+      return Res;
+   end Encode;
 
 end TGen.Types;
