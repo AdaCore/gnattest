@@ -29,14 +29,32 @@ with GNAT.OS_Lib;
 
 package TGen.JSON.Test_Cases is
 
+   --  All the types defined in this package rely on counted shared references,
+   --  modifications done to any of the values returned by the getters will be
+   --  reflected in the underlying shared data held by other references.
+   --
+   --  Use the `Clone` functions defined bellow to create deep copies of the
+   --  data types if needed.
+
    type JSON_Test_Cases is private;
    --  JSON test cases instance. Represent a loaded JSON file.
+   --
+   --  This type is a reference to underlying data, copying it only creates a
+   --  copy of the reference, the underlying data being (ref-counted) shared
+   --  by all copies.
 
    No_JSON_Test_Cases : constant JSON_Test_Cases;
    --  A JSON test case file with no test cases.
 
    type Subprogram_Test_Case is private;
-   --  Subprogram test case.
+   --  Subprogram test case. This contains information about a single
+   --  subprogram (such as it name, its return type if it is a function) but
+   --  has no notion of subprogram profile.
+   --
+   --  It also stores the various test vectors associated with this subprogram.
+   --  This type is a reference to underlying data, copying it only creates a
+   --  copy of the reference, the underlying data being (ref-counted) shared
+   --  by all copies.
 
    No_Subprogram_Test_Case : constant Subprogram_Test_Case;
    --  An empty subprogram with no test cases. This value is intended to be
@@ -47,6 +65,10 @@ package TGen.JSON.Test_Cases is
 
    type Subprogram_Test is private;
    --  Represents a subprogram test
+   --
+   --  This type is a reference to underlying data, copying it only creates a
+   --  copy of the reference, the underlying data being (ref-counted) shared
+   --  by all copies.
 
    type Subprogram_Test_Vector is private
    with
@@ -62,6 +84,10 @@ package TGen.JSON.Test_Cases is
 
    type Subprogram_Parameter is private;
    --  Represent a single subprogram parameter
+   --
+   --  This type is a reference to underlying data, copying it only creates a
+   --  copy of the reference, the underlying data being (ref-counted) shared
+   --  by all copies.
 
    type Subprogram_Parameter_Vector is private
    with
@@ -71,6 +97,8 @@ package TGen.JSON.Test_Cases is
         Has_Element => Subprogram_Parameter_Vector_Has_Element,
         Element     => Subprogram_Parameter_Vector_Element);
    --  Represents subprogram parameters
+
+   Empty_Parameter_Vector : constant Subprogram_Parameter_Vector;
 
    ----------------------------------------
    --  Subprogram Test Vector Iteration  --
@@ -112,8 +140,18 @@ package TGen.JSON.Test_Cases is
    --  file. This function will raise an exception
    --  (`TGen.JSON.Invalid_JSON_Stream`) if the JSON file is not valid.
 
+   procedure Bind_JSON (Self : in out JSON_Test_Cases; New_JSON : JSON_Value)
+   with Pre => New_JSON.Kind = JSON_Object_Type;
+   --  Bind Self to New_JSON. There is no validation done on New_JSON as to the
+   --  expected structure of the JSON value.
+
+   procedure Write_To_File (Self : JSON_Test_Cases; File_Path : String);
+   --  Write Self encoded as a JSON to File_Path
+
    procedure Add_Subprogram_To_JSON_File
-     (Self : in out JSON_Test_Cases; Subprogram_Hash : String)
+     (Self            : in out JSON_Test_Cases;
+      Subprogram_Hash : String;
+      Subp_Test_Cases : Subprogram_Test_Case)
    with Pre => not Has_Subprogram (Self, Subprogram_Hash);
    --  Add a subprogram entry to the test case file.
 
@@ -147,23 +185,60 @@ package TGen.JSON.Test_Cases is
    with Pre => Is_Function (Self);
    --  Returns the given subprogram return type
 
-   function Get_Subprogram_Origin (Self : Subprogram_Test) return String;
-   --  Returns the given subprogram origin
-
    function Get_Subprogram_Name (Self : Subprogram_Test_Case) return String;
    --  Returns the given subprogram name
+
+   function Create_Subprogram_Test_Case
+     (Qualified_Name : String; Return_Type_Name : String := "")
+      return Subprogram_Test_Case;
+   --  Create an empty subprogram testcase, containing no test vectors.
+
+   procedure Add_Test
+     (Self : in out Subprogram_Test_Case; New_Test : Subprogram_Test);
+   --  Add the New test to Self. This does not check that the parameter types
+   --  of New_Test match those that may already be present in Self.
+
+   function Create_Subprogram_Test
+     (Param_Values : Subprogram_Parameter_Vector;
+      Origin       : String;
+      Globals      : Subprogram_Parameter_Vector := Empty_Parameter_Vector)
+      return Subprogram_Test;
+   --  Create a test object from the given Param_Values and Globals.
+   --  Origin can be used to identify the provenance of the test.
+
+   function Get_Subprogram_Origin (Self : Subprogram_Test) return String;
+   --  Returns the given subprogram origin
 
    function Get_Subprogram_Parameters
      (Self : Subprogram_Test) return Subprogram_Parameter_Vector;
    --  Returns the list of parameters associated to the given subprogram.
 
+   function Create_Subprogram_Parameters return Subprogram_Parameter_Vector;
+   --  Create an empty subprogram parameter vector
+
+   procedure Append_Parameter
+     (Self : in out Subprogram_Parameter_Vector; Value : Subprogram_Parameter);
+   --  Add Value at the end of Self
+
    function Has_Global_Values (Self : Subprogram_Test) return Boolean;
    --  Returns if the subprogram has global values.
 
    function Get_Subprogram_Global_Values
-     (Self : Subprogram_Test) return JSON_Array
+     (Self : Subprogram_Test) return Subprogram_Parameter_Vector
    with Pre => Has_Global_Values (Self);
    --  Returns subprogram global values if applicable.
+
+   function Create_Parameter
+     (Name : String; Type_Name : String; Value : JSON_Value)
+      return Subprogram_Parameter;
+   --  Create a parameter object for the given Ada Name, for which the type's
+   --  fully qualified name is Type_Name, and represented by Value.
+   --
+   --  If Type_Name isn't a fully qualified name, code generated from this
+   --  parameter object may fail to compile due to visibility issues.
+   --
+   --  Value should correspond to the kind of JSON value that the JSON
+   --  marshallers would generate for this type.
 
    function Get_Parameter_Name (Self : Subprogram_Parameter) return String;
    --  Returns the parameter name.
@@ -176,6 +251,15 @@ package TGen.JSON.Test_Cases is
      (Self : Subprogram_Parameter) return JSON_Value;
    --  Return the parameter value.
    --  TODO: Add parameter value abstraction.
+
+   ----------------------
+   --  Clone functions --
+   ----------------------
+
+   function Clone (Val : JSON_Test_Cases) return JSON_Test_Cases;
+   function Clone (Val : Subprogram_Test_Case) return Subprogram_Test_Case;
+   function Clone (Val : Subprogram_Test) return Subprogram_Test;
+   function Clone (Val : Subprogram_Parameter) return Subprogram_Parameter;
 
 private
 
@@ -212,6 +296,9 @@ private
 
    Empty_Subprogram_Test_Vector : constant Subprogram_Test_Vector :=
      Subprogram_Test_Vector'(Values => Empty_Array);
+
+   Empty_Parameter_Vector : constant Subprogram_Parameter_Vector :=
+     Subprogram_Parameter_Vector'(Values => Empty_Array);
 
    function Read_Whole_File (Filename : String) return String;
    --  Return the content of a text file as a string

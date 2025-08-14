@@ -6885,11 +6885,11 @@ package body Test.Skeleton is
 
       Unit_Raw_Content : GNAT.Strings.String_Access;
 
-      Global_Values : JSON_Array;
       Test_Cases    : TGen_JSON_TC.JSON_Test_Cases :=
         TGen_JSON_TC.No_JSON_Test_Cases;
       Subprogram_TC : TGen_JSON_TC.Subprogram_Test_Case;
       Param_Values  : TGen_JSON_TC.Subprogram_Parameter_Vector;
+      Global_Values : TGen_JSON_TC.Subprogram_Parameter_Vector;
 
       Diags : String_Vector;
       --  Diagnostics for TGen.Libgen.Include_Subp
@@ -7358,7 +7358,7 @@ package body Test.Skeleton is
                Global_Values :=
                  (if TGen_JSON_TC.Has_Global_Values (Test_Vec)
                   then TGen_JSON_TC.Get_Subprogram_Global_Values (Test_Vec)
-                  else TGen.JSON.Empty_Array);
+                  else TGen_JSON_TC.Empty_Parameter_Vector);
 
                Put_Line
                  (Spec_Kind,
@@ -7501,7 +7501,8 @@ package body Test.Skeleton is
 
                      declare
                         Unparsed_JSON : constant JSON_Value :=
-                          TGen.JSON.Unparse.Unparse (Global.Get ("value"));
+                          TGen.JSON.Unparse.Unparse
+                            (TGen_JSON_TC.Get_Parameter_Value (Global));
                         Constraints   : Unbounded_String;
                         Value         : Unbounded_String;
                      begin
@@ -7513,7 +7514,7 @@ package body Test.Skeleton is
                         Put_Line
                           (Body_Kind,
                            Com
-                           & Global.Get ("name")
+                           & TGen_JSON_TC.Get_Parameter_Name (Global)
                            & " "
                            & (+Constraints)
                            & " := "
@@ -7527,14 +7528,21 @@ package body Test.Skeleton is
                      declare
                         Value : constant Unbounded_String :=
                           +Input_Fname_For_Typ
-                             (To_Qualified_Name (Global.Get ("type_name")))
+                             (To_Qualified_Name
+                                (TGen_JSON_TC.Get_Parameter_Type_Name
+                                   (Global)))
                           & " (TGen.JSON.Read (";
                      begin
                         Put_Line
                           (Body_Kind,
-                           Com & Global.Get ("name") & ":= " & (+Value));
+                           Com
+                           & TGen_JSON_TC.Get_Parameter_Name (Global)
+                           & ":= "
+                           & (+Value));
                         Pp_JSON_Object_Lit
-                          (Body_Kind, Global.Get ("value"), 5);
+                          (Body_Kind,
+                           TGen_JSON_TC.Get_Parameter_Value (Global),
+                           5);
                         Put_Line (Body_Kind, "));");
                      end;
                   end if;
