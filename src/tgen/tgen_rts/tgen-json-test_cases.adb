@@ -176,8 +176,11 @@ package body TGen.JSON.Test_Cases is
    procedure Add_Test
      (Self : in out Subprogram_Test_Case; New_Test : Subprogram_Test)
    is
-      Subp_Tests : JSON_Array := Self.Subp_Root.Get ("test_vectors");
+      Subp_Tests : JSON_Array;
    begin
+      if Self.Subp_Root.Has_Field ("test_vectors") then
+         Subp_Tests := Self.Subp_Root.Get ("test_vectors");
+      end if;
       Append (Subp_Tests, New_Test.Root);
       Self.Subp_Root.Set_Field ("test_vectors", Subp_Tests);
    end Add_Test;
