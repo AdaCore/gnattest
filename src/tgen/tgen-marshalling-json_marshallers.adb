@@ -79,6 +79,7 @@ package body TGen.Marshalling.JSON_Marshallers is
       procedure Print_Record (Assocs : Translate_Table);
       procedure Print_Header_Wrappers (Assocs : Translate_Table);
       procedure Print_Derived_Private_Subtype (Assocs : Translate_Table);
+      procedure Print_Proxy_Read (Assocs : Translate_Set);
 
       ---------------------
       -- Component_Write --
@@ -198,6 +199,16 @@ package body TGen.Marshalling.JSON_Marshallers is
          New_Line (Body_Part);
       end Print_Derived_Private_Subtype;
 
+      ----------------------
+      -- Print_Proxy_Read --
+      ----------------------
+
+      procedure Print_Proxy_Read (Assocs : Translate_Set) is
+      begin
+         New_Line (Body_Part);
+         Put_Line (Body_Part, Parse (Proxy_Read_Template, Assocs));
+      end Print_Proxy_Read;
+
       procedure Generate_Base_Functions_For_Typ_Instance is new
         Generate_Base_Functions_For_Typ
           (Differentiate_Discrete        => False,
@@ -211,7 +222,8 @@ package body TGen.Marshalling.JSON_Marshallers is
            Print_Array                   => Print_Array,
            Print_Record                  => Print_Record,
            Print_Header_Wrappers         => Print_Header_Wrappers,
-           Print_Derived_Private_Subtype => Print_Derived_Private_Subtype);
+           Print_Derived_Private_Subtype => Print_Derived_Private_Subtype,
+           Print_Proxy_Read              => Print_Proxy_Read);
    begin
       --  Generate the base functions for Typ
 
@@ -226,11 +238,19 @@ package body TGen.Marshalling.JSON_Marshallers is
 
       --  Generate the Input and Output subprograms
 
-      Put_Line (Spec_Part, Parse (In_Out_Spec_Template, Assocs));
-      New_Line (Spec_Part);
+      if Typ in Proxy_Typ'Class then
 
-      Put_Line (Body_Part, Parse (In_Out_Body_Template, Assocs));
-      New_Line (Body_Part);
+         --  Proxy_Typ use their own custom Input function (no output).
+
+         Put_Line (Spec_Part, Parse (Proxy_Base_Spec_Template, Assocs));
+         New_Line (Spec_Part);
+      else
+         Put_Line (Spec_Part, Parse (In_Out_Spec_Template, Assocs));
+         New_Line (Spec_Part);
+
+         Put_Line (Body_Part, Parse (In_Out_Body_Template, Assocs));
+         New_Line (Body_Part);
+      end if;
 
    end Generate_Marshalling_Functions_For_Typ;
 

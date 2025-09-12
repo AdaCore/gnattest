@@ -29,6 +29,8 @@ with Ada.Strings;                           use Ada.Strings;
 with Ada.Strings.Fixed;                     use Ada.Strings.Fixed;
 with Ada.Text_IO;                           use Ada.Text_IO;
 
+with TGen.Libgen; use TGen.Libgen;
+
 with TGen.Types.Array_Types;    use TGen.Types.Array_Types;
 with TGen.Types.Discrete_Types; use TGen.Types.Discrete_Types;
 with TGen.Types.Enum_Types;     use TGen.Types.Enum_Types;
@@ -953,6 +955,59 @@ package body TGen.Marshalling is
             Print_Derived_Private_Subtype (Assocs);
          end;
 
+      elsif Typ in Proxy_Typ'Class then
+         declare
+            Proxy_FN : Function_Typ renames
+              Function_Typ (Proxy_Typ (Typ).Proxy_Subprogram.all);
+            Assocs   : Translate_Set := To_Set (Common_Assocs);
+
+            --  @_PARAM_NAME_@ Name of the parameters of the proxy subprogram
+            Param_Names   : Vector_Tag;
+            --  @_PARAM_TY_@ Fully qualified names of the parameters of the proxy
+            --  subprogram
+            Param_Types   : Vector_Tag;
+            --  @_PARAM_INPUT_FN_@ Name of the input function for the parameters of the
+            --                     proxy subprogram.
+            Param_Inputs  : Vector_Tag;
+            --  @_GLOBAL_NAME_@ Name of the global variables
+            Global_Names  : Vector_Tag;
+            --  @_GLOBAL_INPUT_FN_@ Name of the input function for the global variables
+            Global_Inputs : Vector_Tag;
+         begin
+            Insert (Assocs, Assoc ("PROXY_FN_FQN", Proxy_FN.FQN));
+            Insert (Assocs, Assoc ("PROXY_UID", String'(+Proxy_FN.Subp_UID)));
+            for Param_Name of Proxy_FN.Param_Order loop
+               declare
+                  use Component_Maps;
+                  Param_Ty : constant Constant_Reference_Type :=
+                    Proxy_FN.Component_Types.Constant_Reference (Param_Name);
+               begin
+                  Append (Param_Names, String'(+Param_Name));
+                  Append
+                    (Param_Types, Param_Ty.Element.all.FQN (No_Std => True));
+                  Append (Param_Inputs, Input_Fname_For_Typ (Param_Ty.Name));
+               end;
+            end loop;
+            Insert (Assocs, Assoc ("PARAM_TY", Param_Types));
+            Insert (Assocs, Assoc ("PARAM_NAME", Param_Names));
+            Insert (Assocs, Assoc ("PARAM_INPUT_FN", Param_Inputs));
+            for Global_Cur in Proxy_FN.Globals.Iterate loop
+               declare
+                  use Component_Maps;
+                  Global_Name : constant String :=
+                    +Component_Maps.Key (Global_Cur);
+                  Global_Ty   : constant Constant_Reference_Type :=
+                    Proxy_FN.Globals.Constant_Reference (Global_Cur);
+               begin
+                  Append (Global_Names, Global_Name);
+                  Append (Global_Inputs, Input_Fname_For_Typ (Global_Ty.Name));
+               end;
+            end loop;
+            Insert (Assocs, Assoc ("GLOBAL_NAME", Global_Names));
+            Insert (Assocs, Assoc ("GLOBAL_INPUT_FN", Global_Inputs));
+            Print_Proxy_Read (Assocs);
+         end;
+
       --  3.3 For record types, we generate the calls for the components and
       --      the variant part and instanciate the appropriate patterns.
 
@@ -1064,24 +1119,26 @@ package body TGen.Marshalling is
       end if;
    end Generate_Base_Functions_For_Typ;
 
-   -----------------------
-   -- Is_Supported_Type --
-   -----------------------
+   --------------------
+   -- Get_IO_Support --
+   --------------------
 
-   function Is_Supported_Type (Typ : TGen.Types.Typ'Class) return Boolean is
+   function Get_IO_Support (Typ : TGen.Types.Typ'Class) return IO_Support is
       use Component_Maps;
 
-      function Is_Supported_Variant
-        (Variant_Part : Variant_Part_Acc) return Boolean;
+      function Variant_IO_Support
+        (Variant_Part : Variant_Part_Acc) return IO_Support;
       --  Recursive function used to check the variant part of a discriminated
       --  record.
 
-      --------------------------
-      -- Is_Supported_Variant --
-      --------------------------
+      ------------------------
+      -- Variant_IO_Support --
+      ------------------------
 
-      function Is_Supported_Variant
-        (Variant_Part : Variant_Part_Acc) return Boolean is
+      function Variant_IO_Support
+        (Variant_Part : Variant_Part_Acc) return IO_Support
+      is
+         Res : IO_Support := IO_Full;
       begin
          if Variant_Part /= null then
 
@@ -1092,40 +1149,66 @@ package body TGen.Marshalling is
                --  Check components
 
                for Cu in V_Choice.Components.Iterate loop
-                  if not Is_Supported_Type (Element (Cu).all) then
-                     return False;
-                  end if;
+                  Res := Res and Get_IO_Support (Element (Cu).all);
                end loop;
 
                --  Check the variant part if any
 
-               if not Is_Supported_Variant (V_Choice.Variant) then
-                  return False;
-               end if;
+               Res := Res and Variant_IO_Support (V_Choice.Variant);
             end loop;
          end if;
 
-         return True;
-      end Is_Supported_Variant;
+         return Res;
+      end Variant_IO_Support;
+
+      Res : IO_Support := IO_Full;
+      --  Used as accumulator for some type kinds
 
    begin
       if Typ in Scalar_Typ'Class then
-         return True;
+         return IO_Full;
       elsif Typ in Derived_Private_Subtype_Typ then
          return
-           Is_Supported_Type
+           Get_IO_Support
              (Derived_Private_Subtype_Typ'Class (Typ).Parent_Type.all);
       elsif Typ in Constrained_Array_Typ'Class then
          return
-           Is_Supported_Type
+           Get_IO_Support
              (Constrained_Array_Typ'Class (Typ).Component_Type.all);
       elsif Typ in Unconstrained_Array_Typ'Class then
          return
-           Is_Supported_Type
+           Get_IO_Support
              (Unconstrained_Array_Typ'Class (Typ).Component_Type.all);
+      elsif Typ in Function_Typ'Class then
+         declare
+            FN_Typ : Function_Typ renames Function_Typ (Typ);
+         begin
+            Res := IO_Full;
+
+            --  Check out and in out parameters
+
+            for Param_Name of FN_Typ.Param_Order loop
+               if FN_Typ.Param_Modes.Element (Param_Name)
+                  in In_Mode | In_Out_Mode
+               then
+                  Res :=
+                    Res
+                    and Get_IO_Support
+                          (FN_Typ.Component_Types.Element (Param_Name).all);
+               end if;
+            end loop;
+
+            --  Check all globals
+
+            for Global_T of FN_Typ.Globals loop
+               Res := Res and Get_IO_Support (Global_T.all);
+            end loop;
+            return Res;
+         end;
       elsif Typ in Base_Record_Typ'Class then
 
          --  Check specific components of discriminated records
+         Res := IO_Full;
 
          if Typ in Record_Typ'Class then
             declare
@@ -1134,28 +1217,22 @@ package body TGen.Marshalling is
                --  Check that the discriminant types are supported
 
                for Cu in D_Typ.Discriminant_Types.Iterate loop
-                  if not Is_Supported_Type (Element (Cu).all) then
-                     return False;
-                  end if;
+                  Res := Res and Get_IO_Support (Element (Cu).all);
                end loop;
 
                --  Check the variant parts if any
 
-               if not Is_Supported_Variant (D_Typ.Variant) then
-                  return False;
-               end if;
+               Res := Res and Variant_IO_Support (D_Typ.Variant);
             end;
          end if;
 
          --  Check regular component types
 
          for Cu in Base_Record_Typ'Class (Typ).Component_Types.Iterate loop
-            if not Is_Supported_Type (Element (Cu).all) then
-               return False;
-            end if;
+            Res := Res and Get_IO_Support (Element (Cu).all);
          end loop;
 
-         return True;
+         return Res;
 
       elsif Typ in Anonymous_Typ'Class then
 
@@ -1164,16 +1241,44 @@ package body TGen.Marshalling is
 
          if Anonymous_Typ'Class (Typ).Named_Ancestor.all in Real_Typ'Class then
             Ada.Text_IO.Put_Line ("real constraints");
-            return False;
+            return IO_None;
          else
             return
-              Is_Supported_Type (Anonymous_Typ'Class (Typ).Named_Ancestor.all);
+              Get_IO_Support (Anonymous_Typ'Class (Typ).Named_Ancestor.all);
          end if;
-
+      elsif Typ in Proxy_Typ'Class then
+         --  Proxy types only support input at most (depending on the
+         --  capabilities of the parameters of the proxy subprogram).
+         return
+           IO_Input and Get_IO_Support (Proxy_Typ (Typ).Proxy_Subprogram.all);
       else
-         return False;
+         return IO_None;
       end if;
-   end Is_Supported_Type;
+   end Get_IO_Support;
+
+   -----------------------
+   -- Is_Supported_Type --
+   -----------------------
+
+   function Is_Supported_Type (Typ : TGen.Types.Typ'Class) return Boolean
+   is (Get_IO_Support (Typ) = IO_Full);
+   --  Return True for types which are currently fully supported by TGen
+
+   -------------------------
+   -- Type_Supports_Input --
+   -------------------------
+
+   function Type_Supports_Input (Typ : TGen.Types.Typ'Class) return Boolean
+   is (Get_IO_Support (Typ) in IO_Input | IO_Full);
+   --  Whether TGen can generate input function for Typ
+
+   --------------------------
+   -- Type_Supports_Output --
+   --------------------------
+
+   function Type_Supports_Output (Typ : TGen.Types.Typ'Class) return Boolean
+   is (Get_IO_Support (Typ) in IO_Output | IO_Full);
+   --  Whether TGen can generate output functions for Typ
 
    ------------------
    -- Needs_Header --

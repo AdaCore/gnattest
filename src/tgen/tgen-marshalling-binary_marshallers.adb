@@ -78,6 +78,7 @@ package body TGen.Marshalling.Binary_Marshallers is
       procedure Print_Array (Assocs : Translate_Table);
       procedure Print_Record (Assocs : Translate_Table);
       procedure Print_Header_Wrappers (Assocs : Translate_Table);
+      procedure Print_Proxy_Read (Assocs : Translate_Set) is null;
 
       --------------------
       -- Component_Read --
@@ -232,7 +233,8 @@ package body TGen.Marshalling.Binary_Marshallers is
            Print_Array                   => Print_Array,
            Print_Record                  => Print_Record,
            Print_Header_Wrappers         => Print_Header_Wrappers,
-           Print_Derived_Private_Subtype => Print_Derived_Private_Subtype);
+           Print_Derived_Private_Subtype => Print_Derived_Private_Subtype,
+           Print_Proxy_Read              => Print_Proxy_Read);
    begin
       --  Generate the base functions for Typ
 
@@ -247,10 +249,17 @@ package body TGen.Marshalling.Binary_Marshallers is
 
       --  Generate the Input and Output subprograms
 
-      Put_Line (Spec_Part, Parse (In_Out_Spec_Template, Assocs));
-      New_Line (Spec_Part);
-      Put_Line (Body_Part, Parse (In_Out_Body_Template, Assocs));
-      New_Line (Body_Part);
+      if Typ in Proxy_Typ'Class then
+
+         --  Proxy_Typ use their own custom Input function (no output).
+
+         null;
+      else
+         Put_Line (Spec_Part, Parse (In_Out_Spec_Template, Assocs));
+         New_Line (Spec_Part);
+         Put_Line (Body_Part, Parse (In_Out_Body_Template, Assocs));
+         New_Line (Body_Part);
+      end if;
 
    end Generate_Marshalling_Functions_For_Typ;
 

@@ -219,9 +219,11 @@ package body TGen.Libgen is
       for T of Types loop
          declare
             Spec_Part, Private_Part, Body_Part : aliased Unbounded_String;
+            T_IO_Support                       : constant IO_Support :=
+              Get_IO_Support (T.all);
          begin
 
-            if Is_Supported_Type (T.all)
+            if T_IO_Support /= IO_None
               --  We ignore instance types when generating marshallers as they
               --  are not types per-se, but a convenient way of binding a type
               --  to its strategy context.
@@ -229,7 +231,13 @@ package body TGen.Libgen is
               and then T.all not in Instance_Typ'Class
             then
                if T.all.Kind in Function_Kind then
-                  if JSON_Marshalling_Enabled then
+
+                  --  We need output capabilities to be able to generate the
+                  --  testcase serializers.
+
+                  if JSON_Marshalling_Enabled
+                    and then (T_IO_Support and IO_Output) /= IO_None
+                  then
                      TGen
                        .Marshalling
                        .JSON_Marshallers
@@ -1005,9 +1013,10 @@ package body TGen.Libgen is
    ------------------
 
    function Include_Subp
-     (Ctx   : in out Libgen_Context;
-      Subp  : Basic_Decl'Class;
-      Diags : out String_Vectors.Vector) return Boolean
+     (Ctx                  : in out Libgen_Context;
+      Subp                 : LAL.Basic_Decl'Class;
+      Diags                : out TGen.Strings.String_Vectors.Vector;
+      Requested_IO_Support : IO_Support := IO_Full) return Boolean
    is
       use Ada_Qualified_Name_Sets_Maps;
 
@@ -1035,6 +1044,9 @@ package body TGen.Libgen is
 
       Trans_Res : constant Typ_Access := Supported_Subprogram (Subp);
 
+      Subp_IO_Support : constant IO_Support := Get_IO_Support (Trans_Res.all);
+      --  Level of IO we have for this subprogram
+
       Subp_Info : Subp_Information :=
         (UID    =>
            TGen.Strings."+"
@@ -1045,6 +1057,31 @@ package body TGen.Libgen is
       if Trans_Res.all.Kind = Unsupported then
          Diags := Trans_Res.all.Get_Diagnostics;
          return False;
+      end if;
+
+      --  Check wether the subprogram meets the expected level of IO support
+
+      if (Subp_IO_Support and Requested_IO_Support) /= Requested_IO_Support
+      then
+         declare
+            Missing_IO_Support : constant IO_Support :=
+              Requested_IO_Support
+              - (Subp_IO_Support and Requested_IO_Support);
+            --  IO capabilities missing among those requested
+         begin
+            Diags :=
+              TGen.Strings.String_Vectors.To_Vector
+                (+"Warning: Cannot generate "
+                 & (case Missing_IO_Support is
+                      when IO_None   => "no",
+                      when IO_Input  => "input",
+                      when IO_Output => "output",
+                      when IO_Full   => "input and output")
+                 & " marshallers for "
+                 & Trans_Res.FQN (No_Std => True),
+                 1);
+            return False;
+         end;
       end if;
 
       --  Check if the subprogram was already translated
@@ -1371,8 +1408,8 @@ package body TGen.Libgen is
             begin
                --  If no type is supported, do not generate a support library
 
-               if not (for all T of Element (Cur) =>
-                         not Is_Supported_Type (T.all))
+               if (for some T of Element (Cur) =>
+                     Get_IO_Support (T.all) /= IO_None)
                then
                   if Is_Generic_Inst then
                      Create_Generic_Wrapper_Package_If_Not_Exists
@@ -1394,8 +1431,8 @@ package body TGen.Libgen is
                --  If all types are not supported, do not generate a support
                --  library.
 
-               if not (for all T of Element (Cur) =>
-                         not Is_Supported_Type (T.all))
+               if (for some T of Element (Cur) =>
+                     Get_IO_Support (T.all) /= IO_None)
                then
                   Generate_Value_Gen_Library
                     (Ctx,
@@ -1418,12 +1455,13 @@ package body TGen.Libgen is
    --------------
 
    function Generate
-     (Ctx   : in out Libgen_Context;
-      Subp  : LAL.Basic_Decl'Class;
-      Diags : out String_Vectors.Vector;
-      Part  : Any_Library_Part := All_Parts) return Boolean is
+     (Ctx                  : in out Libgen_Context;
+      Subp                 : LAL.Basic_Decl'Class;
+      Diags                : out String_Vectors.Vector;
+      Part                 : Any_Library_Part := All_Parts;
+      Requested_IO_Support : IO_Support := IO_Full) return Boolean is
    begin
-      if Include_Subp (Ctx, Subp, Diags) then
+      if Include_Subp (Ctx, Subp, Diags, Requested_IO_Support) then
          Generate (Ctx, Part);
       else
          return False;

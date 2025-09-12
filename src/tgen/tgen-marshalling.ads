@@ -32,10 +32,22 @@ with TGen.Types.Constraints; use TGen.Types.Constraints;
 with TGen.Types;             use TGen.Types;
 with TGen.Strings;           use TGen.Strings;
 
+limited with TGen.Libgen;
+
 package TGen.Marshalling is
 
+   function Get_IO_Support
+     (Typ : TGen.Types.Typ'Class) return TGen.Libgen.IO_Support;
+   --  Return the IO capabilities TGen can generate for Typ
+
    function Is_Supported_Type (Typ : TGen.Types.Typ'Class) return Boolean;
-   --  Return True for types which are currently supported by the prototype
+   --  Return True for types which are currently fully supported by TGen
+
+   function Type_Supports_Input (Typ : TGen.Types.Typ'Class) return Boolean;
+   --  Whether TGen can generate input function for Typ
+
+   function Type_Supports_Output (Typ : TGen.Types.Typ'Class) return Boolean;
+   --  Whether TGen can generate output functions for Typ
 
    function Needs_Header (Typ : TGen.Types.Typ'Class) return Boolean;
    --  Return True for types which have constraints (bounds of unconstrained
@@ -123,6 +135,9 @@ private
       with procedure Print_Derived_Private_Subtype (Assocs : Translate_Table);
       --  Output (un)marshallers for a type that is a derivation of a
       --  private type.
+
+      with procedure Print_Proxy_Read (Assocs : Translate_Set);
+      --  Output the body of the function to read a value using a proxy
 
      procedure Generate_Base_Functions_For_Typ
      (Typ : TGen.Types.Typ'Class; For_Base : Boolean := False)

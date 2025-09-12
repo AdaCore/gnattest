@@ -151,16 +151,18 @@ package body TGen.Dependency_Graph is
             begin
                Res.Include (Derived_Typ.Parent_Type);
                if Transitive then
-                  Res.Union (Type_Dependencies (Derived_Typ.Parent_Type));
+                  Res.Union
+                    (Type_Dependencies (Derived_Typ.Parent_Type, Transitive));
                end if;
             end;
 
          when Proxy_Kind                   =>
+            --  For proxy subprograms we always need the dependencies on the
+            --  parameter and global types.
             Res.Include (Proxy_Typ (T.all).Proxy_Subprogram);
-            if Transitive then
-               Res.Union
-                 (Type_Dependencies (Proxy_Typ (T.all).Proxy_Subprogram));
-            end if;
+            Res.Union
+              (Type_Dependencies
+                 (Proxy_Typ (T.all).Proxy_Subprogram, Transitive));
 
          when others                       =>
             null;

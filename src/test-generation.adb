@@ -160,8 +160,18 @@ package body Test.Generation is
             end if;
          end;
 
+         --  Register the subprogram in TGen, we only need the marshalling lib
+         --  when generating binary tests (as we need the conversion tools to
+         --  translate from JSON to binary).
+
          if not Include_Subp
-                  (Test.Common.TGen_Libgen_Ctx, Node.As_Basic_Decl, Diags)
+                  (Test.Common.TGen_Libgen_Ctx,
+                   Node.As_Basic_Decl,
+                   Diags,
+                   Requested_IO_Support =>
+                     (if Test.Common.Gen_Bin_Tests
+                      then TGen.Libgen.IO_Input
+                      else TGen.Libgen.IO_None))
          then
             Report_Failures;
          end if;

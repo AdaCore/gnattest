@@ -885,6 +885,9 @@ package body TGen.Type_Representation is
                end loop;
                Insert (Assocs, Assoc ("GLOBAL_NAME", Global_Names));
                Insert (Assocs, Assoc ("GLOBAL_TYPE", Global_Types));
+               Insert
+                 (Assocs,
+                  Assoc ("SUBP_UID", String'(+Function_Type.Subp_UID)));
             end;
          end if;
 

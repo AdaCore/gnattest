@@ -158,8 +158,14 @@ package body Test.Instrument is
 
          end if;
 
+         --  Register marshaller generation for the subprogram. We only need
+         --  output marshallers for test instrumentation.
+
          if not TGen.Libgen.Include_Subp
-                  (TGen_Libgen_Ctx, Node.As_Basic_Decl, Diags)
+                  (TGen_Libgen_Ctx,
+                   Node.As_Basic_Decl,
+                   Diags,
+                   TGen.Libgen.IO_Output)
          then
             Report_Std (Join (Diags) & ASCII.LF);
             return Over;

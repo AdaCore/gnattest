@@ -3,7 +3,9 @@
 @@--  @_COMP_NAME_ORD_@ Component names
 @@--  @_GLOBAL_NAME_@ Fully qualified names for global inputs of the subprogram
 @@--  @_GLOBAL_TYPE_@ Symbol names for global input types
+@@--  @_SUBP_UID_@ Short UID for this function type
 
+@_TY_PREFIX_@_Typ.Subp_UID := TGen.Strings."+" ("@_SUBP_UID_@");
 @@TABLE@@
    @_TY_PREFIX_@_Typ.Param_Order.Append (TGen.Strings."+" ("@_COMP_NAME_ORD_@"));
 @@END_TABLE@@

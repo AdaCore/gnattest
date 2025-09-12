@@ -55,6 +55,22 @@ package TGen.Libgen is
    type Ada_Language_Version is (Unspecified, Ada_12, Ada_22);
    --  Ada language versions
 
+   type IO_Support is mod 4;
+   IO_None   : constant IO_Support := 0;
+   IO_Input  : constant IO_Support := 1;
+   IO_Output : constant IO_Support := 2;
+   IO_Full   : constant IO_Support := 3;
+   --  Kind of operations we support for a given type
+   --
+   --  IO_None means the type is unsupported,
+   --  IO_Input means TGen can generate input marshallers
+   --  IO_Output means TGen can generate output marshallers
+   --  IO_Both means TGen can generate both input & output marshallers.
+   --
+   --  This is independent from the capability of generating test inputs, TGen
+   --  can always generate tests inputs as long as a Include_Subp does not
+   --  return False, even if IO_Output is not set.
+
    type Libgen_Context is private;
 
    function Create
@@ -85,9 +101,10 @@ package TGen.Libgen is
    --  supported inlined in the Unsupported_Typ.Reason field.
 
    function Include_Subp
-     (Ctx   : in out Libgen_Context;
-      Subp  : LAL.Basic_Decl'Class;
-      Diags : out TGen.Strings.String_Vectors.Vector) return Boolean;
+     (Ctx                  : in out Libgen_Context;
+      Subp                 : LAL.Basic_Decl'Class;
+      Diags                : out TGen.Strings.String_Vectors.Vector;
+      Requested_IO_Support : IO_Support := IO_Full) return Boolean;
    --  Register all the types in the parameters of Subp in the set of types for
    --  which the marshalling library will be generated. This procedures does
    --  not actually generate any sources, call Generate to create the support
@@ -97,19 +114,25 @@ package TGen.Libgen is
    --  types, or if some of the types are unsupported for marshalling,
    --  and report diagnostics in Diags. In that case, the context is not
    --  modified. Otherwise, Diags should be ignored.
+   --
+   --  Requested_IO_Support is used to indicated to TGen what level of support
+   --  is required in the marshallers (Input only, Output only or both).
+   --  If a given type is not supported in the requested configuration, then
+   --  Include_Subp will return False, with the corresponding diagnostics.
 
    procedure Generate
      (Ctx : in out Libgen_Context; Part : Any_Library_Part := All_Parts);
    --  Output all of the support library files
 
    function Generate
-     (Ctx   : in out Libgen_Context;
-      Subp  : LAL.Basic_Decl'Class;
-      Diags : out TGen.Strings.String_Vectors.Vector;
-      Part  : Any_Library_Part := All_Parts) return Boolean;
+     (Ctx                  : in out Libgen_Context;
+      Subp                 : LAL.Basic_Decl'Class;
+      Diags                : out TGen.Strings.String_Vectors.Vector;
+      Part                 : Any_Library_Part := All_Parts;
+      Requested_IO_Support : IO_Support := IO_Full) return Boolean;
    --  Shortcut for
    --
-   --     if Include_Subp (Ctx, Subp, Diag) then
+   --     if Include_Subp (Ctx, Subp, Diag, Requested_IO_Support) then
    --       Generate (Ctx);
    --     else
    --        return False;

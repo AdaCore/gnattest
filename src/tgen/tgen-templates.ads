@@ -105,6 +105,10 @@ package TGen.Templates is
         Template_Folder & "derived_private_subtype_spec.tmplt";
       Der_Priv_Sub_Body_Template        : constant String :=
         Template_Folder & "derived_private_subtype_body.tmplt";
+      Proxy_Read_Template               : constant String :=
+        Template_Folder & "proxy_read.tmplt";
+      Proxy_Base_Spec_Template          : constant String :=
+        Template_Folder & "proxy_base_spec.tmplt";
    end JSON_Marshalling;
 
    package Type_Representation is
