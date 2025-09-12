@@ -29,7 +29,7 @@ echo "$OUT" | grep -q -E 'CONSTRAINT_ERROR :.* divide by zero'
 
 # Second instrumentation with --recursive-stub, there should be `pkg_[bc]`
 # unit files in the stub folder.
-gnattest -P proj.gpr --stub --recursive-stub pkg_a.ads
+gnattest -P proj.gpr --recursive-stub pkg_a.ads
 
 find obj/gnattest_stub/stubs/Proj/ -name '*pkg_c*' | grep -q .
 [ $? = 0 ] || _exit "Missing expected stub files related to \`pkg_c\`."
