@@ -32,6 +32,7 @@ include:
       anod-args: run test_$ACI_TRACK
       image: pe-base
       cpus: 16
+      disk: 80
 
   - component: $CI_SERVER_FQDN/eng/gitlab-templates/test@~latest
     inputs:
@@ -39,6 +40,7 @@ include:
       anod-args: run test_gnatfuzz_tests
       image: pe-base
       cpus: 8
+      disk: 80
       rules:
         - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
           changes:
