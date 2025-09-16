@@ -117,7 +117,7 @@ package body TGen.Marshalling is
       Typ_Tag        : in out Tag;
       Pref_Tag       : in out Tag;
       Discr_Ancestor : in out Tag;
-      Complete : Boolean := False)
+      Complete       : Boolean := False)
    with Pre => Is_Discriminated (D_Typ);
    --  Compute the tags for the discriminant of a record type:
    --    * Name_Tag contains the names of the  discriminants: Discr, ...,
@@ -144,13 +144,13 @@ package body TGen.Marshalling is
          Typ    : TGen.Types.Typ'Class;
          Is_Min : Boolean := True) return String
       is (case C.Kind is
-            when Static => String_Value (C.Int_Val, Typ),
+            when Static       => String_Value (C.Int_Val, Typ),
             when Discriminant =>
               Global_Prefix
               & "_"
               & String'(+C.Disc_Name)
               & (if Is_Min then "_D_Min" else "_D_Max"),
-            when Non_Static => "");
+            when Non_Static   => "");
       --  Compute the constraint from a discrete value C. If C has a
       --  static value, we use it. If it is a discriminant, we use the min or
       --  max value for this discriminant. We do not supply values for
@@ -406,12 +406,13 @@ package body TGen.Marshalling is
       Typ_Tag        : in out Tag;
       Pref_Tag       : in out Tag;
       Discr_Ancestor : in out Tag;
-      Complete : Boolean := False)
+      Complete       : Boolean := False)
    is
       procedure Create_Tags_For_Discriminants_Aux (Cur_Typ : Record_Typ'Class);
 
       procedure Create_Tags_For_Discriminants_Aux (Cur_Typ : Record_Typ'Class)
-      is begin
+      is
+      begin
          for Cu in Cur_Typ.Discriminant_Types.Iterate loop
             declare
                Discr_Name : constant String := (+Component_Maps.Key (Cu));
@@ -776,7 +777,7 @@ package body TGen.Marshalling is
                      3 => Assoc ("SPACING", RW_Spacing (Spacing))]);
             Ancestor_WT :=
               +Variant_Read_Write
-              (Assocs
+                 (Assocs
                   & [1 => Assoc ("COMPONENT_ACTION", Ancestor_CWT),
                      2 => Assoc ("ANCESTOR_COMPONENT_ACTION", Ancestor_CWT),
                      3 => Assoc ("VARIANT_PART", Ancestor_VWT),
@@ -995,8 +996,7 @@ package body TGen.Marshalling is
                     8  => Assoc ("LAST_NAME", Last_Name_Tag),
                     9  => Assoc ("BOUND_TYP", Comp_Typ_Tag),
                     10 =>
-                      Assoc
-                        ("COMPONENT_READ_INDEXED", Component_Read_Indexed),
+                      Assoc ("COMPONENT_READ_INDEXED", Component_Read_Indexed),
                     11 => Assoc ("AS_ANCESTOR", Ancestor_CW)];
 
             begin
@@ -1057,15 +1057,16 @@ package body TGen.Marshalling is
               and then Record_Typ (Typ).Ancestor /= null
             then
                declare
-                  Ancestor : constant Record_Typ_Access :=
+                  Ancestor        : constant Record_Typ_Access :=
                     Record_Typ (Typ).Ancestor;
                   Ancestor_B_Name : constant String :=
                     Ancestor.FQN (No_Std => True);
                begin
                   Ancestor_Ty_Prefix := +Prefix_For_Typ (Ancestor.Slug);
-                  Ancestor_Ty_Name   := +(if For_Base
-                                          then Ancestor_B_Name & "'Base"
-                                          else Ancestor_B_Name);
+                  Ancestor_Ty_Name :=
+                    +(if For_Base
+                      then Ancestor_B_Name & "'Base"
+                      else Ancestor_B_Name);
                end;
             end if;
 
@@ -1118,7 +1119,7 @@ package body TGen.Marshalling is
                     7  => Assoc ("ANCESTOR_VARIANT_WRITE", Ancestor_VW),
                     8  => Assoc ("VARIANT_SIZE", Variant_Size),
                     9  => Assoc ("VARIANT_SIZE_MAX", Variant_Size_Max),
-                    10  => Assoc ("DISCR_NAME", Discr_Name_Tag),
+                    10 => Assoc ("DISCR_NAME", Discr_Name_Tag),
                     11 => Assoc ("DISCR_TYP", Comp_Typ_Tag),
                     12 =>
                       Assoc ("COMPONENT_READ_INDEXED", Component_Read_Indexed),
@@ -1264,18 +1265,17 @@ package body TGen.Marshalling is
    -- Needs_Header --
    ------------------
 
-   function Needs_Header (Typ : TGen.Types.Typ'Class) return Boolean
-   is
+   function Needs_Header (Typ : TGen.Types.Typ'Class) return Boolean is
       function Rec_Needs_Header (R : Record_Typ'Class) return Boolean
-      is
-        ((Is_Discriminated (R) and then not R.Constrained)
-         or else
-           (R.Ancestor /= null and then Rec_Needs_Header (R.Ancestor.all)));
+      is ((Is_Discriminated (R) and then not R.Constrained)
+          or else (R.Ancestor /= null
+                   and then Rec_Needs_Header (R.Ancestor.all)));
       --  Records can be tagged and have ancestors. If at least one of the
       --  ancestors has constraints, then Typ has constraints and return True.
 
    begin
-      return Typ in Unconstrained_Array_Typ'Class
+      return
+        Typ in Unconstrained_Array_Typ'Class
         or else (Typ in Record_Typ'Class
                  and then Rec_Needs_Header (Record_Typ'Class (Typ)));
    end Needs_Header;

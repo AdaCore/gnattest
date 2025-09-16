@@ -175,13 +175,13 @@ package body Test.Actions is
       is
          function Mode_Image_Cmd (M : Output_Mode_Type) return String
          is (case M is
-               when Root_Mode => "--tests-root",
+               when Root_Mode   => "--tests-root",
                when Subdir_Mode => "--subdirs",
                when Direct_Mode => "--tests-dir");
 
          function Mode_Image_Att (M : Output_Mode_Type) return String
          is (case M is
-               when Root_Mode => "Tests_Root",
+               when Root_Mode   => "Tests_Root",
                when Subdir_Mode => "Subdir",
                when Direct_Mode => "Tests_Dir");
       begin
@@ -833,7 +833,7 @@ package body Test.Actions is
                      Test.Skeleton.Source_Table.Add_Body_Reference
                        (Files (F).Display_Full_Name);
 
-                  when others =>
+                  when others    =>
                      null;
                end case;
             end if;
@@ -904,7 +904,7 @@ package body Test.Actions is
          when Subdir_Mode =>
             Check_Subdir;
 
-         when Root_Mode =>
+         when Root_Mode   =>
             Check_Separate_Root;
       end case;
 
@@ -1030,7 +1030,7 @@ package body Test.Actions is
         (Test.Common.TGen_Libgen_Ctx,
          (case Test.Common.Lang_Version is
             when Ada_83 | Ada_95 | Ada_2005 | Ada_2012 => TGen.Libgen.Ada_12,
-            when Ada_2022 => TGen.Libgen.Ada_22));
+            when Ada_2022                              => TGen.Libgen.Ada_22));
 
       if Arg (Cmd, Gen_Test_Vectors) then
          Test.Common.Generate_Test_Vectors := True;

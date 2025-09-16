@@ -133,8 +133,7 @@ package TGen.Types.Record_Types is
 
    type Record_Typ_Access is access all Record_Typ;
 
-   type Record_Typ (Constrained : Boolean) is new Base_Record_Typ
-   with record
+   type Record_Typ (Constrained : Boolean) is new Base_Record_Typ with record
 
       Mutable : Boolean := False;
       --  Whether this is a mutable type or not.
@@ -175,7 +174,7 @@ package TGen.Types.Record_Types is
    function Is_Discriminated (Self : Record_Typ) return Boolean
    is (not Self.Discriminant_Types.Is_Empty
        or else (Self.Ancestor /= null
-         and then Is_Discriminated (Self.Ancestor.all)));
+                and then Is_Discriminated (Self.Ancestor.all)));
    --  Self is discriminated if Self or one of its ancestors has at least
    --  one discriminant, i.e. the map of discriminant types has at least
    --  one element.
@@ -254,7 +253,8 @@ package TGen.Types.Record_Types is
    --  cannot have the same name, even if they are in a distinct variant
    --  choice).
 
-   function Kind (Self : Record_Typ) return Typ_Kind is (Record_Kind);
+   function Kind (Self : Record_Typ) return Typ_Kind
+   is (Record_Kind);
 
    procedure Free_Content (Self : in out Record_Typ);
    --  Helper for shared pointers
@@ -277,11 +277,9 @@ package TGen.Types.Record_Types is
    --  Others --
    -------------
 
-   function As_Base_Record_Typ
-     (Self : Typ_Access) return Base_Record_Typ'Class
+   function As_Base_Record_Typ (Self : Typ_Access) return Base_Record_Typ'Class
    is (Base_Record_Typ'Class (Self.all))
-   with
-     Pre => Self /= null and then Self.Kind in Record_Typ_Range;
+   with Pre => Self /= null and then Self.Kind in Record_Typ_Range;
    pragma Inline (As_Base_Record_Typ);
 
    function As_Record_Typ (Self : Typ_Access) return Record_Typ'Class
@@ -378,8 +376,8 @@ package TGen.Types.Record_Types is
 
    function Image (P_Mode : Parameter_Mode) return String
    is (case P_Mode is
-         when In_Mode => "in",
-         when Out_Mode => "out",
+         when In_Mode     => "in",
+         when Out_Mode    => "out",
          when In_Out_Mode => "in out");
 
    package Parameter_Mode_Maps is new

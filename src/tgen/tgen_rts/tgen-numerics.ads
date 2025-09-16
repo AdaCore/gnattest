@@ -104,14 +104,14 @@ package TGen.Numerics is
 
    function First (Digits_Value : Natural) return Any_Float
    is (case Digits_To_Precision (Digits_Value) is
-         when Single => Create (Float'First),
-         when Double => Create (Long_Float'First),
+         when Single   => Create (Float'First),
+         when Double   => Create (Long_Float'First),
          when Extended => Create (Long_Long_Float'First));
 
    function Last (Digits_Value : Natural) return Any_Float
    is (case Digits_To_Precision (Digits_Value) is
-         when Single => Create (Float'Last),
-         when Double => Create (Long_Float'Last),
+         when Single   => Create (Float'Last),
+         when Double   => Create (Long_Float'Last),
          when Extended => Create (Long_Long_Float'Last));
 
 private
@@ -147,15 +147,15 @@ private
    function Create
      (Digits_Value : Natural; R : Big_Reals.Big_Real) return Any_Float
    is (case Digits_To_Precision (Digits_Value) is
-         when Single => (Single, F_Conversions.From_Big_Real (R)),
-         when Double => (Double, LF_Conversions.From_Big_Real (R)),
+         when Single   => (Single, F_Conversions.From_Big_Real (R)),
+         when Double   => (Double, LF_Conversions.From_Big_Real (R)),
          when Extended =>
            (Extended, Long_Long_Float (LF_Conversions.From_Big_Real (R))));
 
    function Value (F : Any_Float) return Big_Reals.Big_Real
    is (case F.Precision is
-         when Single => F_Conversions.To_Big_Real (F.F),
-         when Double => LF_Conversions.To_Big_Real (F.LF),
+         when Single   => F_Conversions.To_Big_Real (F.F),
+         when Double   => LF_Conversions.To_Big_Real (F.LF),
          when Extended => LF_Conversions.To_Big_Real (Long_Float (F.LLF)));
 
 end TGen.Numerics;

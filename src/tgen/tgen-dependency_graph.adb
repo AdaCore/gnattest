@@ -60,7 +60,7 @@ package body TGen.Dependency_Graph is
 
    begin
       case T.all.Kind is
-         when Anonymous_Kind =>
+         when Anonymous_Kind               =>
             Res.Include (As_Anonymous_Typ (T).Named_Ancestor);
             if Transitive then
                Res.Union
@@ -68,7 +68,7 @@ package body TGen.Dependency_Graph is
                     (As_Anonymous_Typ (T).Named_Ancestor, Transitive));
             end if;
 
-         when Array_Typ_Range =>
+         when Array_Typ_Range              =>
             declare
                Comp_Ty : constant Typ_Access :=
                  As_Array_Typ (T).Component_Type;
@@ -89,16 +89,14 @@ package body TGen.Dependency_Graph is
                end if;
             end loop;
 
-         when Record_Kind =>
+         when Record_Kind                  =>
             declare
                Rec_Typ : constant Record_Typ'Class := As_Record_Typ (T);
             begin
                for Comp_Typ of Rec_Typ.Component_Types loop
                   Res.Include (Comp_Typ);
 
-                  if Transitive
-                    or else Comp_Typ.all.Kind = Anonymous_Kind
-                  then
+                  if Transitive or else Comp_Typ.all.Kind = Anonymous_Kind then
                      Res.Union (Type_Dependencies (Comp_Typ, Transitive));
                   end if;
                end loop;
@@ -123,12 +121,12 @@ package body TGen.Dependency_Graph is
 
                if Rec_Typ.Ancestor /= null then
                   Res.Union
-                    (Type_Dependencies (Typ_Access (Rec_Typ.Ancestor),
-                     Transitive));
+                    (Type_Dependencies
+                       (Typ_Access (Rec_Typ.Ancestor), Transitive));
                end if;
             end;
 
-         when Function_Kind =>
+         when Function_Kind                =>
             for Param_Typ of As_Function_Typ (T).Component_Types loop
                Res.Include (Param_Typ);
                if Transitive then
@@ -155,7 +153,7 @@ package body TGen.Dependency_Graph is
                Res.Union (Type_Dependencies (Derived_Typ.Parent_Type));
             end;
 
-         when others =>
+         when others                       =>
             null;
       end case;
       return Res;

@@ -38,7 +38,7 @@ package body TGen.LAL_Utils is
    begin
       return Result : Ada_Qualified_Name do
          case Ada_Name (Name.Kind) is
-            when Ada_Dotted_Name =>
+            when Ada_Dotted_Name     =>
                declare
                   DN     : constant Libadalang.Analysis.Dotted_Name :=
                     Name.As_Dotted_Name;
@@ -63,7 +63,7 @@ package body TGen.LAL_Utils is
                   Result.Append (Identifier);
                end;
 
-            when others =>
+            when others              =>
                raise Constraint_Error
                  with "no qualified name for " & Name.Kind'Image & " nodes";
          end case;

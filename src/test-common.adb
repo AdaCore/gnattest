@@ -315,13 +315,13 @@ package body Test.Common is
                     Type_Decl.Unit.Get_Charset)
                  & (if Attr_Flag then "'Attr" else "");
 
-            when Ada_Anonymous_Type =>
+            when Ada_Anonymous_Type     =>
                Param_Type_Def :=
                  F_Type_Def
                    (As_Type_Decl (F_Type_Decl (As_Anonymous_Type (Param))));
 
                case Kind (Param_Type_Def) is
-                  when Ada_Type_Access_Def =>
+                  when Ada_Type_Access_Def    =>
                      Param_Type_Name :=
                        F_Name
                          (F_Subtype_Indication
@@ -389,13 +389,13 @@ package body Test.Common is
                             F_Subp_Returns
                               (As_Subp_Spec (F_Subp_Spec (Anon_Subp_Def))));
 
-                  when others =>
+                  when others                 =>
                      Report_Err ("UNKNOWN type def:");
                      Print (Param_Type_Def);
                      return "<..>";
                end case;
 
-            when others =>
+            when others                 =>
                Report_Err ("UNKNOWN type dec:");
                Print (Param);
                return "<,,>";
@@ -436,7 +436,7 @@ package body Test.Common is
       end if;
 
       case Kind (F_Subp_Kind (As_Subp_Spec (L_Subp))) is
-         when Ada_Subp_Kind_Function =>
+         when Ada_Subp_Kind_Function  =>
             Sign_Image :=
               To_Unbounded_String
                 ("function"
@@ -452,7 +452,7 @@ package body Test.Common is
                  & Subp_Name
                  & Handle_Parameters (P_Params (L_Subp), No_Type_Expr));
 
-         when others =>
+         when others                  =>
             Trace (Me_Hash, "Unexpected element, returning empty hash");
             Trace (Me_Hash, Node_Image (L_Subp));
             Decrease_Indent (Me_Hash);
@@ -1358,8 +1358,8 @@ package body Test.Common is
         (12,
          "& ("""
          & (case Lang_Version is
-              when Ada_83 => "-gnat83",
-              when Ada_95 => "-gnat95",
+              when Ada_83   => "-gnat83",
+              when Ada_95   => "-gnat95",
               when Ada_2005 => "-gnat2005",
               when Ada_2012 => "-gnat2012",
               when Ada_2022 => "-gnat2022")

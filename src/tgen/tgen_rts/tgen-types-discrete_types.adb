@@ -404,11 +404,11 @@ package body TGen.Types.Discrete_Types is
       Discrete_T : Discrete_Typ'Class renames Discrete_Typ'Class (S.T.all);
    begin
       case S.Generation is
-         when First =>
+         when First  =>
             S.Generation := Last;
             return Create (Discrete_T.Low_Bound);
 
-         when Last =>
+         when Last   =>
             S.Generation := Unknown;
             return Create (Discrete_T.High_Bound);
 

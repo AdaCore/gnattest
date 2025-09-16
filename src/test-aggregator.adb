@@ -477,16 +477,16 @@ package body Test.Aggregator is
                  (S, Suspicious_Output, Traceback_Possible, Current_Kind);
 
                case Current_Kind is
-                  when Passed =>
+                  when Passed  =>
                      Cumulative_Output_Passed.Append (S);
 
-                  when Failed =>
+                  when Failed  =>
                      Cumulative_Output_Failed.Append (S);
 
                   when Crashed =>
                      Cumulative_Output_Crashed.Append (S);
 
-                  when Unsure =>
+                  when Unsure  =>
                      Cumulative_Output_Unsure.Append (S);
                end case;
 

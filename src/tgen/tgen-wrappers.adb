@@ -82,17 +82,17 @@ package body TGen.Wrappers is
       Result : Formula_Type;
    begin
       case Kind (E) is
-         when Ada_Un_Op =>
+         when Ada_Un_Op      =>
 
             case Kind (E.As_Un_Op.F_Op) is
                when Ada_Op_Not =>
                   return Dnf (E.As_Un_Op.F_Expr, not Polarity);
 
-               when others =>
+               when others     =>
                   null;
             end case;
 
-         when Ada_Bin_Op =>
+         when Ada_Bin_Op     =>
             declare
                As_Bin_Op : constant Bin_Op := E.As_Bin_Op;
                Ada_Op    : constant Ada_Node_Kind_Type :=
@@ -102,8 +102,7 @@ package body TGen.Wrappers is
                   when Ada_Op_And_Then
                      | Ada_Op_And
                      | Ada_Op_Or_Else
-                     | Ada_Op_Or
-                  =>
+                     | Ada_Op_Or =>
                      declare
                         Dnf_Left  : constant Formula_Type :=
                           Dnf (As_Bin_Op.F_Left, Polarity);
@@ -139,7 +138,7 @@ package body TGen.Wrappers is
                         return Result;
                      end;
 
-                  when others =>
+                  when others    =>
                      null;
                end case;
             end;
@@ -156,7 +155,7 @@ package body TGen.Wrappers is
                return Dnf (E.As_Paren_Expr.F_Expr, Polarity);
             end if;
 
-         when others =>
+         when others         =>
             null;
       end case;
 
@@ -216,7 +215,7 @@ package body TGen.Wrappers is
             when Ada_Subp_Kind_Procedure =>
                Append (Result, "procedure ");
 
-            when Ada_Subp_Kind_Function =>
+            when Ada_Subp_Kind_Function  =>
                Append (Result, "function ");
          end case;
 
@@ -298,7 +297,7 @@ package body TGen.Wrappers is
       --  Compute the call to the original function
 
       case Subp_Kind (Subprogram) is
-         when Ada_Subp_Kind_Function =>
+         when Ada_Subp_Kind_Function  =>
             Append (Call_To_User_Subp, "return ");
 
          when Ada_Subp_Kind_Procedure =>

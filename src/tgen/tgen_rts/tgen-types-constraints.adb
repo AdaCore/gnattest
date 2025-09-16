@@ -35,9 +35,9 @@ package body TGen.Types.Constraints is
 
    function Image (Self : Discrete_Constraint_Value) return String
    is (case Self.Kind is
-         when Static => Big_Int.To_String (Self.Int_Val),
+         when Static       => Big_Int.To_String (Self.Int_Val),
          when Discriminant => (+Self.Disc_Name),
-         when Non_Static => +Self.Text);
+         when Non_Static   => +Self.Text);
 
    -----------
    -- Value --
@@ -51,7 +51,7 @@ package body TGen.Types.Constraints is
       Cur : Cursor;
    begin
       case Cst.Kind is
-         when Static =>
+         when Static       =>
             return Cst.Int_Val;
 
          when Discriminant =>
@@ -61,7 +61,7 @@ package body TGen.Types.Constraints is
             end if;
             return Get (Element (Cur));
 
-         when others =>
+         when others       =>
             raise Program_Error
               with "Can't determine value of non static constraint";
       end case;
@@ -73,7 +73,7 @@ package body TGen.Types.Constraints is
 
    function Image (Self : Real_Constraint_Value) return String
    is (case Self.Kind is
-         when Static => Big_Reals.To_String (Self.Real_Val),
+         when Static     => Big_Reals.To_String (Self.Real_Val),
          when Non_Static => +Self.Text);
 
    -----------
@@ -172,7 +172,7 @@ package body TGen.Types.Constraints is
                Res := new Signed_Int_Typ (Is_Static => False);
             end if;
 
-         when Mod_Int_Kind =>
+         when Mod_Int_Kind    =>
             if Cst.Static then
                Res :=
                  new Mod_Int_Typ'
@@ -187,7 +187,7 @@ package body TGen.Types.Constraints is
                Res := new Mod_Int_Typ'(Is_Static => False, others => <>);
             end if;
 
-         when Char_Kind =>
+         when Char_Kind       =>
             if Cst.Static then
                Res :=
                  new Char_Typ'
@@ -204,7 +204,7 @@ package body TGen.Types.Constraints is
                     others      => <>);
             end if;
 
-         when Enum_Kind =>
+         when Enum_Kind       =>
             if Cst.Static then
                declare
                   use Enum_Literal_Maps;
@@ -235,7 +235,7 @@ package body TGen.Types.Constraints is
                Res := new Other_Enum_Typ'(Is_Static => False, others => <>);
             end if;
 
-         when Float_Kind =>
+         when Float_Kind      =>
             if Cst.Static then
                if Cst in Real_Range_Constraint then
                   Res :=
@@ -308,7 +308,7 @@ package body TGen.Types.Constraints is
                    (Is_Static => False, Has_Range => False, others => <>);
             end if;
 
-         when Fixed_Kind =>
+         when Fixed_Kind      =>
             if Cst.Static
               and then Cst in Real_Range_Constraint
               and then As_Ordinary_Fixed_Typ (Self.Named_Ancestor).Is_Static
@@ -344,30 +344,26 @@ package body TGen.Types.Constraints is
                  Index_Constraints => Index_Constraints (Cst).Constraint_Array,
                  others            => <>);
 
-         when Record_Kind =>
+         when Record_Kind     =>
             Res :=
               new Record_Typ'
-                 (Constrained             => True,
-                  Component_Types         =>
-                    As_Record_Typ (Self.Named_Ancestor).Component_Types.Copy,
-                  Mutable                 =>
-                    As_Record_Typ (Self.Named_Ancestor).Mutable,
-                  Discriminant_Types      =>
-                    As_Record_Typ (Self.Named_Ancestor)
-                      .Discriminant_Types
-                      .Copy,
-                  Variant                 =>
-                    Clone
-                      (As_Record_Typ (Self.Named_Ancestor)
-                         .Variant),
-                  Discriminant_Constraint =>
-                    Discriminant_Constraints (Cst).Constraint_Map.Copy,
-                  Static_Gen              =>
-                    As_Record_Typ (Self.Named_Ancestor).Static_Gen
-                    and then Self.Subtype_Constraints.Static,
-                  others                  => <>);
+                (Constrained             => True,
+                 Component_Types         =>
+                   As_Record_Typ (Self.Named_Ancestor).Component_Types.Copy,
+                 Mutable                 =>
+                   As_Record_Typ (Self.Named_Ancestor).Mutable,
+                 Discriminant_Types      =>
+                   As_Record_Typ (Self.Named_Ancestor).Discriminant_Types.Copy,
+                 Variant                 =>
+                   Clone (As_Record_Typ (Self.Named_Ancestor).Variant),
+                 Discriminant_Constraint =>
+                   Discriminant_Constraints (Cst).Constraint_Map.Copy,
+                 Static_Gen              =>
+                   As_Record_Typ (Self.Named_Ancestor).Static_Gen
+                   and then Self.Subtype_Constraints.Static,
+                 others                  => <>);
 
-         when others =>
+         when others          =>
             Res :=
               new Unsupported_Typ'
                 (Reason => +"Unknown named ancestor type kind", others => <>);

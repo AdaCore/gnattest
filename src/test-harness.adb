@@ -4529,10 +4529,10 @@ package body Test.Harness is
             Data.Generic_Kind := True;
             Data.Top_Level_Generic_Instantiation := True;
 
-         when Ada_Package_Decl =>
+         when Ada_Package_Decl                  =>
             Data.Generic_Kind := False;
 
-         when others =>
+         when others                            =>
             Report_Std
               ("gnattest: "
                & Base_Name (The_Unit.Unit.Get_Filename)

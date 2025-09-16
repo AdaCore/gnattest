@@ -105,8 +105,8 @@ package TGen.Types is
    subtype Array_Typ_Range is
      Typ_Kind range Unconstrained_Array_Kind .. Constrained_Array_Kind;
 
-   subtype Record_Typ_Range
-     is Typ_Kind range Base_Record_Kind .. Function_Kind;
+   subtype Record_Typ_Range is
+     Typ_Kind range Base_Record_Kind .. Function_Kind;
 
    subtype Big_Integer is Big_Int.Big_Integer;
 
@@ -198,11 +198,14 @@ package TGen.Types is
    is (case Kind is
          when Signed_Int_Kind | Mod_Int_Kind | Enum_Kind | Char_Kind =>
            JSON_Int_Type,
-         when Bool_Kind => JSON_Boolean_Type,
-         when Float_Kind | Fixed_Kind | Decimal_Kind => JSON_Float_Type,
-         when Unconstrained_Array_Kind | Constrained_Array_Kind =>
+         when Bool_Kind                                              =>
+           JSON_Boolean_Type,
+         when Float_Kind | Fixed_Kind | Decimal_Kind                 =>
+           JSON_Float_Type,
+         when Unconstrained_Array_Kind | Constrained_Array_Kind      =>
            JSON_Array_Type,
-         when others => JSON_Object_Type);
+         when others                                                 =>
+           JSON_Object_Type);
 
    procedure Free_Content (Self : in out Typ) is null;
    --  Helper for shared pointers

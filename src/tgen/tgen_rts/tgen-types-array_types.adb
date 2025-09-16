@@ -417,10 +417,10 @@ package body TGen.Types.Array_Types is
       function Constraint_Value
         (Constraint : Discrete_Constraint_Value) return Big_Integer
       is (case Constraint.Kind is
-            when Static => Constraint.Int_Val,
+            when Static       => Constraint.Int_Val,
             when Discriminant =>
               Disc_Context.Element (Constraint.Disc_Name).Get,
-            when others =>
+            when others       =>
               raise Program_Error
                 with "Dynamic constraint unsupported for static generation");
 

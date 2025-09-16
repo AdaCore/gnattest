@@ -209,15 +209,15 @@ package body TGen.Parse_Strategy is
               +(+Assoc.As_Aggregate_Assoc.F_Designators.Text);
          begin
             if not Result.Is_Valid_Component (Assoc_Identifier) then
-                  Put_Line
-                    (+Assoc_Identifier
-                     & (if Rec_Typ in Function_Typ'Class
-                       then " is not a parameter of the function."
-                       else " is not a member of the record.")
-                     & ". Ignoring it.");
+               Put_Line
+                 (+Assoc_Identifier
+                  & (if Rec_Typ in Function_Typ'Class
+                     then " is not a parameter of the function."
+                     else " is not a member of the record.")
+                  & ". Ignoring it.");
             else
                declare
-                  New_Typ     : constant Typ'Class :=
+                  New_Typ : constant Typ'Class :=
                     Check_Strategy
                       (Prefix & TGen.Strings.Ada_Identifier (Assoc_Identifier),
                        Last_Comp_Unit_Index,

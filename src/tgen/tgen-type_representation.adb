@@ -101,10 +101,10 @@ package body TGen.Type_Representation is
       begin
          Constraint_Kind := +(Constraint.Kind'Image);
          case Constraint.Kind is
-            when Static =>
+            when Static       =>
                Value := +Big_Int.To_String (Constraint.Int_Val);
 
-            when Non_Static =>
+            when Non_Static   =>
                Value := Constraint.Text;
 
             when Discriminant =>
@@ -123,7 +123,7 @@ package body TGen.Type_Representation is
       begin
          Constraint_Kind := +(Constraint.Kind'Image);
          case Constraint.Kind is
-            when Static =>
+            when Static     =>
                Value := +Big_Reals.To_String (Constraint.Real_Val);
 
             when Non_Static =>
@@ -747,14 +747,13 @@ package body TGen.Type_Representation is
          procedure Handle_Components
            (Comp_Map      : Component_Map;
             Ancestor      : Record_Typ_Access := null;
-            Discriminants : Boolean := False)
-         is
+            Discriminants : Boolean := False) is
          begin
             for Cur in Comp_Map.Iterate loop
                declare
                   use Component_Maps;
 
-                  Comp_Name : constant Unbounded_String := Key (Cur);
+                  Comp_Name          : constant Unbounded_String := Key (Cur);
                   Comp_Ty_Prefix     : Unbounded_String;
                   Anonymous_Typ_Init : Unbounded_String;
                   Anonymous_Typ_Decl : Unbounded_String;
@@ -796,17 +795,19 @@ package body TGen.Type_Representation is
       begin
          if T in Record_Typ'Class then
             declare
-               Rec_T : constant Record_Typ'Class := Record_Typ (T);
+               Rec_T                      : constant Record_Typ'Class :=
+                 Record_Typ (T);
                Variant_Decl, Variant_Init : Unbounded_String;
             begin
                Insert (Assocs, Assoc ("HAS_CONSTRAINTS", Rec_T.Constrained));
                Insert (Assocs, Assoc ("MUTABLE", Rec_T.Mutable));
-               Insert (Assocs,
-                       Assoc
-                         ("ANCESTOR_TY_PREFIX",
-                          (if Rec_T.Ancestor /= null
-                           then Rec_T.Ancestor.Slug
-                           else "")));
+               Insert
+                 (Assocs,
+                  Assoc
+                    ("ANCESTOR_TY_PREFIX",
+                     (if Rec_T.Ancestor /= null
+                      then Rec_T.Ancestor.Slug
+                      else "")));
 
                --  Start off by encoding the constraints
 
