@@ -157,16 +157,16 @@ package body TGen.JSON is
    function Is_Empty (Val : JSON_Value) return Boolean is
    begin
       case Val.Kind is
-         when JSON_Null_Type =>
+         when JSON_Null_Type   =>
             return True;
 
-         when JSON_Array_Type =>
+         when JSON_Array_Type  =>
             return Val.Data.Arr_Value.Arr.Vals.Is_Empty;
 
          when JSON_Object_Type =>
             return Val.Data.Obj_Value.Vals.Is_Empty;
 
-         when others =>
+         when others           =>
             return False;
       end case;
    end Is_Empty;
@@ -397,36 +397,36 @@ package body TGen.JSON is
          --  Structual tokens are unambiguously designated by standalone
          --  characters.
 
-         when '[' =>
+         when '['              =>
             return Next_Char (J_ARRAY);
 
-         when ']' =>
+         when ']'              =>
             return Next_Char (J_ARRAY_END);
 
-         when '{' =>
+         when '{'              =>
             return Next_Char (J_OBJECT);
 
-         when '}' =>
+         when '}'              =>
             return Next_Char (J_OBJECT_END);
 
-         when ',' =>
+         when ','              =>
             return Next_Char (J_COMMA);
 
-         when ':' =>
+         when ':'              =>
             return Next_Char (J_COLON);
 
          --  Only named value tokens can start with a letter
 
-         when 'n' =>
+         when 'n'              =>
             return Delimit_Keyword ("null", J_NULL);
 
-         when 'f' =>
+         when 'f'              =>
             return Delimit_Keyword ("false", J_FALSE);
 
-         when 't' =>
+         when 't'              =>
             return Delimit_Keyword ("true", J_TRUE);
 
-         when '"' =>
+         when '"'              =>
 
             --  We expect a string.
             --
@@ -454,7 +454,7 @@ package body TGen.JSON is
                   end if;
 
                   case Strm (Pos.Index) is
-                     when 'u' =>
+                     when 'u'                                           =>
                         --  This is a unicode escape sequence ("\uXXXX")
                         for Idx in 1 .. 4 loop
                            Next_Char;
@@ -471,7 +471,7 @@ package body TGen.JSON is
                         --  This is a single-character escape sequence
                         null;
 
-                     when others =>
+                     when others                                        =>
                         return Error ("invalid escape sequence");
                   end case;
                end if;
@@ -512,7 +512,7 @@ package body TGen.JSON is
             --  mere "0" of course) are not allowed.
 
             case Strm (Pos.Index) is
-               when '0' =>
+               when '0'        =>
                   Token_End := Pos;
                   Next_Char;
 
@@ -526,7 +526,7 @@ package body TGen.JSON is
                      Next_Char;
                   end loop;
 
-               when others =>
+               when others     =>
                   return Error ("invalid number");
             end case;
 
@@ -577,7 +577,7 @@ package body TGen.JSON is
                --  Skip the sign, if present
 
                case Strm (Pos.Index) is
-                  when '-' =>
+                  when '-'    =>
 
                      --  The exponent is negative. Even though several corner
                      --  cases (such as having "1" as the prefix) can lead to
@@ -586,7 +586,7 @@ package body TGen.JSON is
                      Can_Be_Integer := False;
                      Next_Char;
 
-                  when '+' =>
+                  when '+'    =>
                      Next_Char;
 
                   when others =>
@@ -618,7 +618,7 @@ package body TGen.JSON is
                return Error ("invalid number");
             end if;
 
-         when others =>
+         when others           =>
             return Error ("Unexpected character '" & CC & ''');
       end case;
    end Read_Token;
@@ -679,20 +679,20 @@ package body TGen.JSON is
       Kind := Token_Result.Kind;
 
       case Kind is
-         when J_EOF =>
+         when J_EOF                =>
             Result := Error ("empty stream");
             return;
 
-         when J_NULL =>
+         when J_NULL               =>
             Result.Value := Create;
 
-         when J_FALSE =>
+         when J_FALSE              =>
             Result.Value := Create (False);
 
-         when J_TRUE =>
+         when J_TRUE               =>
             Result.Value := Create (True);
 
-         when J_STRING =>
+         when J_STRING             =>
             begin
                declare
                   Str_Value : constant UTF8_Unbounded_String :=
@@ -707,7 +707,7 @@ package body TGen.JSON is
                   return;
             end;
 
-         when J_ARRAY =>
+         when J_ARRAY              =>
             declare
                --  In order to avoid the costly array copy in Create
                --  (JSON_Array), we use an aggregate below in order to build
@@ -762,19 +762,19 @@ package body TGen.JSON is
                            when J_ARRAY_END =>
                               exit;
 
-                           when J_COMMA =>
+                           when J_COMMA     =>
                               --  We have a comma, so we expect another element
                               --  in the array. Continue reading.
 
                               null;
 
-                           when others =>
+                           when others      =>
                               Free (Arr);
                               Result := Error ("comma expected");
                               return;
                         end case;
 
-                     when others =>
+                     when others      =>
                         Free (Arr);
                         Result := Error ("syntax error");
                         return;
@@ -788,7 +788,7 @@ package body TGen.JSON is
                   with Data => (Kind => JSON_Array_Type, Arr_Value => Arr));
             end;
 
-         when J_OBJECT =>
+         when J_OBJECT             =>
             declare
                Is_First : Boolean := True;
                --  True if we are still reading the first object member. False
@@ -828,7 +828,7 @@ package body TGen.JSON is
                         Result := Error ("string value expected");
                         return;
 
-                     when J_STRING =>
+                     when J_STRING     =>
                         --  Consume the colon token, then get the member value
 
                         Read (Value, Strm, Pos, ST);
@@ -874,18 +874,18 @@ package body TGen.JSON is
                            when J_OBJECT_END =>
                               exit;
 
-                           when J_COMMA =>
+                           when J_COMMA      =>
                               --  We have a comma, so we expect another member
                               --  in the object. Continue reading.
 
                               null;
 
-                           when others =>
+                           when others       =>
                               Result := Error ("comma expected");
                               return;
                         end case;
 
-                     when others =>
+                     when others       =>
                         Result := Error ("string value expected");
                         return;
                   end case;
@@ -925,7 +925,7 @@ package body TGen.JSON is
                end if;
             end;
 
-         when others =>
+         when others               =>
             if Check_EOF then
                Result := Error ("invalid JSON stream");
                return;
@@ -1015,7 +1015,7 @@ package body TGen.JSON is
 
    begin
       case Item.Kind is
-         when JSON_Null_Type =>
+         when JSON_Null_Type    =>
             Append (Ret, "null");
 
          when JSON_Boolean_Type =>
@@ -1025,7 +1025,7 @@ package body TGen.JSON is
                Append (Ret, "false");
             end if;
 
-         when JSON_Int_Type =>
+         when JSON_Int_Type     =>
             declare
                S : constant String := Item.Data.Int_Value'Img;
             begin
@@ -1036,7 +1036,7 @@ package body TGen.JSON is
                end if;
             end;
 
-         when JSON_Float_Type =>
+         when JSON_Float_Type   =>
             declare
                S : constant String := Item.Data.Flt_Value'Img;
             begin
@@ -1047,10 +1047,10 @@ package body TGen.JSON is
                end if;
             end;
 
-         when JSON_String_Type =>
+         when JSON_String_Type  =>
             Append (Ret, Escape_String (Item.Data.Str_Value));
 
-         when JSON_Array_Type =>
+         when JSON_Array_Type   =>
             Append (Ret, '[');
 
             if not Compact then
@@ -1080,7 +1080,7 @@ package body TGen.JSON is
             Do_Indent (Indent);
             Append (Ret, ']');
 
-         when JSON_Object_Type =>
+         when JSON_Object_Type  =>
             declare
                use Object_Items_Pkg;
                J : Object_Items_Pkg.Cursor := Item.Data.Obj_Value.Vals.First;
@@ -1209,13 +1209,13 @@ package body TGen.JSON is
 
    begin
       case Val.Kind is
-         when JSON_Array_Type =>
+         when JSON_Array_Type  =>
             Sort (Val.Data.Arr_Value.Arr, Less);
 
          when JSON_Object_Type =>
             Sorting.Sort (Val.Data.Obj_Value.Vals);
 
-         when others =>
+         when others           =>
             null;
       end case;
    end Sort;
@@ -1274,7 +1274,7 @@ package body TGen.JSON is
    procedure Adjust (Obj : in out JSON_Value) is
    begin
       case Obj.Data.Kind is
-         when JSON_Array_Type =>
+         when JSON_Array_Type  =>
             if Obj.Data.Arr_Value /= null then
                Increment (Obj.Data.Arr_Value.Cnt);
             end if;
@@ -1284,7 +1284,7 @@ package body TGen.JSON is
                Increment (Obj.Data.Obj_Value.Cnt);
             end if;
 
-         when others =>
+         when others           =>
             null;
       end case;
    end Adjust;
@@ -1297,7 +1297,7 @@ package body TGen.JSON is
    procedure Finalize (Obj : in out JSON_Value) is
    begin
       case Obj.Data.Kind is
-         when JSON_Array_Type =>
+         when JSON_Array_Type  =>
             declare
                Arr : JSON_Array_Access := Obj.Data.Arr_Value;
             begin
@@ -1317,7 +1317,7 @@ package body TGen.JSON is
                end if;
             end;
 
-         when others =>
+         when others           =>
             null;
       end case;
    end Finalize;
@@ -1626,22 +1626,22 @@ package body TGen.JSON is
    function Clone (Val : JSON_Value) return JSON_Value is
    begin
       case Val.Data.Kind is
-         when JSON_Null_Type =>
+         when JSON_Null_Type    =>
             return JSON_Null;
 
          when JSON_Boolean_Type =>
             return Create (Val.Data.Bool_Value);
 
-         when JSON_Int_Type =>
+         when JSON_Int_Type     =>
             return Create (Val.Data.Int_Value);
 
-         when JSON_Float_Type =>
+         when JSON_Float_Type   =>
             return Create (Val.Data.Flt_Value);
 
-         when JSON_String_Type =>
+         when JSON_String_Type  =>
             return Create (Val.Data.Str_Value);
 
-         when JSON_Array_Type =>
+         when JSON_Array_Type   =>
             declare
                Result : constant JSON_Value :=
                  (Ada.Finalization.Controlled
@@ -1656,7 +1656,7 @@ package body TGen.JSON is
                return Result;
             end;
 
-         when JSON_Object_Type =>
+         when JSON_Object_Type  =>
             declare
                Result : constant JSON_Value := Create_Object;
             begin
@@ -1680,22 +1680,22 @@ package body TGen.JSON is
       end if;
 
       case Left.Data.Kind is
-         when JSON_Null_Type =>
+         when JSON_Null_Type    =>
             return True;
 
          when JSON_Boolean_Type =>
             return Left.Data.Bool_Value = Right.Data.Bool_Value;
 
-         when JSON_Int_Type =>
+         when JSON_Int_Type     =>
             return Left.Data.Int_Value = Right.Data.Int_Value;
 
-         when JSON_Float_Type =>
+         when JSON_Float_Type   =>
             return Left.Data.Flt_Value = Right.Data.Flt_Value;
 
-         when JSON_String_Type =>
+         when JSON_String_Type  =>
             return Left.Data.Str_Value = Right.Data.Str_Value;
 
-         when JSON_Array_Type =>
+         when JSON_Array_Type   =>
             --  Same pointer ?
             if Left.Data.Arr_Value = Right.Data.Arr_Value then
                return True;
@@ -1717,7 +1717,7 @@ package body TGen.JSON is
                return True;
             end if;
 
-         when JSON_Object_Type =>
+         when JSON_Object_Type  =>
             --  Same pointer ?
             if Left.Data.Obj_Value = Right.Data.Obj_Value then
                return True;
@@ -1869,28 +1869,28 @@ package body TGen.JSON is
          end;
 
          case W_Chr is
-            when NUL =>
+            when NUL    =>
                Append (Ret, "\u0000");
 
-            when '"' =>
+            when '"'    =>
                Append (Ret, "\""");
 
-            when '\' =>
+            when '\'    =>
                Append (Ret, "\\");
 
-            when BS =>
+            when BS     =>
                Append (Ret, "\b");
 
-            when FF =>
+            when FF     =>
                Append (Ret, "\f");
 
-            when LF =>
+            when LF     =>
                Append (Ret, "\n");
 
-            when CR =>
+            when CR     =>
                Append (Ret, "\r");
 
-            when HT =>
+            when HT     =>
                Append (Ret, "\t");
 
             when others =>
@@ -1994,31 +1994,31 @@ package body TGen.JSON is
                      Idx := Idx + 4;
                   end;
 
-               when '"' =>
+               when '"'       =>
                   Append (Unb, '"');
 
-               when '/' =>
+               when '/'       =>
                   Append (Unb, '/');
 
-               when '\' =>
+               when '\'       =>
                   Append (Unb, '\');
 
-               when 'b' =>
+               when 'b'       =>
                   Append (Unb, ASCII.BS);
 
-               when 'f' =>
+               when 'f'       =>
                   Append (Unb, ASCII.FF);
 
-               when 'n' =>
+               when 'n'       =>
                   Append (Unb, ASCII.LF);
 
-               when 'r' =>
+               when 'r'       =>
                   Append (Unb, ASCII.CR);
 
-               when 't' =>
+               when 't'       =>
                   Append (Unb, ASCII.HT);
 
-               when others =>
+               when others    =>
                   raise Invalid_JSON_Stream
                     with "Unexpected escape sequence '\" & Text (Idx) & "'";
             end case;

@@ -28,14 +28,14 @@ package body TGen.Marshalling_Lib is
 
    function Size (V : Unsigned_8) return Offset_Type
    is (case V is
-         when 0 => 0,
-         when 1 => 1,
-         when 2 .. 3 => 2,
-         when 4 .. 7 => 3,
-         when 8 .. 15 => 4,
-         when 16 .. 31 => 5,
-         when 32 .. 63 => 6,
-         when 64 .. 127 => 7,
+         when 0          => 0,
+         when 1          => 1,
+         when 2 .. 3     => 2,
+         when 4 .. 7     => 3,
+         when 8 .. 15    => 4,
+         when 16 .. 31   => 5,
+         when 32 .. 63   => 6,
+         when 64 .. 127  => 7,
          when 128 .. 255 => 0);
 
    -----------------------
@@ -577,9 +577,9 @@ package body TGen.Marshalling_Lib is
 
       function Get_Precision return Precision
       is (case T'Machine_Mantissa is
-            when 24 => Single,
-            when 53 => Double,
-            when 64 => Extended,
+            when 24     => Single,
+            when 53     => Double,
+            when 64     => Extended,
             when others => raise Program_Error);
 
       -----------
@@ -588,8 +588,8 @@ package body TGen.Marshalling_Lib is
 
       function Size (First : T := T_First; Last : T := T_Last) return Natural
       is (case Get_Precision is
-            when Single => 32,
-            when Double => 64,
+            when Single   => 32,
+            when Double   => 64,
             when Extended => 128);
 
       -----------
@@ -609,7 +609,7 @@ package body TGen.Marshalling_Lib is
          --  types. They are ignored.
       begin
          case Get_Precision is
-            when Single =>
+            when Single   =>
                declare
                   function To_Bits is new
                     Ada.Unchecked_Conversion
@@ -628,7 +628,7 @@ package body TGen.Marshalling_Lib is
                      Long_Long_Long_Unsigned (Bits));
                end;
 
-            when Double =>
+            when Double   =>
                declare
                   function To_Bits is new
                     Ada.Unchecked_Conversion
@@ -684,7 +684,7 @@ package body TGen.Marshalling_Lib is
          --  types. We use saturation to get valid values.
       begin
          case Get_Precision is
-            when Single =>
+            when Single   =>
                declare
                   function From_Bits is new
                     Ada.Unchecked_Conversion
@@ -723,7 +723,7 @@ package body TGen.Marshalling_Lib is
                   end if;
                end;
 
-            when Double =>
+            when Double   =>
                declare
                   function From_Bits is new
                     Ada.Unchecked_Conversion

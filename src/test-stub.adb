@@ -621,14 +621,13 @@ package body Test.Stub is
             | Ada_Single_Protected_Decl
             | Ada_Protected_Type_Decl
             | Ada_Single_Task_Decl
-            | Ada_Task_Type_Decl
-         =>
+            | Ada_Task_Type_Decl                                         =>
             return True;
 
-         when Ada_Entry_Decl =>
+         when Ada_Entry_Decl                                             =>
             return N.Parent.Parent.Parent.Kind = Ada_Protected_Def;
 
-         when Ada_Subp_Decl =>
+         when Ada_Subp_Decl                                              =>
             if not N.As_Subp_Decl.P_Next_Part_For_Decl.Is_Null
               and then N.As_Subp_Decl.P_Next_Part_For_Decl.Unit = N.Unit
             then
@@ -636,7 +635,7 @@ package body Test.Stub is
             end if;
             return not N.As_Basic_Subp_Decl.P_Is_Imported;
 
-         when Ada_Generic_Subp_Decl =>
+         when Ada_Generic_Subp_Decl                                      =>
             return not N.As_Generic_Subp_Decl.P_Is_Imported;
 
          when Ada_Incomplete_Type_Decl | Ada_Incomplete_Tagged_Type_Decl =>
@@ -651,7 +650,7 @@ package body Test.Stub is
                end if;
             end;
 
-         when others =>
+         when others                                                     =>
             return False;
       end case;
    end Requires_Body;
@@ -831,8 +830,8 @@ package body Test.Stub is
               (0,
                "pragma "
                & (case Test.Common.Lang_Version is
-                    when Ada_83 => "Ada_83",
-                    when Ada_95 => "Ada_95",
+                    when Ada_83   => "Ada_83",
+                    when Ada_95   => "Ada_95",
                     when Ada_2005 => "Ada_2005",
                     when Ada_2012 => "Ada_2012",
                     when Ada_2022 => "Ada_2022")
@@ -938,7 +937,7 @@ package body Test.Stub is
          Line_Counter := Line_Counter + 1;
 
          case Parsing_Mode is
-            when Code =>
+            when Code   =>
                if Is_Marker_Start (Line.all) then
                   Map.Include (ID, MD);
                   Prev_Parsing_Mode := Code;
@@ -955,7 +954,7 @@ package body Test.Stub is
 
             when Marker =>
                case Prev_Parsing_Mode is
-                  when Other =>
+                  when Other  =>
                      if Is_Id_String (Line.all) then
                         Parse_Id_String (Line.all, ID, Commented_Out);
                         MD.Commneted_Out := Commented_Out;
@@ -984,7 +983,7 @@ package body Test.Stub is
                         end if;
                      end if;
 
-                  when Code =>
+                  when Code   =>
                      if Is_Marker_End (Line.all) then
                         Prev_Parsing_Mode := Marker;
                         Parsing_Mode := Other;
@@ -999,7 +998,7 @@ package body Test.Stub is
                      null;
                end case;
 
-            when Other =>
+            when Other  =>
                if Is_Marker_Start (Line.all) then
                   Parsing_Mode := Marker;
                   Prev_Parsing_Mode := Other;
@@ -1056,28 +1055,28 @@ package body Test.Stub is
    function MD_Kind_To_String (MD : Markered_Data_Kinds) return String is
    begin
       case MD is
-         when Import_MD =>
+         when Import_MD      =>
             return "00";
 
-         when Type_MD =>
+         when Type_MD        =>
             return "01";
 
-         when Task_MD =>
+         when Task_MD        =>
             return "02";
 
-         when Package_MD =>
+         when Package_MD     =>
             return "03";
 
-         when Subprogram_MD =>
+         when Subprogram_MD  =>
             return "04";
 
-         when Entry_MD =>
+         when Entry_MD       =>
             return "05";
 
          when Elaboration_MD =>
             return "06";
 
-         when Unknown_MD =>
+         when Unknown_MD     =>
             return "99";
       end case;
    end MD_Kind_To_String;
@@ -1201,10 +1200,10 @@ package body Test.Stub is
    begin
 
       case Node_Kind is
-         when Ada_Package_Decl | Ada_Generic_Package_Decl =>
+         when Ada_Package_Decl | Ada_Generic_Package_Decl                =>
             Generate_Package_Body (Node, Cursor);
 
-         when Ada_Subp_Decl =>
+         when Ada_Subp_Decl                                              =>
             if Node
                  .Spec
                  .As_Basic_Subp_Decl
@@ -1218,7 +1217,7 @@ package body Test.Stub is
                Generate_Procedure_Body (Node);
             end if;
 
-         when Ada_Generic_Subp_Decl =>
+         when Ada_Generic_Subp_Decl                                      =>
             if Node
                  .Spec
                  .As_Generic_Subp_Decl
@@ -1234,19 +1233,19 @@ package body Test.Stub is
                Generate_Procedure_Body (Node);
             end if;
 
-         when Ada_Entry_Decl =>
+         when Ada_Entry_Decl                                             =>
             Generate_Entry_Body (Node);
 
-         when Ada_Single_Protected_Decl | Ada_Protected_Type_Decl =>
+         when Ada_Single_Protected_Decl | Ada_Protected_Type_Decl        =>
             Generate_Protected_Body (Node, Cursor);
 
-         when Ada_Single_Task_Decl | Ada_Task_Type_Decl =>
+         when Ada_Single_Task_Decl | Ada_Task_Type_Decl                  =>
             Generate_Task_Body (Node);
 
          when Ada_Incomplete_Type_Decl | Ada_Incomplete_Tagged_Type_Decl =>
             Generate_Full_Type_Declaration (Node);
 
-         when others =>
+         when others                                                     =>
             null;
       end case;
    end Process_Node;
@@ -1388,7 +1387,7 @@ package body Test.Stub is
                    (GNAT.SHA1.Digest
                       (Node_Image (Element.As_Basic_Decl.P_Defining_Name))));
 
-         when Ada_Task_Type_Decl | Ada_Single_Task_Decl =>
+         when Ada_Task_Type_Decl | Ada_Single_Task_Decl                  =>
             Id.Kind := Task_MD;
             Id.Self_Hash :=
               new String'
@@ -1396,7 +1395,7 @@ package body Test.Stub is
                    (GNAT.SHA1.Digest
                       (Node_Image (Element.As_Basic_Decl.P_Defining_Name))));
 
-         when Ada_Package_Decl | Ada_Generic_Package_Decl =>
+         when Ada_Package_Decl | Ada_Generic_Package_Decl                =>
             Id.Kind := Package_MD;
             Id.Self_Hash :=
               new String'
@@ -1404,7 +1403,7 @@ package body Test.Stub is
                    (GNAT.SHA1.Digest
                       (Node_Image (Element.As_Basic_Decl.P_Defining_Name))));
 
-         when Ada_Generic_Subp_Decl | Ada_Subp_Decl =>
+         when Ada_Generic_Subp_Decl | Ada_Subp_Decl                      =>
             Id.Kind := Subprogram_MD;
             if Arg_Kind = Ada_Generic_Subp_Decl then
                Id.Self_Hash :=
@@ -1420,7 +1419,7 @@ package body Test.Stub is
                       (Mangle_Hash_16 (Element, For_Stubs => True)));
             end if;
 
-         when Ada_Entry_Decl =>
+         when Ada_Entry_Decl                                             =>
             Id.Kind := Entry_MD;
             Id.Self_Hash :=
               new String'
@@ -1428,7 +1427,7 @@ package body Test.Stub is
                    (GNAT.SHA1.Digest
                       (Node_Image (Element.As_Basic_Decl.P_Defining_Name))));
 
-         when others =>
+         when others                                                     =>
             null;
       end case;
 
@@ -1600,7 +1599,7 @@ package body Test.Stub is
                   else
 
                      case SP.Kind is
-                        when Constrained =>
+                        when Constrained     =>
                            S_Put
                              ((Level + 1) * Indent_Level,
                               SP.Name.all
@@ -1628,7 +1627,7 @@ package body Test.Stub is
                               & SP.Name.all
                               & ".all;");
 
-                        when Access_Kind =>
+                        when Access_Kind     =>
                            S_Put
                              ((Level + 1) * Indent_Level,
                               SP.Name.all
@@ -1905,7 +1904,7 @@ package body Test.Stub is
                   else
 
                      case SP.Kind is
-                        when Constrained =>
+                        when Constrained     =>
                            S_Put
                              ((Level + 1) * Indent_Level,
                               SP.Name.all
@@ -1933,7 +1932,7 @@ package body Test.Stub is
                               & SP.Name.all
                               & ".all;");
 
-                        when Access_Kind =>
+                        when Access_Kind     =>
                            S_Put
                              ((Level + 1) * Indent_Level,
                               SP.Name.all
@@ -2008,7 +2007,7 @@ package body Test.Stub is
                         & SP.Name.all
                         & ";");
 
-                  when Not_Constrained =>
+                  when Not_Constrained           =>
                      S_Put
                        ((Level + 1) * Indent_Level,
                         "return "
@@ -3191,13 +3190,13 @@ package body Test.Stub is
                  (Indent_Level,
                   "--  procedure/function " & ID.Name.all & " is");
 
-            when Task_MD =>
+            when Task_MD       =>
                S_Put (3, "--  task body " & ID.Name.all & " is");
 
-            when Entry_MD =>
+            when Entry_MD      =>
                S_Put (3, "--  entry " & ID.Name.all & " when");
 
-            when others =>
+            when others        =>
                null;
          end case;
 

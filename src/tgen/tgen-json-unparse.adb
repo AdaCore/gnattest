@@ -357,7 +357,7 @@ package body TGen.JSON.Unparse is
                raise Program_Error with "Unknown value representation";
             end if;
 
-         when others =>
+         when others           =>
             Set_Field (Result, "value", Val);
             return Result;
       end case;

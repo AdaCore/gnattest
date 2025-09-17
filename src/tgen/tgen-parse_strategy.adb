@@ -68,11 +68,11 @@ package body TGen.Parse_Strategy is
    function Check_Strategy_For_Record
      (Prefix               : Ada_Qualified_Name;
       Last_Comp_Unit_Index : Positive;
-      Rec_Typ              : Record_Typ'Class;
+      Rec_Typ              : Base_Record_Typ'Class;
       Strategy             : Expr'Class;
       Strategies           : out FQN_To_Parsed_Strat_Map) return Typ'Class;
    --  Same as Check_Strategy, but for a record type in tgen terminology
-   --  (that is a function, a record or a discriminated record type).
+   --  (that is a function or record type).
 
    function Clone (T : Typ'Class) return Typ'Class;
    --  Clone a given type recursively
@@ -82,10 +82,11 @@ package body TGen.Parse_Strategy is
    begin
       if T in Scalar_Typ'Class then
          return T;
-      elsif T in Record_Typ'Class then
+      elsif T in Base_Record_Typ'Class then
          declare
-            Rec_Type : constant Record_Typ'Class := Record_Typ'Class (T);
-            Result   : Record_Typ'Class := Rec_Type;
+            Rec_Type : constant Base_Record_Typ'Class :=
+              Base_Record_Typ'Class (T);
+            Result   : Base_Record_Typ'Class := Rec_Type;
          begin
             Result.Component_Types.Clear;
             for Comp in Rec_Type.Component_Types.Iterate loop
@@ -183,12 +184,14 @@ package body TGen.Parse_Strategy is
    function Check_Strategy_For_Record
      (Prefix               : Ada_Qualified_Name;
       Last_Comp_Unit_Index : Positive;
-      Rec_Typ              : Record_Typ'Class;
+      Rec_Typ              : Base_Record_Typ'Class;
       Strategy             : Expr'Class;
       Strategies           : out FQN_To_Parsed_Strat_Maps.Map) return Typ'Class
    is
       use type Ada_Qualified_Name;
-      Result : Record_Typ'Class := Record_Typ'Class (Clone (Rec_Typ));
+
+      Result : Base_Record_Typ'Class :=
+        Base_Record_Typ'Class (Clone (Rec_Typ));
    begin
       --  TODO: the strategy expression can be a function name
 
@@ -205,37 +208,32 @@ package body TGen.Parse_Strategy is
             Assoc_Identifier : constant Unbounded_String :=
               +(+Assoc.As_Aggregate_Assoc.F_Designators.Text);
          begin
-            if not Result.Component_Types.Contains (Assoc_Identifier) then
-               declare
-                  Error_Msg : constant String :=
-                    (if Rec_Typ in Function_Typ'Class
-                     then
-                       +Assoc_Identifier
-                       & " is not a parameter of the function."
-                     else
-                       +Assoc_Identifier & " is not a member of the record.");
-               begin
-                  Put_Line (Error_Msg & ". Ignoring it.");
-               end;
-
+            if not Result.Is_Valid_Component (Assoc_Identifier) then
+               Put_Line
+                 (+Assoc_Identifier
+                  & (if Rec_Typ in Function_Typ'Class
+                     then " is not a parameter of the function."
+                     else " is not a member of the record.")
+                  & ". Ignoring it.");
             else
                declare
-                  New_Typ     : constant Typ'Class :=
+                  New_Typ : constant Typ'Class :=
                     Check_Strategy
                       (Prefix & TGen.Strings.Ada_Identifier (Assoc_Identifier),
                        Last_Comp_Unit_Index,
                        Rec_Typ.Component_Types.Element (Assoc_Identifier).all,
                        Assoc.As_Aggregate_Assoc.F_R_Expr,
                        Strategies);
-                  New_Typ_Ref : Typ_Access;
+
+                  New_Typ_Ref : constant Typ_Access := new Typ'Class'(New_Typ);
                begin
-                  New_Typ_Ref := new Typ'Class'(New_Typ);
                   Result.Component_Types.Include
                     (Assoc_Identifier, New_Typ_Ref);
                end;
             end if;
          end;
       end loop;
+
       return Result;
    end Check_Strategy_For_Record;
 
@@ -251,12 +249,12 @@ package body TGen.Parse_Strategy is
       Strategies           : out FQN_To_Parsed_Strat_Map) return Typ'Class is
    begin
       pragma Warnings (Off);
-      if T in Record_Typ'Class then
+      if T in Base_Record_Typ'Class then
          return
            Check_Strategy_For_Record
              (Prefix,
               Last_Comp_Unit_Index,
-              Record_Typ'Class (T),
+              Base_Record_Typ'Class (T),
               Strategy,
               Strategies);
       elsif T in Scalar_Typ'Class then
@@ -317,7 +315,6 @@ package body TGen.Parse_Strategy is
             end if;
          end;
       end loop;
-
    end Parse_Strategy;
 
 end TGen.Parse_Strategy;

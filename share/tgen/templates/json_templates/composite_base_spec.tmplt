@@ -3,6 +3,8 @@
 @@--  @_GLOBAL_PREFIX_@ Prefix used to prefix all entities local to the unit.
 @@--  @_TY_PREFIX_@ Prefix used to prefix all entities for the current type.
 @@--  @_TY_NAME_@ Name of the current type.
+@@--  @_AS_ANCESTOR_@ True if the ancestor version of the Write procedure is
+@@--     needed for this type, False otherwise.
 @@--
 @@INCLUDE@@ util.tmplt
    --  Base operations for @_TY_NAME_@
@@ -10,6 +12,12 @@
    procedure @_TY_PREFIX_@_Write
      (@_GLOBAL_PREFIX_@_JSON : in out TGen.JSON.JSON_Value;
       @_GLOBAL_PREFIX_@_V    : TGen.TGen_Std.@_TY_NAME_@);
+
+@@IF@@ @_AS_ANCESTOR_@
+   procedure @_TY_PREFIX_@_As_Ancestor_Write
+     (@_GLOBAL_PREFIX_@_JSON : in out TGen.JSON.JSON_Value;
+      @_GLOBAL_PREFIX_@_V    : TGen.TGen_Std.@_TY_NAME_@);
+@@END_IF@@
 
    procedure @_TY_PREFIX_@_Read
      (@_GLOBAL_PREFIX_@_JSON : TGen.JSON.JSON_Value;

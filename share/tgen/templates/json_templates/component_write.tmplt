@@ -12,6 +12,8 @@
 @@--  @_CONSTRAINTS_@ Constraints for anonymous component types. They are only
 @@--       used for scalar types.
 @@--  @_SPACING_@ Sequence of spaces used for indentation.
+@@--  @_FOR_ANCESTOR_@ Indicates if the components are being written for a
+@@--       record as a type ancestor or not.
 @@--
 @_SPACING_@declare
 @_SPACING_@   JSON_@_COMP_PREFIX_@ : TGen.JSON.JSON_Value :=
@@ -33,7 +35,11 @@
 @@END_IF@@
 @@IF@@ @_COMPONENT_KIND_@ = "RECORD_COMPONENT"
 @_SPACING_@TGen.JSON.Set_Field
+@@IF@@ @_FOR_ANCESTOR_@ = "True"
+@_SPACING_@  (@_GLOBAL_PREFIX_@_JSON,
+@@ELSE@@
 @_SPACING_@  (Components,
+@@END_IF@@
 @_SPACING_@   "@_COMPONENT_NAME_@",
 @_SPACING_@   JSON_@_COMP_PREFIX_@);
 @@ELSE@@

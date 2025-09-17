@@ -66,7 +66,7 @@ package TGen.Marshalling_Lib.JSON is
    end Read_Write_Float_JSON;
 
    generic
-      type T is private;
+      type T is limited private;
 
       with procedure Write (JSON : in out TGen.JSON.JSON_Value; V : T);
 
@@ -82,7 +82,7 @@ package TGen.Marshalling_Lib.JSON is
    end In_Out_JSON;
 
    generic
-      type T (<>) is private;
+      type T (<>) is limited private;
       type Header is private;
 
       with function Init (H : Header) return T;

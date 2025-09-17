@@ -659,7 +659,7 @@ package body Test.Instrument is
             Semantic_Parent : constant Ada_Node := Decl.P_Semantic_Parent;
          begin
             case Visibility is
-               when Public_Decls =>
+               when Public_Decls  =>
                   if Semantic_Parent.As_Package_Decl.P_Body_Part.Is_Null then
                      Bodyless_Specs.Include (Semantic_Parent.As_Ada_Node);
                   end if;
@@ -681,7 +681,7 @@ package body Test.Instrument is
       begin
          for D of Decls loop
             case D.Kind is
-               when Ada_Package_Decl =>
+               when Ada_Package_Decl  =>
                   Process_Package_Spec (D.As_Basic_Decl);
 
                when Ada_Expr_Function =>
@@ -710,7 +710,7 @@ package body Test.Instrument is
                      Put_New_Line;
                   end if;
 
-               when others =>
+               when others            =>
                   --  In all other cases, just copy the declaration as is to
                   --  the instrumented spec.
 

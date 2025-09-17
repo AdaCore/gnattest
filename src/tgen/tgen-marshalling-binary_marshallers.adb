@@ -271,11 +271,11 @@ package body TGen.Marshalling.Binary_Marshallers is
 
          pragma Style_Checks (Off);
          Size_Max_Pub : constant Boolean :=
-           not (Typ in Discriminated_Record_Typ'Class)
+           not (Typ in Record_Typ'Class
+                and then Is_Discriminated (Record_Typ'Class (Typ)))
            or else not (for some Disc_Typ of
-                          Discriminated_Record_Typ'Class (Typ)
-                            .Discriminant_Types =>
-                          Disc_Typ.all.Fully_Private);
+                          Record_Typ'Class (Typ).Discriminant_Types =>
+                          Disc_Typ.Fully_Private);
          pragma Style_Checks (On);
       begin
          Put_Line (Spec_Part, Parse (Composite_Base_Spec_Template, Assocs));

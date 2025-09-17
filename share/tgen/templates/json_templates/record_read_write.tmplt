@@ -3,6 +3,8 @@
 @@--  @_GLOBAL_PREFIX_@ Prefix used to prefix all entities local to the unit.
 @@--  @_TY_PREFIX_@ Prefix used to prefix all entities for the current type.
 @@--  @_TY_NAME_@ Name of the current type.
+@@--  @_ANCESTOR_TY_PREFIX_@ Prefix used to prefix all entities for the ancestor of the current type.
+@@--  @_ANCESTOR_TY_NAME_@ Name of the ancestor of current type.
 @@--  @_COMPONENT_WRITE_@ Calls to Write for the component type on all
 @@--       components of @_GLOBAL_PREFIX_@_V.
 @@--  @_COMPONENT_READ_@ Calls to Read for the component type on all components
@@ -17,12 +19,16 @@
      (@_GLOBAL_PREFIX_@_JSON : in out TGen.JSON.JSON_Value;
       @_GLOBAL_PREFIX_@_V    : TGen.TGen_Std.@_TY_NAME_@)
    is
-      Components : constant TGen.JSON.JSON_Value := TGen.JSON.Create_Object;
+      Components : TGen.JSON.JSON_Value := TGen.JSON.Create_Object;
    begin
 @@IF@@ @_COMPONENT_WRITE_@ /= ""
 @@TABLE@@
 @_COMPONENT_WRITE_@
 @@END_TABLE@@
+@@END_IF@@
+@@IF@@ @_ANCESTOR_TY_NAME_@ /= ""
+      @_ANCESTOR_TY_PREFIX_@_As_Ancestor_Write
+         (Components, TGen.TGen_Std.@_ANCESTOR_TY_NAME_@(@_GLOBAL_PREFIX_@_V));
 @@END_IF@@
       TGen.JSON.Set_Field
          (@_GLOBAL_PREFIX_@_JSON, "components", Components);
@@ -30,6 +36,26 @@
 @_VARIANT_WRITE_@
 @@END_IF@@
    end @_TY_PREFIX_@_Write;
+
+   procedure @_TY_PREFIX_@_As_Ancestor_Write
+     (@_GLOBAL_PREFIX_@_JSON : in out TGen.JSON.JSON_Value;
+      @_GLOBAL_PREFIX_@_V    : TGen.TGen_Std.@_TY_NAME_@)
+   is
+   begin
+@@IF@@ @_ANCESTOR_COMPONENT_WRITE_@ /= ""
+@@TABLE@@
+@_ANCESTOR_COMPONENT_WRITE_@
+@@END_TABLE@@
+@@END_IF@@
+@@IF@@ @_ANCESTOR_VARIANT_WRITE_@ /= ""
+@_ANCESTOR_VARIANT_WRITE_@
+@@END_IF@@
+@@IF@@ @_ANCESTOR_TY_NAME_@ /= ""
+      @_ANCESTOR_TY_PREFIX_@_As_Ancestor_Write
+         (@_GLOBAL_PREFIX_@_JSON, TGen.TGen_Std.@_ANCESTOR_TY_NAME_@(@_GLOBAL_PREFIX_@_V));
+@@END_IF@@
+      null;
+   end @_TY_PREFIX_@_As_Ancestor_Write;
 
    procedure @_TY_PREFIX_@_Read
      (@_GLOBAL_PREFIX_@_JSON : TGen.JSON.JSON_Value;
@@ -39,6 +65,9 @@
          TGen.JSON.Get
            (@_GLOBAL_PREFIX_@_JSON, "components");
    begin
+@@IF@@ @_ANCESTOR_TY_PREFIX_@ /= ""
+   @_ANCESTOR_TY_PREFIX_@_Read (@_GLOBAL_PREFIX_@_JSON, TGen.TGen_Std.@_ANCESTOR_TY_NAME_@(@_GLOBAL_PREFIX_@_V));
+@@END_IF@@
 @@IF@@ @_COMPONENT_READ_@ /= ""
 @@TABLE@@
 @_COMPONENT_READ_@
@@ -50,7 +79,4 @@
 @_VARIANT_READ_@
 @@END_IF@@
 
-      if @_GLOBAL_PREFIX_@_V not in TGen.TGen_Std.@_TY_NAME_@ then
-        raise Invalid_Value;
-      end if;
    end @_TY_PREFIX_@_Read;

@@ -223,7 +223,7 @@ package TGen.Marshalling_Lib is
    end Read_Write_Float;
 
    generic
-      type T is private;
+      type T is limited private;
 
       with
         procedure Write
@@ -260,7 +260,7 @@ package TGen.Marshalling_Lib is
    end In_Out;
 
    generic
-      type T (<>) is private;
+      type T (<>) is limited private;
       type Header_Type is private;
 
       with function Init (H : Header_Type) return T;

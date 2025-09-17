@@ -60,7 +60,7 @@ package body TGen.Dependency_Graph is
 
    begin
       case T.all.Kind is
-         when Anonymous_Kind =>
+         when Anonymous_Kind               =>
             Res.Include (As_Anonymous_Typ (T).Named_Ancestor);
             if Transitive then
                Res.Union
@@ -68,7 +68,7 @@ package body TGen.Dependency_Graph is
                     (As_Anonymous_Typ (T).Named_Ancestor, Transitive));
             end if;
 
-         when Array_Typ_Range =>
+         when Array_Typ_Range              =>
             declare
                Comp_Ty : constant Typ_Access :=
                  As_Array_Typ (T).Component_Type;
@@ -89,16 +89,44 @@ package body TGen.Dependency_Graph is
                end if;
             end loop;
 
-         when Non_Disc_Record_Kind =>
-            for Comp_Typ of As_Nondiscriminated_Record_Typ (T).Component_Types
-            loop
-               Res.Include (Comp_Typ);
-               if Transitive or else Comp_Typ.all.Kind = Anonymous_Kind then
-                  Res.Union (Type_Dependencies (Comp_Typ, Transitive));
-               end if;
-            end loop;
+         when Record_Kind                  =>
+            declare
+               Rec_Typ : constant Record_Typ'Class := As_Record_Typ (T);
+            begin
+               for Comp_Typ of Rec_Typ.Component_Types loop
+                  Res.Include (Comp_Typ);
 
-         when Function_Kind =>
+                  if Transitive or else Comp_Typ.all.Kind = Anonymous_Kind then
+                     Res.Union (Type_Dependencies (Comp_Typ, Transitive));
+                  end if;
+               end loop;
+
+               if Rec_Typ.Ancestor /= null then
+                  Res.Include (Typ_Access (Rec_Typ.Ancestor));
+               end if;
+
+               if Is_Discriminated (Rec_Typ) then
+
+                  --  Discriminant types are discrete types, and thus do not
+                  --  depend on any type.
+
+                  for Disc_Typ of Rec_Typ.Discriminant_Types loop
+                     Res.Include (Disc_Typ);
+                     if Transitive or else Disc_Typ.Kind = Anonymous_Kind then
+                        Res.Union (Type_Dependencies (Disc_Typ, Transitive));
+                     end if;
+                  end loop;
+                  Inspect_Variant (Rec_Typ.Variant);
+               end if;
+
+               if Rec_Typ.Ancestor /= null then
+                  Res.Union
+                    (Type_Dependencies
+                       (Typ_Access (Rec_Typ.Ancestor), Transitive));
+               end if;
+            end;
+
+         when Function_Kind                =>
             for Param_Typ of As_Function_Typ (T).Component_Types loop
                Res.Include (Param_Typ);
                if Transitive then
@@ -111,27 +139,6 @@ package body TGen.Dependency_Graph is
                   Res.Union (Type_Dependencies (Global_Typ, Transitive));
                end if;
             end loop;
-
-         when Disc_Record_Kind =>
-            for Comp_Typ of As_Discriminated_Record_Typ (T).Component_Types
-            loop
-               Res.Include (Comp_Typ);
-               if Transitive or else Comp_Typ.all.Kind = Anonymous_Kind then
-                  Res.Union (Type_Dependencies (Comp_Typ, Transitive));
-               end if;
-            end loop;
-
-            --  Discriminant types are discrete types, and thus do not depend
-            --  on any type.
-
-            for Disc_Typ of As_Discriminated_Record_Typ (T).Discriminant_Types
-            loop
-               Res.Include (Disc_Typ);
-               if Transitive or else Disc_Typ.all.Kind = Anonymous_Kind then
-                  Res.Union (Type_Dependencies (Disc_Typ, Transitive));
-               end if;
-            end loop;
-            Inspect_Variant (As_Discriminated_Record_Typ (T).Variant);
 
          when Derived_Private_Subtype_Kind =>
 
@@ -146,7 +153,7 @@ package body TGen.Dependency_Graph is
                Res.Union (Type_Dependencies (Derived_Typ.Parent_Type));
             end;
 
-         when others =>
+         when others                       =>
             null;
       end case;
       return Res;

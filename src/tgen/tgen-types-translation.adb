@@ -58,11 +58,6 @@ package body TGen.Types.Translation is
 
    package LALCO renames Libadalang.Common;
 
-   type Nondiscriminated_Record_Typ_Access is
-     access Nondiscriminated_Record_Typ;
-   type Discriminated_Record_Typ_Access is access Discriminated_Record_Typ;
-   type Function_Typ_Access is access Function_Typ;
-
    function New_Eval_As_Int
      (Node : Expr'Class) return GNATCOLL.GMP.Integers.Big_Integer;
    --  Wrapper arround P_Eval_As_Int which raises Non_Static_Error when
@@ -89,7 +84,7 @@ package body TGen.Types.Translation is
       Verbose           : Boolean := False;
       Assume_Non_Static : Boolean := False) return Translation_Result;
    --  Actually translates the Base_Type_Decl. Translate is simply a
-   --  memoization wrapper.
+   --  memorization wrapper.
    --  If Assume_Non_Static is true, the the translated type will always be
    --  flaged as non static.
 
@@ -165,22 +160,26 @@ package body TGen.Types.Translation is
 
    function Translate_Record_Decl
      (Decl : Base_Type_Decl) return Translation_Result
-   with Pre => Decl.P_Root_Type.P_Full_View.P_Is_Record_Type;
+   with
+     Pre =>
+       (Decl.P_Root_Type.P_Full_View.P_Is_Record_Type
+        and then Kind (Decl.P_Root_Type.P_Full_View) in Ada_Type_Decl);
 
    procedure Apply_Record_Subtype_Decl
-     (Decl : Subtype_Indication; Res : in out Discriminated_Record_Typ)
-   with Pre => Res.Constrained;
+     (Decl : Subtype_Indication; Res : in out Record_Typ)
+   with Pre => Is_Discriminated (Res) and then Res.Constrained;
    --  Record the discriminant constraints of Decl in Res. For this, the
    --  type on which you want to apply constraints must be able to accept
    --  them.
 
    function Apply_Record_Derived_Type_Decl
-     (Decl : Type_Decl'Class; From : in out Discriminated_Record_Typ)
-      return Discriminated_Record_Typ
+     (Decl : Type_Decl'Class; From : in out Record_Typ) return Record_Typ
    with
-     Pre =>
-       Kind (Decl.F_Type_Def) in Ada_Derived_Type_Def_Range
-       and then From.Constrained;
+     Pre  =>
+       Is_Discriminated (From)
+       and then Kind (Decl.F_Type_Def) in Ada_Derived_Type_Def_Range
+       and then From.Constrained,
+     Post => Is_Discriminated (Apply_Record_Derived_Type_Decl'Result);
    --  Apply the effects of the record type derivation defined in Decl.
    --  If any discriminant constraints are present, this filters out the
    --  incompatible shapes, and renames discriminant which correspond
@@ -195,8 +194,7 @@ package body TGen.Types.Translation is
    --  Constraints, and rename the variant part discriminant based on the
    --  mapping in Renaming.
 
-   function Record_Constrained
-     (Decl : Base_Type_Decl; Root : Base_Type_Decl) return Boolean;
+   function Record_Constrained (Decl : Base_Type_Decl) return Boolean;
    --  Returns True if Decl has discriminants constraints at some stage in the
    --  chain of subtype definitions / type derivations.
 
@@ -643,7 +641,7 @@ package body TGen.Types.Translation is
 
             --  Otherwise, analyze the type constraint
             case Kind (Parent_Type.F_Constraint) is
-               when Ada_Range_Constraint_Range =>
+               when Ada_Range_Constraint_Range  =>
                   Find_Digits
                     (Parent_Type.P_Designated_Type_Decl, Digits_Value);
                   return;
@@ -654,7 +652,7 @@ package body TGen.Types.Translation is
                     Natural'Value
                       (New_Eval_As_Int (Constraints.F_Digits).Image);
 
-               when others =>
+               when others                      =>
                   raise Translation_Error
                     with
                       "Unexpected kind of"
@@ -776,7 +774,7 @@ package body TGen.Types.Translation is
                     (Subtype_Ind.F_Name.P_Name_Designated_Type, Delta_Value);
                   return;
 
-               when others =>
+               when others                     =>
                   raise Translation_Error
                     with
                       "Unexpected constraint kind for a ordinary fixed point"
@@ -862,7 +860,7 @@ package body TGen.Types.Translation is
          Parent_Subtype : Subtype_Indication;
       begin
          case Kind (Decl) is
-            when Ada_Type_Decl =>
+            when Ada_Type_Decl          =>
                if Kind (Decl.As_Type_Decl.F_Type_Def)
                   in Ada_Decimal_Fixed_Point_Def_Range
                then
@@ -897,7 +895,7 @@ package body TGen.Types.Translation is
             when Ada_Subtype_Decl_Range =>
                Parent_Subtype := Decl.As_Subtype_Decl.F_Subtype;
 
-            when others =>
+            when others                 =>
                raise Translation_Error
                  with
                    "unexpected kind for a decimal fixed point declaration:"
@@ -991,7 +989,7 @@ package body TGen.Types.Translation is
          --  Decl is the root type, it is a type decl
 
          case Kind (Decl.As_Type_Decl.F_Type_Def) is
-            when Ada_Floating_Point_Def_Range =>
+            when Ada_Floating_Point_Def_Range       =>
                Range_Spec_Val :=
                  Decl.As_Type_Decl.F_Type_Def.As_Floating_Point_Def.F_Range;
 
@@ -1003,7 +1001,7 @@ package body TGen.Types.Translation is
                    .As_Ordinary_Fixed_Point_Def
                    .F_Range;
 
-            when Ada_Decimal_Fixed_Point_Def_Range =>
+            when Ada_Decimal_Fixed_Point_Def_Range  =>
                Range_Spec_Val :=
                  Decl
                    .As_Type_Decl
@@ -1011,7 +1009,7 @@ package body TGen.Types.Translation is
                    .As_Decimal_Fixed_Point_Def
                    .F_Range;
 
-            when others =>
+            when others                             =>
                raise Translation_Error
                  with
                    "Expected Real type def for decl but got"
@@ -1090,16 +1088,16 @@ package body TGen.Types.Translation is
      (Node : LAL.Constraint) return LAL.Range_Spec is
    begin
       case Kind (Node) is
-         when Ada_Range_Constraint_Range =>
+         when Ada_Range_Constraint_Range  =>
             return Node.As_Range_Constraint.F_Range;
 
          when Ada_Digits_Constraint_Range =>
             return Node.As_Digits_Constraint.F_Range;
 
-         when Ada_Delta_Constraint_Range =>
+         when Ada_Delta_Constraint_Range  =>
             return Node.As_Delta_Constraint.F_Range;
 
-         when others =>
+         when others                      =>
             raise Translation_Error
               with
                 "Unexpected kind of constraint for a real type "
@@ -1145,7 +1143,7 @@ package body TGen.Types.Translation is
                Max_Static := False;
             end if;
 
-         when Ada_Bin_Op_Range =>
+         when Ada_Bin_Op_Range        =>
             if Node.F_Range.As_Bin_Op.F_Left.P_Is_Static_Expr then
                declare
                   Min_Eval : constant Eval_Result :=
@@ -1204,7 +1202,7 @@ package body TGen.Types.Translation is
                Max_Static := False;
             end if;
 
-         when others =>
+         when others                  =>
             raise Translation_Error
               with
                 "Unexpected expression kind for real range constraint: "
@@ -1248,9 +1246,9 @@ package body TGen.Types.Translation is
       Constraints   : LAL.Constraint;
    begin
       case Kind (Decl_Or_Constraint) is
-         when Ada_Type_Decl =>
+         when Ada_Type_Decl          =>
             case Kind (Decl_Or_Constraint.As_Type_Decl.F_Type_Def) is
-               when Ada_Array_Type_Def_Range =>
+               when Ada_Array_Type_Def_Range   =>
                   for Node of
                     Decl_Or_Constraint
                       .As_Type_Decl
@@ -1274,7 +1272,7 @@ package body TGen.Types.Translation is
                       .F_Subtype_Indication
                       .F_Constraint;
 
-               when others =>
+               when others                     =>
                   raise Translation_Error
                     with
                       "unexpected kind for index constraints in constrained"
@@ -1286,10 +1284,10 @@ package body TGen.Types.Translation is
             Constraints :=
               Decl_Or_Constraint.As_Subtype_Decl.F_Subtype.F_Constraint;
 
-         when Ada_Constraint =>
+         when Ada_Constraint         =>
             Constraints := Decl_Or_Constraint.As_Constraint;
 
-         when others =>
+         when others                 =>
             raise Translation_Error
               with
                 "unexpected kind for index constraints: "
@@ -1304,7 +1302,7 @@ package body TGen.Types.Translation is
                Current_Index := Current_Index + 1;
             end loop;
 
-         when others =>
+         when others                         =>
             raise Translation_Error
               with
                 "unexpected kind for index constraints: "
@@ -1417,15 +1415,15 @@ package body TGen.Types.Translation is
                         Has_Constraints := True;
                      end if;
 
-                  when Ada_Bin_Op_Range =>
+                  when Ada_Bin_Op_Range             =>
                      Has_Constraints := True;
                      Range_Exp := Constraint.As_Expr;
 
-                  when Ada_Attribute_Ref_Range =>
+                  when Ada_Attribute_Ref_Range      =>
                      Has_Constraints := True;
                      Range_Exp := Constraint.As_Expr;
 
-                  when others =>
+                  when others                       =>
                      Has_Constraints := False;
                end case;
 
@@ -1779,7 +1777,7 @@ package body TGen.Types.Translation is
                return Translate_Constrained (Decl);
             end if;
 
-         when Ada_Type_Decl =>
+         when Ada_Type_Decl          =>
 
             if Kind (Decl.As_Type_Decl.F_Type_Def)
                in Ada_Derived_Type_Def_Range
@@ -1811,7 +1809,7 @@ package body TGen.Types.Translation is
                          .As_Array_Type_Def
                          .F_Indices)
                is
-                  when Ada_Constrained_Array_Indices_Range =>
+                  when Ada_Constrained_Array_Indices_Range   =>
                      return Translate_Constrained (Decl);
 
                   when Ada_Unconstrained_Array_Indices_Range =>
@@ -1819,7 +1817,7 @@ package body TGen.Types.Translation is
                        Translate_Unconstrained
                          (Decl.As_Type_Decl.F_Type_Def.As_Array_Type_Def);
 
-                  when others =>
+                  when others                                =>
                      return
                        (Success     => False,
                         Diagnostics =>
@@ -1834,7 +1832,7 @@ package body TGen.Types.Translation is
                end case;
             end if;
 
-         when others =>
+         when others                 =>
             return
               (Success     => False,
                Diagnostics =>
@@ -1848,41 +1846,46 @@ package body TGen.Types.Translation is
    -- Record_Constrained --
    ------------------------
 
-   function Record_Constrained
-     (Decl : Base_Type_Decl; Root : Base_Type_Decl) return Boolean
-   is
+   function Record_Constrained (Decl : Base_Type_Decl) return Boolean is
       Ancestor_Type : Subtype_Indication;
    begin
-      --  The original Decl of a record is not constrained.
-
-      if Decl = Root then
-         return False;
-      end if;
       case Kind (Decl) is
          when Ada_Subtype_Decl_Range =>
             Ancestor_Type := Decl.As_Subtype_Decl.F_Subtype;
 
-         when Ada_Type_Decl =>
-            pragma
-              Assert
-                (Kind (Decl.As_Type_Decl.F_Type_Def)
-                 in Ada_Derived_Type_Def_Range);
-            Ancestor_Type :=
-              Decl
-                .As_Type_Decl
-                .F_Type_Def
-                .As_Derived_Type_Def
-                .F_Subtype_Indication;
+         when Ada_Type_Decl          =>
+            declare
+               Decl_Kind : constant Ada_Node_Kind_Type :=
+                 Kind (Decl.As_Type_Decl.F_Type_Def);
+            begin
+               --  The original Decl of a record is not constrained.
 
-         when others =>
+               if Decl_Kind = Ada_Record_Type_Def then
+                  return False;
+               end if;
+
+               pragma Assert (Decl_Kind in Ada_Derived_Type_Def_Range);
+
+               Ancestor_Type :=
+                 Decl
+                   .As_Type_Decl
+                   .F_Type_Def
+                   .As_Derived_Type_Def
+                   .F_Subtype_Indication;
+            end;
+
+         when others                 =>
             return False;
          --  we should not be able to end up in here, but if we do,
          --  simply ignore the constraints.
       end case;
 
+      if not Ancestor_Type.P_Subtype_Constraint.Is_Null then
+         return True;
+      end if;
+
       if Is_Null (Ancestor_Type.F_Constraint) then
-         return
-           Record_Constrained (Ancestor_Type.P_Designated_Type_Decl, Root);
+         return Record_Constrained (Ancestor_Type.P_Designated_Type_Decl);
       else
          pragma
            Assert
@@ -1901,7 +1904,7 @@ package body TGen.Types.Translation is
    -------------------------------
 
    procedure Apply_Record_Subtype_Decl
-     (Decl : Subtype_Indication; Res : in out Discriminated_Record_Typ) is
+     (Decl : Subtype_Indication; Res : in out Record_Typ) is
    begin
       if Is_Null (Decl.F_Constraint) then
          return;
@@ -2057,15 +2060,14 @@ package body TGen.Types.Translation is
    ------------------------------------
 
    function Apply_Record_Derived_Type_Decl
-     (Decl : Type_Decl'Class; From : in out Discriminated_Record_Typ)
-      return Discriminated_Record_Typ
+     (Decl : Type_Decl'Class; From : in out Record_Typ) return Record_Typ
    is
-
       use Discriminant_Constraint_Maps;
 
       Constraints_Map    : Discriminant_Constraint_Maps.Map;
       Discr_Renaming_Map : Discriminant_Constraint_Maps.Map;
       Constraint_Cur     : Cursor;
+
    begin
       --  There are three cases here:
       --  1. There is no known discriminant part, and no discriminant
@@ -2109,7 +2111,7 @@ package body TGen.Types.Translation is
       --  First build a discriminant constraint map to filter out
       --  the unachievable shapes.
 
-      return New_Typ : Discriminated_Record_Typ (Constrained => True) do
+      return New_Typ : Record_Typ (Constrained => True) do
          New_Typ.Mutable :=
            not Is_Null (Decl.F_Discriminants)
            and then not Is_Null
@@ -2193,7 +2195,6 @@ package body TGen.Types.Translation is
                New_Typ.Component_Types,
                Constraints_Map,
                Discr_Renaming_Map);
-
          end if;
 
          --  Fill out discriminant types
@@ -2205,18 +2206,18 @@ package body TGen.Types.Translation is
                  (Key      => Element (Constraint_Cur).Disc_Name,
                   New_Item =>
                     From.Discriminant_Types.Element (Key (Constraint_Cur)));
-               Next (Constraint_Cur);
             end if;
+            Next (Constraint_Cur);
          end loop;
 
          --  Then the non static constraints
-         --  We also need to copy the corresponding discriminant type.
 
          Constraint_Cur := Constraints_Map.First;
          while Has_Element (Constraint_Cur) loop
             if Element (Constraint_Cur).Kind = Non_Static then
                New_Typ.Discriminant_Constraint.Insert
                  (Key (Constraint_Cur), Element (Constraint_Cur));
+
                New_Typ.Discriminant_Types.Insert
                  (Key      => Key (Constraint_Cur),
                   New_Item =>
@@ -2224,6 +2225,7 @@ package body TGen.Types.Translation is
             end if;
             Next (Constraint_Cur);
          end loop;
+
          New_Typ.Name := From.Name;
          New_Typ.Last_Comp_Unit_Idx := From.Last_Comp_Unit_Idx;
       end return;
@@ -2443,7 +2445,7 @@ package body TGen.Types.Translation is
             end if;
             for Alt of Var_Choice.F_Choices loop
                case Alt.Kind is
-                  when Ada_Expr =>
+                  when Ada_Expr                    =>
                      if Alt.Kind in Ada_Bin_Op then
                         if Alt.As_Bin_Op.F_Op.Kind in Ada_Op_Double_Dot then
                            Choice_Min :=
@@ -2518,7 +2520,7 @@ package body TGen.Types.Translation is
                              (Discriminants.Element (Res.Discr_Name))
                              .High_Bound));
 
-                  when others =>
+                  when others                      =>
                      raise Translation_Error
                        with
                          "Unexpected node kind for a variant choice"
@@ -2557,18 +2559,47 @@ package body TGen.Types.Translation is
    function Translate_Record_Decl
      (Decl : Base_Type_Decl) return Translation_Result
    is
+      function Is_Non_Discriminated_Full_View
+        (D : Type_Decl'Class) return Boolean
+      is (D.P_Discriminants_List'Length = 0);
+
+      function Get_Component_List
+        (D : Concrete_Type_Decl) return Component_List;
 
       procedure Apply_Constraints
-        (Decl, Root : Base_Type_Decl; Res : in out Discriminated_Record_Typ);
+        (Decl, Root : Base_Type_Decl; Res : in out Record_Typ)
+      with Pre => Is_Discriminated (Res);
       --  Modify Res to include all the discriminant constraints present in
       --  the type derivation / subtype decl chain.
+
+      ------------------------
+      -- Get_Component_List --
+      ------------------------
+
+      function Get_Component_List
+        (D : Concrete_Type_Decl) return Component_List is
+      begin
+         if D.F_Type_Def.Kind in Ada_Derived_Type_Def then
+            --  Tagged type extension
+            return
+              D.F_Type_Def.As_Derived_Type_Def.F_Record_Extension.F_Components;
+         elsif D.F_Type_Def.Kind in Ada_Record_Type_Def then
+            --  Tagged type or untagged derived type
+            return D.F_Type_Def.As_Record_Type_Def.F_Record_Def.F_Components;
+         else
+            raise Translation_Error
+              with
+                "Unsupported construct, unabe to get record component list."
+                & Kind_Name (D);
+         end if;
+      end Get_Component_List;
 
       -----------------------
       -- Apply_Constraints --
       -----------------------
 
       procedure Apply_Constraints
-        (Decl, Root : Base_Type_Decl; Res : in out Discriminated_Record_Typ) is
+        (Decl, Root : Base_Type_Decl; Res : in out Record_Typ) is
       begin
          --  The original Decl of a record is not constrained.
 
@@ -2577,7 +2608,7 @@ package body TGen.Types.Translation is
          end if;
 
          case Kind (Decl) is
-            when Ada_Type_Decl =>
+            when Ada_Type_Decl          =>
 
                --  First apply constraints of the ancestor type
 
@@ -2610,55 +2641,84 @@ package body TGen.Types.Translation is
 
                Apply_Record_Subtype_Decl (Decl.As_Subtype_Decl.F_Subtype, Res);
 
-            when others =>
+            when others                 =>
                --  This should not be reachable
                null;
          end case;
       end Apply_Constraints;
 
-      Actual_Decl : Type_Decl;
-      --  The type decl where the components of the array are actually defined.
-      --  For now we don't support tagged types, and thus record extension, so
-      --  the whole list of components is available in a single type
-      --  declaration. Other subtypes or derived types may only add
-      --  discriminant constraints or rebind discriminants.
+      Root_Decl : constant Concrete_Type_Decl :=
+        Decl.P_Root_Type.P_Full_View.As_Type_Decl.As_Concrete_Type_Decl;
+
+      Decl_CTD    : constant Concrete_Type_Decl :=
+        Decl.P_Base_Subtype.As_Concrete_Type_Decl;
+      Actual_Decl : Concrete_Type_Decl :=
+        (if Kind (Decl_CTD.F_Type_Def) in Ada_Private_Type_Def
+         then P_Private_Completion (Decl_CTD).As_Concrete_Type_Decl
+         else Decl_CTD);
+
+      Is_Derived_Type : constant Boolean :=
+        Kind (Actual_Decl.F_Type_Def) = Ada_Derived_Type_Def;
+
+      Is_Derived_Untagged : constant Boolean :=
+        Is_Derived_Type and then not Actual_Decl.P_Is_Tagged_Type;
+      --  If this type is derived from an untagged record, directly consider
+      --  the full view of its root type. Otherwise, only consider what is
+      --  visible from Actual_Decl.
 
       Failure_Reason : Unbounded_String;
 
-      --  Start of processing for Translate_Record_Decl;
-
+      --  Start of processing for Translate_Record_Decl
    begin
 
       --  First the simple case of an undiscriminated record
 
-      if Kind (Decl.P_Root_Type.P_Full_View) in Ada_Type_Decl
-        and then Kind (Decl.P_Root_Type.P_Full_View.As_Type_Decl.F_Type_Def)
-                 in Ada_Record_Type_Def_Range
-        and then Is_Null
-                   (Decl.P_Root_Type.P_Full_View.As_Type_Decl.F_Discriminants)
-      then
-         Actual_Decl := Decl.P_Root_Type.P_Full_View.As_Type_Decl;
+      if Is_Non_Discriminated_Full_View (Actual_Decl) then
 
          declare
-            Trans_Res : constant Nondiscriminated_Record_Typ_Access :=
-              new Nondiscriminated_Record_Typ'(others => <>);
-            Comp_List : constant Ada_Node_List :=
-              Actual_Decl
-                .F_Type_Def
-                .As_Record_Type_Def
-                .F_Record_Def
-                .F_Components
-                .F_Components;
+            Trans_Res : constant Record_Typ_Access :=
+              new Record_Typ'
+                (Constrained        => False,
+                 Mutable            => False,
+                 Discriminant_Types => Component_Maps.Empty_Map,
+                 Variant            => null,
+                 others             => <>);
+
+            Decl_Comp_List : constant Component_List :=
+              (if Actual_Decl.P_Is_Tagged_Type
+               then Get_Component_List (Actual_Decl)
+               else Get_Component_List (Root_Decl));
+
+            Comp_List : constant Ada_Node_List := Decl_Comp_List.F_Components;
          begin
+            --  Translate this record's components
 
             Failure_Reason :=
               Translate_Component_Decl_List
-                (Comp_List, Trans_Res.all.Component_Types);
+                (Comp_List, Trans_Res.Component_Types);
 
             if Failure_Reason = Null_Unbounded_String then
-               Trans_Res.all.Static_Gen :=
-                 (for all Comp_Ref of Trans_Res.all.Component_Types =>
+               Trans_Res.Static_Gen :=
+                 (for all Comp_Ref of Trans_Res.Component_Types =>
                     Comp_Ref.all.Supports_Static_Gen);
+
+               --  Now, if this record is tagged then we must also translate
+               --  all the derivation chain.
+
+               if Is_Derived_Type and then Actual_Decl.P_Is_Tagged_Type then
+                  declare
+                     Ancestor_Decl : constant Base_Type_Decl :=
+                       Actual_Decl
+                         .F_Type_Def
+                         .As_Derived_Type_Def
+                         .F_Subtype_Indication
+                         .P_Designated_Type_Decl;
+                  begin
+                     Trans_Res.Ancestor :=
+                       Record_Typ_Access
+                         (Translate_Internal (Ancestor_Decl).Res);
+                  end;
+               end if;
 
                return Res : Translation_Result (Success => True) do
                   Res.Res := Typ_Access (Trans_Res);
@@ -2672,60 +2732,82 @@ package body TGen.Types.Translation is
       else
          --  Now the rest
 
-         Actual_Decl := Decl.P_Root_Type.P_Full_View.As_Type_Decl;
+         --  If this record is derived from a discriminated untagged record,
+         --  directly consider the full view of its root type. Otherwise,
+         --  translate this record now and then its parents separatly to
+         --  keep track of which discriminants belong to which types.
+
+         if Is_Derived_Untagged then
+            Actual_Decl := Root_Decl;
+         end if;
 
          declare
-            Trans_Res : constant Discriminated_Record_Typ_Access :=
-              new Discriminated_Record_Typ
-                    (Constrained =>
-                       Record_Constrained
-                         (Decl, Actual_Decl.As_Base_Type_Decl));
+            Is_Constrained : constant Boolean := Record_Constrained (Decl);
 
-            Discriminant_List : constant Discriminant_Spec_List :=
-              Actual_Decl
-                .F_Discriminants
-                .As_Known_Discriminant_Part
-                .F_Discr_Specs;
-            --  ??? We assume that we only have known discriminants for the
-            --  moment as we are supposed to be translating the full view of
-            --  the type, will need to revisit this to double check.
+            Discr_Part : constant Known_Discriminant_Part :=
+              Actual_Decl.F_Discriminants.As_Known_Discriminant_Part;
+
+            Comp_List : constant Component_List :=
+              Get_Component_List (Actual_Decl);
+
+            Trans_Res : constant Record_Typ_Access :=
+              (if Is_Constrained
+               then new Record_Typ'(Constrained => True, others => <>)
+               else new Record_Typ'(Constrained => False, others => <>));
 
             Current_Type : Translation_Result;
-            Comp_Decl    : constant Component_List :=
-              Actual_Decl
-                .F_Type_Def
-                .As_Record_Type_Def
-                .F_Record_Def
-                .F_Components;
          begin
+            --  First translate the list of discriminants.
 
-            --  First translate the list of discriminants
+            if not Is_Null (Actual_Decl.F_Discriminants) then
 
-            for Spec of Discriminant_List loop
-               if not Is_Null (Spec.F_Default_Expr) then
-                  Trans_Res.all.Mutable := True;
-               end if;
-               Current_Type := Translate (Spec.F_Type_Expr, Verbose_Diag);
-               if not Current_Type.Success then
-                  Failure_Reason :=
-                    "Failed to translate discriminant spec "
-                    & Spec.Image
-                    & ": "
-                    & Current_Type.Diagnostics;
-                  goto Failed_Discr_Rec_Translation;
-               end if;
-               for Def_Name of Spec.F_Ids loop
-                  Trans_Res.all.Discriminant_Types.Insert
-                    (Key      => +Def_Name.As_Defining_Name.Text,
-                     New_Item => Current_Type.Res);
+               for Spec of Discr_Part.F_Discr_Specs loop
+
+                  if not Is_Null (Spec.F_Default_Expr) then
+                     Trans_Res.Mutable := True;
+                  end if;
+
+                  Current_Type := Translate (Spec.F_Type_Expr, Verbose_Diag);
+
+                  if not Current_Type.Success then
+                     Failure_Reason :=
+                       "Failed to translate discriminant spec "
+                       & Spec.Image
+                       & ": "
+                       & Current_Type.Diagnostics;
+                     goto Failed_Discr_Rec_Translation;
+                  end if;
+
+                  for Def_Name of Spec.F_Ids loop
+                     Trans_Res.Discriminant_Types.Insert
+                       (Key      => +Def_Name.As_Defining_Name.Text,
+                        New_Item => Current_Type.Res);
+                  end loop;
                end loop;
-            end loop;
+            end if;
 
-            --  Then the components always present
+            --  Then the always present components
 
             Failure_Reason :=
               Translate_Component_Decl_List
-                (Comp_Decl.F_Components, Trans_Res.all.Component_Types);
+                (Comp_List.F_Components, Trans_Res.Component_Types);
+
+            --  Now, if this record is tagged then we must also translate
+            --  all the derivation chain.
+
+            if Is_Derived_Type and then Actual_Decl.P_Is_Tagged_Type then
+               declare
+                  Ancestor_Decl : constant Base_Type_Decl :=
+                    Actual_Decl
+                      .F_Type_Def
+                      .As_Derived_Type_Def
+                      .F_Subtype_Indication
+                      .P_Designated_Type_Decl;
+               begin
+                  Trans_Res.Ancestor :=
+                    Record_Typ_Access (Translate_Internal (Ancestor_Decl).Res);
+               end;
+            end if;
 
             if Failure_Reason /= Null_Unbounded_String then
                return (Success => False, Diagnostics => Failure_Reason);
@@ -2733,18 +2815,18 @@ package body TGen.Types.Translation is
 
             --  And then the variant part if any
 
-            if not Comp_Decl.F_Variant_Part.Is_Null then
-               Trans_Res.all.Variant :=
+            if not Comp_List.F_Variant_Part.Is_Null then
+               Trans_Res.Variant :=
                  new Record_Types.Variant_Part'
                    (Translate_Variant_Part
-                      (Comp_Decl.F_Variant_Part,
+                      (Comp_List.F_Variant_Part,
                        Trans_Res.all.Discriminant_Types));
             end if;
 
             --  If the record is actually a constrained type, record the
             --  constraints now.
 
-            if Trans_Res.all.Constrained then
+            if Is_Constrained then
                Apply_Constraints
                  (Decl, Actual_Decl.As_Base_Type_Decl, Trans_Res.all);
             end if;
@@ -2776,32 +2858,36 @@ package body TGen.Types.Translation is
                   --  static constraints that don't allow us to determine
                   --  what the final list of components is.
 
-                  if Trans_Res.all.Variant /= null then
-                     Free_Variant (Trans_Res.all.Variant);
+                  if Trans_Res.Variant /= null then
+                     Free_Variant (Trans_Res.Variant);
                   end if;
 
                   return Res : Translation_Result (Success => True) do
                      Res.Res :=
-                       new Nondiscriminated_Record_Typ'
-                         (Component_Types => Trans_Res.all.Component_Types,
-                          Static_Gen      => Trans_Res.all.Static_Gen,
-                          others          => <>);
+                       new Record_Typ'
+                         (Constrained        => False,
+                          Mutable            => False,
+                          Discriminant_Types => Component_Maps.Empty_Map,
+                          Variant            => null,
+                          Component_Types    => Trans_Res.Component_Types,
+                          Static_Gen         => Trans_Res.Static_Gen,
+                          others             => <>);
                   end return;
 
                else
                   return Res : Translation_Result (Success => True) do
                      declare
-                        Rec_Typ : constant Discriminated_Record_Typ_Access :=
-                          new Discriminated_Record_Typ'
-                            (Constrained => False, others => <>);
+                        Rec_Typ : constant Record_Typ_Access :=
+                          new Record_Typ'(Constrained => False, others => <>);
                      begin
-                        Rec_Typ.all.Component_Types.Move
-                          (Trans_Res.all.Component_Types);
-                        Rec_Typ.all.Discriminant_Types.Move
+                        Rec_Typ.Component_Types.Move
+                          (Trans_Res.Component_Types);
+                        Rec_Typ.Discriminant_Types.Move
                           (Trans_Res.Discriminant_Types);
-                        Rec_Typ.all.Variant := Trans_Res.all.Variant;
-                        Rec_Typ.all.Mutable := Trans_Res.all.Mutable;
-                        Rec_Typ.all.Static_Gen := Trans_Res.all.Static_Gen;
+                        Rec_Typ.Variant := Trans_Res.Variant;
+                        Rec_Typ.Mutable := Trans_Res.Mutable;
+                        Rec_Typ.Ancestor := Trans_Res.Ancestor;
+                        Rec_Typ.Static_Gen := Trans_Res.Static_Gen;
                         Res.Res := Typ_Access (Rec_Typ);
                      end;
                   end return;
@@ -2942,7 +3028,7 @@ package body TGen.Types.Translation is
                    .P_Discrete_Range)
                 .As_Expr;
 
-         when Ada_Bin_Op_Range =>
+         when Ada_Bin_Op_Range        =>
             pragma
               Assert
                 (Node.F_Range.F_Range.As_Bin_Op.F_Op
@@ -2950,7 +3036,7 @@ package body TGen.Types.Translation is
             Min := Node.F_Range.F_Range.As_Bin_Op.F_Left;
             Max := Node.F_Range.F_Range.As_Bin_Op.F_Right;
 
-         when others =>
+         when others                  =>
             raise Translation_Error
               with
                 "Unexpected expression for a range constraint: "
@@ -2975,7 +3061,7 @@ package body TGen.Types.Translation is
       end if;
 
       case Kind (Node) is
-         when Ada_Range_Constraint_Range =>
+         when Ada_Range_Constraint_Range  =>
             pragma Assert (not Is_Null (Range_Spc));
             return Rnge;
 
@@ -3032,11 +3118,11 @@ package body TGen.Types.Translation is
             raise Translation_Error
               with "Non static digits constraints are forbidden:" & Node.Image;
 
-         when Ada_Delta_Constraint_Range =>
+         when Ada_Delta_Constraint_Range  =>
             raise Translation_Error
               with "Delta constraints for anonymous types not implemented yet";
 
-         when others =>
+         when others                      =>
             raise Translation_Error
               with
                 "Unexpected expression for a real type constraint: "
@@ -3081,7 +3167,7 @@ package body TGen.Types.Translation is
                          .P_Discrete_Range;
                   end if;
 
-               when Ada_Bin_Op_Range =>
+               when Ada_Bin_Op_Range             =>
                   pragma
                     Assert
                       (Kind (Cst.As_Bin_Op.F_Op) in Ada_Op_Double_Dot_Range);
@@ -3091,7 +3177,7 @@ package body TGen.Types.Translation is
                        Cst.As_Bin_Op.F_Left,
                        Cst.As_Bin_Op.F_Right);
 
-               when Ada_Attribute_Ref_Range =>
+               when Ada_Attribute_Ref_Range      =>
                   Discr_Range :=
                     Cst
                       .As_Attribute_Ref
@@ -3101,7 +3187,7 @@ package body TGen.Types.Translation is
                   Referenced_Type :=
                     Cst.As_Attribute_Ref.F_Prefix.P_Name_Designated_Type;
 
-               when others =>
+               when others                       =>
                   Discr_Range :=
                     Cst.As_Name.P_Name_Designated_Type.P_Discrete_Range;
                   Referenced_Type := Cst.As_Name.P_Name_Designated_Type;
@@ -3233,7 +3319,7 @@ package body TGen.Types.Translation is
                     others              => <>);
             end return;
 
-         when Real_Typ_Range =>
+         when Real_Typ_Range     =>
             return Res : Translation_Result (Success => True) do
                Res.Res :=
                  new Anonymous_Typ'
@@ -3251,7 +3337,7 @@ package body TGen.Types.Translation is
                     others              => <>);
             end return;
 
-         when Array_Typ_Range =>
+         when Array_Typ_Range    =>
 
             --  We need to check wether this anonymous array type isn't
             --  going to be larger than what is supported by the
@@ -3301,7 +3387,7 @@ package body TGen.Types.Translation is
                end if;
             end;
 
-         when Record_Typ_Range =>
+         when Record_Typ_Range   =>
             return Res : Translation_Result (Success => True) do
                pragma
                  Assert
@@ -3333,7 +3419,7 @@ package body TGen.Types.Translation is
                     others              => <>);
             end return;
 
-         when others =>
+         when others             =>
             return Intermediate_Result;
       end case;
    exception
@@ -3438,6 +3524,16 @@ package body TGen.Types.Translation is
 
       Specialized_Res : Translation_Result;
 
+      Is_Opaque_Type_Def : constant Boolean :=
+        ((N.Kind = Ada_Concrete_Type_Decl
+          and then N.As_Concrete_Type_Decl.F_Type_Def.Kind
+                   = Ada_Derived_Type_Def
+          and then TGen.LAL_Utils.Derive_Opaque_Type (N))
+         or (N.Kind in Ada_Subtype_Decl_Range
+             and then TGen.LAL_Utils.Derive_Opaque_Type
+                        (N.As_Base_Type_Decl)));
+      --  True if N is the definition of an opaque type, False otherwise
+
    begin
       Verbose_Diag := Verbose;
       Is_Static :=
@@ -3495,14 +3591,7 @@ package body TGen.Types.Translation is
              (Reason => To_Unbounded_String ("System.Address unsupported"),
               others => <>);
 
-      elsif (N.Kind = Ada_Concrete_Type_Decl
-             and then N.As_Concrete_Type_Decl.F_Type_Def.Kind
-                      = Ada_Derived_Type_Def
-             and then TGen.LAL_Utils.Derive_Opaque_Type (N))
-        or (N.Kind in Ada_Subtype_Decl_Range
-            and then TGen.LAL_Utils.Derive_Opaque_Type (N.As_Base_Type_Decl))
-      then
-
+      elsif Is_Opaque_Type_Def then
          Specialized_Res := (Success => True, others => <>);
 
          declare
@@ -3632,11 +3721,20 @@ package body TGen.Types.Translation is
          Specialized_Res := Translate_Array_Decl (N);
 
       elsif Root_Type.P_Is_Record_Type then
-         if Root_Type.P_Is_Tagged_Type then
+
+         if Kind (Root_Type) in Ada_Classwide_Type_Decl_Range then
             Specialized_Res := (Success => True, others => <>);
             Specialized_Res.Res :=
               new Unsupported_Typ'
-                (Reason => To_Unbounded_String ("tagged types not supported"),
+                (Reason =>
+                   To_Unbounded_String ("Classwide types are not supported"),
+                 others => <>);
+         elsif Root_Type.P_Is_Abstract_Type then
+            Specialized_Res := (Success => True, others => <>);
+            Specialized_Res.Res :=
+              new Unsupported_Typ'
+                (Reason =>
+                   To_Unbounded_String ("Abstract types are not supported"),
                  others => <>);
          else
             Specialized_Res := Translate_Record_Decl (N);
@@ -3717,8 +3815,8 @@ package body TGen.Types.Translation is
    function Translate_Globals
      (N : Expr; Verbose : Boolean) return Translation_Result
    is
-      Rec : constant Nondiscriminated_Record_Typ_Access :=
-        new Nondiscriminated_Record_Typ;
+      Rec : constant Record_Typ_Access :=
+        new Record_Typ'(Constrained => False, others => <>);
       --  Record_Typ encapsulating the globals (that are stored in
       --  Rec.Component_Types).
 
@@ -3755,7 +3853,7 @@ package body TGen.Types.Translation is
                        Translate (Global.As_Object_Decl.F_Type_Expr, Verbose);
                   begin
                      if Global_Typ_Translation.Success then
-                        Rec.all.Component_Types.Insert
+                        Rec.Component_Types.Insert
                           (+To_Ada
                               (Convert_Qualified_Name
                                  (N
@@ -3775,7 +3873,7 @@ package body TGen.Types.Translation is
 
    begin
       case Kind (N) is
-         when Ada_Aggregate =>
+         when Ada_Aggregate  =>
             for Assoc of N.As_Aggregate.F_Assocs loop
                if Kind (Assoc) = Ada_Aggregate_Assoc then
                   declare
@@ -3859,7 +3957,7 @@ package body TGen.Types.Translation is
                raise Translation_Error with +Diagnostics;
             end if;
 
-         when others =>
+         when others         =>
             null;
       end case;
       Result.Res := Typ_Access (Rec);
@@ -3933,8 +4031,9 @@ package body TGen.Types.Translation is
                         New_Item =>
                           (case Param.F_Mode is
                              when Ada_Mode_Default | Ada_Mode_In => In_Mode,
-                             when Ada_Mode_In_Out => In_Out_Mode,
-                             when others => Out_Mode));
+                             when Ada_Mode_In_Out                =>
+                               In_Out_Mode,
+                             when others                         => Out_Mode));
                      F_Typ.all.Param_Order.Append (+Id.As_Defining_Name.Text);
                   end loop;
                else

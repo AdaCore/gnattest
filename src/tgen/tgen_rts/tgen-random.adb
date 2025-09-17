@@ -458,10 +458,10 @@ package body TGen.Random is
    function Random (Min, Max : Any_Float) return Any_Float is
    begin
       case Min.Precision is
-         when Single =>
+         when Single   =>
             return Create (Random_F (Value (Min), Value (Max)));
 
-         when Double =>
+         when Double   =>
             return Create (Random_LF (Value (Min), Value (Max)));
 
          when Extended =>

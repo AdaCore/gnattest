@@ -57,26 +57,26 @@ package body TGen.Types.Enum_Types is
       if Self.Has_Range then
          Res := Res & " range ";
          case Self.Range_Value.Low_Bound.Kind is
-            when Static =>
+            when Static       =>
                Res :=
                  Res & Self.Lit_Image (Self.Range_Value.Low_Bound.Int_Val);
 
             when Discriminant =>
                Append (Res, +Self.Range_Value.Low_Bound.Disc_Name);
 
-            when Non_Static =>
+            when Non_Static   =>
                Append (Res, +Self.Range_Value.Low_Bound.Text);
          end case;
          Res := Res & " .. ";
          case Self.Range_Value.High_Bound.Kind is
-            when Static =>
+            when Static       =>
                Res :=
                  Res & Self.Lit_Image (Self.Range_Value.High_Bound.Int_Val);
 
             when Discriminant =>
                Append (Res, +Self.Range_Value.High_Bound.Disc_Name);
 
-            when Non_Static =>
+            when Non_Static   =>
                Append (Res, +Self.Range_Value.High_Bound.Text);
          end case;
       end if;

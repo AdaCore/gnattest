@@ -2063,8 +2063,8 @@ package body TGen.Libgen is
    function Lang_Version_To_Attr (Version : Ada_Language_Version) return String
    is (case Version is
          when Unspecified => "",
-         when Ada_12 => """-gnat2012""",
-         when Ada_22 => """-gnat2022""");
+         when Ada_12      => """-gnat2012""",
+         when Ada_22      => """-gnat2022""");
 
    ------------------------------
    -- JSON_Marshalling_Enabled --

@@ -2,7 +2,7 @@
 @@--  @_TY_PREFIX_@ Prefix used to prefix all entities for the current type.
 @@--  @_TY_NAME_@ Name of the current type.
 @@--  @_RECORD_TYP_@ Kind of the record type. Can be either Function_Typ,
-@@--     Nondiscriminated_Record_Typ, or Discriminated_Record_Typ.
+@@--  or Record_Typ.
 @@--  @_HAS_VARIANT_PART_@ If this is a discriminated record typ, whether it
 @@--     has a variant part or not.
 @@--  @_HAS_CONSTRAINTS_@ If this is a discriminated record typ, whether it
@@ -11,6 +11,8 @@
 @@--  @_CONSTRAINT_INIT_@ Initialization code for constraints.
 @@--  @_ANONYMOUS_TYP_INIT_@ Initialization code for the record components
 @@--     that are of an anonymous type.
+@@--  @_ANCESTOR_TY_PREFIX_@ Ancestor of the record type for tagged derived
+@@--     records.
 @@--
    @_ANONYMOUS_TYP_INIT_@
 @@--  Set the component types
@@ -19,7 +21,7 @@
       (TGen.Strings."+" ("@_COMP_NAME_@"),
        @_COMP_TYPE_@_Typ_Ref);
 @@END_TABLE@@
-@@IF@@ @_RECORD_TYP_@ = "Discriminated_Record_Typ"
+@@IF@@ @_RECORD_TYP_@ = "Record_Typ"
 @@IF@@ @_HAS_VARIANT_PART_@
 @@--  In this case, we need to initialize the variant parts
    @_VARIANT_INIT_@
@@ -37,6 +39,10 @@
       (TGen.Strings."+" ("@_DISCR_NAME_@"),
        @_DISCR_TYPE_@_Typ_Ref);
 @@END_TABLE@@
+@@IF@@ @_ANCESTOR_TY_PREFIX_@ /= ""
+   @_TY_PREFIX_@_Typ.Ancestor := TGen.Types.Record_Types.Record_Typ_Access
+   (@_ANCESTOR_TY_PREFIX_@_Typ_Ref);
+@@END_IF@@
 @@END_IF@@
 
    @_TY_PREFIX_@_Typ_Ref := (@_TY_PREFIX_@_Typ'Access);
