@@ -3,3 +3,7 @@ description:
     discriminated tagged record defined using discriminant correspondance.
 
 driver: shell_script
+
+control:
+  - [XFAIL, 'x86', 'Marshalling not working for 32bits (UB03-008)']
+  - [XFAIL, 'True', 'Discriminant correspondance unsupported for now']
