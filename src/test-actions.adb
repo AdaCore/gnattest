@@ -616,8 +616,9 @@ package body Test.Actions is
          Source_Info : File_Info;
 
       begin
-         Common.Stub_Mode_ON := Arg (Cmd, Stub);
          Common.Recursive_Stubbing_ON := Arg (Cmd, Recursive_Stub);
+         Common.Stub_Mode_ON :=
+           Arg (Cmd, Stub) or else Common.Recursive_Stubbing_ON;
 
          for File of File_Names (Cmd) loop
             if not Contains (Ignored, Simple_Name (File.all)) then
@@ -761,13 +762,15 @@ package body Test.Actions is
       if Arg (Cmd, Reporter) /= null then
          Free (Test.Common.Reporter_Name);
          Test.Common.Reporter_Name := new String'(Arg (Cmd, Reporter).all);
-         if Arg (Cmd, Stub) or else Arg (Cmd, Separate_Drivers) /= null then
+         if Test.Common.Stub_Mode_ON
+           or else Arg (Cmd, Separate_Drivers) /= null
+         then
             Test.Common.Report_Std
               ("warning: (gnattest) --reporter has no effect");
          end if;
       end if;
 
-      if Arg (Cmd, Stub) then
+      if Test.Common.Stub_Mode_ON then
 
          if Arg (Cmd, Harness_Only) then
             Cmd_Error_No_Help
@@ -1230,7 +1233,7 @@ package body Test.Actions is
       if Status (Tool.Project_Tree.all) = Empty then
          Test.Aggregator.Process_Drivers_List;
       else
-         if Arg (Cmd, Stub) then
+         if Test.Common.Stub_Mode_ON then
             Test.Harness.Generate_Stub_Test_Driver_Projects (Src_Prj);
          elsif Arg (Cmd, Separate_Drivers) /= null then
             Test.Skeleton.Generate_Project_File (Src_Prj);
