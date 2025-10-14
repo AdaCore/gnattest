@@ -112,9 +112,11 @@ package Test.Common is
    --  Returns difference in ending of two nestings without the first dot
    --  of the deeper nesting.
 
-   function Node_Image (Node : Ada_Node'Class) return String
-   is (Encode (Text (Node), Node.Unit.Get_Charset));
-   --  Textual image of the node
+   function Node_Image (Node : Ada_Node'Class) return String;
+   --  Textual image of the node (i.e. full text of the node).
+   --  For further text processing reasons, this strips any trivia tokens for
+   --  name nodes, to avoid including potential newlines or blank characters in
+   --  places where it is not desirable (e.g. hashes, marker IDs, etc).
 
    function Get_Subp_Name (Node : Ada_Node'Class) return String;
    --  if Subp is a subprigram declaration it will return subprogram's name;
