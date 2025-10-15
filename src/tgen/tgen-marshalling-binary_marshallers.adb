@@ -78,7 +78,7 @@ package body TGen.Marshalling.Binary_Marshallers is
       procedure Print_Array (Assocs : Translate_Table);
       procedure Print_Record (Assocs : Translate_Table);
       procedure Print_Header_Wrappers (Assocs : Translate_Table);
-      procedure Print_Proxy_Read (Assocs : Translate_Set) is null;
+      procedure Print_Proxy_Read (Assocs : Translate_Set);
 
       --------------------
       -- Component_Read --
@@ -220,6 +220,16 @@ package body TGen.Marshalling.Binary_Marshallers is
          New_Line (Body_Part);
       end Print_Header_Wrappers;
 
+      ----------------------
+      -- Print_Proxy_Read --
+      ----------------------
+
+      procedure Print_Proxy_Read (Assocs : Translate_Set) is
+      begin
+         New_Line (Body_Part);
+         Put_Line (Body_Part, Parse (Proxy_Read_Template, Assocs));
+      end Print_Proxy_Read;
+
       procedure Generate_Base_Functions_For_Typ_Instance is new
         Generate_Base_Functions_For_Typ
           (Differentiate_Discrete        => True,
@@ -253,7 +263,8 @@ package body TGen.Marshalling.Binary_Marshallers is
 
          --  Proxy_Typ use their own custom Input function (no output).
 
-         null;
+         Put_Line (Spec_Part, Parse (Proxy_Base_Spec_Template, Assocs));
+         New_Line (Spec_Part);
       else
          Put_Line (Spec_Part, Parse (In_Out_Spec_Template, Assocs));
          New_Line (Spec_Part);

@@ -961,18 +961,17 @@ package body TGen.Marshalling is
               Function_Typ (Proxy_Typ (Typ).Proxy_Subprogram.all);
             Assocs   : Translate_Set := To_Set (Common_Assocs);
 
-            --  @_PARAM_NAME_@ Name of the parameters of the proxy subprogram
             Param_Names   : Vector_Tag;
-            --  @_PARAM_TY_@ Fully qualified names of the parameters of the proxy
-            --  subprogram
+            --  Name of the parameters of the proxy subprogram
             Param_Types   : Vector_Tag;
-            --  @_PARAM_INPUT_FN_@ Name of the input function for the parameters of the
-            --                     proxy subprogram.
+            --  fully qualified names of the parameters of the proxy subprogram
             Param_Inputs  : Vector_Tag;
-            --  @_GLOBAL_NAME_@ Name of the global variables
+            --  Name of the input function for each of the parameters of the
+            --  proxy subprogram.
             Global_Names  : Vector_Tag;
-            --  @_GLOBAL_INPUT_FN_@ Name of the input function for the global variables
+            --  Name of the global variables
             Global_Inputs : Vector_Tag;
+            --  Name of the input function for each of the global variables
          begin
             Insert (Assocs, Assoc ("PROXY_FN_FQN", Proxy_FN.FQN));
             Insert (Assocs, Assoc ("PROXY_UID", String'(+Proxy_FN.Subp_UID)));
