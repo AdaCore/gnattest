@@ -5,7 +5,7 @@ project Prj is
    package Coverage is
       Level := "stmt+mcdc";
       for Switches ("*") use ("-q", "--level=" & Level);
-      for Switches ("Coverage") use ("--annotate=report", "--save-checkpoint=ckpt");
+      for Switches ("coverage") use ("--annotate=report", "--save-checkpoint=ckpt");
    end Coverage;
 
 end Prj;

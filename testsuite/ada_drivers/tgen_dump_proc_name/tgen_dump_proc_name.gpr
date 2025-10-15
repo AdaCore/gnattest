@@ -1,4 +1,5 @@
 with "../../../src/gnattest.gpr";
+with "gpr2";
 with "libadalang.gpr";
 
 project TGen_Dump_Proc_Name is

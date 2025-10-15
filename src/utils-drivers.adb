@@ -22,14 +22,10 @@
 ------------------------------------------------------------------------------
 
 with Ada.Directories;
-use Ada;
 with Ada.Exceptions;
 with GNAT.Command_Line;
 with GNAT.Directory_Operations; use GNAT.Directory_Operations;
 with GNAT.OS_Lib;
-
-with GNATCOLL.Projects;
-with GNATCOLL.Projects.Aux;
 
 with Utils.Command_Lines.Common; use Utils.Command_Lines.Common;
 with Utils.Environment;
@@ -55,7 +51,6 @@ package body Utils.Drivers is
    procedure Driver
      (Cmd                   : in out Command_Line;
       Tool                  : in out Tool_State'Class;
-      Tool_Package_Name     : String;
       Preprocessing_Allowed : Boolean := True;
       Callback              : Parse_Callback := null)
    is
@@ -97,7 +92,7 @@ package body Utils.Drivers is
          Counter        : Natural := N_File_Names;
          Has_Syntax_Err : Boolean := False;
 
-         use Directories;
+         use Ada.Directories;
       begin
          --  First compute the Ignored set by looking at all the --ignored
          --  switches.
@@ -178,16 +173,11 @@ package body Utils.Drivers is
       --  Start of processing for Driver
 
    begin
-
       Process_Command_Line
         (Cmd,
          Global_Report_Dir,
-         The_Project_Tree      => Tool.Project_Tree,
-         The_Project_Env       => Tool.Project_Env,
-         Preprocessing_Allowed => Preprocessing_Allowed,
-         Tool_Package_Name     => Tool_Package_Name,
-         Callback              => Local_Callback'Unrestricted_Access,
-         Print_Help            => Print_Help'Access);
+         Callback   => Local_Callback'Unrestricted_Access,
+         Print_Help => Print_Help'Access);
       --      Utils.Command_Lines.Common.Post.Postprocess_Common (Cmd);
 
       if Debug_Flag_C then
@@ -235,7 +225,7 @@ package body Utils.Drivers is
             Dir           : constant String := Arg (Cmd, Output_Directory).all;
             Cannot_Create : constant String :=
               "cannot create directory '" & Dir & "'";
-            use Directories;
+            use Ada.Directories;
          begin
             if Exists (Dir) then
                if Kind (Dir) /= Directory then
@@ -255,22 +245,14 @@ package body Utils.Drivers is
       Init (Tool, Cmd);
 
       if Aggregate.Use_Subprocesses_For_Aggregated_Projects then
-         Aggregate.Process_Aggregated_Projects (Cmd, Tool_Package_Name);
+         Aggregate.Process_Aggregated_Projects (Cmd);
       else
          Process_Files;
       end if;
 
       Final (Tool, Cmd);
-
-      if GNATCOLL.Projects."/="
-           (Tool.Project_Tree.Status, GNATCOLL.Projects.Empty)
-      then
-         GNATCOLL.Projects.Aux.Delete_All_Temp_Files
-           (Tool.Project_Tree.Root_Project);
-      end if;
-      GNATCOLL.Projects.Unload (Tool.Project_Tree.all);
-      GNATCOLL.Projects.Free (Tool.Project_Env);
       Environment.Clean_Up;
+      Unload;
 
       --      if not Utils.Options.Incremental_Mode then
       --         if not Utils.Source_Table.Processing
@@ -292,7 +274,9 @@ package body Utils.Drivers is
          Environment.Clean_Up;
          GNAT.OS_Lib.OS_Exit (1);
       when Utils.Command_Lines.Command_Line_Error =>
+
          --  Error message has already been printed.
+
          GNAT.Command_Line.Try_Help;
          Environment.Clean_Up;
          GNAT.OS_Lib.OS_Exit (1);
@@ -301,6 +285,7 @@ package body Utils.Drivers is
         | Utils.Command_Lines.Command_Line_Error_No_Tool_Name
       =>
          --  Error message has already been printed.
+
          Environment.Clean_Up;
          GNAT.OS_Lib.OS_Exit (1);
    end Driver;

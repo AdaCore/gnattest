@@ -1,5 +1,6 @@
 with "../../../src/gnattest.gpr";
 with "gnatcoll";
+with "gpr2";
 with "libadalang";
 
 project Light_Marshalling_Lib is

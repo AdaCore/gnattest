@@ -28,8 +28,7 @@ with Ada.Directories;
 with TGen.Context; use TGen.Context;
 with TGen.Strings; use TGen.Strings;
 
-with GNATCOLL.VFS;      use GNATCOLL.VFS;
-with GNATCOLL.Projects; use GNATCOLL.Projects;
+with GNATCOLL.VFS; use GNATCOLL.VFS;
 
 package TGen.Files is
 
@@ -43,9 +42,6 @@ package TGen.Files is
 
    procedure Prepare_Output_Dirs (Context : Generation_Context);
    --  Create directories for the output if needed
-
-   function Project_Output_Dir (Project : Project_Type) return String;
-   --  Return the path to the output dir of Project
 
    function Gen_File
      (Ctx : Generation_Context; File : String) return Virtual_File

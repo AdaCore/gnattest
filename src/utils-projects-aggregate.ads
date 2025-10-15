@@ -48,10 +48,6 @@
 
 package Utils.Projects.Aggregate is
 
-   procedure Collect_Aggregated_Projects (P : Project_Type);
-   --  Stores (in internal data structures) the full paths to the
-   --  (non-aggregate!) projects that have been aggregated by P
-
    function Num_Of_Aggregated_Projects return Natural;
    --  Returns the number of (non-aggregate) projects being aggregated
 
@@ -62,14 +58,11 @@ package Utils.Projects.Aggregate is
    --  aggregates only one project is treated specially. That is, False for the
    --  "Simple case", and True for the "Complex case".
 
-   function Get_Aggregated_Prj_Src return String_Access
-   with Pre => Num_Of_Aggregated_Projects = 1;
-   --  Returns the (single!) aggregate project source file. This is called when
-   --  we are not going to spawn any subprocesses.
+   procedure Collect_Aggregated_Projects (P : GPR2.Project.Tree.Object);
+   --  Stores (in internal data structures) the full paths to the
+   --  (non-aggregate!) projects that have been aggregated by P
 
-   procedure Process_Aggregated_Projects
-     (Cmd : Command_Line; Tool_Package_Name : String)
-   with Pre => Num_Of_Aggregated_Projects > 1;
+   procedure Process_Aggregated_Projects (Cmd : Command_Line);
    --  Iterates through the projects being aggregated and spawns the tool
    --  for each of them.
 

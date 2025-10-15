@@ -28,8 +28,6 @@
 
 with Test.Common; use Test.Common;
 
-with GNATCOLL.Projects; use GNATCOLL.Projects;
-
 package Test.Skeleton.Source_Table is
 
    type SF_Status is
@@ -156,7 +154,8 @@ package Test.Skeleton.Source_Table is
    --  Project File Info  --
    -------------------------
 
-   procedure Initialize_Project_Table (Source_Project_Tree : Project_Tree);
+   procedure Initialize_Project_Table;
+
    procedure Mark_Projects_With_Stubbed_Sources;
 
    function Get_Project_Path (Project_Name : String) return String;

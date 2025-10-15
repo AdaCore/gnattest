@@ -51,12 +51,6 @@ package body TGen.LAL_Utils is
 
             when Ada_Single_Tok_Node =>
                declare
-
-                  --  ??? GNATCOLL.Projects does not specify how to encode
-                  --  Unicode unit names as strings, so for now, assume that we
-                  --  process only codepoints in the ASCII range and thus use
-                  --  Langkit_Support.Text.Image.
-
                   Identifier : constant TGen.Strings.Ada_Identifier :=
                     To_Unbounded_String (Image (Name.Text));
                begin

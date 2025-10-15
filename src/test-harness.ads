@@ -168,8 +168,8 @@ package Test.Harness is
    end record;
 
    procedure Generate_Suite (Data : Data_Holder; Path : String := "");
-   --  Creates a test suites for both the directly declared
-   --  tests and inherited ones.
+   --  Creates a test suites for both the directly declared tests and inherited
+   --  ones.
 
    procedure Generate_Substitution_Suite_From_Tested
      (Data : Data_Holder; Path : String := "");

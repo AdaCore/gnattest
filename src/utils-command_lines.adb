@@ -22,21 +22,19 @@
 ------------------------------------------------------------------------------
 
 with Ada.Characters.Handling; use Ada.Characters.Handling;
-with Ada.Command_Line;
-with Ada.Environment_Variables;
+with Ada.Command_Line;        use Ada.Command_Line;
+with Ada.Directories;
 with Ada.Exceptions;
 with Ada.Strings;             use Ada.Strings;
 with Ada.Strings.Fixed;       use Ada.Strings.Fixed;
-use Ada;
 with Ada.Unchecked_Deallocation;
 
 with GNAT.Command_Line;
 --  We don't use most of the facilities of GNAT.Command_Line.
 --  We use it mainly for the wildcard-expansion facility.
 
+with Utils.Formatted_Output;
 with Utils.Tool_Names;
-with Utils.Strings; use Utils.Strings;
-with Utils.String_Utilities;
 
 package body Utils.Command_Lines is
    use Ada.Text_IO;
@@ -180,58 +178,6 @@ package body Utils.Command_Lines is
       Put_Line (Standard_Error, Message);
       raise Command_Line_Error_No_Tool_Name with Message;
    end Cmd_Error_No_Tool_Name;
-
-   procedure Append_Text_Args_From_Command_Line
-     (Tool_Package_Name : String; Args : in out String_Access_Vector)
-   is
-      use Ada.Command_Line;
-      Cur : Positive := 1;
-   begin
-      while Cur <= Argument_Count loop
-         --  We skip "-x ada", which is passed in by gprbuild. It is necessary
-         --  to do that here, rather than during the command-line parsing,
-         --  because gnatmetric uses the -x switch for something else.
-
-         if Argument (Cur) = "-x"
-           and then Cur < Argument_Count
-           and then Argument (Cur + 1) = "ada"
-         then
-            Cur := Cur + 2;
-
-         else
-            Append (Args, new String'(Argument (Cur)));
-            Cur := Cur + 1;
-         end if;
-      end loop;
-
-      --  If environment variables of the form below exist, then take them to
-      --  be arguments. This feature is for testing, so is not documented, and
-      --  is not particularly friendly. It would be friendlier to have just one
-      --  environment variable, with space-separated arguments, but that's
-      --  harder to parse (consider quoting and whatnot).  We can add more of
-      --  these if needed. Example: PRETTY_PRINTER_EXTRA_ARG_1.
-
-      for N in 1 .. 8 loop
-         declare
-            use Environment_Variables, String_Utilities;
-            Env_Var_Name : constant String :=
-              To_Upper (Tool_Package_Name) & "_EXTRA_ARG_" & Image (N);
-         begin
-            if Exists (Env_Var_Name) then
-               Append (Args, new String'(Value (Env_Var_Name)));
-            end if;
-         end;
-      end loop;
-   end Append_Text_Args_From_Command_Line;
-
-   function Text_Args_From_Command_Line
-     (Tool_Package_Name : String) return Argument_List_Access
-   is
-      Result : String_Access_Vector;
-   begin
-      Append_Text_Args_From_Command_Line (Tool_Package_Name, Result);
-      return To_Argument_List_Access (Result);
-   end Text_Args_From_Command_Line;
 
    generic
       type Switches is (<>);
@@ -971,7 +917,7 @@ package body Utils.Command_Lines is
    end Text_To_Switch;
 
    procedure Parse_Helper
-     (Text_Args          : Argument_List_Access;
+     (Text_Args          : String_Vector;
       Cmd                : in out Command_Line;
       Phase              : Parse_Phase;
       Callback           : Parse_Callback;
@@ -980,7 +926,7 @@ package body Utils.Command_Lines is
    --  This does the actual parsing work, after Parse has initialized things.
 
    procedure Parse_Helper
-     (Text_Args          : Argument_List_Access;
+     (Text_Args          : String_Vector;
       Cmd                : in out Command_Line;
       Phase              : Parse_Phase;
       Callback           : Parse_Callback;
@@ -993,18 +939,18 @@ package body Utils.Command_Lines is
       procedure Bump;
       --  Move to next element of Text_Args
 
+      procedure Parse_One_Switch;
+      --  Parse one element, plus the next one in case that's the parameter of
+      --  the current switch (as in "--switch arg").
+
       procedure Bump is
       begin
          Cur := Cur + 1;
          Cmd.Current_Position := Cmd.Current_Position + 1;
       end Bump;
 
-      procedure Parse_One_Switch;
-      --  Parse one element, plus the next one in case that's the parameter of
-      --  the current switch (as in "--switch arg").
-
       procedure Parse_One_Switch is
-         Text       : String renames Text_Args (Cur).all;
+         Text       : String renames Text_Args.Element (Cur);
          pragma Assert (Text'First = 1);
          Descriptor : Command_Line_Descriptor renames Cmd.Descriptor.all;
          Switch     : constant All_Switches :=
@@ -1057,7 +1003,7 @@ package body Utils.Command_Lines is
                      Bump;
                      First := 1;
 
-                     if Cur > Text_Args'Last then
+                     if Cur > Text_Args.Last_Index then
                         Raise_Cmd_Error
                           ("missing switch parameter for: " & Text);
                      end if;
@@ -1088,7 +1034,8 @@ package body Utils.Command_Lines is
 
                   declare
                      Arg : String renames
-                       Text_Args (Cur) (First .. Text_Args (Cur)'Last);
+                       Text_Args.Element (Cur)
+                         (First .. Text_Args.Element (Cur)'Last);
                      S   : constant String (1 .. Arg'Length) := Arg;
                      --  Slide it to start at 1
                   begin
@@ -1144,7 +1091,7 @@ package body Utils.Command_Lines is
       end Parse_One_Switch;
 
    begin
-      while Cur <= Text_Args'Last loop
+      while Cur <= Text_Args.Last_Index loop
          if Text_Args (Cur) (1) = '-' then
             --  Is it a switch?
             begin
@@ -1160,7 +1107,7 @@ package body Utils.Command_Lines is
                        (Standard_Error,
                         Utils.Tool_Names.Tool_Name
                         & ": "
-                        & Exceptions.Exception_Message (X));
+                        & Ada.Exceptions.Exception_Message (X));
                      raise;
                   end if;
             end;
@@ -1176,13 +1123,14 @@ package body Utils.Command_Lines is
                --  is main.adb).
 
                Has_Wildcards : constant Boolean :=
-                 (for some C of Text_Args (Cur).all => C in '*' | '?' | '[');
+                 (for some C of Text_Args.Element (Cur) =>
+                    C in '*' | '?' | '[');
 
                use GNAT.Command_Line;
                It : Expansion_Iterator;
             begin
                if Has_Wildcards then
-                  Start_Expansion (It, Text_Args (Cur).all);
+                  Start_Expansion (It, Text_Args.Element (Cur));
                   loop
                      declare
                         X : constant String := Expansion (It);
@@ -1195,7 +1143,8 @@ package body Utils.Command_Lines is
                --  No wildcards:
 
                else
-                  Append (Cmd.File_Names, String_Ref (Text_Args (Cur)));
+                  Append
+                    (Cmd.File_Names, new String'(Text_Args.Element (Cur)));
                end if;
             end;
          end if;
@@ -1205,7 +1154,7 @@ package body Utils.Command_Lines is
    end Parse_Helper;
 
    procedure Parse
-     (Text_Args          : Argument_List_Access;
+     (Text_Args          : String_Vector;
       Cmd                : in out Command_Line;
       Phase              : Parse_Phase;
       Callback           : Parse_Callback;
@@ -1506,5 +1455,36 @@ package body Utils.Command_Lines is
          end;
       end loop;
    end Dump_Descriptor;
+
+   ----------
+   -- Args --
+   ----------
+
+   function Args return String_Vector is
+      I      : Positive := 1;
+      Result : String_Vector;
+   begin
+      while I <= Argument_Count loop
+         Result.Append (Argument (I));
+         I := I + 1;
+      end loop;
+      return Result;
+   end Args;
+
+   ------------------------
+   -- Print_Command_Line --
+   ------------------------
+
+   procedure Print_Command_Line (Command_Name : String; Args : Argument_List)
+   is
+      use Ada.Directories;
+   begin
+      Formatted_Output.Put ("current directory = \1\n", Current_Directory);
+      Formatted_Output.Put ("  \1", Command_Name);
+      for Arg of Args loop
+         Formatted_Output.Put (" \1", Arg.all);
+      end loop;
+      Formatted_Output.Put ("\n");
+   end Print_Command_Line;
 
 end Utils.Command_Lines;

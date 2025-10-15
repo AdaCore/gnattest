@@ -192,10 +192,7 @@ package body Test.Generation is
       First_Pass_Tool : Test.Actions.Test_Tool;
       First_Pass_Cmd  : Command_Line (Test.Command_Lines.Descriptor'Access);
    begin
-      Driver
-        (Cmd               => First_Pass_Cmd,
-         Tool              => First_Pass_Tool,
-         Tool_Package_Name => Test.Common.GT_Package);
+      Driver (Cmd => First_Pass_Cmd, Tool => First_Pass_Tool);
    end Run_First_Pass_Tool;
 
    --------------------

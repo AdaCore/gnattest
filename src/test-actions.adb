@@ -21,66 +21,60 @@
 -- <http://www.gnu.org/licenses/>.                                          --
 ------------------------------------------------------------------------------
 
+with Ada.Characters.Handling; use Ada.Characters.Handling;
 with Ada.Command_Line;
-with Ada.Containers;
-use type Ada.Containers.Count_Type;
+with Ada.Directories;         use Ada.Directories;
 with Ada.Environment_Variables;
 with Ada.IO_Exceptions;
+with Ada.Strings.Fixed;
 with Ada.Strings.Unbounded;
+with Ada.Text_IO;
 
-with Interfaces;
-use type Interfaces.Unsigned_16;
-
+with GNAT.Directory_Operations;
 with GNAT.OS_Lib; use GNAT.OS_Lib;
 
-with GNATCOLL.JSON;     use GNATCOLL.JSON;
-with GNATCOLL.VFS;      use GNATCOLL.VFS;
-with GNATCOLL.Projects; use GNATCOLL.Projects;
+with GNATCOLL.JSON; use GNATCOLL.JSON;
 with GNATCOLL.Traces;
+with GNATCOLL.VFS;  use GNATCOLL.VFS;
+
+with GPR2; use GPR2;
+pragma Warnings (Off);
+with GPR2.Build.Source.Sets;
+pragma Warnings (On);
+with GPR2.Path_Name;
+with GPR2.Path_Name.Set;
+with GPR2.Project.Attribute;
+with GPR2.Project.Attribute_Index;
+with GPR2.Project.Registry.Attribute;
+with GPR2.Project.Registry.Attribute.Description;
+with GPR2.Project.Registry.Pack;
+with GPR2.Project.Registry.Pack.Description;
+with GPR2.Project.Tree;
+with GPR2.Project.View;
 
 with Libadalang; use Libadalang;
+with Libadalang.Common;
 with Libadalang.Project_Provider;
 
-with Utils;
-with Utils.Command_Lines.Common;
-use Utils;
-use Utils.Command_Lines.Common;
-pragma Unreferenced (Utils.Command_Lines.Common); -- ????
+with Test.Aggregator;
+with Test.Command_Lines;         use Test.Command_Lines;
+with Test.Common;
+with Test.Generation;
+with Test.Harness;
+with Test.Harness.Source_Table;
+with Test.Mapping;
+with Test.Skeleton;
+with Test.Skeleton.Source_Table;
+with Test.Suite_Min;
+with TGen.Libgen;
+with Utils;                      use Utils;
+with Utils.Command_Lines.Common; use Utils.Command_Lines.Common;
+with Utils_Debug;                use Utils_Debug;
 with Utils.Formatted_Output;
+with Utils.Projects;             use Utils.Projects;
 with Utils.String_Utilities;
 
-with Utils_Debug; use Utils_Debug;
-
-with Test.Command_Lines; use Test.Command_Lines;
-
-with Test.Aggregator;
-with Test.Skeleton;
-with Test.Harness;
-with Test.Mapping;
-with Test.Common;
-with Test.Skeleton.Source_Table;
-with Test.Harness.Source_Table;
-with Test.Generation;
-with Test.Suite_Min;
-
-with Ada.Directories;         use Ada.Directories;
-with Utils.Projects;          use Utils.Projects;
-with GNAT.Directory_Operations;
-with Ada.Characters.Handling; use Ada.Characters.Handling;
-with Ada.Text_IO;
-with Ada.Strings.Fixed;
-
-with TGen.Libgen;
-
-with Libadalang.Common;
-
 package body Test.Actions is
-
-   SPT : GNATCOLL.Projects.Project_Tree renames
-     Test.Common.Source_Project_Tree;
-
-   function Is_Externally_Built (File : Virtual_File) return Boolean;
-   --  Checks if the given source file belongs to an externally build library
 
    procedure Process_Exclusion_List
      (Value : String; From_Project : Boolean := False);
@@ -108,8 +102,7 @@ package body Test.Actions is
      (Left : File_Array_Access; Right : File_Array) return Boolean;
    --  Returns True if two file arrays have at least one common file.
 
-   procedure Process_Additional_Tests
-     (Env : Project_Environment_Access; Cmd : Command_Line);
+   procedure Process_Additional_Tests (Cmd : Command_Line);
    --  Loads the project containing additional tests and processes them.
    --  This project needs to get loaded with the same environment as the
    --  argument one.
@@ -138,21 +131,10 @@ package body Test.Actions is
       Tmp   : GNAT.OS_Lib.String_Access;
       Files : File_Array_Access;
 
-      Root_Prj : Project_Type;
+      Root_Prj : GPR2.Project.View.Object;
 
       type Output_Mode_Type is (Root_Mode, Subdir_Mode, Direct_Mode);
       Output_Mode : Output_Mode_Type := Direct_Mode;
-
-      Subdir_Mode_Att : constant Attribute_Pkg_String :=
-        Build (Test.Common.GT_Package, "subdir");
-      Root_Mode_Att   : constant Attribute_Pkg_String :=
-        Build (Test.Common.GT_Package, "tests_root");
-      Direct_Mode_Att : constant Attribute_Pkg_String :=
-        Build (Test.Common.GT_Package, "tests_dir");
-
-      function Build_Att_String
-        (Attribute_Name : String) return Attribute_Pkg_String
-      is (Build (Test.Common.GT_Package, Attribute_Name));
 
       --  Flags for default output dirs being set explicitly:
       Stub_Dir_Set    : Boolean := False;
@@ -249,7 +231,9 @@ package body Test.Actions is
       --  The aggregated projects will be processed in sequence in subprocess
       --  calls made by the driver.
 
-      if Tool.Project_Tree.Root_Project.Is_Aggregate_Project then
+      if Project_Tree.Is_Defined
+        and then Project_Tree.Root_Project.Kind in Aggregate_Kind
+      then
          return;
       end if;
 
@@ -317,8 +301,7 @@ package body Test.Actions is
          end if;
       end;
 
-      if Status (Tool.Project_Tree.all) = Empty then
-
+      if not Project_Tree.Is_Defined then
          if Arg (Cmd, Subdirs) /= null then
             GNAT.OS_Lib.Free (Test.Common.Aggregate_Subdir_Name);
             Test.Common.Aggregate_Subdir_Name :=
@@ -382,20 +365,11 @@ package body Test.Actions is
          return;
       end if;
 
-      SPT := GNATCOLL.Projects.Project_Tree (Tool.Project_Tree.all);
-
-      Test.Common.Target_Val :=
-        new String'(SPT.Root_Project.Get_Target (Default_To_Host => False));
+      Test.Common.Target_Val := new String'(String (Project_Tree.Target));
       Test.Common.RTS_Attribute_Val :=
-        new String'(SPT.Root_Project.Get_Runtime);
+        new String'(String (Project_Tree.Runtime (Ada_Language)));
 
-      --  Most output directories should be calculated relatively to original
-      --  object dirs, so possible side effect of --subdirs must be undone.
-      if Arg (Cmd, Subdirs) /= null then
-         SPT.Root_Project.Get_Environment.Set_Object_Subdir ("");
-         SPT.Recompute_View;
-      end if;
-      Root_Prj := SPT.Root_Project;
+      Root_Prj := Project_Tree.Root_Project;
 
       declare
          procedure Include_One (File_Name : String);
@@ -411,9 +385,18 @@ package body Test.Actions is
          end loop;
       end;
 
-      if Root_Prj.Has_Attribute (Runtime_Attribute) then
-         Test.Common.RTS_Attribute_Val := new String'(Root_Prj.Get_Runtime);
-      end if;
+      declare
+         Attr_Value : GPR2.Project.Attribute.Object;
+      begin
+         if Root_Prj.Check_Attribute
+              (Root_Attribute ("runtime"),
+               GPR2.Project.Attribute_Index.Create (Ada_Language),
+               Result => Attr_Value)
+         then
+            Test.Common.RTS_Attribute_Val :=
+              new String'(String (Attr_Value.Value.Text));
+         end if;
+      end;
 
       if Arg (Cmd, Recursive) then
          --  We need to override the list of argument sources. Switch -r is
@@ -421,20 +404,15 @@ package body Test.Actions is
          --  do not have. We can also optimise a bit, since gnattest only cares
          --  about units specs as entry points of analysis.
          Clear_File_Names (Cmd);
-         declare
-            All_Sources : File_Array_Access :=
-              Root_Prj.Source_Files (Recursive => True);
-         begin
-            for S of All_Sources.all loop
-               if not Ignored.Contains (Simple_Name (S.Display_Full_Name))
-                 and then To_Lower (SPT.Info (S).Language) = "ada"
-                 and then SPT.Info (S).Unit_Part = Unit_Spec
-               then
-                  Append_File_Name (Cmd, S.Display_Full_Name);
-               end if;
-            end loop;
-            Unchecked_Free (All_Sources);
-         end;
+         for S of Project_Tree.Root_Project.Visible_Sources loop
+            if not Ignored.Contains (String (S.Path_Name.Simple_Name))
+              and then S.Language = Ada_Language
+              and then S.Unit.Kind = S_Spec
+              and then not S.Owning_View.Is_Externally_Built
+            then
+               Append_File_Name (Cmd, S.Path_Name.String_Value);
+            end if;
+         end loop;
       end if;
 
       if Arg (Cmd, Harness_Only) then
@@ -443,8 +421,7 @@ package body Test.Actions is
          if Arg (Cmd, Additional_Tests) /= null then
             Cmd_Error_No_Help
               ("--harness only and --additional-tests are mutually exclusive");
-         elsif Root_Prj.Has_Attribute (Build_Att_String ("additional_tests"))
-         then
+         elsif Root_Prj.Has_Attribute (+Additional_Tests_Attr) then
             Cmd_Error_No_Help
               ("--harness only and Gnattest.Additional_Tests "
                & "are mutually exclusive");
@@ -486,123 +463,114 @@ package body Test.Actions is
 
       else
 
-         if Root_Prj.Has_Attribute (Direct_Mode_Att) then
+         if Root_Prj.Has_Attribute (+Tests_Dir_Attr) then
 
             Output_Mode := Direct_Mode;
 
-            if Root_Prj.Has_Attribute (Root_Mode_Att) then
+            if Root_Prj.Has_Attribute (+Tests_Root_Attr) then
                Report_Multiple_Output (Root_Mode, True);
-            elsif Root_Prj.Has_Attribute (Subdir_Mode_Att) then
+            elsif Root_Prj.Has_Attribute (+Subdir_Attr) then
                Report_Multiple_Output (Subdir_Mode, True);
             end if;
 
             Tests_Dir_Set := True;
             Free (Test.Common.Test_Dir_Name);
             Test.Common.Test_Dir_Name :=
-              new String'(Root_Prj.Attribute_Value (Direct_Mode_Att));
+              new String'(Attr_Value (Root_Prj, +Tests_Dir_Attr));
 
-         elsif Root_Prj.Has_Attribute (Root_Mode_Att) then
+         elsif Root_Prj.Has_Attribute (+Tests_Root_Attr) then
 
             Output_Mode := Root_Mode;
 
-            if Root_Prj.Has_Attribute (Subdir_Mode_Att) then
+            if Root_Prj.Has_Attribute (+Subdir_Attr) then
                Report_Multiple_Output (Subdir_Mode, True);
             end if;
 
             Tests_Dir_Set := True;
             Test.Common.Separate_Root_Dir :=
-              new String'(Root_Prj.Attribute_Value (Root_Mode_Att));
+              new String'
+                (String (Root_Prj.Attribute (+Tests_Root_Attr).Value.Text));
 
-         elsif Root_Prj.Has_Attribute (Subdir_Mode_Att) then
+         elsif Root_Prj.Has_Attribute (+Subdir_Attr) then
 
             Output_Mode := Subdir_Mode;
             Tests_Dir_Set := True;
             Test.Common.Test_Subdir_Name :=
-              new String'(Root_Prj.Attribute_Value (Subdir_Mode_Att));
+              new String'
+                (String (Root_Prj.Attribute (+Subdir_Attr).Value.Text));
 
          end if;
 
       end if;
 
-      --  Forbid specifying a test subdir along with a source directoy path
+      --  Forbid specifying a test subdir along with a source directory path
       --  ending with "**".
       --  Upon running gnattest twice in a row, the subdirs created during the
       --  first run will be taken as source directories during the second,
       --  leading to an error.
 
-      if (Root_Prj.Has_Attribute (Subdir_Mode_Att)
+      if (Root_Prj.Has_Attribute (+Subdir_Attr)
           or else Arg (Cmd, Subdirs) /= null)
-        and then Root_Prj.Has_Attribute (Source_Dirs_Attribute)
+        and then Root_Prj.Has_Attribute (Root_Attribute ("source_dirs"))
       then
          for Src_Dir_Path of
-           Root_Prj.Attribute_Value (Source_Dirs_Attribute).all
+           Root_Prj.Attribute (Root_Attribute ("source_dirs")).Values
          loop
-            if Src_Dir_Path'Length >= 2
-              and then Src_Dir_Path
-                         (Src_Dir_Path'Last - 1 .. Src_Dir_Path'Last)
-                       = "**"
-            then
-               Cmd_Error_No_Help
-                 ("cannot specify test subdir along with a source directory"
-                  & " path ending with ""**""");
-            end if;
+            declare
+               Src_Dir_Str : constant String := String (Src_Dir_Path.Text);
+            begin
+               if Src_Dir_Str'Length >= 2
+                 and then Src_Dir_Str
+                            (Src_Dir_Str'Last - 1 .. Src_Dir_Str'Last)
+                          = "**"
+               then
+                  Cmd_Error_No_Help
+                    ("cannot specify test subdir along with a source directory"
+                     & " path ending with ""**""");
+               end if;
+            end;
          end loop;
       end if;
 
       if Arg (Cmd, Stubs_Dir) /= null then
-
          Free (Test.Common.Stub_Dir_Name);
          Test.Common.Stub_Dir_Name := new String'(Arg (Cmd, Stubs_Dir).all);
          Stub_Dir_Set := True;
 
-      elsif Root_Prj.Has_Attribute (Build_Att_String ("stubs_dir")) then
-
+      elsif Root_Prj.Has_Attribute (+Stubs_Dir_Attr) then
          Free (Test.Common.Stub_Dir_Name);
          Test.Common.Stub_Dir_Name :=
-           new String'
-             (Root_Prj.Attribute_Value (Build_Att_String ("stubs_dir")));
+           new String'(Attr_Value (Root_Prj, +Stubs_Dir_Attr));
          Stub_Dir_Set := True;
 
       end if;
 
       if Arg (Cmd, Harness_Dir) /= null then
-
          Free (Test.Common.Harness_Dir_Str);
          Test.Common.Harness_Dir_Str :=
            new String'(Arg (Cmd, Harness_Dir).all);
          Harness_Dir_Set := True;
 
-      elsif Root_Prj.Has_Attribute (Build_Att_String ("harness_dir")) then
-
+      elsif Root_Prj.Has_Attribute (+Harness_Dir_Attr) then
          Free (Test.Common.Harness_Dir_Str);
          Test.Common.Harness_Dir_Str :=
-           new String'
-             (Root_Prj.Attribute_Value (Build_Att_String ("harness_dir")));
+           new String'(Attr_Value (Root_Prj, +Harness_Dir_Attr));
          Harness_Dir_Set := True;
-
       end if;
 
       --  Checking if argument project has IDE package specified.
-      declare
-         S : constant Attribute_Pkg_String := Build (Ide_Package, "");
-      begin
-         if Has_Attribute (Root_Prj, S) then
-            Test.Common.IDE_Package_Present := True;
-         else
-            Test.Common.IDE_Package_Present := False;
-         end if;
-      end;
+      if Root_Prj.Has_Package (+"ide") then
+         Test.Common.IDE_Package_Present := True;
+      else
+         Test.Common.IDE_Package_Present := False;
+      end if;
 
       --  Checking if argument project has Make package specified.
-      declare
-         S : constant Attribute_Pkg_String := Build ("make", "");
-      begin
-         if Has_Attribute (Root_Prj, S) then
-            Test.Common.Make_Package_Present := True;
-         else
-            Test.Common.Make_Package_Present := False;
-         end if;
-      end;
+      if Root_Prj.Has_Package (+"make") then
+         Test.Common.Make_Package_Present := True;
+      else
+         Test.Common.Make_Package_Present := False;
+      end if;
 
       --  We need to fill a local source table since gnattest actually needs
       --  info not only on current source but on any particular one or even
@@ -613,7 +581,7 @@ package body Test.Actions is
          --  files, this should be optimized.
          use Test.Common.String_Set;
 
-         Source_Info : File_Info;
+         Source : GPR2.Build.Source.Object;
 
       begin
          Common.Recursive_Stubbing_ON := Arg (Cmd, Recursive_Stub);
@@ -621,17 +589,16 @@ package body Test.Actions is
            Arg (Cmd, Stub) or else Common.Recursive_Stubbing_ON;
 
          for File of File_Names (Cmd) loop
-            if not Contains (Ignored, Simple_Name (File.all)) then
-
-               Source_Info := Info (SPT, Create (SPT, +File.all));
-
-               if Source_Info.Unit_Part = Unit_Spec then
+            if not Contains (Ignored, Ada.Directories.Simple_Name (File.all))
+            then
+               Source := Src (File.all);
+               if Source.Unit.Kind = S_Spec then
                   if Test.Common.Harness_Only then
                      Test.Harness.Source_Table.Add_Source_To_Process
-                       (Source_Info.File.Display_Full_Name);
+                       (Source.Path_Name.String_Value);
                   else
                      Test.Skeleton.Source_Table.Add_Source_To_Process
-                       (Source_Info.File.Display_Full_Name);
+                       (Source.Path_Name.String_Value);
                   end if;
                end if;
             end if;
@@ -659,30 +626,22 @@ package body Test.Actions is
          Test.Common.No_Command_Line := True;
       else
          declare
-            Files          : constant GNATCOLL.VFS.File_Array :=
-              Predefined_Source_Files (Root_Prj.Get_Environment);
             A_Comlin_Found : Boolean := False;
          begin
-            for I in Files'Range loop
-               if Files (I).Display_Base_Name = "a-comlin.ads" then
-                  A_Comlin_Found := True;
-                  exit;
-               end if;
-            end loop;
-
+            if Has_Runtime_Source ("a-comlin.ads") then
+               A_Comlin_Found := True;
+            end if;
             Test.Common.No_Command_Line := not A_Comlin_Found;
 
             if A_Comlin_Found then
-               for I in Files'Range loop
-                  if Arg (Cmd, Test_Filtering_File_IO)
-                    and then Files (I).Display_Base_Name = "s-ficobl.ads"
-                  then
-                     Test.Common.Text_IO_Present := True;
-                  end if;
-                  if Files (I).Display_Base_Name = "g-os_lib.ads" then
-                     Test.Common.GNAT_OS_Lib_Present := True;
-                  end if;
-               end loop;
+               if Arg (Cmd, Test_Filtering_File_IO)
+                 and then Has_Runtime_Source ("s-ficobl.ads")
+               then
+                  Test.Common.Text_IO_Present := True;
+               end if;
+               if Has_Runtime_Source ("g-os_lib.ads") then
+                  Test.Common.GNAT_OS_Lib_Present := True;
+               end if;
             end if;
          end;
       end if;
@@ -692,19 +651,18 @@ package body Test.Actions is
          Skeleton_Default_Switch : constant String_Ref :=
            Arg (Cmd, Skeleton_Default);
 
-         Skeleton_Default_Att : constant Attribute_Pkg_String :=
-           Build_Att_String ("skeletons_default");
-
          Present : constant Boolean :=
            Skeleton_Default_Switch /= null
-           or else Root_Prj.Has_Attribute (Skeleton_Default_Att);
+           or else Root_Prj.Has_Attribute (+Skeletons_Default_Attr);
 
          Skeleton_Default_Val : constant String :=
            To_Lower
              ((if Skeleton_Default_Switch = null
                then
-                 (if Root_Prj.Has_Attribute (Skeleton_Default_Att)
-                  then Root_Prj.Attribute_Value (Skeleton_Default_Att)
+                 (if Present
+                  then
+                    String
+                      (Root_Prj.Attribute (+Skeletons_Default_Attr).Value.Text)
                   else "")
                else Arg (Cmd, Skeleton_Default).all));
          --  If Skeleton_Default was specified through a switch, use this
@@ -805,38 +763,35 @@ package body Test.Actions is
               new String'("gnattest_stub" & Directory_Separator & "harness");
          end if;
 
-         Test.Skeleton.Source_Table.Initialize_Project_Table (SPT);
+         Test.Skeleton.Source_Table.Initialize_Project_Table;
 
-         Files := SPT.Root_Project.Source_Files (True);
-         for F in Files'Range loop
-            if To_Lower (SPT.Info (Files (F)).Language) = "ada"
-              and then not Is_Externally_Built (Files (F))
+         for F of Project_Tree.Root_Project.Visible_Sources loop
+            if F.Language = Ada_Language
+              and then not F.Owning_View.Is_Externally_Built
             then
-               case SPT.Info (Files (F)).Unit_Part is
-                  when Unit_Body =>
+               case F.Unit.Kind is
+                  when S_Body =>
                      declare
-                        P : Project_Type := SPT.Info (Files (F)).Project;
+                        View : GPR2.Project.View.Object := F.Owning_View;
                      begin
                         --  The name of the project here will be used to create
                         --  stub projects. Those extend original projects, so
                         --  if a source belongs to an extended project we need
                         --  the extending on here instead, so that we do not
                         --  end up with different extensions of same project.
-                        while Extending_Project (P) /= No_Project loop
-                           P := Extending_Project (P);
-                        end loop;
+                        View := Outermost_Extending (View);
 
                         Test.Skeleton.Source_Table.Add_Body_To_Process
-                          (Files (F).Display_Full_Name,
-                           P.Name,
-                           SPT.Info (Files (F)).Unit_Name);
+                          (F.Path_Name.String_Value,
+                           String (View.Name),
+                           String (F.Unit.Name));
                      end;
 
-                  when Unit_Spec =>
+                  when S_Spec =>
                      Test.Skeleton.Source_Table.Add_Body_Reference
-                       (Files (F).Display_Full_Name);
+                       (F.Path_Name.String_Value);
 
-                  when others    =>
+                  when others =>
                      null;
                end case;
             end if;
@@ -862,17 +817,19 @@ package body Test.Actions is
          Test.Common.Harness_Dir_Str :=
            new String'
              (Normalize_Pathname
-                (Root_Prj.Object_Dir.Display_Full_Name & Tmp.all,
+                (Root_Prj.Object_Directory.String_Value
+                 & Directory_Separator
+                 & Tmp.all,
                  Resolve_Links  => False,
                  Case_Sensitive => False)
               & Directory_Separator);
          Free (Tmp);
       end if;
 
-      for Dir of Root_Prj.Source_Dirs (Recursive => True) loop
+      for Dir of Recursive_Source_Dirs loop
          if Test.Common.Harness_Dir_Str.all
            = Normalize_Pathname
-               (Dir.Display_Full_Name,
+               (Dir.String_Value,
                 Resolve_Links  => False,
                 Case_Sensitive => False)
              & Directory_Separator
@@ -914,14 +871,13 @@ package body Test.Actions is
       --  Instrumentation
 
       if Arg (Cmd, Dump_Test_Inputs) then
-         Files := SPT.Root_Project.Source_Files (True);
-         for F in Files'Range loop
-            if To_Lower (SPT.Info (Files (F)).Language) = "ada"
-              and then not Is_Externally_Built (Files (F))
+         for F of Project_Tree.Root_Project.Visible_Sources loop
+            if F.Language = Ada_Language
+              and then not F.Owning_View.Is_Externally_Built
             then
-               if SPT.Info (Files (F)).Unit_Part = Unit_Body then
+               if F.Unit.Kind = S_Body then
                   Test.Skeleton.Source_Table.Add_Body_For_Instrumentation
-                    (Files (F).Display_Full_Name);
+                    (F.Path_Name.String_Value);
                end if;
             end if;
          end loop;
@@ -938,7 +894,7 @@ package body Test.Actions is
                     & "test_obj"
                     & Directory_Separator
                     & Test.Common.Test_Prj_Prefix
-                    & To_Lower (SPT.Root_Project.Name)
+                    & To_Lower (Project_Tree.Root_Project.Name)
                     & Test.Common.Instr_Suffix)));
             Test.Common.Create_Dirs (F);
             Unchecked_Free (F);
@@ -979,7 +935,7 @@ package body Test.Actions is
             Test.Common.JSON_Test_Dir :=
               new String'
                 (Normalize_Pathname
-                   (Root_Prj.Object_Dir.Display_Full_Name
+                   (Root_Prj.Object_Directory.String_Value
                     & Directory_Separator
                     & Test.Common.Test_Dir_Name.all
                     & Directory_Separator
@@ -1025,7 +981,7 @@ package body Test.Actions is
               & GNAT.OS_Lib.Directory_Separator
               & "templates"));
 
-      Test.Common.Extract_Preprocessor_Config (Tool.Project_Tree.all);
+      Test.Common.Extract_Preprocessor_Config (Project_Tree);
       TGen.Libgen.Set_Preprocessing_Definitions
         (Test.Common.TGen_Libgen_Ctx, Test.Common.Preprocessor_Config);
 
@@ -1106,28 +1062,16 @@ package body Test.Actions is
             end loop;
          end;
 
-         declare
-            Default_Exclude_Attr : constant Attribute_Pkg_String :=
-              Build (Test.Common.GT_Package, "default_stub_exclusion_list");
-            Exclude_Attr         : constant Attribute_Pkg_String :=
-              Build (Test.Common.GT_Package, "stub_exclusion_list");
-            Indexes              : constant String_List :=
-              Attribute_Indexes (Root_Prj, Exclude_Attr);
-         begin
-            if Has_Attribute (Root_Prj, Default_Exclude_Attr) then
-               Process_Exclusion_List
-                 (Attribute_Value (Root_Prj, Default_Exclude_Attr),
-                  From_Project => True);
-            end if;
-            for Index of Indexes loop
-               Process_Exclusion_List
-                 (":"
-                  & Index.all
-                  & "="
-                  & Attribute_Value (Root_Prj, Exclude_Attr, Index.all),
-                  From_Project => True);
-            end loop;
-         end;
+         if Root_Prj.Has_Attribute (+Default_Stub_Exclusion_List_Attr) then
+            Process_Exclusion_List
+              (Attr_Value (Root_Prj, +Default_Stub_Exclusion_List_Attr),
+               From_Project => True);
+         end if;
+         for Attr of Root_Prj.Attributes (+Stub_Exclusion_List_Attr) loop
+            Process_Exclusion_List
+              (":" & String (Attr.Index.Text) & "=" & String (Attr.Value.Text),
+               From_Project => True);
+         end loop;
       end if;
 
       --  Process additional tests
@@ -1138,12 +1082,11 @@ package body Test.Actions is
                 (Arg (Cmd, Additional_Tests).all,
                  Resolve_Links  => False,
                  Case_Sensitive => False));
-      elsif Root_Prj.Has_Attribute (Build_Att_String ("additional_tests")) then
+      elsif Root_Prj.Has_Attribute (+Additional_Tests_Attr) then
          Test.Common.Additional_Tests_Prj :=
            new String'
              (Normalize_Pathname
-                (Root_Prj.Attribute_Value
-                   (Build_Att_String ("additional_tests")),
+                (Attr_Value (Root_Prj, +Additional_Tests_Attr),
                  Resolve_Links  => False,
                  Case_Sensitive => False));
       end if;
@@ -1155,23 +1098,18 @@ package body Test.Actions is
            ("cannot find " & Test.Common.Additional_Tests_Prj.all);
       end if;
 
-      if Root_Prj.Has_Attribute (Compiler_Default_Switches_Attribute) then
+      if Root_Prj.Has_Attribute (Attr_Id ("compiler", "default_switches")) then
          declare
-            Switches : String_List_Access :=
-              Attribute_Value
-                (Root_Prj, Compiler_Default_Switches_Attribute, "ada");
+            Switches : constant GPR2.Project.Attribute.Object :=
+              Project_Tree.Root_Project.Attribute
+                (Name  => Attr_Id ("compiler", "default_switches"),
+                 Index => GPR2.Project.Attribute_Index.Create (Ada_Language));
          begin
-            if Switches = null then
-               return;
-            end if;
-
-            for I in Switches'Range loop
-               if Switches (I).all = "-gnatE" then
-                  Test.Common.Inherited_Switches.Append (Switches (I).all);
+            for Switch of Switches.Values loop
+               if Switch.Text = "-gnatE" then
+                  Test.Common.Inherited_Switches.Append (String (Switch.Text));
                end if;
             end loop;
-
-            Free (Switches);
          end;
       end if;
 
@@ -1200,10 +1138,7 @@ package body Test.Actions is
 
    procedure Final (Tool : in out Test_Tool; Cmd : Command_Line) is
       use Ada.Strings.Unbounded;
-      Src_Prj : constant String :=
-        Tool.Project_Tree.Root_Project.Project_Path.Display_Full_Name;
    begin
-
       --  Abort here if we the switch --dump-subp-hash is on. This return
       --  should not be moved further down.
 
@@ -1211,11 +1146,13 @@ package body Test.Actions is
          return;
       end if;
 
-      --  If the tool project is an aggregate one, exit early and do nothing.
-      --  The aggregated projects will be processed in sequence in subprocess
-      --  calls made by the driver.
+      --  If the project is an aggregate one, exit early and do nothing. The
+      --  aggregated projects will be processed in sequence in subprocess calls
+      --  made by the driver.
 
-      if Tool.Project_Tree.Root_Project.Is_Aggregate_Project then
+      if Project_Tree.Is_Defined
+        and then Project_Tree.Root_Project.Kind in Aggregate_Kind
+      then
          return;
       end if;
 
@@ -1230,31 +1167,36 @@ package body Test.Actions is
          Test.Common.Mark_Lib_Support_Generated;
       end if;
 
-      if Status (Tool.Project_Tree.all) = Empty then
+      if not Project_Tree.Is_Defined then
          Test.Aggregator.Process_Drivers_List;
       else
-         if Test.Common.Stub_Mode_ON then
-            Test.Harness.Generate_Stub_Test_Driver_Projects (Src_Prj);
-         elsif Arg (Cmd, Separate_Drivers) /= null then
-            Test.Skeleton.Generate_Project_File (Src_Prj);
-            Test.Harness.Generate_Test_Driver_Projects (Src_Prj);
-         else
-            if not Arg (Cmd, Harness_Only) then
-               if Test.Common.Additional_Tests_Prj /= null then
-                  Process_Additional_Tests (Tool.Project_Env, Cmd);
-               end if;
-               Test.Skeleton.Report_Unused_Generic_Tests;
+         declare
+            Src_Prj : constant String :=
+              Project_Tree.Root_Project.Path_Name.String_Value;
+         begin
+            if Test.Common.Stub_Mode_ON then
+               Test.Harness.Generate_Stub_Test_Driver_Projects (Src_Prj);
+            elsif Arg (Cmd, Separate_Drivers) /= null then
                Test.Skeleton.Generate_Project_File (Src_Prj);
-               if Test.Common.Verbose then
-                  Test.Skeleton.Report_Tests_Total;
+               Test.Harness.Generate_Test_Driver_Projects (Src_Prj);
+            else
+               if not Arg (Cmd, Harness_Only) then
+                  if Test.Common.Additional_Tests_Prj /= null then
+                     Process_Additional_Tests (Cmd);
+                  end if;
+                  Test.Skeleton.Report_Unused_Generic_Tests;
+                  Test.Skeleton.Generate_Project_File (Src_Prj);
+                  if Test.Common.Verbose then
+                     Test.Skeleton.Report_Tests_Total;
+                  end if;
                end if;
+               Test.Harness.Test_Runner_Generator (Src_Prj);
+               Test.Harness.Project_Creator (Src_Prj);
             end if;
-            Test.Harness.Test_Runner_Generator (Src_Prj);
-            Test.Harness.Project_Creator (Src_Prj);
-         end if;
-         Test.Harness.Generate_Makefile (Src_Prj);
-         Test.Harness.Generate_Config;
-         Test.Common.Generate_Common_File;
+            Test.Harness.Generate_Makefile (Src_Prj);
+            Test.Harness.Generate_Config;
+            Test.Common.Generate_Common_File;
+         end;
 
          --  Only generate the mapping file if we are not minimizing.
          --  Otherwise, the gnattest subprocess will take care of generating it
@@ -1520,23 +1462,6 @@ package body Test.Actions is
       pragma Style_Checks ("M79");
    end Tool_Help;
 
-   -------------------------
-   -- Is_Externally_Built --
-   -------------------------
-
-   function Is_Externally_Built (File : Virtual_File) return Boolean is
-      F_Info : constant File_Info := Info (SPT, File);
-      Proj   : constant Project_Type := Project (F_Info);
-      Attr   : constant Attribute_Pkg_String := Build ("", "externally_built");
-   begin
-      if Has_Attribute (Proj, Attr) then
-         if To_Lower (Attribute_Value (Proj, Attr)) = "true" then
-            return True;
-         end if;
-      end if;
-      return False;
-   end Is_Externally_Built;
-
    ----------------------------
    -- Process_Exclusion_List --
    ----------------------------
@@ -1626,78 +1551,165 @@ package body Test.Actions is
    ----------------------------------
 
    procedure Register_Specific_Attributes is
-      procedure Report_If_Err (S : String);
-      --  Outputs warning when attribute cannot be registered
-
-      procedure Report_If_Err (S : String) is
-      begin
-         if S = "" then
-            return;
-         else
-            Common.Report_Std (S);
-         end if;
-      end Report_If_Err;
+      package GPR2_RA renames GPR2.Project.Registry.Attribute;
+      package GPR2_RP renames GPR2.Project.Registry.Pack;
    begin
-      Report_If_Err
-        (GNATCOLL.Projects.Register_New_Attribute
-           (Name    => "gnattest_switches",
-            Pkg     => Test.Common.GT_Package,
-            Is_List => True,
-            Indexed => False));
-      Report_If_Err
-        (GNATCOLL.Projects.Register_New_Attribute
-           (Name => "harness_dir", Pkg => Test.Common.GT_Package));
-      Report_If_Err
-        (GNATCOLL.Projects.Register_New_Attribute
-           (Name => "subdir", Pkg => Test.Common.GT_Package));
-      Report_If_Err
-        (GNATCOLL.Projects.Register_New_Attribute
-           (Name => "tests_root", Pkg => Test.Common.GT_Package));
-      Report_If_Err
-        (GNATCOLL.Projects.Register_New_Attribute
-           (Name => "tests_dir", Pkg => Test.Common.GT_Package));
-      Report_If_Err
-        (GNATCOLL.Projects.Register_New_Attribute
-           (Name => "additional_tests", Pkg => Test.Common.GT_Package));
-      Report_If_Err
-        (GNATCOLL.Projects.Register_New_Attribute
-           (Name => "stubs_dir", Pkg => Test.Common.GT_Package));
-      Report_If_Err
-        (GNATCOLL.Projects.Register_New_Attribute
-           (Name => "skeletons_default", Pkg => Test.Common.GT_Package));
-      Report_If_Err
-        (GNATCOLL.Projects.Register_New_Attribute
-           (Name => "default_stub_exclusion_list",
-            Pkg  => Test.Common.GT_Package));
-      Report_If_Err
-        (GNATCOLL.Projects.Register_New_Attribute
-           (Name    => "stub_exclusion_list",
-            Pkg     => Test.Common.GT_Package,
-            Indexed => True));
+      GPR2_RP.Add (GPR2_GT_Package, GPR2_RP.Everywhere);
+      GPR2_RP.Description.Set_Package_Description
+        (GPR2_GT_Package,
+         "Specifies options used when calling the 'gnattest' program.");
+
+      GPR2_RA.Add
+        (Name                 => +Gnattest_Switches_Attr,
+         Index_Type           => GPR2_RA.No_Index,
+         Value                => GPR2_RA.List,
+         Value_Case_Sensitive => True,
+         Is_Allowed_In        => GPR2_RA.Everywhere);
+      GPR2_RA.Description.Set_Attribute_Description
+        (+Gnattest_Switches_Attr, "Switches passed to gnattest invocations.");
+
+      GPR2_RA.Add
+        (Name                 => +Default_Switches_Attr,
+         Index_Type           => GPR2_RA.No_Index,
+         Value                => GPR2_RA.List,
+         Value_Case_Sensitive => True,
+         Is_Allowed_In        => GPR2_RA.Everywhere);
+      GPR2_RA.Description.Set_Attribute_Description
+        (+Default_Switches_Attr, "Switches passed to gnattest invocations.");
+
+      GPR2_RA.Add
+        (Name                 => +Switches_Attr,
+         Index_Type           => GPR2_RA.String_Index,
+         Value                => GPR2_RA.List,
+         Value_Case_Sensitive => True,
+         Is_Allowed_In        => GPR2_RA.Everywhere);
+      GPR2_RA.Description.Set_Attribute_Description
+        (+Switches_Attr,
+         "Switches passed to gnattest invocations for a specific file.");
+
+      GPR2_RA.Add
+        (Name                 => +Harness_Dir_Attr,
+         Index_Type           => GPR2_RA.No_Index,
+         Value                => GPR2_RA.Single,
+         Value_Case_Sensitive => True,
+         Is_Allowed_In        => GPR2_RA.Everywhere);
+      GPR2_RA.Description.Set_Attribute_Description
+        (+Harness_Dir_Attr, "Directory containing the gnattest harness.");
+
+      GPR2_RA.Add
+        (Name                 => +Subdir_Attr,
+         Index_Type           => GPR2_RA.No_Index,
+         Value                => GPR2_RA.Single,
+         Value_Case_Sensitive => True,
+         Is_Allowed_In        => GPR2_RA.Everywhere);
+      GPR2_RA.Description.Set_Attribute_Description
+        (+Subdir_Attr,
+         "Subdirectory corresponding to the source directory where to generate"
+         & " test packages.");
+
+      GPR2_RA.Add
+        (Name                 => +Tests_Root_Attr,
+         Index_Type           => GPR2_RA.No_Index,
+         Value                => GPR2_RA.Single,
+         Value_Case_Sensitive => True,
+         Is_Allowed_In        => GPR2_RA.Everywhere);
+      GPR2_RA.Description.Set_Attribute_Description
+        (+Tests_Root_Attr,
+         "Directory hosting the hierarchy of test packages.");
+
+      GPR2_RA.Add
+        (Name                 => +Tests_Dir_Attr,
+         Index_Type           => GPR2_RA.No_Index,
+         Value                => GPR2_RA.Single,
+         Value_Case_Sensitive => True,
+         Is_Allowed_In        => GPR2_RA.Everywhere);
+      GPR2_RA.Description.Set_Attribute_Description
+        (+Tests_Dir_Attr, "Directory containing all test packages.");
+
+      GPR2_RA.Add
+        (Name                 => +Additional_Tests_Attr,
+         Index_Type           => GPR2_RA.No_Index,
+         Value                => GPR2_RA.Single,
+         Value_Case_Sensitive => True,
+         Is_Allowed_In        => GPR2_RA.Everywhere);
+      GPR2_RA.Description.Set_Attribute_Description
+        (+Additional_Tests_Attr,
+         "List of projects containing additional tests to be added to the"
+         & " testsuite.");
+
+      GPR2_RA.Add
+        (Name                 => +Stubs_Dir_Attr,
+         Index_Type           => GPR2_RA.No_Index,
+         Value                => GPR2_RA.Single,
+         Value_Case_Sensitive => True,
+         Is_Allowed_In        => GPR2_RA.Everywhere);
+      GPR2_RA.Description.Set_Attribute_Description
+        (+Stubs_Dir_Attr, "Directory in which stubbed units are generated.");
+
+      GPR2_RA.Add
+        (Name                 => +Skeletons_Default_Attr,
+         Index_Type           => GPR2_RA.No_Index,
+         Value                => GPR2_RA.Single,
+         Value_Case_Sensitive => True,
+         Is_Allowed_In        => GPR2_RA.Everywhere);
+      GPR2_RA.Description.Set_Attribute_Description
+        (+Skeletons_Default_Attr,
+         "Default behavior of test skeletons (pass or fail).");
+
+      GPR2_RA.Add
+        (Name                 => +Stub_Exclusion_List_Attr,
+         Index_Type           => GPR2_RA.String_Index,
+         Value                => GPR2_RA.Single,
+         Value_Case_Sensitive => True,
+         Is_Allowed_In        => GPR2_RA.Everywhere);
+      GPR2_RA.Description.Set_Attribute_Description
+        (+Stub_Exclusion_List_Attr,
+         "List of spec:filename that should not be stubbed.");
+
+      GPR2_RA.Add
+        (Name                 => +Default_Stub_Exclusion_List_Attr,
+         Index_Type           => GPR2_RA.No_Index,
+         Value                => GPR2_RA.Single,
+         Value_Case_Sensitive => True,
+         Is_Allowed_In        => GPR2_RA.Everywhere);
+      GPR2_RA.Description.Set_Attribute_Description
+        (+Default_Stub_Exclusion_List_Attr,
+         "Response file to specify a stub exclusion list.");
 
       --  Not really a gnattest specific attribute, but we still need to
       --  inherit makefile attribute in test driver.
-      Report_If_Err
-        (GNATCOLL.Projects.Register_New_Attribute
-           (Name => "makefile", Pkg => "make"));
+
+      declare
+         GPR2_Make_Package : constant GPR2.Package_Id := +Name_Type'("make");
+      begin
+         GPR2_RP.Add (GPR2_Make_Package, GPR2_RP.Everywhere);
+         GPR2_RA.Add
+           (Name                 =>
+              (Pack => GPR2_Make_Package,
+               Attr => GPR2."+" (GPR2.Name_Type'("makefile"))),
+            Index_Type           => GPR2_RA.No_Index,
+            Value                => GPR2_RA.Single,
+            Value_Case_Sensitive => True,
+            Is_Allowed_In        => GPR2_RA.Everywhere);
+      end;
 
       --  Needed for gnatcov integration
 
-      Report_If_Err
-        (GNATCOLL.Projects.Register_New_Attribute
-           (Name                 => "Switches",
-            Pkg                  => "Coverage",
-            Is_List              => True,
-            Indexed              => True,
-            Case_Sensitive_Index => False));
+      GPR2_RP.Add (+Name_Type'("coverage"), GPR2_RP.Everywhere);
+      GPR2_RA.Add
+        (Name                 => Coverage_Switches,
+         Index_Type           => GPR2_RA.File_Index,
+         Value                => GPR2_RA.List,
+         Value_Case_Sensitive => True,
+         Is_Allowed_In        => GPR2_RA.Everywhere);
 
-      Report_If_Err
-        (GNATCOLL.Projects.Register_New_Attribute
-           (Name    => "Board",
-            Pkg     => "Emulator",
-            Is_List => False,
-            Indexed => False));
-
+      GPR2_RP.Add (+Name_Type'("emulator"), GPR2_RP.Everywhere);
+      GPR2_RA.Add
+        (Name                 => Emulator_Board,
+         Index_Type           => GPR2_RA.No_Index,
+         Value                => GPR2_RA.Single,
+         Value_Case_Sensitive => True,
+         Is_Allowed_In        => GPR2_RA.Everywhere);
    end Register_Specific_Attributes;
 
    ---------------------------
@@ -1743,36 +1755,28 @@ package body Test.Actions is
    procedure Check_Direct is
       use Test.Common;
 
-      Tmp            : String_Access;
       TD_Name        : constant Virtual_File :=
         GNATCOLL.VFS.Create (+Test_Dir_Name.all);
       Future_Dirs    : File_Array_Access := new File_Array'(Empty_File_Array);
       Harness_Dir_Ar : constant File_Array (1 .. 1) :=
         [1 => Create (+(Harness_Dir_Str.all))];
 
-      Obj_Dir : String_Access;
-
       All_Source_Locations : constant File_Array :=
-        Source_Project_Tree.Root_Project.Source_Dirs (Recursive => True);
-
-      Project  : Project_Type;
-      Iterator : Project_Iterator := Start (Source_Project_Tree.Root_Project);
+        To_File_Array (Recursive_Source_Dirs);
    begin
-
       if TD_Name.Is_Absolute_Path then
          Append (Future_Dirs, GNATCOLL.VFS.Create (+Test_Dir_Name.all));
       else
-         loop
-            Project := Current (Iterator);
-            exit when Project = No_Project;
-
-            Obj_Dir := new String'(Project.Object_Dir.Display_Full_Name);
-            Tmp := new String'(Obj_Dir.all & Test_Dir_Name.all);
-            Append (Future_Dirs, GNATCOLL.VFS.Create (+Tmp.all));
-            Free (Tmp);
-            Free (Obj_Dir);
-
-            Next (Iterator);
+         for View of Project_Tree.Ordered_Views loop
+            if View.Kind in With_Object_Dir_Kind then
+               Append
+                 (Future_Dirs,
+                  GNATCOLL.VFS.Create
+                    (GNATCOLL.VFS."+"
+                       (View.Object_Directory.String_Value
+                        & Directory_Separator
+                        & Test_Dir_Name.all)));
+            end if;
          end loop;
       end if;
 
@@ -1807,7 +1811,8 @@ package body Test.Actions is
         [1 => Create (+(Harness_Dir_Str.all))];
 
       All_Source_Locations : constant File_Array :=
-        Source_Project_Tree.Root_Project.Source_Dirs (Recursive => True);
+        To_File_Array (Recursive_Source_Dirs);
+
    begin
       for Loc of All_Source_Locations loop
          Append (Future_Dirs, Loc / (+Test_Subdir_Name.all));
@@ -1848,18 +1853,11 @@ package body Test.Actions is
       Harness_Dir_Ar : constant File_Array (1 .. 1) :=
         [1 => Create (+(Harness_Dir_Str.all))];
 
-      All_Source_Locations : constant File_Array :=
-        Source_Project_Tree.Root_Project.Source_Dirs (Recursive => True);
+      All_Source_Locations : constant GNATCOLL.VFS.File_Array :=
+        To_File_Array (Recursive_Source_Dirs);
 
-      Files    : File_Array_Access;
-      Project  : Project_Type;
-      Iterator : Project_Iterator :=
-        Start_Reversed (Source_Project_Tree.Root_Project);
+      Files : GPR2.Build.Source.Sets.Object;
 
-      Ext_Bld : constant Attribute_Pkg_String :=
-        Build ("", "externally_built");
-
-      Obj_Dir                 : String_Access;
       Local_Separate_Root_Dir : String_Access;
 
       function Common_Root (Left : String; Right : String) return String;
@@ -1904,7 +1902,6 @@ package body Test.Actions is
       end Common_Root;
 
    begin
-
       if RD_Name.Is_Absolute_Path then
 
          Test.Skeleton.Source_Table.Reset_Location_Iterator;
@@ -1970,57 +1967,25 @@ package body Test.Actions is
 
          Test.Skeleton.Source_Table.Set_Separate_Root (Maximin_Root.all);
       else
+         for View of Project_Tree.Ordered_Views loop
 
-         loop
-            Project := Current (Iterator);
-            exit when Project = No_Project;
+            --  Skip externally built and abstract projects
+
+            if View.Is_Externally_Built or else View.Kind = K_Abstract then
+               goto Next;
+            end if;
 
             declare
-               Dirs : constant File_Array := Project.Source_Dirs (False);
-
                Common_Root_Dir : String_Access;
+               Dirs            : constant GPR2.Path_Name.Set.Object :=
+                 View.Source_Directories;
             begin
-               if Dirs'Length > 0 then
-                  Common_Root_Dir :=
-                    new String'(Dirs (Dirs'First).Display_Full_Name);
+               Common_Root_Dir := new String'(Dirs.First_Element.String_Value);
 
-                  for J in Dirs'Range loop
-                     Tmp := new String'(Dirs (J).Display_Full_Name);
-                     Buff :=
-                       new String'(Common_Root (Tmp.all, Common_Root_Dir.all));
-
-                     if Buff.all = "" then
-                        Cmd_Error_No_Help
-                          ("gnattest: sources have different root dirs, "
-                           & "cannot apply separate root output");
-                     end if;
-
-                     Free (Common_Root_Dir);
-                     Common_Root_Dir := new String'(Buff.all);
-                     Free (Buff);
-                     Free (Tmp);
-                  end loop;
-
-                  for J in Dirs'Range loop
-                     if Dirs (J).Display_Full_Name = Common_Root_Dir.all then
-                        Maximin_Root := Common_Root_Dir;
-                        exit;
-                     end if;
-                  end loop;
-               end if;
-            end;
-
-            Files := Project.Source_Files;
-
-            if Files'Length > 0 then
-               if Maximin_Root = null then
-                  Maximin_Root :=
-                    new String'(Files (Files'First).Display_Dir_Name);
-               end if;
-
-               for F in Files'Range loop
-                  Tmp := new String'(Files (F).Display_Dir_Name);
-                  Buff := new String'(Common_Root (Tmp.all, Maximin_Root.all));
+               for Dir of Dirs loop
+                  Tmp := new String'(Dir.String_Value);
+                  Buff :=
+                    new String'(Common_Root (Tmp.all, Common_Root_Dir.all));
 
                   if Buff.all = "" then
                      Cmd_Error_No_Help
@@ -2028,61 +1993,75 @@ package body Test.Actions is
                         & "cannot apply separate root output");
                   end if;
 
-                  Free (Maximin_Root);
-                  Maximin_Root := new String'(Buff.all);
+                  Free (Common_Root_Dir);
+                  Common_Root_Dir := new String'(Buff.all);
                   Free (Buff);
                   Free (Tmp);
                end loop;
 
-               Root_Length := Maximin_Root.all'Length;
-
-               Obj_Dir := new String'(Project.Object_Dir.Display_Full_Name);
-
-               Local_Separate_Root_Dir :=
-                 new String'
-                   (Normalize_Pathname
-                      (Name           => Obj_Dir.all & Separate_Root_Dir.all,
-                       Case_Sensitive => False));
-
-               for F in Files'Range loop
-
-                  if Source_Project_Tree.Info (Files (F)).Unit_Part = Unit_Spec
-                    and then Test.Skeleton.Source_Table.Source_Present
-                               (Files (F).Display_Full_Name)
-                  then
-                     Tmp := new String'(Files (F).Display_Dir_Name);
-
-                     Append
-                       (Future_Dirs,
-                        GNATCOLL.VFS.Create
-                          (+(Local_Separate_Root_Dir.all
-                             & Directory_Separator
-                             & Tmp.all (Root_Length + 1 .. Tmp.all'Last))));
-
-                     Test.Skeleton.Source_Table.Set_Output_Dir
-                       (Files (F).Display_Full_Name,
-                        Local_Separate_Root_Dir.all
-                        & Directory_Separator
-                        & Tmp.all (Root_Length + 1 .. Tmp.all'Last));
+               for Dir of Dirs loop
+                  if Dir.String_Value = Common_Root_Dir.all then
+                     Maximin_Root := Common_Root_Dir;
+                     exit;
                   end if;
-
                end loop;
+            end;
 
-            end if;
+            Files := View.Sources;
+            for F of Files loop
+               if Maximin_Root = null then
+                  Maximin_Root := new String'(F.Path_Name.String_Value);
+               end if;
+               Tmp := new String'(F.Path_Name.String_Value);
+               Buff := new String'(Common_Root (Tmp.all, Maximin_Root.all));
 
-            --  Externally built projects should be skipped.
-            loop
-               Next (Iterator);
+               if Buff.all = "" then
+                  Cmd_Error_No_Help
+                    ("gnattest: sources have different root dirs, "
+                     & "cannot apply separate root output");
+               end if;
 
-               if Current (Iterator) = No_Project
-                 or else not Has_Attribute (Current (Iterator), Ext_Bld)
-                 or else To_Lower
-                           (Attribute_Value (Current (Iterator), Ext_Bld))
-                         /= "true"
+               Free (Maximin_Root);
+               Maximin_Root := new String'(Buff.all);
+               Free (Buff);
+               Free (Tmp);
+            end loop;
+
+            Root_Length := Maximin_Root.all'Length;
+
+            Local_Separate_Root_Dir :=
+              new String'
+                (Normalize_Pathname
+                   (Name           =>
+                      View.Object_Directory.String_Value
+                      & Directory_Separator
+                      & Separate_Root_Dir.all,
+                    Case_Sensitive => False));
+
+            for F of Files loop
+               if F.Unit.Kind = S_Spec
+                 and then Test.Skeleton.Source_Table.Source_Present
+                            (F.Path_Name.String_Value)
                then
-                  exit;
+                  Tmp :=
+                    new String'(F.Path_Name.Virtual_File.Display_Dir_Name);
+
+                  Append
+                    (Future_Dirs,
+                     GNATCOLL.VFS.Create
+                       (+(Local_Separate_Root_Dir.all
+                          & Directory_Separator
+                          & Tmp.all (Root_Length + 1 .. Tmp.all'Last))));
+
+                  Test.Skeleton.Source_Table.Set_Output_Dir
+                    (F.Path_Name.String_Value,
+                     Local_Separate_Root_Dir.all
+                     & Directory_Separator
+                     & Tmp.all (Root_Length + 1 .. Tmp.all'Last));
                end if;
             end loop;
+
+            <<Next>>
          end loop;
 
          if Non_Null_Intersection (Future_Dirs, All_Source_Locations) then
@@ -2114,34 +2093,25 @@ package body Test.Actions is
       Future_Dirs : File_Array_Access := new File_Array'(Empty_File_Array);
 
       All_Source_Locations : constant File_Array :=
-        Source_Project_Tree.Root_Project.Source_Dirs (Recursive => True);
-
-      Obj_Dir : String_Access;
-
-      Project  : Project_Type;
-      Iterator : Project_Iterator := Start (Source_Project_Tree.Root_Project);
+        To_File_Array (Recursive_Source_Dirs);
    begin
+      --  Look for collisions with source dirs
 
-      --  look for collisions with source dirs
       if SD_Name.Is_Absolute_Path then
          Append (Future_Dirs, GNATCOLL.VFS.Create (+Test_Dir_Name.all));
       else
-         loop
-            Project := Current (Iterator);
-            exit when Project = No_Project;
-
-            Obj_Dir := new String'(Project.Object_Dir.Display_Full_Name);
-            Tmp :=
-              new String'
-                (Normalize_Pathname
-                   (Obj_Dir.all & Stub_Dir_Name.all,
-                    Resolve_Links  => False,
-                    Case_Sensitive => False));
-            Append (Future_Dirs, GNATCOLL.VFS.Create (+Tmp.all));
-            Free (Tmp);
-            Free (Obj_Dir);
-
-            Next (Iterator);
+         for View of Project_Tree.Ordered_Views loop
+            if View.Kind in With_Object_Dir_Kind then
+               Append
+                 (Future_Dirs,
+                  GNATCOLL.VFS.Create
+                    (+Normalize_Pathname
+                        (View.Object_Directory.String_Value
+                         & Directory_Separator
+                         & Stub_Dir_Name.all,
+                         Resolve_Links  => False,
+                         Case_Sensitive => False)));
+            end if;
          end loop;
       end if;
 
@@ -2179,36 +2149,26 @@ package body Test.Actions is
    -- Process_Additional_Tests --
    ------------------------------
 
-   procedure Process_Additional_Tests
-     (Env : Project_Environment_Access; Cmd : Command_Line)
-   is
-      PT       : Project_Tree_Access := new Project_Tree;
-      Sources  : File_Array_Access;
-      Src_Info : File_Info;
-
+   procedure Process_Additional_Tests (Cmd : Command_Line) is
       Context  : Analysis_Context;
       Provider : Unit_Provider_Reference;
       Unit     : Analysis_Unit;
 
       Current_Source : String_Access;
 
+      Additional_Tests_Project : constant GPR2.Project.Tree.Object :=
+        Load_Project (Cmd, Test.Common.Additional_Tests_Prj.all);
       use Libadalang.Project_Provider;
    begin
-      PT.Load (Create (+Test.Common.Additional_Tests_Prj.all), Env);
-      Sources := PT.Root_Project.Source_Files;
-      for Src in Sources.all'Range loop
-         Src_Info := PT.Info (Sources (Src));
-         if Src_Info.Unit_Part = Unit_Spec then
+      for Src of Additional_Tests_Project.Root_Project.Sources loop
+         if Src.Unit.Kind = S_Spec then
             Test.Harness.Source_Table.Add_Source_To_Process
-              (Sources (Src).Display_Full_Name);
+              (Src.Path_Name.String_Value);
          end if;
       end loop;
-      Unchecked_Free (Sources);
 
       Provider :=
-        Create_Project_Unit_Provider
-          (Tree => PT, Env => Env, Is_Project_Owner => False);
-
+        Create_Project_Unit_Provider (Tree => Additional_Tests_Project);
       Context :=
         Create_Context
           (Charset       => Wide_Character_Encoding (Cmd),
@@ -2217,7 +2177,6 @@ package body Test.Actions is
       Current_Source :=
         new String'(Test.Harness.Source_Table.Next_Non_Processed_Source);
       while Current_Source.all /= "" loop
-
          Unit :=
            Get_From_File
              (Context,
@@ -2231,9 +2190,6 @@ package body Test.Actions is
            new String'(Test.Harness.Source_Table.Next_Non_Processed_Source);
       end loop;
       Free (Current_Source);
-
-      PT.Unload;
-      Free (PT);
    end Process_Additional_Tests;
 
 end Test.Actions;

@@ -1,14 +1,15 @@
 with Ada.Command_Line;
-
 with Ada.Text_IO;
-with GNATCOLL.Projects;
-with GNATCOLL.VFS;
+
+with GPR2;
+with GPR2.Project.Tree;
+with GPR2.Options;
+
 with Libadalang.Analysis;
 with Libadalang.Project_Provider;
 
 with Test.Generation;
 with Test.Common;
-
 with TGen.Libgen;
 
 procedure Light_Marshalling_Lib is
@@ -17,21 +18,23 @@ procedure Light_Marshalling_Lib is
    function Load_Project return LAL.Unit_Provider_Reference;
 
    function Load_Project return LAL.Unit_Provider_Reference is
-      package GPR renames GNATCOLL.Projects;
       package LAL_GPR renames Libadalang.Project_Provider;
-      use type GNATCOLL.VFS.Filesystem_String;
 
       Project_Filename : constant String := Ada.Command_Line.Argument (1);
-      Project_File     : constant GNATCOLL.VFS.Virtual_File :=
-        GNATCOLL.VFS.Create (+Project_Filename);
 
-      Env     : GPR.Project_Environment_Access;
-      Project : constant GPR.Project_Tree_Access := new GPR.Project_Tree;
+      Opts     : GPR2.Options.Object;
+      Prj_Tree : GPR2.Project.Tree.Object;
    begin
-      GPR.Initialize (Env);
-      Project.Load (Project_File, Env);
-      return
-        LAL_GPR.Create_Project_Unit_Provider (Tree => Project, Env => Env);
+      Opts.Add_Switch (GPR2.Options.P, Project_Filename);
+      if not Prj_Tree.Load
+        (Options              => Opts,
+         Artifacts_Info_Level => GPR2.Sources_Units,
+         With_Runtime         => True)
+      then
+         raise Program_Error
+           with "aborted: could not load project " & Project_Filename;
+      end if;
+      return LAL_GPR.Create_Project_Unit_Provider (Tree => Prj_Tree);
    end Load_Project;
 
    Output_Dir   : constant String := "obj/tgen_light";

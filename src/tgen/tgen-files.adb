@@ -21,7 +21,6 @@
 -- <http://www.gnu.org/licenses/>.                                          --
 ------------------------------------------------------------------------------
 
-with Ada.Characters.Handling;
 with Ada.Text_IO;
 
 package body TGen.Files is
@@ -38,24 +37,5 @@ package body TGen.Files is
          Ada.Directories.Create_Path (Output_Dir);
       end if;
    end Prepare_Output_Dirs;
-
-   ------------------------
-   -- Project_Output_Dir --
-   ------------------------
-
-   function Project_Output_Dir (Project : Project_Type) return String is
-      Obj_Dir : constant String := +Project.Object_Dir.Full_Name;
-   begin
-      if Obj_Dir'Length = 0 then
-         return "";
-      else
-         declare
-            Prj_Name : constant String :=
-              Ada.Characters.Handling.To_Lower (Project.Name);
-         begin
-            return Obj_Dir / Prj_Name & "-tgen";
-         end;
-      end if;
-   end Project_Output_Dir;
 
 end TGen.Files;

@@ -28,6 +28,7 @@ use Ada.Containers;
 with GNAT.OS_Lib; use GNAT.OS_Lib;
 with GNAT.String_Hash;
 
+with Utils.String_Utilities; use Utils.String_Utilities;
 with Utils.Vectors;
 
 package Utils.Command_Lines is
@@ -584,7 +585,7 @@ package Utils.Command_Lines is
    is null;
 
    procedure Parse
-     (Text_Args          : Argument_List_Access;
+     (Text_Args          : String_Vector;
       Cmd                : in out Command_Line;
       Phase              : Parse_Phase;
       Callback           : Parse_Callback;
@@ -643,12 +644,6 @@ package Utils.Command_Lines is
      (Args : String_Access_Vector) return Argument_List_Access
    is (new Argument_List'(To_Array (Args)));
 
-   procedure Append_Text_Args_From_Command_Line
-     (Tool_Package_Name : String; Args : in out String_Access_Vector);
-   function Text_Args_From_Command_Line
-     (Tool_Package_Name : String) return Argument_List_Access;
-   --  Returns the sequence of command-line arguments
-
    function "+" (S : String) return String_Ref
    is (new String'(S));
    --  Hack to get around the fact that Ada doesn't allow arrays of String
@@ -682,6 +677,13 @@ package Utils.Command_Lines is
    procedure Raise_Cmd_Error (Message : String)
    with No_Return;
    --  Raises Command_Line_Error with the given message.
+
+   function Args return String_Vector;
+   --  Return command line arguments
+
+   procedure Print_Command_Line (Command_Name : String; Args : Argument_List);
+   --  Prints the command line composed of Command_Name and Args to standard
+   --  output for debugging.
 
 private
 
