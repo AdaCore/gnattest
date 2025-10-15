@@ -59,6 +59,16 @@ package TGen.Marshalling is
    function Input_Fname_For_Typ (Typ_FQN : Ada_Qualified_Name) return String;
    --  Name of the input marshalling function for the given type
 
+   function Bin_to_JSON_Fname_For_Typ
+     (Typ_FQN : Ada_Qualified_Name) return String;
+   --  Name of the function reading a value from a binary stream and returning
+   --  its JSON representation.
+
+   function JSON_to_Bin_Fname_For_Typ
+     (Typ_FQN : Ada_Qualified_Name) return String;
+   --  Name of the procedure converting a value from a JSON representation to a
+   --  binary stream.
+
    function Get_Array_Size_Limit return Positive;
    --  Return the size beyond which the marshallers will give up trying to load
    --  arrays, to avoid allocating overly-large arrays on the stack.
@@ -85,6 +95,10 @@ private
    is (Global_Prefix & "_" & Ty_Name);
    --  Construct a prefix that will be shared by all entities generated for a
    --  given type.
+
+   function No_Output
+     (Assocs : Translate_Table with Unreferenced) return Unbounded_String
+   is (Null_Unbounded_String);
 
    generic
       Differentiate_Discrete : Boolean;
@@ -139,8 +153,25 @@ private
       with procedure Print_Proxy_Read (Assocs : Translate_Set);
       --  Output the body of the function to read a value using a proxy
 
+      with
+        function Component_B2J
+          (Assocs : Translate_Table) return Unbounded_String is No_Output;
+      --  Generate a call to translate a component value from binary to JSON
+
+      with
+        function Component_J2B
+          (Assocs : Translate_Table) return Unbounded_String is No_Output;
+      --  Generate a call to translate a component value from JSON to binary
+
+      --  with function Variant_Convert
+      --    (Assocs : Translate_Table) return Unbounded_String is No_Output;
+      --  --  Generate a variant part conversion (from JSON to binary or vice
+      --  --  versa) to be used in a record conversion procedure.
+
      procedure Generate_Base_Functions_For_Typ
-     (Typ : TGen.Types.Typ'Class; For_Base : Boolean := False)
+     (Typ            : TGen.Types.Typ'Class;
+      Output_Support : Boolean;
+      For_Base       : Boolean := False)
    with
      Pre =>
        (if For_Base then Typ in Scalar_Typ'Class)

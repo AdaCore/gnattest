@@ -1,0 +1,31 @@
+@@--  Template for translating a component from Binary to JSON
+@@--  @_GLOBAL_PREFIX_@ Prefix used to prefix all entities local to the unit.
+@@--  @_COMP_PREFIX_@ Prefix used to prefix all entities for the component
+@@--       type.
+@@--  @_COMPONENT_KIND_@ Kind of the parent's component type. It can
+@@--      either be array_component or record_component.
+@@--  @_COMPONENT_NAME_@ Name of the selected component on which the call is
+@@--       made.
+@@--  @_SPACING_@ Sequence of spaces used for indentation.
+
+@_SPACING_@declare
+@_SPACING_@   JSON_@_COMP_PREFIX_@ : TGen.JSON.JSON_Value :=
+@_SPACING_@      TGen.JSON.Create_Object;
+@_SPACING_@begin
+@_SPACING_@@_COMP_PREFIX_@_To_JSON
+@_SPACING_@  (@_GLOBAL_PREFIX_@_Stream,
+@_SPACING_@   @_GLOBAL_PREFIX_@_Buffer,
+@_SPACING_@   @_GLOBAL_PREFIX_@_Offset,
+@_SPACING_@   JSON_@_COMP_PREFIX_@);
+
+@@IF@@ @_COMPONENT_KIND_@ = "RECORD_COMPONENT"
+@_SPACING_@TGen.JSON.Set_Field
+@_SPACING_@  (Components,
+@_SPACING_@   "@_COMPONENT_NAME_@",
+@_SPACING_@   JSON_@_COMP_PREFIX_@);
+@@ELSE@@
+@_SPACING_@TGen.JSON.Append
+@_SPACING_@  (@_GLOBAL_PREFIX_@_JSON_Array,
+@_SPACING_@   JSON_@_COMP_PREFIX_@);
+@@END_IF@@
+@_SPACING_@end;

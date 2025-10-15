@@ -451,7 +451,9 @@ package body TGen.Marshalling is
    -------------------------------------
 
    procedure Generate_Base_Functions_For_Typ
-     (Typ : TGen.Types.Typ'Class; For_Base : Boolean := False)
+     (Typ            : TGen.Types.Typ'Class;
+      Output_Support : Boolean;
+      For_Base       : Boolean := False)
    is
       B_Name    : constant String := Typ.FQN (No_Std => True);
       Ty_Prefix : constant String := Prefix_For_Typ (Typ.Slug);
@@ -462,7 +464,9 @@ package body TGen.Marshalling is
         [1 => Assoc ("GLOBAL_PREFIX", Global_Prefix),
          2 => Assoc ("TY_PREFIX", Ty_Prefix),
          3 => Assoc ("TY_NAME", Ty_Name),
-         4 => Assoc ("HAS_STATIC_PREDICATE", Typ.Has_Static_Predicate)];
+         4 => Assoc ("HAS_STATIC_PREDICATE", Typ.Has_Static_Predicate),
+         5 => Assoc ("NEEDS_HEADER", Needs_Header (Typ)),
+         6 => Assoc ("OUTPUT_SUPPORTED", Output_Support)];
 
       type Component_Kind is (Array_Component, Record_Component);
 
@@ -491,6 +495,8 @@ package body TGen.Marshalling is
          Read_Indexed_Tag : out Unbounded_String;
          Write_Tag        : out Unbounded_String;
          Ancestor_WT      : out Unbounded_String;
+         Comp_B2J_Tag     : out Unbounded_String;
+         Comp_J2B_Tag     : out Unbounded_String;
          Spacing          : Natural);
       --  Generate the parts of the subprograms Read and Write
       --  for a component Comp_Name of type Comp_Ty. Also generate base
@@ -503,6 +509,8 @@ package body TGen.Marshalling is
          Read_Tag    : in out Vector_Tag;
          Write_Tag   : in out Vector_Tag;
          Ancestor_WT : in out Vector_Tag;
+         B2J_Tag     : in out Vector_Tag;
+         J2B_Tag     : in out Vector_Tag;
          Spacing     : Natural;
          Object_Name : String);
       --  Go over the components in Components and generate the parts of the
@@ -517,6 +525,8 @@ package body TGen.Marshalling is
          Read_Tag      : out Tag;
          Write_Tag     : out Tag;
          Ancestor_WT   : out Tag;
+         B2J_Tag       : out Tag;
+         J2B_Tag       : out Tag;
          Spacing       : Natural;
          Object_Name   : String);
       --  Instanciate the variant part templates to create strings for the
@@ -537,6 +547,8 @@ package body TGen.Marshalling is
          Read_Indexed_Tag : out Unbounded_String;
          Write_Tag        : out Unbounded_String;
          Ancestor_WT      : out Unbounded_String;
+         Comp_B2J_Tag     : out Unbounded_String;
+         Comp_J2B_Tag     : out Unbounded_String;
          Spacing          : Natural)
       is
          Named_Comp_Ty    : constant TGen.Types.Typ'Class :=
@@ -555,25 +567,21 @@ package body TGen.Marshalling is
               2 => Assoc ("COMPONENT", Comp),
               3 => Assoc ("CONSTRAINTS", Comp_Constraints),
               4 => Assoc ("COMP_SCALAR", Comp_Scalar),
-              5 => Assoc ("NEEDS_HEADER", Needs_Header (Named_Comp_Ty)),
+              5 => Assoc ("COMP_NEEDS_HEADER", Needs_Header (Named_Comp_Ty)),
               6 => Assoc ("COMPONENT_KIND", Component_Kind'Image (Comp_Kind)),
-              7 => Assoc ("COMPONENT_NAME", Comp_Name)];
+              7 => Assoc ("COMPONENT_NAME", Comp_Name),
+              8 => Assoc ("SPACING", RW_Spacing (Spacing))];
          Comp_Kind_Str    : constant String :=
            Component_Kind'Image (Comp_Kind);
          pragma Unreferenced (Comp_Kind_Str);
       begin
-         Read_Tag :=
-           Component_Read (Assocs & Assoc ("SPACING", RW_Spacing (Spacing)));
-         Read_Indexed_Tag :=
-           Component_Read_Indexed
-             (Assocs & Assoc ("SPACING", RW_Spacing (Spacing)));
-         Write_Tag :=
-           Component_Write (Assocs & Assoc ("SPACING", RW_Spacing (Spacing)));
+         Read_Tag := Component_Read (Assocs);
+         Read_Indexed_Tag := Component_Read_Indexed (Assocs);
+         Write_Tag := Component_Write (Assocs);
          Ancestor_WT :=
-           Component_Write
-             (Assocs
-              & Assoc ("SPACING", RW_Spacing (Spacing))
-              & Assoc ("FOR_ANCESTOR", "True"));
+           Component_Write (Assocs & Assoc ("FOR_ANCESTOR", "True"));
+         Comp_B2J_Tag := Component_B2J (Assocs);
+         Comp_J2B_Tag := Component_J2B (Assocs);
       end Collect_Info_For_Component;
 
       ---------------------------------
@@ -585,6 +593,8 @@ package body TGen.Marshalling is
          Read_Tag    : in out Vector_Tag;
          Write_Tag   : in out Vector_Tag;
          Ancestor_WT : in out Vector_Tag;
+         B2J_Tag     : in out Vector_Tag;
+         J2B_Tag     : in out Vector_Tag;
          Spacing     : Natural;
          Object_Name : String) is
       begin
@@ -599,6 +609,8 @@ package body TGen.Marshalling is
                Read_Indexed : Unbounded_String;
                Write        : Unbounded_String;
                Ancestor_W   : Unbounded_String;
+               Comp_B2J     : Unbounded_String;
+               Comp_J2B     : Unbounded_String;
             begin
                Collect_Info_For_Component
                  (Record_Component,
@@ -609,10 +621,14 @@ package body TGen.Marshalling is
                   Read_Indexed,
                   Write,
                   Ancestor_W,
+                  Comp_B2J,
+                  Comp_J2B,
                   Spacing);
                Read_Tag := Read_Tag & Read;
                Write_Tag := Write_Tag & Write;
                Ancestor_WT := Ancestor_WT & Ancestor_W;
+               B2J_Tag := B2J_Tag & Comp_B2J;
+               J2B_Tag := J2B_Tag & Comp_J2B;
             end;
          end loop;
       end Collect_Info_For_Components;
@@ -627,6 +643,8 @@ package body TGen.Marshalling is
          Read_Tag      : out Tag;
          Write_Tag     : out Tag;
          Ancestor_WT   : out Tag;
+         B2J_Tag       : out Tag;
+         J2B_Tag       : out Tag;
          Spacing       : Natural;
          Object_Name   : String)
       is
@@ -639,9 +657,13 @@ package body TGen.Marshalling is
          Comp_Read_Tag     : Matrix_Tag;
          Comp_Write_Tag    : Matrix_Tag;
          Ancestor_CWT      : Matrix_Tag;
+         Comp_B2J_Tag      : Matrix_Tag;
+         Comp_J2B_Tag      : Matrix_Tag;
          Variant_Read_Tag  : Vector_Tag;
          Variant_Write_Tag : Vector_Tag;
          Ancestor_VWT      : Vector_Tag;
+         Variant_J2B_Tag   : Vector_Tag;
+         Variant_B2J_Tag   : Vector_Tag;
 
       begin
          for V_Choice of V.Variant_Choices loop
@@ -658,17 +680,23 @@ package body TGen.Marshalling is
                Comp_Read   : Tag;
                Comp_Write  : Tag;
                Ancestor_CW : Tag;
+               Comp_B2J    : Tag;
+               Comp_J2B    : Tag;
             begin
                Collect_Info_For_Components
                  (V_Choice.Components,
                   Comp_Read,
                   Comp_Write,
                   Ancestor_CW,
+                  Comp_B2J,
+                  Comp_J2B,
                   Spacing     => Spacing + 1,
                   Object_Name => Object_Name);
                Comp_Read_Tag := Comp_Read_Tag & Comp_Read;
                Comp_Write_Tag := Comp_Write_Tag & Comp_Write;
                Ancestor_CWT := Ancestor_CWT & Ancestor_CW;
+               Comp_B2J_Tag := Comp_B2J_Tag & Comp_B2J;
+               Comp_J2B_Tag := Comp_J2B_Tag & Comp_J2B;
             end;
 
             --  Handle the nested variant if any
@@ -682,6 +710,8 @@ package body TGen.Marshalling is
                   Variant_Read  : Tag;
                   Variant_Write : Tag;
                   Ancestor_VW   : Tag;
+                  Variant_B2J   : Tag;
+                  Variant_J2B   : Tag;
                begin
                   Collect_Info_For_Variants
                     (V_Choice.Variant.all,
@@ -689,16 +719,20 @@ package body TGen.Marshalling is
                      Variant_Read,
                      Variant_Write,
                      Ancestor_VW,
+                     Variant_B2J,
+                     Variant_J2B,
                      Spacing + 1,
                      Object_Name);
                   Variant_Read_Tag := Variant_Read_Tag & Variant_Read;
                   Variant_Write_Tag := Variant_Write_Tag & Variant_Write;
                   Ancestor_VWT := Ancestor_VWT & Ancestor_VW;
+                  Variant_B2J_Tag := Variant_B2J_Tag & Variant_B2J;
+                  Variant_J2B_Tag := Variant_J2B_Tag & Variant_J2B;
                end;
             end if;
          end loop;
 
-         --  Instanciate the appropriate template to glue the pieces together
+         --  Instantiate the appropriate template to glue the pieces together
 
          declare
             Assocs : constant Translate_Table :=
@@ -706,28 +740,36 @@ package body TGen.Marshalling is
               & [1 => Assoc ("OBJECT_NAME", Object_Name),
                  2 => Assoc ("DISCR_NAME", Discr_Name),
                  3 => Assoc ("DISCR_TYP", Discr_Typ_FQN),
-                 4 => Assoc ("CHOICES", Choices_Tag)];
+                 4 => Assoc ("CHOICES", Choices_Tag),
+                 5 => Assoc ("SPACING", RW_Spacing (Spacing))];
 
          begin
             Read_Tag :=
               +Variant_Read_Write
                  (Assocs
                   & [1 => Assoc ("COMPONENT_ACTION", Comp_Read_Tag),
-                     2 => Assoc ("VARIANT_PART", Variant_Read_Tag),
-                     3 => Assoc ("SPACING", RW_Spacing (Spacing))]);
+                     2 => Assoc ("VARIANT_PART", Variant_Read_Tag)]);
             Write_Tag :=
               +Variant_Read_Write
                  (Assocs
                   & [1 => Assoc ("COMPONENT_ACTION", Comp_Write_Tag),
-                     2 => Assoc ("VARIANT_PART", Variant_Write_Tag),
-                     3 => Assoc ("SPACING", RW_Spacing (Spacing))]);
+                     2 => Assoc ("VARIANT_PART", Variant_Write_Tag)]);
             Ancestor_WT :=
               +Variant_Read_Write
                  (Assocs
                   & [1 => Assoc ("COMPONENT_ACTION", Ancestor_CWT),
                      2 => Assoc ("ANCESTOR_COMPONENT_ACTION", Ancestor_CWT),
-                     3 => Assoc ("VARIANT_PART", Ancestor_VWT),
-                     4 => Assoc ("SPACING", RW_Spacing (Spacing))]);
+                     3 => Assoc ("VARIANT_PART", Ancestor_VWT)]);
+            B2J_Tag :=
+              +Variant_Read_Write
+                 (Assocs
+                  & [1 => Assoc ("COMPONENT_ACTION", Comp_B2J_Tag),
+                     2 => Assoc ("VARIANT_PART", Variant_B2J_Tag)]);
+            J2B_Tag :=
+              +Variant_Read_Write
+                 (Assocs
+                  & [1 => Assoc ("COMPONENT_ACTION", Comp_J2B_Tag),
+                     2 => Assoc ("VARIANT_PART", Variant_J2B_Tag)]);
          end;
       end Collect_Info_For_Variants;
 
@@ -894,6 +936,8 @@ package body TGen.Marshalling is
             Component_Read_Indexed : Unbounded_String;
             Component_Write        : Unbounded_String;
             Ancestor_CW            : Unbounded_String;
+            Comp_B2J               : Unbounded_String;
+            Comp_J2B               : Unbounded_String;
          begin
             --  Contruct the calls for the components
             --  Ancestor_CW is only useful for tagged records, but needs to
@@ -908,6 +952,8 @@ package body TGen.Marshalling is
                Component_Read_Indexed,
                Component_Write,
                Ancestor_CW,
+               Comp_B2J,
+               Comp_J2B,
                1);
 
             --  Generate the basic operations
@@ -915,17 +961,19 @@ package body TGen.Marshalling is
             declare
                Assocs : constant Translate_Table :=
                  Common_Assocs
-                 & [1 => Assoc ("COMPONENT_READ", Component_Read),
-                    2 => Assoc ("COMPONENT_WRITE", Component_Write),
-                    3 =>
+                 & [1  => Assoc ("COMPONENT_READ", Component_Read),
+                    2  => Assoc ("COMPONENT_WRITE", Component_Write),
+                    3  =>
                       Assoc ("COMP_TYP", Named_Comp_Ty.FQN (No_Std => True)),
-                    4 => Assoc ("ADA_DIM", Ada_Dim_Tag),
-                    5 => Assoc ("FIRST_NAME", First_Name_Tag),
-                    6 => Assoc ("LAST_NAME", Last_Name_Tag),
-                    7 => Assoc ("BOUND_TYP", Comp_Typ_Tag),
-                    8 =>
+                    4  => Assoc ("ADA_DIM", Ada_Dim_Tag),
+                    5  => Assoc ("FIRST_NAME", First_Name_Tag),
+                    6  => Assoc ("LAST_NAME", Last_Name_Tag),
+                    7  => Assoc ("BOUND_TYP", Comp_Typ_Tag),
+                    8  =>
                       Assoc ("COMPONENT_READ_INDEXED", Component_Read_Indexed),
-                    9 => Assoc ("AS_ANCESTOR", Ancestor_CW)];
+                    9  => Assoc ("AS_ANCESTOR", Ancestor_CW),
+                    10 => Assoc ("COMPONENT_B2J", Comp_B2J),
+                    11 => Assoc ("COMPONENT_J2B", Comp_J2B)];
 
             begin
                Print_Array (Assocs);
@@ -961,17 +1009,26 @@ package body TGen.Marshalling is
               Function_Typ (Proxy_Typ (Typ).Proxy_Subprogram.all);
             Assocs   : Translate_Set := To_Set (Common_Assocs);
 
-            Param_Names   : Vector_Tag;
+            Param_Names  : Vector_Tag;
             --  Name of the parameters of the proxy subprogram
-            Param_Types   : Vector_Tag;
+            Param_Types  : Vector_Tag;
             --  fully qualified names of the parameters of the proxy subprogram
-            Param_Inputs  : Vector_Tag;
+            Param_Inputs : Vector_Tag;
             --  Name of the input function for each of the parameters of the
             --  proxy subprogram.
+            Param_J2B    : Vector_Tag;
+            Param_B2J    : Vector_Tag;
+            --  Conversion function names for the parameters of the proxy
+            --  subprogram.
+
             Global_Names  : Vector_Tag;
             --  Name of the global variables
             Global_Inputs : Vector_Tag;
             --  Name of the input function for each of the global variables
+            Global_J2B    : Vector_Tag;
+            Global_B2J    : Vector_Tag;
+            --  Conversion function names for the parameters of the proxy
+            --  subprogram.
          begin
             Insert (Assocs, Assoc ("PROXY_FN_FQN", Proxy_FN.FQN));
             Insert (Assocs, Assoc ("PROXY_UID", String'(+Proxy_FN.Subp_UID)));
@@ -985,11 +1042,17 @@ package body TGen.Marshalling is
                   Append
                     (Param_Types, Param_Ty.Element.all.FQN (No_Std => True));
                   Append (Param_Inputs, Input_Fname_For_Typ (Param_Ty.Name));
+                  Append
+                    (Param_B2J, Bin_to_JSON_Fname_For_Typ (Param_Ty.Name));
+                  Append
+                    (Param_J2B, JSON_to_Bin_Fname_For_Typ (Param_Ty.Name));
                end;
             end loop;
             Insert (Assocs, Assoc ("PARAM_TY", Param_Types));
             Insert (Assocs, Assoc ("PARAM_NAME", Param_Names));
             Insert (Assocs, Assoc ("PARAM_INPUT_FN", Param_Inputs));
+            Insert (Assocs, Assoc ("PARAM_BIN_TO_JSON_FN", Param_B2J));
+            Insert (Assocs, Assoc ("PARAM_JSON_TO_BIN_FN", Param_J2B));
             for Global_Cur in Proxy_FN.Globals.Iterate loop
                declare
                   use Component_Maps;
@@ -1000,10 +1063,16 @@ package body TGen.Marshalling is
                begin
                   Append (Global_Names, Global_Name);
                   Append (Global_Inputs, Input_Fname_For_Typ (Global_Ty.Name));
+                  Append
+                    (Global_B2J, Bin_to_JSON_Fname_For_Typ (Global_Ty.Name));
+                  Append
+                    (Global_J2B, JSON_to_Bin_Fname_For_Typ (Global_Ty.Name));
                end;
             end loop;
             Insert (Assocs, Assoc ("GLOBAL_NAME", Global_Names));
             Insert (Assocs, Assoc ("GLOBAL_INPUT_FN", Global_Inputs));
+            Insert (Assocs, Assoc ("GLOBAL_BIN_TO_JSON_FN", Global_B2J));
+            Insert (Assocs, Assoc ("GLOBAL_JSON_TO_BIN_FN", Global_J2B));
             Print_Proxy_Read (Assocs);
          end;
 
@@ -1027,6 +1096,10 @@ package body TGen.Marshalling is
             Variant_Write          : Tag;
             Ancestor_VW            : Tag;
             As_Ancestor            : Tag;
+            Comp_B2J               : Tag;
+            Comp_J2B               : Tag;
+            Variant_J2B            : Tag;
+            Variant_B2J            : Tag;
          begin
 
             if Kind (Typ) = Record_Kind
@@ -1053,6 +1126,8 @@ package body TGen.Marshalling is
                Component_Read,
                Component_Write,
                Ancestor_CW,
+               Comp_B2J,
+               Comp_J2B,
                Object_Name => Object_Name,
                Spacing     => 0);
 
@@ -1069,6 +1144,8 @@ package body TGen.Marshalling is
                         Variant_Read,
                         Variant_Write,
                         Ancestor_VW,
+                        Variant_B2J,
+                        Variant_J2B,
                         Object_Name => Object_Name,
                         Spacing     => 0);
                   end if;
@@ -1094,7 +1171,11 @@ package body TGen.Marshalling is
                     9  => Assoc ("ANCESTOR_TY_PREFIX", Ancestor_Ty_Prefix),
                     10 => Assoc ("ANCESTOR_TY_NAME", Ancestor_Ty_Name),
                     11 => Assoc ("ANCESTOR_COMPONENT_WRITE", Ancestor_CW),
-                    12 => Assoc ("AS_ANCESTOR", As_Ancestor)];
+                    12 => Assoc ("AS_ANCESTOR", As_Ancestor),
+                    13 => Assoc ("COMPONENT_B2J", Comp_B2J),
+                    14 => Assoc ("COMPONENT_J2B", Comp_J2B),
+                    15 => Assoc ("VARIANT_B2J", Variant_B2J),
+                    16 => Assoc ("VARIANT_J2B", Variant_J2B)];
             begin
                Print_Record (Assocs);
             end;
@@ -1343,6 +1424,22 @@ package body TGen.Marshalling is
    begin
       return Prefix_For_Typ (To_Symbol (Typ_FQN, '_')) & "_Input";
    end Input_Fname_For_Typ;
+
+   -------------------------------
+   -- Bin_to_JSON_Fname_For_Typ --
+   -------------------------------
+
+   function Bin_to_JSON_Fname_For_Typ
+     (Typ_FQN : Ada_Qualified_Name) return String
+   is (Prefix_For_Typ (To_Symbol (Typ_FQN, '_')) & "_To_JSON");
+
+   -------------------------------
+   -- Bin_to_JSON_Fname_For_Typ --
+   -------------------------------
+
+   function JSON_to_Bin_Fname_For_Typ
+     (Typ_FQN : Ada_Qualified_Name) return String
+   is (Prefix_For_Typ (To_Symbol (Typ_FQN, '_')) & "_To_Binary");
 
    --------------
    -- Put_Line --

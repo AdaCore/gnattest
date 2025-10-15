@@ -23,6 +23,7 @@
 
 with GNAT.OS_Lib; use GNAT.OS_Lib;
 
+with TGen.Libgen; use TGen.Libgen;
 with Utils.String_Utilities;
 
 with TGen.Strings; use TGen.Strings;
@@ -51,18 +52,21 @@ package body TGen.Marshalling.JSON_Marshallers is
       package Templates is new TGen.Templates (TRD);
       use Templates.JSON_Marshalling;
 
-      Ty_Name      : constant String := Typ.FQN (No_Std => True);
-      Ty_Prefix    : constant String := Prefix_For_Typ (Typ.Slug);
-      Generic_Name : constant String :=
+      Ty_Name        : constant String := Typ.FQN (No_Std => True);
+      Ty_Prefix      : constant String := Prefix_For_Typ (Typ.Slug);
+      Ty_IO          : constant IO_Support := Get_IO_Support (Typ);
+      Output_Support : constant Boolean := (Ty_IO and IO_Output) /= IO_None;
+      Generic_Name   : constant String :=
         (if Needs_Header (Typ) then "In_Out_Unconstrained" else "In_Out");
-      Assocs       : constant Translate_Table :=
+      Assocs         : constant Translate_Table :=
         [1 => Assoc ("TY_NAME", Ty_Name),
          2 => Assoc ("TY_PREFIX", Ty_Prefix),
          3 => Assoc ("MARSHALLING_LIB", Marshalling_Lib),
          4 => Assoc ("GENERIC_NAME", Generic_Name),
          5 => Assoc ("GLOBAL_PREFIX", Global_Prefix),
          6 => Assoc ("NEEDS_HEADER", Needs_Header (Typ)),
-         7 => Assoc ("IS_SCALAR", Typ in Scalar_Typ'Class)];
+         7 => Assoc ("IS_SCALAR", Typ in Scalar_Typ'Class),
+         8 => Assoc ("OUTPUT_SUPPORTED", Output_Support)];
 
       function Component_Read
         (Assocs : Translate_Table) return Unbounded_String;
@@ -80,6 +84,10 @@ package body TGen.Marshalling.JSON_Marshallers is
       procedure Print_Header_Wrappers (Assocs : Translate_Table);
       procedure Print_Derived_Private_Subtype (Assocs : Translate_Table);
       procedure Print_Proxy_Read (Assocs : Translate_Set);
+      function Component_B2J
+        (Assocs : Translate_Table) return Unbounded_String;
+      function Component_J2B
+        (Assocs : Translate_Table) return Unbounded_String;
 
       ---------------------
       -- Component_Write --
@@ -209,6 +217,20 @@ package body TGen.Marshalling.JSON_Marshallers is
          Put_Line (Body_Part, Parse (Proxy_Read_Template, Assocs));
       end Print_Proxy_Read;
 
+      -------------------
+      -- Component_B2J --
+      -------------------
+
+      function Component_B2J (Assocs : Translate_Table) return Unbounded_String
+      is (Parse (Component_B2J_Template, Assocs));
+
+      -------------------
+      -- Component_J2B --
+      -------------------
+
+      function Component_J2B (Assocs : Translate_Table) return Unbounded_String
+      is (Parse (Component_J2B_Template, Assocs));
+
       procedure Generate_Base_Functions_For_Typ_Instance is new
         Generate_Base_Functions_For_Typ
           (Differentiate_Discrete        => False,
@@ -223,17 +245,20 @@ package body TGen.Marshalling.JSON_Marshallers is
            Print_Record                  => Print_Record,
            Print_Header_Wrappers         => Print_Header_Wrappers,
            Print_Derived_Private_Subtype => Print_Derived_Private_Subtype,
-           Print_Proxy_Read              => Print_Proxy_Read);
+           Print_Proxy_Read              => Print_Proxy_Read,
+           Component_B2J                 => Component_B2J,
+           Component_J2B                 => Component_J2B);
    begin
       --  Generate the base functions for Typ
 
-      Generate_Base_Functions_For_Typ_Instance (Typ);
+      Generate_Base_Functions_For_Typ_Instance (Typ, Output_Support);
 
       --  If the type is used as an array index constraint, also generate the
       --  functions for Typ'Base.
 
       if Constrains_Array then
-         Generate_Base_Functions_For_Typ_Instance (Typ, For_Base => True);
+         Generate_Base_Functions_For_Typ_Instance
+           (Typ, Output_Support, For_Base => True);
       end if;
 
       --  Generate the Input and Output subprograms

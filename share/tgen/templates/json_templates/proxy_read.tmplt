@@ -8,8 +8,16 @@
 @@--  @_PARAM_TY_@ Fully qualified names of the parameters of the proxy subprogram
 @@--  @_PARAM_INPUT_FN_@ Name of the input function for the parameters of the
 @@--                     proxy subprogram.
+@@--  @_PARAM_BIN_TO_JSON_FN_@ Name of the binary to JSON conversion subprogram
+@@--                           for the parameters of the proxy subprogram.
+@@--  @_PARAM_JSON_TO_BIN_FN_@ Name of the JSON to binary conversion subprogram
+@@--                           for the parameters of the proxy subprogram.
 @@--  @_GLOBAL_NAME_@ Name of the global variables
 @@--  @_GLOBAL_INPUT_FN_@ Name of the input function for the global variables
+@@--  @_GLOBAL_BIN_TO_JSON_FN_@ Name of the binary to JSON conversion subprogram
+@@--                           for the globals of the proxy subprogram.
+@@--  @_GLOBAL_JSON_TO_BIN_FN_@ Name of the JSON to binary conversion subprogram
+@@--                           for the globals of the proxy subprogram.
 @@--
 @@INCLUDE@@ util.tmplt
 
@@ -43,3 +51,176 @@
         ;
       end;
    end @_TY_PREFIX_@_Input;
+
+   procedure @_TY_PREFIX_@_Read
+     (@_GLOBAL_PREFIX_@_JSON : TGen.JSON.JSON_Value;
+      @_GLOBAL_PREFIX_@_V    : out TGen.TGen_Std.@_TY_NAME_@) is
+    begin
+       @_GLOBAL_PREFIX_@_V := @_TY_PREFIX_@_Input (@_GLOBAL_PREFIX_@_JSON);
+    end @_TY_PREFIX_@_Read;
+
+   procedure @_TY_PREFIX_@_To_JSON
+     (@_GLOBAL_PREFIX_@_Stream    : not null access Ada.Streams.Root_Stream_Type'Class;
+      @_GLOBAL_PREFIX_@_Buffer    : in out Interfaces.Unsigned_8;
+      @_GLOBAL_PREFIX_@_Offset    : in out TGen.Marshalling_Lib.Offset_Type;
+      @_GLOBAL_PREFIX_@_JSON      : out TGen.JSON.JSON_Value;
+      @_GLOBAL_PREFIX_@_Header    : access Ada.Streams.Root_Stream_Type'Class := null;
+      @_GLOBAL_PREFIX_@_Flush_Hdr : Boolean := False)
+   is
+      Hdr_Stream : constant access Ada.Streams.Root_Stream_Type'Class :=
+        (if @_GLOBAL_PREFIX_@_Header = null
+         then @_GLOBAL_PREFIX_@_Stream
+         else @_GLOBAL_PREFIX_@_Header);
+      @_GLOBAL_PREFIX_@_Proxy_Values : constant TGen.JSON.JSON_Value :=
+        TGen.JSON.Create_Object;
+      @_GLOBAL_PREFIX_@_Param_Values : constant TGen.JSON.JSON_Value :=
+        TGen.JSON.Create_Object;
+      @_GLOBAL_PREFIX_@_Global_Values : constant TGen.JSON.JSON_Value :=
+        TGen.JSON.Create_Object;
+
+      subtype String_16 is String (1 .. 16);
+      TGen_Proxy_UID : String_16;
+   begin
+      @_GLOBAL_PREFIX_@_JSON := TGen.JSON.Create_Object;
+      String_16'Read(Hdr_Stream, TGen_Proxy_UID);
+      if TGen_Proxy_UID /= "@_PROXY_UID_@" then
+         raise TGen.Marshalling_Lib.Invalid_Value with
+           "Mismatched proxy subprogram fingerprint";
+      end if;
+
+      --  Reading a proxy value from stream only uses the *_Input functions,
+      --  which discard the remaining bits of the buffer once a value is read.
+      --  We need to do the same here.
+      @_GLOBAL_PREFIX_@_Buffer := 0;
+      @_GLOBAL_PREFIX_@_Offset := 0;
+
+      @_GLOBAL_PREFIX_@_JSON.Set_Field ("proxy_uid", TGen.JSON.Create (TGen_Proxy_UID));
+@@TABLE@@
+      @_GLOBAL_PREFIX_@_Param_Values.Set_Field
+        ("@_PARAM_NAME_@",
+         @_PARAM_BIN_TO_JSON_FN_@
+           (Hdr_Stream, @_GLOBAL_PREFIX_@_Stream));
+@@END_TABLE@@
+
+@@TABLE@@
+      @_GLOBAL_PREFIX_@_Global_Values.Set_Field
+        ("@_GLOBAL_NAME_@",
+         @_GLOBAL_BIN_TO_JSON_FN_@
+           (Hdr_Stream, @_GLOBAL_PREFIX_@_Stream));
+@@END_TABLE@@
+
+      @_GLOBAL_PREFIX_@_Proxy_Values.Set_Field
+        ("param_values", @_GLOBAL_PREFIX_@_Param_Values);
+      @_GLOBAL_PREFIX_@_Proxy_Values.Set_Field
+        ("global_values", @_GLOBAL_PREFIX_@_Global_Values);
+      @_GLOBAL_PREFIX_@_JSON.Set_Field
+        ("proxy_values", @_GLOBAL_PREFIX_@_Proxy_Values);
+   end @_TY_PREFIX_@_To_JSON;
+
+   function @_TY_PREFIX_@_To_JSON
+     (@_GLOBAL_PREFIX_@_Header : not null access Ada.Streams.Root_Stream_Type'Class;
+      @_GLOBAL_PREFIX_@_Stream : not null access Ada.Streams.Root_Stream_Type'Class)
+      return TGen.JSON.JSON_Value
+   is
+      Buffer : Interfaces.Unsigned_8 := 0;
+      Offset : TGen.Marshalling_Lib.Offset_Type := 0;
+   begin
+      return Res : TGen.JSON.JSON_Value do
+         @_TY_PREFIX_@_To_JSON
+           (@_GLOBAL_PREFIX_@_Stream,
+            Buffer,
+            Offset,
+            Res,
+            @_GLOBAL_PREFIX_@_Header,
+            @_GLOBAL_PREFIX_@_Flush_Hdr => True);
+      end return;
+   end @_TY_PREFIX_@_To_JSON;
+
+   function @_TY_PREFIX_@_To_JSON
+     (@_GLOBAL_PREFIX_@_Stream : not null access Ada.Streams.Root_Stream_Type'Class)
+      return TGen.JSON.JSON_Value
+   is
+   begin
+      return @_TY_PREFIX_@_To_JSON (@_GLOBAL_PREFIX_@_Stream, @_GLOBAL_PREFIX_@_Stream);
+   end @_TY_PREFIX_@_To_JSON;
+
+   procedure @_TY_PREFIX_@_To_Binary
+     (@_GLOBAL_PREFIX_@_Stream    : not null access Ada.Streams.Root_Stream_Type'Class;
+      @_GLOBAL_PREFIX_@_Buffer    : in out Interfaces.Unsigned_8;
+      @_GLOBAL_PREFIX_@_Offset    : in out TGen.Marshalling_Lib.Offset_Type;
+      @_GLOBAL_PREFIX_@_JSON      : TGen.JSON.JSON_Value;
+      @_GLOBAL_PREFIX_@_Header    : access Ada.Streams.Root_Stream_Type'Class := null;
+      @_GLOBAL_PREFIX_@_Flush_Hdr : Boolean := False)
+   is
+      Hdr_Stream : constant access Ada.Streams.Root_Stream_Type'Class :=
+        (if @_GLOBAL_PREFIX_@_Header = null
+         then @_GLOBAL_PREFIX_@_Stream
+         else @_GLOBAL_PREFIX_@_Header);
+
+      subtype String_16 is String (1 .. 16);
+      Proxy_UID : constant String_16 := @_GLOBAL_PREFIX_@_JSON.Get ("proxy_uid");
+
+      @_GLOBAL_PREFIX_@_Param_Values  : constant TGen.JSON.JSON_Value :=
+        @_GLOBAL_PREFIX_@_JSON.Get("proxy_values").Get("param_values");
+      @_GLOBAL_PREFIX_@_Global_Values : constant TGen.JSON.JSON_Value :=
+        @_GLOBAL_PREFIX_@_JSON.Get("proxy_values").Get("global_values");
+   begin
+      --  Both the proxy UID and parameter values will be written without
+      --  leveraging the buffer to minimize padding (in order to remain
+      --  compliant with the @_TY_PREFIX_@_Read procedure).
+      if @_GLOBAL_PREFIX_@_Offset /= 0 then
+         Interfaces.Unsigned_8'Write
+           (@_GLOBAL_PREFIX_@_Stream, @_GLOBAL_PREFIX_@_Buffer);
+      end if;
+
+      if Proxy_UID /= "@_PROXY_UID_@" then
+         raise TGen.Marshalling_Lib.Invalid_Value with
+           "Mismatched proxy subprogram fingerprint";
+      end if;
+      String_16'Write(Hdr_Stream, Proxy_UID);
+
+@@TABLE@@
+      @_PARAM_JSON_TO_BIN_FN_@
+        (Hdr_Stream,
+         @_GLOBAL_PREFIX_@_Stream,
+         @_GLOBAL_PREFIX_@_Param_Values.Get ("@_PARAM_NAME_@"));
+@@END_TABLE@@
+
+@@TABLE@@
+      @_GLOBAL_JSON_TO_BIN_FN_@
+        (Hdr_Stream,
+         @_GLOBAL_PREFIX_@_Stream,
+         @_GLOBAL_PREFIX_@_Global_Values.Get ("@_GLOBAL_NAME_@"));
+@@END_TABLE@@
+   end @_TY_PREFIX_@_To_Binary;
+
+   procedure @_TY_PREFIX_@_To_Binary
+     (@_GLOBAL_PREFIX_@_Stream : not null access Ada.Streams.Root_Stream_Type'Class;
+      @_GLOBAL_PREFIX_@_JSON   : TGen.JSON.JSON_Value)
+   is
+   begin
+      @_TY_PREFIX_@_To_Binary
+        (@_GLOBAL_PREFIX_@_Stream,
+         @_GLOBAL_PREFIX_@_Stream,
+         @_GLOBAL_PREFIX_@_JSON);
+   end @_TY_PREFIX_@_To_Binary;
+
+   procedure @_TY_PREFIX_@_To_Binary
+     (@_GLOBAL_PREFIX_@_Header : not null access Ada.Streams.Root_Stream_Type'Class;
+      @_GLOBAL_PREFIX_@_Stream : not null access Ada.Streams.Root_Stream_Type'Class;
+      @_GLOBAL_PREFIX_@_JSON   : TGen.JSON.JSON_Value)
+   is
+      Buffer : Interfaces.Unsigned_8 := 0;
+      Offset : TGen.Marshalling_Lib.Offset_Type := 0;
+   begin
+      @_TY_PREFIX_@_To_Binary
+        (@_GLOBAL_PREFIX_@_Stream,
+         Buffer,
+         Offset,
+         @_GLOBAL_PREFIX_@_JSON,
+         @_GLOBAL_PREFIX_@_Header,
+         @_GLOBAL_PREFIX_@_Flush_Hdr => True);
+      if Offset /= 0 then
+         Interfaces.Unsigned_8'Write(@_GLOBAL_PREFIX_@_Stream, Buffer);
+      end if;
+   end @_TY_PREFIX_@_To_Binary;

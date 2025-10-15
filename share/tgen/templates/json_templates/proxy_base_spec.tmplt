@@ -11,4 +11,69 @@
    --  Input function for @_TY_NAME_@
 
    function @_TY_PREFIX_@_Input
-     (@_GLOBAL_PREFIX_@_JSON : TGen.JSON.JSON_Value) return TGen.TGen_Std.@_TY_NAME_@;
+     (@_GLOBAL_PREFIX_@_JSON : TGen.JSON.JSON_Value) return
+     TGen.TGen_Std.@_TY_NAME_@;
+     
+   procedure @_TY_PREFIX_@_Read
+     (@_GLOBAL_PREFIX_@_JSON : TGen.JSON.JSON_Value;
+      @_GLOBAL_PREFIX_@_V    : out TGen.TGen_Std.@_TY_NAME_@);
+
+   procedure @_TY_PREFIX_@_To_JSON
+     (@_GLOBAL_PREFIX_@_Stream    : not null access Ada.Streams.Root_Stream_Type'Class;
+      @_GLOBAL_PREFIX_@_Buffer    : in out Interfaces.Unsigned_8;
+      @_GLOBAL_PREFIX_@_Offset    : in out TGen.Marshalling_Lib.Offset_Type;
+      @_GLOBAL_PREFIX_@_JSON      : out TGen.JSON.JSON_Value;
+      @_GLOBAL_PREFIX_@_Header    : access Ada.Streams.Root_Stream_Type'Class := null;
+      @_GLOBAL_PREFIX_@_Flush_Hdr : Boolean := False);
+   --  Read a value of @_TY_NAME_@ from the stream and update @_GLOBAL_PREFIX_@_JSON
+   --  to its corresponding JSON representation.
+   --  if @_GLOBAL_PREFIX_@_Header is not null, the header (if any) will be
+   --  read from this stream instead of the main data stream.
+   --
+   --  @_GLOBAL_PREFIX_@_Flush_Hdr controls how the header is read from stream.
+   --  If True, this procedure behaves like the *_Input functions, where some
+   --  padding bits are inserted to make sure the header data is byte-aligned.
+   --  Otherwise, this procedure behaves like the *_Read_All procedure, where
+   --  the header bits and data bits are concatenated.
+
+   procedure @_TY_PREFIX_@_To_Binary
+     (@_GLOBAL_PREFIX_@_Stream    : not null access Ada.Streams.Root_Stream_Type'Class;
+      @_GLOBAL_PREFIX_@_Buffer    : in out Interfaces.Unsigned_8;
+      @_GLOBAL_PREFIX_@_Offset    : in out TGen.Marshalling_Lib.Offset_Type;
+      @_GLOBAL_PREFIX_@_JSON      : TGen.JSON.JSON_Value;
+      @_GLOBAL_PREFIX_@_Header    : access Ada.Streams.Root_Stream_Type'Class := null;
+      @_GLOBAL_PREFIX_@_Flush_Hdr : Boolean := False);
+   --  Convert the JSON representation of @_TY_NAME_@ to a compact binary form
+   --  and write it to the streams.
+   --  if @_GLOBAL_PREFIX_@_Header is not null, the header (if any) will be
+   --  written to this stream instead of the main data stream.
+   --
+   --  @_GLOBAL_PREFIX_@_Flush_Hdr controls how the header is read from stream.
+   --  If True, this procedure behaves like the *_Input functions, where some
+   --  padding bits are inserted to make sure the header data is byte-aligned.
+   --  Otherwise, this procedure behaves like the *_Read_All procedure, where
+   --  the header bits and data bits are concatenated.
+
+   function @_TY_PREFIX_@_To_JSON
+     (@_GLOBAL_PREFIX_@_Header : not null access Ada.Streams.Root_Stream_Type'Class;
+      @_GLOBAL_PREFIX_@_Stream : not null access Ada.Streams.Root_Stream_Type'Class)
+      return TGen.JSON.JSON_Value with Inline;
+   --  Read a value of type @_TY_NAME_@ from the streams and return its
+   --  corresponding JSON representation.
+
+   function @_TY_PREFIX_@_To_JSON
+     (@_GLOBAL_PREFIX_@_Stream : not null access Ada.Streams.Root_Stream_Type'Class)
+      return TGen.JSON.JSON_Value with Inline;
+   --  Read a value of type @_TY_NAME_@ from the stream and return its
+   --  corresponding JSON representation.
+
+   procedure @_TY_PREFIX_@_To_Binary
+     (@_GLOBAL_PREFIX_@_Header : not null access Ada.Streams.Root_Stream_Type'Class;
+      @_GLOBAL_PREFIX_@_Stream : not null access Ada.Streams.Root_Stream_Type'Class;
+      @_GLOBAL_PREFIX_@_JSON   : TGen.JSON.JSON_Value) with Inline;
+   --  Decode @_GLOBAL_PREFIX_@_JSON and write its representation to the streams
+
+   procedure @_TY_PREFIX_@_To_Binary
+     (@_GLOBAL_PREFIX_@_Stream : not null access Ada.Streams.Root_Stream_Type'Class;
+      @_GLOBAL_PREFIX_@_JSON   : TGen.JSON.JSON_Value) with Inline;
+   --  Decode @_GLOBAL_PREFIX_@_JSON and write its representation to the stream

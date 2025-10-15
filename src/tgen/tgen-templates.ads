@@ -113,6 +113,10 @@ package TGen.Templates is
         Template_Folder & "proxy_read.tmplt";
       Proxy_Base_Spec_Template          : constant String :=
         Template_Folder & "proxy_base_spec.tmplt";
+      Component_B2J_Template            : constant String :=
+        Template_Folder & "component_B2J.tmplt";
+      Component_J2B_Template            : constant String :=
+        Template_Folder & "component_J2B.tmplt";
    end JSON_Marshalling;
 
    package Type_Representation is

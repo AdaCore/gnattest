@@ -432,7 +432,7 @@ package Test.Common is
    --  harness with Ada literal values, not depending on the tgen_support
    --  library. False by default as there are many scenarios in which
    --  unparsing will result in invalid code
-   --  (private types from other packages etc..)
+   --  (private types from other packages etc..).
 
    JSON_Test_Dir : String_Access;
    --  Dir in which the test vector in json format should be stored / looked up

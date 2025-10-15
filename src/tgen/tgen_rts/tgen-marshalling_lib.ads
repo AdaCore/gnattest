@@ -200,7 +200,7 @@ package TGen.Marshalling_Lib is
           (Stream : not null access Ada.Streams.Root_Stream_Type'Class;
            Buffer : in out Unsigned_8;
            Offset : in out Offset_Type;
-           V      : T);
+           V      : T) is null;
 
       with
         procedure Read
@@ -242,14 +242,15 @@ package TGen.Marshalling_Lib is
 
       with
         procedure Output_Header
-          (Stream : not null access Ada.Streams.Root_Stream_Type'Class; V : T);
+          (Stream : not null access Ada.Streams.Root_Stream_Type'Class;
+           V      : T) is null;
 
       with
         procedure Write
           (Stream : not null access Ada.Streams.Root_Stream_Type'Class;
            Buffer : in out Unsigned_8;
            Offset : in out Offset_Type;
-           V      : T);
+           V      : T) is null;
 
       with
         procedure Read

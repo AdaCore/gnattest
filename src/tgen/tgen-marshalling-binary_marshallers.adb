@@ -25,6 +25,7 @@ with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 
 with GNAT.OS_Lib; use GNAT.OS_Lib;
 
+with TGen.Libgen; use TGen.Libgen;
 with TGen.Templates;
 
 package body TGen.Marshalling.Binary_Marshallers is
@@ -50,11 +51,13 @@ package body TGen.Marshalling.Binary_Marshallers is
       package Templates is new TGen.Templates (TRD);
       use Templates.Binary_Marshalling;
 
-      Ty_Name      : constant String := Typ.FQN (No_Std => True);
-      Ty_Prefix    : constant String := Prefix_For_Typ (Typ.Slug);
-      Generic_Name : constant String :=
+      Ty_Name        : constant String := Typ.FQN (No_Std => True);
+      Ty_Prefix      : constant String := Prefix_For_Typ (Typ.Slug);
+      Ty_IO          : constant IO_Support := Get_IO_Support (Typ);
+      Output_Support : constant Boolean := (Ty_IO and IO_Output) /= IO_None;
+      Generic_Name   : constant String :=
         (if Needs_Header (Typ) then "In_Out_Unconstrained" else "In_Out");
-      Assocs       : constant Translate_Table :=
+      Assocs         : constant Translate_Table :=
         [1 => Assoc ("TY_NAME", Ty_Name),
          2 => Assoc ("TY_PREFIX", Ty_Prefix),
          3 => Assoc ("MARSHALLING_LIB", Marshalling_Lib),
@@ -62,7 +65,8 @@ package body TGen.Marshalling.Binary_Marshallers is
          5 => Assoc ("GLOBAL_PREFIX", Global_Prefix),
          6 => Assoc ("NEEDS_HEADER", Needs_Header (Typ)),
          7 => Assoc ("IS_SCALAR", Typ in Scalar_Typ'Class),
-         8 => Assoc ("HAS_STATIC_PREDICATE", Typ.Has_Static_Predicate)];
+         8 => Assoc ("HAS_STATIC_PREDICATE", Typ.Has_Static_Predicate),
+         9 => Assoc ("OUTPUT_SUPPORTED", Output_Support)];
 
       function Component_Read
         (Assocs : Translate_Table) return Unbounded_String;
@@ -248,13 +252,14 @@ package body TGen.Marshalling.Binary_Marshallers is
    begin
       --  Generate the base functions for Typ
 
-      Generate_Base_Functions_For_Typ_Instance (Typ);
+      Generate_Base_Functions_For_Typ_Instance (Typ, Output_Support);
 
       --  If the type is used as an array index constraint, also generate the
       --  functions for Typ'Base.
 
       if Constrains_Array then
-         Generate_Base_Functions_For_Typ_Instance (Typ, For_Base => True);
+         Generate_Base_Functions_For_Typ_Instance
+           (Typ, Output_Support, For_Base => True);
       end if;
 
       --  Generate the Input and Output subprograms
