@@ -6,7 +6,7 @@ gprbuild -P obj/gnattest/harness/test_driver.gpr --src-subdirs=gnattest-instr --
 
 # Generate some binary tests, this will call and exercise the conversion programs
 gnattest -P prj.gpr --gen-test-vectors --gen-test-binary --serialized-test-dir=bin_tests
-# post process the filenames to make it easier to located them in the Ada test
+# post process the filenames to make it easier to locate them in the Ada test
 # program
 ls bin_tests | sed -n 's/\(.*\)\(-[0-9a-f]*-\)\([0-4]\)/mv bin_tests\/\1\2\3 bin_tests\/\1\-\3/p' | sh
 

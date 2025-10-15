@@ -1,0 +1,53 @@
+Units remaining: 2     Units remaining: 1     Warning: Cannot generate output marshallers for pkg.print_my_int
+
+Warning: Cannot generate output marshallers for pkg.print_int_acc
+
+
+pkg.ads:6:07: warning: "TGen_Proxy" is not a valid aspect identifier [enabled by default]
+pkg.ads:9:06: warning: "TGen_Proxy" is not a valid aspect identifier [enabled by default]
+ 524453158
+-6717808
+-1500502807
+ 604
+-610670150
+ 524453158
+-6717808
+-1500502807
+ 604
+-610670150
+pkg.ads:13:4: info: corresponding test PASSED
+pkg.ads:13:4: info: corresponding test PASSED
+pkg.ads:13:4: info: corresponding test PASSED
+pkg.ads:13:4: info: corresponding test PASSED
+pkg.ads:13:4: info: corresponding test PASSED
+pkg.ads:11:4: info: corresponding test PASSED
+pkg.ads:11:4: info: corresponding test PASSED
+pkg.ads:11:4: info: corresponding test PASSED
+pkg.ads:11:4: info: corresponding test PASSED
+pkg.ads:11:4: info: corresponding test PASSED
+pkg.ads:18:4: info: corresponding test PASSED
+pkg.ads:18:4: info: corresponding test PASSED
+pkg.ads:18:4: info: corresponding test PASSED
+pkg.ads:18:4: info: corresponding test PASSED
+pkg.ads:18:4: info: corresponding test PASSED
+pkg.ads:16:4: info: corresponding test PASSED
+pkg.ads:16:4: info: corresponding test PASSED
+pkg.ads:16:4: info: corresponding test PASSED
+pkg.ads:16:4: info: corresponding test PASSED
+pkg.ads:16:4: info: corresponding test PASSED
+pkg.ads:11:4: error: corresponding test FAILED: Test not implemented. (pkg-test_data-tests.adb:61)
+pkg.ads:13:4: error: corresponding test FAILED: Test not implemented. (pkg-test_data-tests.adb:97)
+pkg.ads:16:4: error: corresponding test FAILED: Test not implemented. (pkg-test_data-tests.adb:133)
+pkg.ads:18:4: error: corresponding test FAILED: Test not implemented. (pkg-test_data-tests.adb:169)
+24 tests run: 20 passed; 4 failed; 0 crashed.
+Units remaining: 2     Units remaining: 1     
+ 524453158
+-6717808
+-1500502807
+ 604
+-610670150
+ 524453158
+-6717808
+-1500502807
+ 604
+-610670150

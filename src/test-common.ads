@@ -423,16 +423,16 @@ package Test.Common is
    --  Indicates that we should use TGen to generate tests vectors for the
    --  supported subprograms.
 
-   Gen_Bin_Tests : Boolean := False;
-   --  Whether gnattest should generate tests in binary format instead of in
-   --  JSON format.
-
    Unparse_Test_Vectors : Boolean := False;
    --  Indicates that we should unparse test vectors to produce a GNATtest
    --  harness with Ada literal values, not depending on the tgen_support
    --  library. False by default as there are many scenarios in which
    --  unparsing will result in invalid code
    --  (private types from other packages etc..).
+
+   Gen_Bin_Tests : Boolean := False;
+   --  Whether gnattest should generate tests in binary format instead of in
+   --  JSON format.
 
    JSON_Test_Dir : String_Access;
    --  Dir in which the test vector in json format should be stored / looked up

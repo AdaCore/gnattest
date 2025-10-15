@@ -1159,6 +1159,8 @@ package body Test.Actions is
          Test.Common.Generate_Test_Vectors := True;
          Test.Common.Request_Lib_Support;
 
+         Test.Common.Gen_Bin_Tests := Arg (Cmd, Gen_Test_Binary);
+
          if Arg (Cmd, Gen_Test_Subprograms) /= null then
             declare
                Subp_List : constant Test.Common.Unbounded_String_Vector :=
