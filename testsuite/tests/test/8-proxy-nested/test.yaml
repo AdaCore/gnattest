@@ -1,0 +1,4 @@
+description: Check that TGen supports types with a proxy annotations that are a
+  component of some other type.
+
+driver: shell_script

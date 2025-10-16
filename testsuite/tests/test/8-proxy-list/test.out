@@ -1,0 +1,33 @@
+[]
+[ 787967301]
+[]
+[ 1248212433] <-> [-2006314810]
+[]
+[ 10545] <-> [-99151122] <-> [ 460393444] <-> [-1443051794]
+[-80954216] <-> [ 25] <-> [ 73]
+[ 481676256] <-> [-155943] <-> [ 1881046700] <-> [ 1421664222] <-> [ 1647778632] <-> [-1492188565] <-> [ 134] <-> [ 272991524]
+[-1947632047] <-> [-747] <-> [-2020150723]
+[-6155764] <-> [-1363271023] <-> [-7] <-> [ 5]
+lists.ads:17:4: info: corresponding test PASSED
+lists.ads:17:4: info: corresponding test PASSED
+lists.ads:17:4: info: corresponding test PASSED
+lists.ads:17:4: info: corresponding test PASSED
+lists.ads:17:4: info: corresponding test PASSED
+lists.ads:17:4: info: corresponding test PASSED
+lists.ads:17:4: info: corresponding test PASSED
+lists.ads:17:4: info: corresponding test PASSED
+lists.ads:17:4: info: corresponding test PASSED
+lists.ads:17:4: info: corresponding test PASSED
+lists.ads:15:4: info: corresponding test PASSED
+lists.ads:15:4: info: corresponding test PASSED
+lists.ads:15:4: info: corresponding test PASSED
+lists.ads:15:4: info: corresponding test PASSED
+lists.ads:15:4: info: corresponding test PASSED
+lists.ads:15:4: info: corresponding test PASSED
+lists.ads:15:4: info: corresponding test PASSED
+lists.ads:15:4: info: corresponding test PASSED
+lists.ads:15:4: info: corresponding test PASSED
+lists.ads:15:4: info: corresponding test PASSED
+lists.ads:15:4: error: corresponding test FAILED: Test not implemented. (lists-test_data-tests.adb:45)
+lists.ads:17:4: error: corresponding test FAILED: Test not implemented. (lists-test_data-tests.adb:66)
+22 tests run: 20 passed; 2 failed; 0 crashed.
