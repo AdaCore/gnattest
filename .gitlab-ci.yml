@@ -52,14 +52,36 @@ include:
               - testsuite/drivers/gnattest_tgen.py
             compare_to: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME
 
-  # Optional testing of ALS
-  - component: $CI_SERVER_FQDN/eng/gitlab-templates/test@~latest
-    inputs:
-      job-name: als-test
-      anod-args: run test_als_$ACI_TRACK
-      image: pe-base
-      cpus: 16
-      rules:
-        - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
-          when: manual
-          allow_failure: true
+
+.common_test_before_script: &test_before_script
+  before_script:
+    - mkdir $CI_PROJECT_DIR/coverage
+
+.common_test_after_script: &test_after_script
+  after_script:
+    - cat /tmp/ci_env.sh
+    - . /tmp/ci_env.sh
+    - TEST_BSN=$(anod eval --primitive=test gnattest -Q instr-cov build_space_name --sandbox-dir=$ANOD_DEFAULT_SANDBOX_DIR)
+    - mv $ANOD_DEFAULT_SANDBOX_DIR/x86_64-linux/$TEST_BSN/test/coverage/cobertura.xml $CI_PROJECT_DIR/coverage/cobertura.xml
+
+.common_artifacts_bits: &artifacts
+  artifacts:
+    paths:
+      - xunit-*.xml
+      - coverage/cobertura.xml
+
+    reports:
+      junit: xunit-*.xml
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage/cobertura.xml
+
+gnattest:linux:
+  <<: *test_before_script
+  <<: *test_after_script
+  <<: *artifacts
+
+gnattest-gnatfuzz:linux:
+  <<: *test_before_script
+  <<: *test_after_script
+  <<: *artifacts

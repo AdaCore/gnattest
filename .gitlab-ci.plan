@@ -1,38 +1,27 @@
-def build_(qualifier={}):
+cov_qualifier={"instr-cov": True}
+
+def build_(qualifier=cov_qualifier):
     with defaults(qualifier=qualifier):
         anod_build("gnattest")
 
-def test_(qualifier={}):
+def test_(qualifier=cov_qualifier):
     with defaults(qualifier=qualifier):
         # Install the component built in the preceding CI build job
         anod_install("gnattest")
         anod_test("gnattest")
 
-def test_gnatfuzz_tests():
-    # Install the component already built in previous stage
-    anod_install("gnattest")
-    anod_test("gnattest", qualifier={"gnatfuzz-tests": True})
+def test_gnatfuzz_tests(qualifier=cov_qualifier):
+    with defaults(qualifier=qualifier):
+        # Install the component already built in previous stage
+        anod_install("gnattest")
+        anod_test("gnattest", qualifier={"gnatfuzz-tests": True, **cov_qualifier})
 
 # Edge
 
-edge_qualifier = {"edge": True}
+edge_qualifier = {"edge": True, **cov_qualifier}
 
 def build_edge():
     build_(edge_qualifier)
 
 def test_edge():
     test_(edge_qualifier)
-
-# Optional ALS testing
-
-def test_als_(qualifier={}):
-    with defaults(qualifier=qualifier):
-        # This component below has been built by the build job of the CI
-        anod_install("gnattest")
-
-        # Build and test the ALS
-        anod_build("als")
-        anod_test("als")
-
-def test_als_edge():
-    test_als_(edge_qualifier)
