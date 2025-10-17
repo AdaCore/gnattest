@@ -702,7 +702,7 @@ package body Utils.Projects is
            ("gnattest does not support abstract projects (without sources)");
       end if;
 
-      if Aggregate.Use_Subprocesses_For_Aggregated_Projects then
+      if My_Project_Tree.Root_Project.Kind in Aggregate_Kind then
 
          if Num_File_Names (Cmd) /= 0 then
             Cmd_Error
@@ -736,9 +736,9 @@ package body Utils.Projects is
       end if;
    end Process_Project;
 
-   -------------------------
+   -------------------------------
    -- Read_File_Names_From_File --
-   -------------------------
+   -------------------------------
 
    procedure Read_File_Names_From_File
      (Par_File_Name : String;

@@ -65,13 +65,6 @@ package body Utils.Projects.Aggregate is
       end if;
    end Collect_Aggregated_Projects;
 
-   --------------------------------
-   -- Num_Of_Aggregated_Projects --
-   --------------------------------
-
-   function Num_Of_Aggregated_Projects return Natural
-   is (Natural (Aggregated_Projects.Length));
-
    ---------------------------------
    -- Process_Aggregated_Projects --
    ---------------------------------

@@ -37,7 +37,6 @@ with GPR2.Project.Registry.Attribute;
 with GPR2.Project.Tree;
 with GPR2.Project.View;
 
-with GPR2.Project.View.Set;
 with Test.Common;
 with Utils.Command_Lines; use Utils.Command_Lines;
 

@@ -23,9 +23,12 @@
 
 with Ada.Directories;
 with Ada.Exceptions;
+
 with GNAT.Command_Line;
 with GNAT.Directory_Operations; use GNAT.Directory_Operations;
 with GNAT.OS_Lib;
+
+with GPR2;
 
 with Utils.Command_Lines.Common; use Utils.Command_Lines.Common;
 with Utils.Environment;
@@ -244,7 +247,9 @@ package body Utils.Drivers is
 
       Init (Tool, Cmd);
 
-      if Aggregate.Use_Subprocesses_For_Aggregated_Projects then
+      if Project_Tree.Is_Defined
+        and then Project_Tree.Root_Project.Kind in GPR2.Aggregate_Kind
+      then
          Aggregate.Process_Aggregated_Projects (Cmd);
       else
          Process_Files;
