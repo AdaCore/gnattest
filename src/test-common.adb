@@ -595,6 +595,33 @@ package body Test.Common is
 
    end Nesting_Difference;
 
+   ----------------
+   -- Node_Image --
+   ----------------
+
+   function Node_Image (Node : Ada_Node'Class) return String is
+      Charset : constant String := Node.Unit.Get_Charset;
+   begin
+      if Node.Kind not in Ada_Defining_Name then
+         return Encode (Text (Node), Charset);
+      end if;
+
+      --  Special processing for Defining_Name: Only print the non-trivia
+      --  tokens.
+
+      declare
+         Name_Toks : constant Token_Iterator := Node.Token_Range;
+         Res       : Unbounded_String;
+      begin
+         for Tok of Name_Toks loop
+            if not Is_Trivia (Tok) then
+               Res := Res & Encode (Text (Tok), Charset);
+            end if;
+         end loop;
+         return To_String (Res);
+      end;
+   end Node_Image;
+
    ----------------------
    --   Get_Subp_Name  --
    ----------------------

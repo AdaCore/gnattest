@@ -1,0 +1,4 @@
+description: Ensure that gnattest generates legal sources when some
+  defining names contain trivia tokens, such as newline characters.
+
+driver: shell_script
