@@ -30,24 +30,42 @@ RELOCATE_BUILD=--relocate-build-tree="$(BUILD_ROOT)" --root-dir=.
 BIN=$(BUILD_ROOT)/bin
 endif
 
-GPRBUILD = gprbuild -v -k -p -j$(PROCESSORS) $(RELOCATE_BUILD)
+GPRBUILD = gprbuild -v -k -p \
+	   -j$(PROCESSORS) \
+	   $(RELOCATE_BUILD)
+
+
+ifdef INSTRUMENTED
+# When instrumenting, expect a "GNATTEST_TRACE_DIR" variable at runtime
+# to indicate where to put trace files.
+GNATCOV_INSTR = gnatcov instrument \
+		-j$(PROCESSORS) \
+		--level=stmt \
+		--dump-filename-env-var=GNATTEST_TRACE_DIR
+GPRBUILD += --implicit-with=gnatcov_rts \
+	   --src-subdirs=gnatcov-instr
+endif
 
 .PHONY: all
-all:
-	which gprbuild
-	which gcc
-	for proj in $(ALL_PROJECTS) ; do \
-		$(GPRBUILD) \
-			-XLIBRARY_TYPE=$(LIBRARY_TYPE) \
-			-XXMLADA_BUILD=$(LIBRARY_TYPE) \
-			-XBUILD_MODE=$(BUILD_MODE) \
-			-P $$proj ; \
-	done
+all: bin lib testsuite_drivers
 
 .PHONY: lib
 lib:
 	which gprbuild
 	which gcc
+ifdef INSTRUMENTED
+	for kind in $(ALL_LIBRARY_TYPES) ; do \
+		rm -f obj/lib/$$kind/*.lexch; \
+		$(GNATCOV_INSTR) \
+			-XLIBRARY_TYPE=$$kind \
+			-XBUILD_MODE=$(BUILD_MODE) \
+			-P $(LIB_PROJECT) ; \
+		$(GPRBUILD) \
+			-XLIBRARY_TYPE=$$kind \
+			-XBUILD_MODE=$(BUILD_MODE) \
+			-P $(LIB_PROJECT) ; \
+	done ;
+else
 	for kind in $(ALL_LIBRARY_TYPES) ; do \
 		rm -f obj/lib/$$kind/*.lexch; \
 		$(GPRBUILD) \
@@ -55,11 +73,19 @@ lib:
 			-XBUILD_MODE=$(BUILD_MODE) \
 			-P $(LIB_PROJECT) ; \
 	done ;
+endif
 
 .PHONY: bin
 bin:
 	which gprbuild
 	which gcc
+ifdef INSTRUMENTED
+	$(GNATCOV_INSTR) \
+		-XLIBRARY_TYPE=$(LIBRARY_TYPE) \
+		-XXMLADA_BUILD=$(LIBRARY_TYPE) \
+		-XBUILD_MODE=$(BUILD_MODE) \
+		-P $(BIN_PROJECT) ;
+endif
 	$(GPRBUILD) \
 		-XLIBRARY_TYPE=$(LIBRARY_TYPE) \
 		-XXMLADA_BUILD=$(LIBRARY_TYPE) \
@@ -70,6 +96,21 @@ bin:
 testsuite_drivers:
 	which gprbuild
 	which gcc
+ifdef INSTRUMENTED
+	for proj in $(TESTSUITE_PROJECTS) ; do \
+		$(GNATCOV_INSTR) \
+			-XLIBRARY_TYPE=$(LIBRARY_TYPE) \
+			-XXMLADA_BUILD=$(LIBRARY_TYPE) \
+			-XBUILD_MODE=$(BUILD_MODE) \
+			-P $$proj \
+			--projects $(LIB_PROJECT) ; \
+		$(GPRBUILD) \
+			-XLIBRARY_TYPE=$(LIBRARY_TYPE) \
+			-XXMLADA_BUILD=$(LIBRARY_TYPE) \
+			-XBUILD_MODE=$(BUILD_MODE) \
+			-P $$proj ; \
+	done
+else
 	for proj in $(TESTSUITE_PROJECTS) ; do \
 		$(GPRBUILD) \
 			-XLIBRARY_TYPE=$(LIBRARY_TYPE) \
@@ -77,6 +118,7 @@ testsuite_drivers:
 			-XBUILD_MODE=$(BUILD_MODE) \
 			-P $$proj ; \
 	done
+endif
 
 .PHONY: test
 test: all
