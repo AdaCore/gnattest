@@ -7895,7 +7895,7 @@ package body Test.Skeleton is
                Decl_Line => Natural (Subp_Span.Start_Line),
                Decl_File =>
                  new String'
-                   (Ada.Directories.Simple_Name
+                   (Ada.Directories.Full_Name
                       (Subp.Subp_Declaration.Unit.Get_Filename)),
                others    => <>));
          TR := TP_Mapping_List.Reference (TP_List, TP).TR_List.Last;
