@@ -33,13 +33,11 @@ with Ada.Strings.Fixed;       use Ada.Strings.Fixed;
 
 with GNATCOLL.Traces; use GNATCOLL.Traces;
 
-with GNAT.SHA1;
-
-with Utils.Command_Lines; use Utils.Command_Lines;
-
 with GNAT.Directory_Operations; use GNAT.Directory_Operations;
+with GNAT.SHA1;
 with GNAT.Traceback.Symbolic;
 
+with Utils.Command_Lines; use Utils.Command_Lines;
 with Utils.Tool_Names;
 with Utils.String_Utilities;
 
@@ -1339,9 +1337,7 @@ package body Test.Common is
    -- Extract_Preprocessor_Config --
    ---------------------------------
 
-   procedure Extract_Preprocessor_Config
-     (Tree : GNATCOLL.Projects.Project_Tree'Class)
-   is
+   procedure Extract_Preprocessor_Config (Tree : GPR2.Project.Tree.Object) is
       use Libadalang.Preprocessing;
       Data : constant Preprocessor_Data :=
         Extract_Preprocessor_Data_From_Project (Tree);

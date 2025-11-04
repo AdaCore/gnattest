@@ -21,6 +21,7 @@
 -- <http://www.gnu.org/licenses/>.                                          --
 ------------------------------------------------------------------------------
 
+with Ada.Directories;
 with GNAT.Byte_Order_Mark;
 with GNAT.OS_Lib;
 
@@ -33,6 +34,7 @@ with Libadalang.Project_Provider; use Libadalang.Project_Provider;
 
 with Utils.Command_Lines.Common; use Utils.Command_Lines.Common;
 with Utils.Err_Out;
+with Utils.Projects;             use Utils.Projects;
 with Utils.String_Utilities;     use Utils.String_Utilities;
 
 package body Utils.Tools is
@@ -71,8 +73,6 @@ package body Utils.Tools is
 
       if Tool.Context = No_Analysis_Context or else Counter mod 100 = 0 then
          declare
-            use GNATCOLL.Projects;
-
             Default_Config : Libadalang.Preprocessing.File_Config;
             File_Configs   : Libadalang.Preprocessing.File_Config_Maps.Map;
             File_Reader    :
@@ -80,13 +80,7 @@ package body Utils.Tools is
                 Langkit_Support.File_Readers.No_File_Reader_Reference;
 
             Provider : constant Unit_Provider_Reference :=
-              (if Status (Tool.Project_Tree.all) = Empty
-               then No_Unit_Provider_Reference
-               else
-                 Create_Project_Unit_Provider
-                   (Tree             => Tool.Project_Tree,
-                    Env              => Tool.Project_Env,
-                    Is_Project_Owner => False));
+              Create_Project_Unit_Provider (Tree => Project_Tree);
 
          begin
             --  Check if there are preprocessing directives and if so, update
@@ -94,8 +88,7 @@ package body Utils.Tools is
 
             if Preprocessing_Allowed then
                Libadalang.Preprocessing.Extract_Preprocessor_Data_From_Project
-                 (Tree           => Tool.Project_Tree.all,
-                  Project        => No_Project,
+                 (Tree           => Project_Tree,
                   Default_Config => Default_Config,
                   File_Configs   => File_Configs);
 
@@ -128,7 +121,9 @@ package body Utils.Tools is
 
          if Has_Diagnostics (Unit) then
             Syntax_Error := True;
-            Err_Out.Put ("Syntax errors in \1\n", File_Name);
+            Err_Out.Put
+              ("Syntax errors in \1\n",
+               Ada.Directories.Simple_Name (File_Name));
 
             for D of Diagnostics (Unit) loop
                Err_Out.Put

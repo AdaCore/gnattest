@@ -59,17 +59,17 @@ with Test.Harness;
 with Test.Skeleton.Source_Table; use Test.Skeleton.Source_Table;
 with Test.Mapping;               use Test.Mapping;
 with Test.Stub;
-with TGen.JSON.Test_Cases;
-with Utils.Command_Lines;        use Utils.Command_Lines;
-with Utils.Environment;
-with Utils.String_Utilities;
-
 with TGen.LAL_Utils;
-with TGen.JSON;        use TGen.JSON;
+with TGen.JSON;                  use TGen.JSON;
+with TGen.JSON.Test_Cases;
 with TGen.JSON.Unparse;
 with TGen.Libgen;
-with TGen.Marshalling; use TGen.Marshalling;
+with TGen.Marshalling;           use TGen.Marshalling;
 with TGen.Strings;
+with Utils.Command_Lines;        use Utils.Command_Lines;
+with Utils.Environment;
+with Utils.Projects;             use Utils.Projects;
+with Utils.String_Utilities;
 
 package body Test.Skeleton is
    Me                : constant Trace_Handle :=
@@ -5659,7 +5659,7 @@ package body Test.Skeleton is
                        & "test_obj"
                        & Directory_Separator
                        & Test_Prj_Prefix
-                       & To_Lower (Source_Project_Tree.Root_Project.Name)
+                       & To_Lower (String (Project_Tree.Root_Project.Name))
                        & Instr_Suffix
                      else Output_Dir)
                     & Directory_Separator
@@ -6873,7 +6873,7 @@ package body Test.Skeleton is
                        & "test_obj"
                        & Directory_Separator
                        & Test_Prj_Prefix
-                       & To_Lower (Source_Project_Tree.Root_Project.Name)
+                       & To_Lower (String (Project_Tree.Root_Project.Name))
                        & Instr_Suffix
                      else Output_Dir)
                     & Directory_Separator
@@ -9289,28 +9289,22 @@ package body Test.Skeleton is
    -------------------
 
    procedure Process_Stubs (List : Ada_Nodes_List.List) is
-      Cur : Ada_Nodes_List.Cursor;
       Str : String_Access;
 
       Stub_Success : Boolean;
 
       use Ada_Nodes_List;
    begin
-      if Is_Empty (List) then
-         return;
-      end if;
-
       --  Once we change the context, contents of List won't make sense.
-      Cur := List.First;
-      while Cur /= Ada_Nodes_List.No_Element loop
 
-         Str := new String'(Ada_Nodes_List.Element (Cur).Unit.Get_Filename);
+      for Node of List loop
+         Str := new String'(Node.Unit.Get_Filename);
 
          if Get_Source_Body (Str.all) /= "" then
             if not Source_Stubbed (Str.all) then
                begin
                   Test.Stub.Process_Unit
-                    (Ada_Nodes_List.Element (Cur),
+                    (Node,
                      Get_Source_Stub_Dir (Str.all)
                      & GNAT.OS_Lib.Directory_Separator
                      & Base_Name (Get_Source_Body (Str.all)),
@@ -9336,8 +9330,6 @@ package body Test.Skeleton is
          end if;
 
          Free (Str);
-
-         Next (Cur);
       end loop;
 
    end Process_Stubs;

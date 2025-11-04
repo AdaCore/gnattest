@@ -229,7 +229,7 @@ package body Test.Stub is
      Ada.Containers.Indefinite_Vectors (Natural, String);
 
    type Markered_Data_Type is record
-      Commneted_Out : Boolean := False;
+      Commented_Out : Boolean := False;
       Lines         : String_Vectors.Vector := String_Vectors.Empty_Vector;
    end record;
 
@@ -957,7 +957,7 @@ package body Test.Stub is
                   when Other  =>
                      if Is_Id_String (Line.all) then
                         Parse_Id_String (Line.all, ID, Commented_Out);
-                        MD.Commneted_Out := Commented_Out;
+                        MD.Commented_Out := Commented_Out;
                         ID_Found := True;
                         Trace
                           (Me,
@@ -1156,7 +1156,7 @@ package body Test.Stub is
 
    begin
 
-      if MD.Commneted_Out = Comment_Out then
+      if MD.Commented_Out = Comment_Out then
          for I in MD.Lines.First_Index .. MD.Lines.Last_Index loop
             S_Put (0, MD.Lines.Element (I));
             New_Line_Count;

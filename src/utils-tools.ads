@@ -21,8 +21,6 @@
 -- <http://www.gnu.org/licenses/>.                                          --
 ------------------------------------------------------------------------------
 
-with GNATCOLL.Projects;
-
 with Libadalang.Analysis; use Libadalang.Analysis;
 
 with Utils.Command_Lines; use Utils.Command_Lines;
@@ -37,12 +35,6 @@ package Utils.Tools is
    type Pass_Kind is (First_Pass, Second_Pass);
 
    type Tool_State is abstract tagged limited record
-      Project_Tree : GNATCOLL.Projects.Project_Tree_Access;
-      --  The driver sets this to the current project. If there is no
-      --  -P switch, then the Status will be Empty.
-
-      Project_Env : GNATCOLL.Projects.Project_Environment_Access;
-
       Context : Analysis_Context := No_Analysis_Context;
       --  The only tool that needs access to the Context is gnatstub.
 

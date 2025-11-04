@@ -117,6 +117,9 @@ package Utils.String_Utilities is
    function Replace_String (S, From, To : String) return String;
    --  Same as Replace_All, but for String
 
+   function Dashes (S : String) return String
+   is (Replace_String (S, From => "_", To => "-"));
+
    subtype Digit is Integer range 0 .. 9;
    function Char_To_Digit (C : Character) return Digit;
    function Char_To_Digit (C : W_Char) return Digit;

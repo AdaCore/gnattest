@@ -20,18 +20,26 @@
 -- the files COPYING3 and COPYING.RUNTIME respectively.  If not, see        --
 -- <http://www.gnu.org/licenses/>.                                          --
 ------------------------------------------------------------------------------
-pragma Ada_2012;
 
+with Ada.Characters.Handling; use Ada.Characters.Handling;
 with Ada.Containers.Indefinite_Ordered_Maps;
 
 with GNAT.OS_Lib;               use GNAT.OS_Lib;
 with GNAT.Directory_Operations; use GNAT.Directory_Operations;
 
-with GNAT.Strings;
 with GNATCOLL.VFS;    use GNATCOLL.VFS;
 with GNATCOLL.Traces; use GNATCOLL.Traces;
 
-with Ada.Characters.Handling; use Ada.Characters.Handling;
+with GPR2; use GPR2;
+with GPR2.Build.Compilation_Unit;
+with GPR2.Build.Source;
+with GPR2.Path_Name;
+with GPR2.Project.Attribute;
+with GPR2.Project.Registry.Attribute;
+with GPR2.Project.Tree;
+with GPR2.Project.View;
+
+with Utils.Projects; use Utils.Projects;
 
 package body Test.Skeleton.Source_Table is
 
@@ -74,7 +82,7 @@ package body Test.Skeleton.Source_Table is
 
       Theoretical_Body : String_Access := null;
       --  Set for creating an instrumented body in case a bodyless spec would
-      --  nned a body due to expression functions.
+      --  need a body due to expression functions.
 
       Stub_Data_Base_Spec : String_Access;
       Stub_Data_Base_Body : String_Access;
@@ -135,8 +143,7 @@ package body Test.Skeleton.Source_Table is
    --  Enforce_Project_Extension.
 
    type Project_Record is record
-      Path    : String_Access;
-      Obj_Dir : String_Access;
+      Path : String_Access;
 
       Stub_Dir : String_Access;
       --  Directory in which the stubbed sources must be generated
@@ -147,14 +154,15 @@ package body Test.Skeleton.Source_Table is
 
       Imported_List : List_Of_Strings.List;
       --  List of projects that this project imports, either directly, or
-      --  through dependencies of the extended projects.
+      --  through dependencies of the extended projects. Note that this
+      --  contains limited with-ed projects.
 
       Limited_Withed : String_Set.Set;
       --  Set of projects that are limited with'ed by this projects
 
       Is_Externally_Built  : Boolean := False;
       Is_Library           : Boolean := False;
-      Needed_For_Extention : Boolean := False;
+      Needed_For_Extension : Boolean := False;
 
       Aggregate_Lib : Boolean := False;
       --  Whether this project is an aggregate library project. As an aggregate
@@ -237,72 +245,65 @@ package body Test.Skeleton.Source_Table is
 
       if Stub_Mode_ON then
          declare
-            Given_File : constant GNATCOLL.VFS.Virtual_File := Create (+Fname);
-            Other_File : constant GNATCOLL.VFS.Virtual_File :=
-              Source_Project_Tree.Other_File (Given_File);
-            F_Info     : constant File_Info :=
-              Source_Project_Tree.Info (Given_File);
-            P          : Project_Type;
+            Unit_Name : constant Optional_Name_Type :=
+              Project_Tree.Root_Project.Visible_Source
+                (GPR2.Path_Name.Create
+                   (GNATCOLL.VFS.Create (GNATCOLL.VFS."+" (Fname))))
+                .Unit
+                .Name;
+            Unit      : constant GPR2.Build.Compilation_Unit.Object :=
+              Unit_Name_To_Unit (String (Unit_Name));
+
+            Stub_Unit_Name : constant Name_Type :=
+              Name_Type (String (Unit_Name) & "." & Stub_Data_Unit_Name);
+
+            P : GPR2.Project.View.Object := Unit.Owning_View;
          begin
-            if Given_File /= Other_File
-              and then Is_Regular_File (Other_File.Display_Full_Name)
-            then
+            if Unit.Has_Part (S_Body) then
                New_SF_Record.Corresponding_Body :=
-                 new String'(Other_File.Display_Full_Name);
+                 new String'(Unit.Main_Body.Source.String_Value);
             end if;
 
             New_SF_Record.Stub_Data_Base_Spec :=
               new String'
-                (+(File_From_Unit
-                     (Project         => F_Info.Project,
-                      Unit_Name       =>
-                        F_Info.Unit_Name & "." & Stub_Data_Unit_Name,
-                      Part            => Unit_Spec,
-                      Language        => F_Info.Language,
-                      File_Must_Exist => False)));
+                (String (P.Filename_For_Unit (Stub_Unit_Name, S_Spec)));
 
             New_SF_Record.Stub_Data_Base_Body :=
               new String'
-                (+(File_From_Unit
-                     (Project         => F_Info.Project,
-                      Unit_Name       =>
-                        F_Info.Unit_Name & "." & Stub_Data_Unit_Name,
-                      Part            => Unit_Body,
-                      Language        => F_Info.Language,
-                      File_Must_Exist => False)));
+                (String (P.Filename_For_Unit (Stub_Unit_Name, S_Body)));
 
-            P := F_Info.Project;
-            loop
-               exit when Extending_Project (P) = No_Project;
-               P := Extending_Project (P);
-            end loop;
-
-            New_SF_Record.Project_Name := new String'(P.Name);
+            P := Outermost_Extending (P);
+            New_SF_Record.Project_Name := new String'(String (P.Name));
          end;
 
       end if;
 
       if Instrument then
          declare
-            Given_File : constant GNATCOLL.VFS.Virtual_File := Create (+Fname);
-            Other_File : constant GNATCOLL.VFS.Virtual_File :=
-              Source_Project_Tree.Other_File (Given_File);
-            F_Info     : constant File_Info :=
-              Source_Project_Tree.Info (Given_File);
-            P          : constant Project_Type := F_Info.Project;
+            Unit_Name : constant Optional_Name_Type :=
+              Project_Tree.Root_Project.Visible_Source
+                (GPR2.Path_Name.Create
+                   (GNATCOLL.VFS.Create (GNATCOLL.VFS."+" (Fname))))
+                .Unit
+                .Name;
+            Unit      : constant GPR2.Build.Compilation_Unit.Object :=
+              Unit_Name_To_Unit (String (Unit_Name));
+
+            P : constant GPR2.Project.View.Object := Unit.Owning_View;
          begin
             New_SF_Record.Inst_Dir :=
               new String'
-                (Display_Full_Name
-                   (P.Object_Dir / (+(To_Lower (P.Name) & Instr_Suffix))));
-            if Given_File /= Other_File then
-               if Is_Regular_File (Other_File.Display_Full_Name) then
-                  New_SF_Record.Corresponding_Body :=
-                    new String'(Other_File.Display_Full_Name);
-               else
-                  New_SF_Record.Theoretical_Body :=
-                    new String'(Other_File.Display_Full_Name);
-               end if;
+                (P.Object_Directory.String_Value
+                 & Directory_Separator
+                 & To_Lower (String (P.Name))
+                 & Instr_Suffix);
+
+            if Unit.Has_Part (S_Body) then
+               New_SF_Record.Corresponding_Body :=
+                 new String'(Unit.Main_Body.Source.String_Value);
+            else
+               New_SF_Record.Theoretical_Body :=
+                 new String'(String (P.Filename_For_Unit (Unit_Name, S_Body)));
             end if;
          end;
       end if;
@@ -433,49 +434,34 @@ package body Test.Skeleton.Source_Table is
       New_SF_Record.Status := Body_Reference;
 
       declare
-         Given_File : constant GNATCOLL.VFS.Virtual_File := Create (+Fname);
-         Other_File : constant GNATCOLL.VFS.Virtual_File :=
-           Source_Project_Tree.Other_File (Given_File);
-         F_Info     : constant File_Info :=
-           Source_Project_Tree.Info (Given_File);
-         P          : Project_Type;
+         Unit_Name      : constant Optional_Name_Type :=
+           Project_Tree.Root_Project.Visible_Source
+             (GPR2.Path_Name.Create
+                (GNATCOLL.VFS.Create (GNATCOLL.VFS."+" (Fname))))
+             .Unit
+             .Name;
+         Unit           : constant GPR2.Build.Compilation_Unit.Object :=
+           Unit_Name_To_Unit (String (Unit_Name));
+         Stub_Unit_Name : constant Name_Type :=
+           Name_Type (String (Unit_Name) & "." & Stub_Data_Unit_Name);
+
+         P : GPR2.Project.View.Object := Unit.Owning_View;
       begin
-         if Given_File /= Other_File
-           and then Is_Regular_File (Other_File.Display_Full_Name)
-         then
+         if Unit.Has_Part (S_Body) then
             New_SF_Record.Corresponding_Body :=
-              new String'(Other_File.Display_Full_Name);
+              new String'(Unit.Main_Body.Source.String_Value);
          end if;
 
          New_SF_Record.Stub_Data_Base_Spec :=
-           new String'
-             (+(File_From_Unit
-                  (Project         => F_Info.Project,
-                   Unit_Name       =>
-                     F_Info.Unit_Name & "." & Stub_Data_Unit_Name,
-                   Part            => Unit_Spec,
-                   Language        => F_Info.Language,
-                   File_Must_Exist => False)));
-
+           new String'(String (P.Filename_For_Unit (Stub_Unit_Name, S_Spec)));
          New_SF_Record.Stub_Data_Base_Body :=
-           new String'
-             (+(File_From_Unit
-                  (Project         => F_Info.Project,
-                   Unit_Name       =>
-                     F_Info.Unit_Name & "." & Stub_Data_Unit_Name,
-                   Part            => Unit_Body,
-                   Language        => F_Info.Language,
-                   File_Must_Exist => False)));
+           new String'(String (P.Filename_For_Unit (Stub_Unit_Name, S_Body)));
 
-         P := F_Info.Project;
-         loop
-            exit when Extending_Project (P) = No_Project;
-            P := Extending_Project (P);
-         end loop;
-         New_SF_Record.Project_Name := new String'(P.Name);
-         New_SF_Record.Unit_Name := new String'(F_Info.Unit_Name);
+         P := Outermost_Extending (P);
+
+         New_SF_Record.Project_Name := new String'(String (P.Name));
+         New_SF_Record.Unit_Name := new String'(String (Unit_Name));
       end;
-
       Insert (SF_Table, Full_Source_Name_String.all, New_SF_Record);
 
       Free (Short_Source_Name_String);
@@ -507,18 +493,19 @@ package body Test.Skeleton.Source_Table is
 
       declare
          Given_File : constant GNATCOLL.VFS.Virtual_File := Create (+Fname);
-         F_Info     : constant File_Info :=
-           Source_Project_Tree.Info (Given_File);
-         P          : constant Project_Type := F_Info.Project;
+         Src        : constant GPR2.Build.Source.Object :=
+           Project_Tree.Root_Project.Visible_Source
+             (GPR2.Path_Name.Create (Given_File));
+         P          : constant GPR2.Project.View.Object := Src.Owning_View;
       begin
          New_SF_Record.Inst_Dir :=
            new String'
-             (Display_Full_Name
-                (P.Object_Dir / (+(To_Lower (P.Name) & Instr_Suffix))));
+             (P.Object_Directory.String_Value
+              & Directory_Separator
+              & To_Lower (String (P.Name))
+              & Instr_Suffix);
       end;
-
       Insert (SF_Table, Full_Source_Name_String.all, New_SF_Record);
-
       Free (Full_Source_Name_String);
    end Add_Body_For_Instrumentation;
 
@@ -768,121 +755,116 @@ package body Test.Skeleton.Source_Table is
    -- Initialize_Project_Table --
    ------------------------------
 
-   procedure Initialize_Project_Table (Source_Project_Tree : Project_Tree) is
-      Iter, Importing, Imported : Project_Iterator;
-      P, P2                     : Project_Type;
-
-      Attr : constant Attribute_Pkg_String := Build ("", "externally_built");
+   procedure Initialize_Project_Table is
    begin
       Trace (Me, "Initialize_Project_Table");
       Increase_Indent (Me);
-      Iter :=
-        Start
-          (Source_Project_Tree.Root_Project,
-           Include_Aggregate_Libraries => True);
-      while Current (Iter) /= No_Project loop
-         P := Current (Iter);
-         Trace (Me, "processing " & P.Name);
+      for View of Project_Tree.Ordered_Views loop
+         Trace (Me, "processing " & String (View.Name));
 
-         if Extending_Project (P) /= No_Project then
-            --  We do not want extended projects in the table.
+         --  Skip extended projects
+
+         if View.Is_Extended then
             goto Next_Project;
          end if;
 
          declare
             PR : Project_Record;
          begin
-            if Has_Attribute (P, Attr) then
-               if To_Lower (Attribute_Value (P, Attr)) = "true" then
-                  PR.Is_Externally_Built := True;
-                  --  Nothing should be done for sources of externally built
-                  --  projects, so no point in calculating obj dirs and so on.
-                  goto Add_Project;
-               end if;
+            if View.Is_Externally_Built then
+               PR.Is_Externally_Built := True;
+               --  Nothing should be done for sources of externally built
+               --  projects, so no point in calculating obj dirs and so on.
+               goto Add_Project;
             end if;
             PR.Is_Externally_Built := False;
-            PR.Aggregate_Lib := P.Is_Aggregate_Library;
+            PR.Aggregate_Lib := View.Kind = K_Aggregate_Library;
+            PR.Is_Library := View.Kind in Library_Kind;
 
-            if P = Source_Project_Tree.Root_Project then
-               PR.Needed_For_Extention := True;
+            if View.Is_Namespace_Root then
+               PR.Needed_For_Extension := True;
             end if;
 
-            if Has_Attribute (P, Library_Name_Attribute)
-              and then Attribute_Value (P, Library_Name_Attribute) /= ""
-            then
-               PR.Is_Library := True;
-            end if;
-
-            PR.Path := new String'(P.Project_Path.Display_Full_Name);
-            PR.Obj_Dir := new String'(P.Object_Dir.Display_Full_Name);
+            PR.Path := new String'(View.Path_Name.String_Value);
             if Is_Absolute_Path (Stub_Dir_Name.all) then
                PR.Stub_Dir :=
-                 new String'(Stub_Dir_Name.all & Directory_Separator & P.Name);
-            else
+                 new String'
+                   (Stub_Dir_Name.all
+                    & Directory_Separator
+                    & String (View.Name));
+            elsif View.Kind in With_Object_Dir_Kind then
                PR.Stub_Dir :=
                  new String'
                    (Normalize_Pathname
-                      (P.Object_Dir.Display_Full_Name
+                      (View.Object_Directory.String_Value
+                       & Directory_Separator
                        & Stub_Dir_Name.all
                        & Directory_Separator
-                       & P.Name,
+                       & String (View.Name),
                        Resolve_Links  => False,
                        Case_Sensitive => False));
             end if;
 
             Increase_Indent (Me, "imported projects:");
-            P2 := P;
 
-            while P2 /= No_Project loop
-               Imported :=
-                 P2.Start
-                   (Direct_Only                 => True,
-                    Include_Extended            => False,
-                    Include_Aggregate_Libraries => True);
+            --  Add the with-ed projects to the imported list
 
-               while Current (Imported) /= No_Project loop
-
-                  --  ??? It seems that aggregate library projects include
-                  --  themselves according to GNATOLL.Projects..
-
-                  if Current (Imported).Name /= P.Name then
-                     PR.Imported_List.Append (Current (Imported).Name);
-                     if Is_Limited_With (Imported) then
-                        PR.Limited_Withed.Include (Current (Imported).Name);
-                     end if;
-                     Trace (Me, Current (Imported).Name);
-                  end if;
-                  Next (Imported);
-               end loop;
-
-               P2 := Extended_Project (P2);
+            for Withed_View of View.Imports loop
+               PR.Imported_List.Append (String (Withed_View.Name));
             end loop;
-            Decrease_Indent (Me);
 
-            Importing := P.Find_All_Projects_Importing (Direct_Only => True);
-            Increase_Indent (Me, "importing projects:");
-            while Current (Importing) /= No_Project loop
+            --  .. also add the aggregated projects to the imported list
 
-               --  Ensure to only reference the extending-most project, as
-               --  extended projects are skipped.
+            if View.Kind in Aggregate_Kind then
+               for Aggr of View.Aggregated loop
+                  PR.Imported_List.Append (String (Aggr.Name));
+               end loop;
+            end if;
 
-               PR.Importing_List.Append
-                 (Current (Importing).Extending_Project (Recurse => True)
-                    .Name);
-               Trace (Me, Current (Importing).Name);
-               Next (Importing);
+            --  .. and the limited with-ed projects to both the imported list
+            --  and the limited withed list.
+
+            for Limited_Withed_View of View.Limited_Imports loop
+               PR.Imported_List.Append (String (Limited_Withed_View.Name));
+               PR.Limited_Withed.Include (String (Limited_Withed_View.Name));
             end loop;
             Decrease_Indent (Me);
 
             <<Add_Project>>
-
-            PF_Table.Include (P.Name, PR);
+            PF_Table.Include (String (View.Name), PR);
          end;
-
          <<Next_Project>>
-
-         Next (Iter);
       end loop;
+
+      --  Then, compute importing lists after each project has been inserted in
+      --  the PF_Table.
+
+      for View of Project_Tree.Ordered_Views loop
+         if not View.Is_Extended and then not View.Is_Externally_Built then
+            declare
+               --  The set of importing projects consists of projects with-ing,
+               --  limiting with-ing or aggregating this project.
+
+               View_Cur    : constant Project_File_Table.Cursor :=
+                 PF_Table.Find (String (View.Name));
+               View_Entry  : constant Project_Record := Element (View_Cur);
+               All_Imports : List_Of_Strings.List := View_Entry.Imported_List;
+            begin
+               Increase_Indent (Me, "importing projects:");
+               for P of View_Entry.Limited_Withed loop
+                  All_Imports.Append (P);
+               end loop;
+
+               for Import of All_Imports loop
+                  PF_Table.Reference (PF_Table.Find (Import))
+                    .Importing_List
+                    .Append (String (View.Name));
+               end loop;
+               Decrease_Indent (Me);
+            end;
+         end if;
+      end loop;
+
       Decrease_Indent (Me);
    end Initialize_Project_Table;
 
@@ -932,7 +914,7 @@ package body Test.Skeleton.Source_Table is
          end if;
 
          Local_PR := PF_Table.Element (S);
-         Local_PR.Needed_For_Extention := True;
+         Local_PR.Needed_For_Extension := True;
          PF_Table.Replace (S, Local_PR);
 
          Cur := Local_PR.Importing_List.First;
@@ -940,8 +922,8 @@ package body Test.Skeleton.Source_Table is
             Process_Project (List_Of_Strings.Element (Cur));
             Next (Cur);
          end loop;
-
       end Process_Project;
+
    begin
       Trace (Me, "Mark_Projects_With_Stubbed_Sources");
       Increase_Indent (Me);
@@ -952,7 +934,7 @@ package body Test.Skeleton.Source_Table is
             PR :=
               PF_Table.Element
                 (Source_File_Table.Element (S_Cur).Project_Name.all);
-            PR.Needed_For_Extention := True;
+            PR.Needed_For_Extension := True;
 
             Trace
               (Me,
@@ -972,7 +954,7 @@ package body Test.Skeleton.Source_Table is
       P_Cur := PF_Table.First;
       while P_Cur /= Project_File_Table.No_Element loop
          if not Processed_Projects.Contains (Project_File_Table.Key (P_Cur))
-           and then Project_File_Table.Element (P_Cur).Needed_For_Extention
+           and then Project_File_Table.Element (P_Cur).Needed_For_Extension
          then
             Process_Project (Project_File_Table.Key (P_Cur));
          end if;
@@ -1087,7 +1069,7 @@ package body Test.Skeleton.Source_Table is
    begin
       return
         Project_File_Table.Element (PF_Table, Project_Name)
-          .Needed_For_Extention;
+          .Needed_For_Extension;
    end Project_Extended;
 
    ------------------------
@@ -1231,12 +1213,11 @@ package body Test.Skeleton.Source_Table is
       SF_Rec_Key : String_Access;
       Cur        : Source_File_Table.Cursor := SF_Table.First;
 
-      Project : Project_Type;
+      View : GPR2.Project.View.Object;
 
       TD_Name : constant Virtual_File :=
         GNATCOLL.VFS.Create (+Test_Dir_Name.all);
    begin
-
       loop
          exit when Cur = Source_File_Table.No_Element;
 
@@ -1246,14 +1227,16 @@ package body Test.Skeleton.Source_Table is
          if TD_Name.Is_Absolute_Path then
             SF_Rec.Test_Destination := new String'(Test_Dir_Name.all);
          else
-            Project :=
-              GNATCOLL.Projects.Project
-                (Info
-                   (Source_Project_Tree,
-                    GNATCOLL.VFS.Create (+SF_Rec.Full_Source_Name.all)));
+            View :=
+              Project_Tree.Root_Project.Visible_Source
+                (GPR2.Path_Name.Create
+                   (GNATCOLL.VFS.Create (+SF_Rec.Full_Source_Name.all)))
+                .Owning_View;
             SF_Rec.Test_Destination :=
               new String'
-                (Project.Object_Dir.Display_Full_Name & Test_Dir_Name.all);
+                (View.Object_Directory.String_Value
+                 & Directory_Separator
+                 & Test_Dir_Name.all);
          end if;
 
          Replace (SF_Table, SF_Rec_Key.all, SF_Rec);
@@ -1274,7 +1257,7 @@ package body Test.Skeleton.Source_Table is
       SF_Rec_Key : String_Access;
       Cur        : Source_File_Table.Cursor := SF_Table.First;
 
-      Project : Project_Type;
+      View : GPR2.Project.View.Object;
 
       TD_Name : constant Virtual_File :=
         GNATCOLL.VFS.Create (+Stub_Dir_Name.all);
@@ -1286,30 +1269,27 @@ package body Test.Skeleton.Source_Table is
          SF_Rec := Source_File_Table.Element (Cur);
          SF_Rec_Key := new String'(Key (Cur));
 
-         Project :=
-           GNATCOLL.Projects.Project
-             (Info
-                (Source_Project_Tree,
-                 GNATCOLL.VFS.Create (+SF_Rec.Full_Source_Name.all)));
-
-         loop
-            exit when Extending_Project (Project) = No_Project;
-            Project := Extending_Project (Project);
-         end loop;
+         View :=
+           Project_Tree.Root_Project.Visible_Source
+             (GPR2.Path_Name.Create
+                (GNATCOLL.VFS.Create (+SF_Rec.Full_Source_Name.all)))
+             .Owning_View;
+         View := Outermost_Extending (View);
 
          --  Better use subdirs to separate stubs from different projects.
          if TD_Name.Is_Absolute_Path then
             SF_Rec.Stub_Destination :=
               new String'
-                (Stub_Dir_Name.all & Directory_Separator & Project.Name);
+                (Stub_Dir_Name.all & Directory_Separator & String (View.Name));
          else
             SF_Rec.Stub_Destination :=
               new String'
                 (Normalize_Pathname
-                   (Project.Object_Dir.Display_Full_Name
+                   (View.Object_Directory.String_Value
+                    & Directory_Separator
                     & Stub_Dir_Name.all
                     & Directory_Separator
-                    & Project.Name,
+                    & String (View.Name),
                     Resolve_Links  => False,
                     Case_Sensitive => False));
          end if;
@@ -1415,7 +1395,7 @@ package body Test.Skeleton.Source_Table is
             goto Process_Imported;
          end if;
 
-         if Arg_Proj.Needed_For_Extention then
+         if Arg_Proj.Needed_For_Extension then
 
             declare
                F : File_Array_Access;
@@ -1473,7 +1453,7 @@ package body Test.Skeleton.Source_Table is
             I_Cur := Arg_Proj.Imported_List.First;
             while I_Cur /= List_Of_Strings.No_Element loop
                if PF_Table.Element (List_Of_Strings.Element (I_Cur))
-                    .Needed_For_Extention
+                    .Needed_For_Extension
                then
                   declare
                      Imported_Sub_Project : constant String :=
@@ -1838,31 +1818,24 @@ package body Test.Skeleton.Source_Table is
    procedure Put_Interface_For_Project
      (Project_Name : String; Source_List : String_Set.Set)
    is
-      Interfaces_Attribute : constant Attribute_Pkg_List :=
-        Build ("", "interfaces");
-
-      Lib_Interface_Attribute : constant Attribute_Pkg_List :=
-        Build ("", "library_interface");
-
-      Project : constant Project_Type :=
-        GNATCOLL.Projects.Project_From_Name
-          (Source_Project_Tree, Project_Name);
+      View : constant GPR2.Project.View.Object := View_For (Project_Name);
    begin
-      if Project.Has_Attribute (Interfaces_Attribute)
-        or else Project.Has_Attribute (Lib_Interface_Attribute)
+      if View.Has_Attribute (GPR2.Project.Registry.Attribute.Library_Interface)
+        or else View.Has_Attribute (GPR2.Project.Registry.Attribute.Interfaces)
       then
          S_Put (3, "for Interfaces use (");
 
          --  Go through all files exposed in the interface and
          --  add them to the driver's interface.
          declare
-            Exposed_List : String_List_Access :=
-              Project.Attribute_Value (Interfaces_Attribute);
+            Exposed_List : constant GPR2.Project.Attribute.Object :=
+              View.Attribute (GPR2.Project.Registry.Attribute.Interfaces);
          begin
-            for Source of Exposed_List.all loop
-               S_Put (0, """" & Source.all & """,");
-            end loop;
-            GNAT.Strings.Free (Exposed_List);
+            if Exposed_List.Is_Defined then
+               for Source of Exposed_List.Values loop
+                  S_Put (0, """" & String (Source.Text) & """,");
+               end loop;
+            end if;
          end;
 
          --  Do the same for the library interface attribute. The
@@ -1871,22 +1844,21 @@ package body Test.Skeleton.Source_Table is
          --  which we'll need to translate to spec filenames.
 
          declare
-            Exposed_List : String_List_Access :=
-              Project.Attribute_Value (Lib_Interface_Attribute);
+            Exposed_List : constant GPR2.Project.Attribute.Object :=
+              View.Attribute
+                (GPR2.Project.Registry.Attribute.Library_Interface);
          begin
-            for Unit of Exposed_List.all loop
-               S_Put
-                 (0,
-                  """"
-                  & String'
-                      (+Project.File_From_Unit
-                          (Unit.all,
-                           Unit_Spec,
-                           "Ada",
-                           File_Must_Exist => True))
-                  & """,");
-            end loop;
-            GNAT.Strings.Free (Exposed_List);
+            if Exposed_List.Is_Defined then
+               for Unit of Exposed_List.Values loop
+                  S_Put
+                    (0,
+                     """"
+                     & String
+                         (View.Filename_For_Unit
+                            (Name_Type (Unit.Text), S_Spec))
+                     & """,");
+               end loop;
+            end if;
          end;
 
          --  Include all sources in the interface

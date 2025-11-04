@@ -1,3 +1,4 @@
+with "gpr2.gpr";
 with "libadalang.gpr";
 with "templates_parser.gpr";
 

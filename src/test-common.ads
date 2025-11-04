@@ -24,28 +24,29 @@
 --  This package contains some general-purpose entities that are used by many
 --  GNATtest components
 
-with Libadalang.Analysis;  use Libadalang.Analysis;
-with Libadalang.Preprocessing;
-with Langkit_Support.Text; use Langkit_Support.Text;
-
-with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
-with Ada.Exceptions;
-
-with Ada.Strings.Fixed;
 with Ada.Containers.Indefinite_Ordered_Maps;
 with Ada.Containers.Indefinite_Ordered_Sets;
 with Ada.Containers.Indefinite_Doubly_Linked_Lists;
 with Ada.Containers.Vectors;
+with Ada.Exceptions;
+with Ada.Sequential_IO;
+with Ada.Strings.Fixed;
+with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 
 with GNAT.OS_Lib;
-with GNATCOLL.VFS; use GNATCOLL.VFS;
-with GNATCOLL.Projects;
 
-with Ada.Sequential_IO;
+with GNATCOLL.VFS; use GNATCOLL.VFS;
+
+with GPR2; use GPR2;
+with GPR2.Project.Tree;
+
+with Libadalang.Analysis; use Libadalang.Analysis;
+with Libadalang.Preprocessing;
+
+with Langkit_Support.Text;  use Langkit_Support.Text;
 with Langkit_Support.Slocs; use Langkit_Support.Slocs;
 
 with TGen.Libgen;
-
 with Utils.Command_Lines.Common; use Utils.Command_Lines.Common;
 
 package Test.Common is
@@ -238,7 +239,7 @@ package Test.Common is
    ------------------------
 
    GT_Package : constant String := "gnattest";
-   --  Name of tool specific package in the project file.
+   --  Name of tool specific package in the project file
 
    Test_Routine_Prefix : constant String := "Test_";
    --  Prefix to each test routine
@@ -312,10 +313,6 @@ package Test.Common is
    Test_Dir_Name : GNAT.OS_Lib.String_Access :=
      new String'("gnattest" & GNAT.OS_Lib.Directory_Separator & "tests");
    --  Name of default directory to place test files
-
-   Source_Project_Tree : GNATCOLL.Projects.Project_Tree;
-   --  Source project file name. Used for extraction of source
-   --  and project files.
 
    Generate_Separates : Boolean := False;
 
@@ -454,8 +451,7 @@ package Test.Common is
    function Harness_Has_Gen_Tests return Boolean;
    --  Return whether the harness contains any generated tests
 
-   procedure Extract_Preprocessor_Config
-     (Tree : GNATCOLL.Projects.Project_Tree'Class);
+   procedure Extract_Preprocessor_Config (Tree : GPR2.Project.Tree.Object);
    --  Extract the preprocessor configuration from a project tree.
    --  It is possible to check if preprocessing is being used with
    --  `Has_Preprocessor` and retrieve the configuration using

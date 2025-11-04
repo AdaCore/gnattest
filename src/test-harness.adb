@@ -22,28 +22,32 @@
 ------------------------------------------------------------------------------
 
 with Ada.Directories;
-with GNATCOLL.JSON;
-with GNATCOLL.VFS;        use GNATCOLL.VFS;
-with GNATCOLL.Traces;     use GNATCOLL.Traces;
-with GNATCOLL.Projects;   use GNATCOLL.Projects;
-with Utils.Command_Lines; use Utils.Command_Lines;
-
-with GNAT.Directory_Operations; use GNAT.Directory_Operations;
-with GNAT.Strings;
-
 with Ada.Characters.Handling; use Ada.Characters.Handling;
 with Ada.Containers;          use Ada.Containers;
 with Ada.Containers.Vectors;
+with Ada.Strings;             use Ada.Strings;
+with Ada.Strings.Fixed;       use Ada.Strings.Fixed;
 
-with Ada.Strings;       use Ada.Strings;
-with Ada.Strings.Fixed; use Ada.Strings.Fixed;
+with GNAT.Directory_Operations; use GNAT.Directory_Operations;
+
+with GNATCOLL.JSON;
+with GNATCOLL.VFS;    use GNATCOLL.VFS;
+with GNATCOLL.Traces; use GNATCOLL.Traces;
+
+with GPR2; use GPR2;
+with GPR2.Containers;
+with GPR2.Path_Name;
+with GPR2.Project.Attribute;
+with GPR2.Project.View;
+
+with Langkit_Support.Slocs; use Langkit_Support.Slocs;
+with Libadalang.Common;     use Libadalang.Common;
 
 with Test.Skeleton.Source_Table;
 with Test.Mapping;              use Test.Mapping;
 with Test.Harness.Source_Table; use Test.Harness.Source_Table;
-
-with Libadalang.Common;     use Libadalang.Common;
-with Langkit_Support.Slocs; use Langkit_Support.Slocs;
+with Utils.Command_Lines;       use Utils.Command_Lines;
+with Utils.Projects;            use Utils.Projects;
 
 package body Test.Harness is
 
@@ -2336,6 +2340,13 @@ package body Test.Harness is
            (Get_SPI (Current_TR, New_Unit_Dir, New_Unit_Name));
 
       end Process_Test_Routine;
+
+      Unit_Name : constant String :=
+        String
+          (Project_Tree.Root_Project.Visible_Source
+             (GPR2.Path_Name.Create (+UUT))
+             .Unit
+             .Name);
    begin
       Trace (Me, "Generate_Test_Drivers");
       Increase_Indent (Me);
@@ -2404,7 +2415,7 @@ package body Test.Harness is
             & Data.Test_Unit_Full_Name.all
             & Directory_Separator
             & "units.list");
-         S_Put (0, Source_Project_Tree.Info (Create (+UUT)).Unit_Name);
+         S_Put (0, Unit_Name);
          Close_File;
 
          Decrease_Indent (Me, "done");
@@ -2423,13 +2434,15 @@ package body Test.Harness is
 
       --  Create a file with the unit under test so that gnatcov only computes
       --  coverage information of it, to avoid incidental coverage.
+      --
+      --  TODO??? avoid the duplication with the code above.
 
       Create
         (Harness_Dir.all
          & Data.Test_Unit_Full_Name.all
          & Directory_Separator
          & "units.list");
-      S_Put (0, Source_Project_Tree.Info (Create (+UUT)).Unit_Name);
+      S_Put (0, Unit_Name);
       Close_File;
 
       Decrease_Indent (Me, "done");
@@ -3551,40 +3564,9 @@ package body Test.Harness is
    -----------------------
 
    procedure Generate_Makefile (Source_Prj : String) is
-      P : Separate_Project_Info;
 
-      Root_Prj           : constant Project_Type :=
-        Source_Project_Tree.Root_Project;
-      Switches_Attribute : constant Attribute_Pkg_List :=
-        Build ("Coverage", "Switches");
-      Board_Attribute    : constant Attribute_Pkg_String :=
-        Build ("Emulator", "Board");
-      --  Root project and switches of interest for coverage purposes
-
-      Single_Driver : constant Boolean :=
-        not (Stub_Mode_ON or else Separate_Drivers);
-
-      Exe_Ext : constant String :=
-        (if Dir_Separator = '\' then ".exe" else "");
-
-      Target_Driver : constant String :=
-        Base_Name
-          (Root_Prj.Attribute_Value
-             (Compiler_Driver_Attribute, Index => "ada"),
-           Suffix => Exe_Ext);
-
-      Target_Native : constant Boolean := Target_Driver = "gcc";
-
-      Target : constant String :=
-        (if Root_Prj.Has_Attribute (Target_Attribute)
-         then Root_Prj.Attribute_Value (Target_Attribute)
-         else "");
-
-      Switches : GNAT.Strings.String_List_Access;
-
-      Common_Switches : GNAT.Strings.String_List_Access;
-      --  Will be used to store the values of the "for Switches("*") use ..."
-      --  and propagate them everywhere.
+      Root_Prj : constant GPR2.Project.View.Object :=
+        Project_Tree.Root_Project;
 
       Switches_From_Prj     : Boolean := False;
       Switches_From_Default : Boolean := False;
@@ -3592,8 +3574,66 @@ package body Test.Harness is
       --  project or default switches) and to warn of any possible
       --  incompatibility.
 
-   begin
+      Common_Switches : GPR2.Containers.Source_Value_List;
+      --  Will be used to store the values of the "for Switches("*") use ..."
+      --  and propagate them everywhere.
 
+      procedure Collect_Command_Switches
+        (Command : String; Default_Switches : access procedure);
+      --  Write gnatcoverage switches for the given Command to the integration
+      --  Makefile. Use the Default_Switches callback if no project are
+      --  specified in the gpr file.
+
+      ----------------------
+      -- Collect_Switches --
+      ----------------------
+
+      procedure Collect_Command_Switches
+        (Command : String; Default_Switches : access procedure)
+      is
+         Attr_Value       : GPR2.Project.Attribute.Object;
+         Command_Switches : GPR2.Containers.Source_Value_List :=
+           Common_Switches;
+         Attr             : PAI.Object := PAI.Create (Command);
+         pragma Unreferenced (Attr);
+      begin
+         if Root_Prj.Check_Attribute
+              (Coverage_Switches,
+               Index  => PAI.Create (Command),
+               Result => Attr_Value)
+           or else Common_Switches.Length /= 0
+         then
+            if Attr_Value.Is_Defined then
+               Command_Switches.Append_Vector (Attr_Value.Values);
+            end if;
+            S_Put (0, "SWITCHES_" & To_Upper (Command) & "=");
+            for Switch of Command_Switches loop
+               S_Put (0, Switch.Text & ' ');
+            end loop;
+            Switches_From_Prj := True;
+         else
+            Default_Switches.all;
+            Switches_From_Default := True;
+         end if;
+         Put_New_Line;
+         Put_New_Line;
+      end Collect_Command_Switches;
+
+      P : Separate_Project_Info;
+
+      Single_Driver : constant Boolean :=
+        not (Stub_Mode_ON or else Separate_Drivers);
+
+      Exe_Ext : constant String :=
+        (if Dir_Separator = '\' then ".exe" else "");
+
+      Is_Cross_Target : Boolean renames Project_Tree.Is_Cross_Target;
+      --  Whether the project targets a cross platform
+
+      Attr_Value : GPR2.Project.Attribute.Object;
+      --  Placeholder for attribute values
+
+   begin
       --  Generate coverage setting makefile if it doesn't already exists
 
       if not File_Exists (Harness_Dir.all & "coverage_settings.mk") then
@@ -3623,117 +3663,95 @@ package body Test.Harness is
          S_Put (0, "# Switches for the various gnatcov commands");
          Put_New_Line;
 
-         if Root_Prj.Has_Attribute (Switches_Attribute, Index => "*") then
-            Common_Switches :=
-              Root_Prj.Attribute_Value (Switches_Attribute, Index => "*");
-         else
-            Common_Switches := new GNAT.Strings.String_List'([]);
+         if Root_Prj.Check_Attribute
+              (Coverage_Switches,
+               Index  => PAI.Create ("*"),
+               Result => Attr_Value)
+         then
+            Common_Switches := Attr_Value.Values;
          end if;
 
          --  Instrument switches
 
-         if Root_Prj.Has_Attribute (Switches_Attribute, Index => "instrument")
-           or else Common_Switches.all'Length /= 0
-         then
-            Switches :=
-              Root_Prj.Attribute_Value
-                (Switches_Attribute, Index => "instrument");
-            if Switches = null then
-               Switches := new GNAT.Strings.String_List'([]);
-            end if;
-            S_Put (0, "SWITCHES_INSTRUMENT=");
-            for Switch of
-              GNAT.Strings.String_List'(Common_Switches.all & Switches.all)
-            loop
-               S_Put (0, Switch.all & ' ');
-            end loop;
-            GNAT.Strings.Free (Switches);
-            Switches_From_Prj := True;
-         else
-            S_Put
-              (0,
-               "# The instrument switches are default ones, they may"
-               & " need to be adjusted to fit your coverage needs.");
-            Put_New_Line;
-            if Target_Native then
-               S_Put (0, "SWITCHES_INSTRUMENT=-cstmt --dump-trigger=atexit");
-            else
+         declare
+            procedure Default_Instrument_Switches;
+            --  Code writing default instrumentation switches to the Makefile
+            --  if none are specified in the gpr file.
+
+            ---------------------------------
+            -- Default_Instrument_Switches --
+            ---------------------------------
+
+            procedure Default_Instrument_Switches is
+            begin
                S_Put
                  (0,
-                  "SWITCHES_INSTRUMENT=-cstmt --dump-trigger=main-end"
-                  & " --dump-channel=base64-stdout");
-            end if;
-            Switches_From_Default := True;
-         end if;
-         Put_New_Line;
-         Put_New_Line;
+                  "# The instrument switches are default ones, they may"
+                  & " need to be adjusted to fit your coverage needs.");
+               Put_New_Line;
+               if Is_Cross_Target then
+                  S_Put
+                    (0,
+                     "SWITCHES_INSTRUMENT=-cstmt --dump-trigger=main-end"
+                     & " --dump-channel=base64-stdout");
+               else
+                  S_Put
+                    (0, "SWITCHES_INSTRUMENT=-cstmt --dump-trigger=atexit");
+               end if;
+            end Default_Instrument_Switches;
+         begin
+            Collect_Command_Switches
+              ("instrument", Default_Instrument_Switches'Access);
+         end;
 
-         --  Run switches
+         declare
+            procedure Default_Run_Switches;
+            --  Code writing default run switches to the Makefile if none are
+            --  specified in the gpr file.
 
-         if Root_Prj.Has_Attribute (Switches_Attribute, Index => "run")
-           or else Common_Switches.all'Length /= 0
-         then
-            Switches :=
-              Root_Prj.Attribute_Value (Switches_Attribute, Index => "run");
-            if Switches = null then
-               Switches := new GNAT.Strings.String_List'([]);
-            end if;
-            S_Put (0, "SWITCHES_RUN=");
-            for Switch of
-              GNAT.Strings.String_List'(Common_Switches.all & Switches.all)
-            loop
-               S_Put (0, Switch.all & ' ');
-            end loop;
-            GNAT.Strings.Free (Switches);
-            Switches_From_Prj := True;
-         else
-            S_Put
-              (0,
-               "# The run switches are default ones, they may"
-               & " need to be adjusted to fit your coverage needs.");
-            Put_New_Line;
-            S_Put (0, "SWITCHES_RUN=-cstmt");
-            Switches_From_Default := True;
-         end if;
-         Put_New_Line;
-         Put_New_Line;
+            --------------------------
+            -- Default_Run_Switches --
+            --------------------------
 
-         --  Coverage switches
+            procedure Default_Run_Switches is
+            begin
+               S_Put
+                 (0,
+                  "# The run switches are default ones, they may"
+                  & " need to be adjusted to fit your coverage needs.");
+               Put_New_Line;
+               S_Put (0, "SWITCHES_RUN=-cstmt");
+            end Default_Run_Switches;
+         begin
+            Collect_Command_Switches ("run", Default_Run_Switches'Access);
+         end;
 
-         if Root_Prj.Has_Attribute (Switches_Attribute, Index => "coverage")
-           or else Common_Switches.all'Length /= 0
-         then
-            Switches :=
-              Root_Prj.Attribute_Value
-                (Switches_Attribute, Index => "coverage");
-            if Switches = null then
-               Switches := new GNAT.Strings.String_List'([]);
-            end if;
-            S_Put (0, "SWITCHES_COVERAGE=");
-            for Switch of
-              GNAT.Strings.String_List'(Common_Switches.all & Switches.all)
-            loop
-               S_Put (0, Switch.all & ' ');
-            end loop;
-            GNAT.Strings.Free (Switches);
-            Switches_From_Prj := True;
-         else
-            S_Put
-              (0,
-               "# The coverage switches are default ones, they may"
-               & " need to be adjusted to fit your coverage needs.");
-            Put_New_Line;
-            S_Put
-              (0,
-               "SWITCHES_COVERAGE=-cstmt -axcov+,dhtml "
-               & "--output-dir="
-               & GNATCOLL.VFS."+" (Object_Dir (Root_Prj).Full_Name));
-            Switches_From_Default := True;
-         end if;
-         Put_New_Line;
-         Put_New_Line;
+         declare
+            procedure Default_Coverage_Switches;
+            --  Code writing default coverage to the Makefile if none are
+            --  specified in the gpr file.
 
-         GNAT.Strings.Free (Common_Switches);
+            -------------------------------
+            -- Default_Coverage_Switches --
+            -------------------------------
+
+            procedure Default_Coverage_Switches is
+            begin
+               S_Put
+                 (0,
+                  "# The coverage switches are default ones, they may"
+                  & " need to be adjusted to fit your coverage needs.");
+               Put_New_Line;
+               S_Put
+                 (0,
+                  "SWITCHES_COVERAGE=-cstmt -axcov+,dhtml "
+                  & "--output-dir="
+                  & Root_Prj.Object_Directory.String_Value);
+            end Default_Coverage_Switches;
+         begin
+            Collect_Command_Switches
+              ("coverage", Default_Coverage_Switches'Access);
+         end;
 
          --  If there are both switches from the project file and "default"
          --  switches in the makefile, warn the user that there may be
@@ -3763,21 +3781,20 @@ package body Test.Harness is
 
          --  Cross-config specific options
 
-         if not Target_Native then
+         if Is_Cross_Target then
             Put_New_Line;
             S_Put (0, "# Target and RTS for cross build");
             Put_New_Line;
-            S_Put (0, "TARGET=" & Target);
+            S_Put (0, "TARGET=" & String (Project_Tree.Target));
             Put_New_Line;
             if RTS_Attribute_Val /= null then
                S_Put (0, "RTSFLAG=--RTS=" & RTS_Attribute_Val.all);
             end if;
             Put_New_Line;
-            if Root_Prj.Has_Attribute (Board_Attribute) then
-               S_Put
-                 (0,
-                  "GNATEMU_BOARD="
-                  & Root_Prj.Attribute_Value (Board_Attribute));
+            if Root_Prj.Check_Attribute
+                 (Utils.Projects.Emulator_Board, Result => Attr_Value)
+            then
+               S_Put (0, "GNATEMU_BOARD=" & String (Attr_Value.Value.Text));
             else
                S_Put (0, "# Couldn't determine board from project file");
                Put_New_Line;
@@ -3791,7 +3808,7 @@ package body Test.Harness is
 
       --  Generate a run-cross.sh if in cross mode, and if it doesn't yet exist
 
-      if not Target_Native
+      if Is_Cross_Target
         and then not File_Exists (Harness_Dir.all & "run-cross.sh")
       then
          Create (Harness_Dir.all & "run-cross.sh");
@@ -3839,12 +3856,14 @@ package body Test.Harness is
          Put_New_Line;
          S_Put
            (0,
-            Target
+            String (Project_Tree.Target)
             & "-gnatemu"
             & Exe_Ext
             & " --serial=file:$2.b64 "
-            & (if Root_Prj.Has_Attribute (Board_Attribute)
-               then "--board=" & Root_Prj.Attribute_Value (Board_Attribute)
+            & (if Root_Prj.Has_Attribute (Emulator_Board)
+               then
+                 "--board="
+                 & String (Root_Prj.Attribute (Emulator_Board).Value.Text)
                else "")
             & " $1");
          Put_New_Line;
@@ -3915,7 +3934,7 @@ package body Test.Harness is
          "# To be defined to customize the build. TARGET and RTSFLAGS are"
          & " defined in coverage_settings.mk");
       Put_New_Line;
-      if not Target_Native then
+      if Is_Cross_Target then
          S_Put (0, "GPRFLAGS?=--target=$(TARGET) $(RTSFLAGS)");
       else
          S_Put (0, "GPRFLAGS=");
@@ -4136,7 +4155,7 @@ package body Test.Harness is
       --  the execution to an external script that can be modified by the user
       --  (and not overwritten by gnattest)
 
-      if not Target_Native then
+      if Is_Cross_Target then
          S_Put
            (0,
             ASCII.HT & "sh run-cross.sh $*$(EXE_EXT) $*-gnattest_td.srctrace");
@@ -4195,7 +4214,7 @@ package body Test.Harness is
       Put_New_Line;
       Put_New_Line;
 
-      if not Target_Native then
+      if Is_Cross_Target then
          S_Put (0, "# Specific settings for non-instrumented cross runs");
          Put_New_Line;
          S_Put
