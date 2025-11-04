@@ -22,6 +22,7 @@
 ------------------------------------------------------------------------------
 
 with Ada.Command_Line; use Ada.Command_Line;
+with Ada.Directories;
 with Ada.Text_IO;
 
 with GNAT.OS_Lib;
@@ -106,7 +107,8 @@ package body Test.Suite_Min is
    function Unit_Has_Subp
      (Unit_Mapping : TP_Mapping; Subp_Sloc : String_Ref) return Boolean;
    --  Check whether any of the subprograms of interest in Unit_Mapping have a
-   --  declaration sloc matching Subp_Sloc.
+   --  declaration sloc matching Subp_Sloc. Subp_Sloc is expected to have the
+   --  form <simple_name>:<line_number>.
 
    function Get_Cov_Level (Cmd : Command_Line) return String;
    --  Get the coverage level specified either through the --cov-level switch,
@@ -640,7 +642,9 @@ package body Test.Suite_Min is
      (Unit_Mapping : TP_Mapping; Subp_Sloc : String_Ref) return Boolean is
    begin
       for Subp_Mapping of Unit_Mapping.TR_List loop
-         if Subp_Mapping.Decl_File.all & ":" & Image (Subp_Mapping.Decl_Line)
+         if Ada.Directories.Simple_Name (Subp_Mapping.Decl_File.all)
+           & ":"
+           & Image (Subp_Mapping.Decl_Line)
            = Subp_Sloc.all
          then
             return True;
