@@ -1,1 +1,0 @@
-warning: (gnattest) : the Gnattest_Switches attribute is deprecated and will be removed in the 27 release. Please use the Default_Switches attribute.

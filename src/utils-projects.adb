@@ -635,19 +635,6 @@ package body Utils.Projects is
          Project_Switches : String_Vector :=
            Process_Attr (+Default_Switches_Attr);
       begin
-         --  Warn on deprecated Gnattest_Switches attribute
-
-         if My_Project_Tree.Root_Project.Has_Attribute
-              (+Gnattest_Switches_Attr)
-         then
-            Test.Common.Report_Std
-              ("warning: (gnattest) : the Gnattest_Switches attribute is"
-               & " deprecated and will be removed in the 27 release. Please"
-               & " use the Default_Switches attribute.");
-         end if;
-
-         Project_Switches.Append_Vector
-           (Process_Attr (+Gnattest_Switches_Attr));
          if Num_File_Names (Cmd) = 1 then
             declare
                File_Switches : constant String_Vector :=
