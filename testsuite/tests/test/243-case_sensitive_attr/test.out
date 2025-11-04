@@ -1,7 +1,2 @@
-generate test driver
 warning: (gnattest) : the Gnattest_Switches attribute is deprecated and will be removed in the 27 release. Please use the Default_Switches attribute.
-generate test driver with instrumentation
 warning: (gnattest) : the Gnattest_Switches attribute is deprecated and will be removed in the 27 release. Please use the Default_Switches attribute.
-build instrumented test driver
-2 tests run: 2 passed; 0 failed; 0 crashed.
-2nd test input present

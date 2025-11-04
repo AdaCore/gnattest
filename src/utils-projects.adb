@@ -41,6 +41,7 @@ with GNATCOLL.Traces;
 with Libadalang.Analysis;         use Libadalang.Analysis;
 with Libadalang.Project_Provider; use Libadalang.Project_Provider;
 
+with Test.Common;
 with Utils.Command_Lines.Common; use Utils.Command_Lines.Common;
 with Utils.Environment;
 with Utils.Err_Out;
@@ -806,6 +807,15 @@ package body Utils.Projects is
          Index_Found           : Boolean := False;
          Project_Switches_Text : Argument_List_Access;
       begin
+         --  Warn on deprecated Gnattest_Switches attribute
+
+         if Has_Attribute (Proj, Attr_GT_Switches) then
+            Test.Common.Report_Std
+              ("warning: (gnattest) : the Gnattest_Switches attribute is"
+               & " deprecated and will be removed in the 27 release. Please"
+               & " use the Default_Switches attribute.");
+         end if;
+
          if Num_File_Names (Cmd) = 1 then
             --  ????What if the "one file" comes from -files=
             Arg_File_Name := new String'(File_Names (Cmd) (1).all);
