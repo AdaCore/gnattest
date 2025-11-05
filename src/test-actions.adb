@@ -1560,15 +1560,6 @@ package body Test.Actions is
          "Specifies options used when calling the 'gnattest' program.");
 
       GPR2_RA.Add
-        (Name                 => +Gnattest_Switches_Attr,
-         Index_Type           => GPR2_RA.No_Index,
-         Value                => GPR2_RA.List,
-         Value_Case_Sensitive => True,
-         Is_Allowed_In        => GPR2_RA.Everywhere);
-      GPR2_RA.Description.Set_Attribute_Description
-        (+Gnattest_Switches_Attr, "Switches passed to gnattest invocations.");
-
-      GPR2_RA.Add
         (Name                 => +Default_Switches_Attr,
          Index_Type           => GPR2_RA.No_Index,
          Value                => GPR2_RA.List,

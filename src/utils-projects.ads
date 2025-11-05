@@ -73,9 +73,6 @@ package Utils.Projects is
       Default_Switches_Attr,
       --  Specify a list of switches to pass to gnattest invocations
 
-      Gnattest_Switches_Attr,
-      --  Specify a list of switches to pass to gnattest invocations
-
       Additional_Tests_Attr,
       --  Specify a list of projects containing additional tests to be added to
       --  the testsuite.

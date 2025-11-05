@@ -1,7 +1,7 @@
 project Test2 is
    package Gnattest is
       for Skeletons_Default use "PasS";
-      for Gnattest_Switches use
+      for Default_Switches use
          ("--passed-tests=Hide",
           "--separate-drivers=uNIT",
           "--exit-status=OFF");

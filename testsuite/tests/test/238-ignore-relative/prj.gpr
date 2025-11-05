@@ -5,7 +5,7 @@ project Prj is
 
    package Gnattest is 
 
-      for Gnattest_Switches use ("--ignore=ignore-list.txt");
+      for Default_Switches use ("--ignore=ignore-list.txt");
 
    end Gnattest;
 

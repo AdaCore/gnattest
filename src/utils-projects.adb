@@ -635,8 +635,6 @@ package body Utils.Projects is
          Project_Switches : String_Vector :=
            Process_Attr (+Default_Switches_Attr);
       begin
-         Project_Switches.Append_Vector
-           (Process_Attr (+Gnattest_Switches_Attr));
          if Num_File_Names (Cmd) = 1 then
             declare
                File_Switches : constant String_Vector :=
