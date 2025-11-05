@@ -1,11 +1,11 @@
 ------------------------------------------------------------------------------
 --                                                                          --
---                             Libadalang Tools                             --
+--                                 GNATtest                                 --
 --                                                                          --
 --                      Copyright (C) 2012-2021, AdaCore                    --
 --                                                                          --
--- Libadalang Tools  is free software; you can redistribute it and/or modi- --
--- fy  it  under  terms of the  GNU General Public License  as published by --
+-- GNATtest  is  free  software; you  can  redistribute  it  and/or  modify --
+-- it  under  terms of the  GNU  General  Public  License  as  published by --
 -- the Free Software Foundation;  either version 3, or (at your option) any --
 -- later version. This software  is distributed in the hope that it will be --
 -- useful but  WITHOUT  ANY  WARRANTY; without even the implied warranty of --
