@@ -515,18 +515,14 @@ package body Test.Skeleton.Source_Table is
 
    function SF_Table_Empty return Boolean is
       Empty : constant Boolean := Is_Empty (SF_Table);
-      Cur   : Source_File_Table.Cursor;
    begin
       if Empty then
          return Empty;
       else
-         Cur := SF_Table.First;
-         while Cur /= Source_File_Table.No_Element loop
-            if Element (Cur).Status /= To_Stub_Body then
+         for SF of SF_Table loop
+            if SF.Status /= To_Stub_Body then
                return False;
             end if;
-
-            Next (Cur);
          end loop;
 
          return True;
@@ -888,17 +884,13 @@ package body Test.Skeleton.Source_Table is
    ----------------------------------------
 
    procedure Mark_Projects_With_Stubbed_Sources is
-      S_Cur : Source_File_Table.Cursor := SF_Table.First;
-      PR    : Project_Record;
+      PR : Project_Record;
 
       Processed_Projects : String_Set.Set;
-
-      P_Cur : Project_File_Table.Cursor;
 
       procedure Process_Project (S : String);
 
       procedure Process_Project (S : String) is
-         Cur      : List_Of_Strings.Cursor;
          Local_PR : Project_Record;
       begin
          Trace (Me, "Process_Project " & S);
@@ -917,10 +909,8 @@ package body Test.Skeleton.Source_Table is
          Local_PR.Needed_For_Extension := True;
          PF_Table.Replace (S, Local_PR);
 
-         Cur := Local_PR.Importing_List.First;
-         while Cur /= List_Of_Strings.No_Element loop
-            Process_Project (List_Of_Strings.Element (Cur));
-            Next (Cur);
+         for P of Local_PR.Importing_List loop
+            Process_Project (P);
          end loop;
       end Process_Project;
 
@@ -929,37 +919,24 @@ package body Test.Skeleton.Source_Table is
       Increase_Indent (Me);
 
       --  First, mark all projects that have sources that have been stubbed.
-      while S_Cur /= Source_File_Table.No_Element loop
-         if Source_File_Table.Element (S_Cur).Stub_Created then
-            PR :=
-              PF_Table.Element
-                (Source_File_Table.Element (S_Cur).Project_Name.all);
+      for SF of SF_Table loop
+         if SF.Stub_Created then
+            PR := PF_Table.Element (SF.Project_Name.all);
             PR.Needed_For_Extension := True;
-
-            Trace
-              (Me,
-               Source_File_Table.Element (S_Cur).Project_Name.all
-               & " has stubbed sources");
-
-            PF_Table.Replace
-              (Source_File_Table.Element (S_Cur).Project_Name.all, PR);
+            Trace (Me, SF.Project_Name.all & " has stubbed sources");
+            PF_Table.Replace (SF.Project_Name.all, PR);
          end if;
-
-         Next (S_Cur);
       end loop;
 
       --  Now we need to also mark all projects that are imported by any
       --  of already marked ones.
 
-      P_Cur := PF_Table.First;
-      while P_Cur /= Project_File_Table.No_Element loop
+      for P_Cur in PF_Table.Iterate loop
          if not Processed_Projects.Contains (Project_File_Table.Key (P_Cur))
-           and then Project_File_Table.Element (P_Cur).Needed_For_Extension
+           and then PF_Table.Constant_Reference (P_Cur).Needed_For_Extension
          then
             Process_Project (Project_File_Table.Key (P_Cur));
          end if;
-
-         Next (P_Cur);
       end loop;
 
       Decrease_Indent (Me);
@@ -985,6 +962,7 @@ package body Test.Skeleton.Source_Table is
    ---------------------------------
    --  Next_Non_Processed_Source  --
    ---------------------------------
+
    function Next_Non_Processed_Source return String is
       Cur : Source_File_Table.Cursor := Source_File_Table.No_Element;
    begin
@@ -1034,6 +1012,7 @@ package body Test.Skeleton.Source_Table is
    ----------------------------
    --  Next_Source_Location  --
    ----------------------------
+
    function Next_Source_Location return String is
       Cur : Source_File_Locations.Cursor;
    begin
@@ -1049,6 +1028,7 @@ package body Test.Skeleton.Source_Table is
    ------------------------
    --  Next_Source_Name  --
    ------------------------
+
    function Next_Source_Name return String is
       Cur : Source_File_Table.Cursor;
    begin
@@ -1131,13 +1111,10 @@ package body Test.Skeleton.Source_Table is
       SF_Rec     : SF_Record;
       Tmp_Str    : String_Access;
       SF_Rec_Key : String_Access;
-      Cur        : Source_File_Table.Cursor := SF_Table.First;
    begin
       Increase_Indent (Me, "Set_Subdir_Output");
 
-      loop
-         exit when Cur = Source_File_Table.No_Element;
-
+      for Cur in SF_Table.Iterate loop
          SF_Rec := Source_File_Table.Element (Cur);
          SF_Rec_Key := new String'(Key (Cur));
 
@@ -1150,8 +1127,6 @@ package body Test.Skeleton.Source_Table is
              (Tmp_Str.all & Test_Subdir_Name.all & Directory_Separator);
 
          Replace (SF_Table, SF_Rec_Key.all, SF_Rec);
-
-         Source_File_Table.Next (Cur);
          Free (SF_Rec_Key);
          Free (Tmp_Str);
       end loop;
@@ -1168,15 +1143,12 @@ package body Test.Skeleton.Source_Table is
       SF_Rec     : SF_Record;
       Tmp_Str    : String_Access;
       SF_Rec_Key : String_Access;
-      Cur        : Source_File_Table.Cursor := SF_Table.First;
 
       Idx : Integer;
    begin
       Increase_Indent (Me, "Set_Separate_Root");
 
-      loop
-         exit when Cur = Source_File_Table.No_Element;
-
+      for Cur in SF_Table.Iterate loop
          SF_Rec := Source_File_Table.Element (Cur);
          SF_Rec_Key := new String'(Key (Cur));
 
@@ -1194,7 +1166,6 @@ package body Test.Skeleton.Source_Table is
 
          Replace (SF_Table, SF_Rec_Key.all, SF_Rec);
 
-         Source_File_Table.Next (Cur);
          Free (SF_Rec_Key);
          Free (Tmp_Str);
       end loop;
@@ -1208,21 +1179,15 @@ package body Test.Skeleton.Source_Table is
    -----------------------
 
    procedure Set_Direct_Output is
-      SF_Rec     : SF_Record;
-      Tmp_Str    : String_Access;
-      SF_Rec_Key : String_Access;
-      Cur        : Source_File_Table.Cursor := SF_Table.First;
+      SF_Rec : SF_Record;
 
       View : GPR2.Project.View.Object;
 
       TD_Name : constant Virtual_File :=
         GNATCOLL.VFS.Create (+Test_Dir_Name.all);
    begin
-      loop
-         exit when Cur = Source_File_Table.No_Element;
-
+      for Cur in SF_Table.Iterate loop
          SF_Rec := Source_File_Table.Element (Cur);
-         SF_Rec_Key := new String'(Key (Cur));
 
          if TD_Name.Is_Absolute_Path then
             SF_Rec.Test_Destination := new String'(Test_Dir_Name.all);
@@ -1239,11 +1204,7 @@ package body Test.Skeleton.Source_Table is
                  & Test_Dir_Name.all);
          end if;
 
-         Replace (SF_Table, SF_Rec_Key.all, SF_Rec);
-
-         Source_File_Table.Next (Cur);
-         Free (SF_Rec_Key);
-         Free (Tmp_Str);
+         Replace (SF_Table, Key (Cur), SF_Rec);
       end loop;
    end Set_Direct_Output;
 
@@ -1252,22 +1213,15 @@ package body Test.Skeleton.Source_Table is
    ----------------------------
 
    procedure Set_Direct_Stub_Output is
-      SF_Rec     : SF_Record;
-      Tmp_Str    : String_Access;
-      SF_Rec_Key : String_Access;
-      Cur        : Source_File_Table.Cursor := SF_Table.First;
+      SF_Rec : SF_Record;
 
       View : GPR2.Project.View.Object;
 
       TD_Name : constant Virtual_File :=
         GNATCOLL.VFS.Create (+Stub_Dir_Name.all);
    begin
-
-      loop
-         exit when Cur = Source_File_Table.No_Element;
-
+      for Cur in SF_Table.Iterate loop
          SF_Rec := Source_File_Table.Element (Cur);
-         SF_Rec_Key := new String'(Key (Cur));
 
          View :=
            Project_Tree.Root_Project.Visible_Source
@@ -1277,6 +1231,7 @@ package body Test.Skeleton.Source_Table is
          View := Outermost_Extending (View);
 
          --  Better use subdirs to separate stubs from different projects.
+
          if TD_Name.Is_Absolute_Path then
             SF_Rec.Stub_Destination :=
               new String'
@@ -1294,11 +1249,7 @@ package body Test.Skeleton.Source_Table is
                     Case_Sensitive => False));
          end if;
 
-         Replace (SF_Table, SF_Rec_Key.all, SF_Rec);
-
-         Source_File_Table.Next (Cur);
-         Free (SF_Rec_Key);
-         Free (Tmp_Str);
+         Replace (SF_Table, Source_File_Table.Key (Cur), SF_Rec);
       end loop;
    end Set_Direct_Stub_Output;
 
@@ -1323,6 +1274,7 @@ package body Test.Skeleton.Source_Table is
    ----------------------
    --  Source_Present  --
    ----------------------
+
    function Source_Present (Source_Name : String) return Boolean is
       SN : constant String :=
         Normalize_Pathname
@@ -1371,9 +1323,7 @@ package body Test.Skeleton.Source_Table is
       -----------------------------------------
 
       procedure Generate_Stub_Extension_Project_Aux (Proj : String) is
-         Cur, I_Cur : List_Of_Strings.Cursor;
-         E_Cur      : String_Set.Cursor;
-         Arg_Proj   : Project_Record;
+         Arg_Proj : Project_Record;
 
          Relative_P_Path, Relative_I_Path : String_Access;
 
@@ -1450,25 +1400,16 @@ package body Test.Skeleton.Source_Table is
             --  otherwise the list will be the plain list of relative paths,
             --  with surrounding quotes.
 
-            I_Cur := Arg_Proj.Imported_List.First;
-            while I_Cur /= List_Of_Strings.No_Element loop
-               if PF_Table.Element (List_Of_Strings.Element (I_Cur))
-                    .Needed_For_Extension
-               then
+            for P of Arg_Proj.Imported_List loop
+               if PF_Table.Constant_Reference (P).Needed_For_Extension then
                   declare
                      Imported_Sub_Project : constant String :=
-                       PF_Table.Element (List_Of_Strings.Element (I_Cur))
-                         .Stub_Dir.all
+                       PF_Table.Constant_Reference (P).Stub_Dir.all
                        & Directory_Separator
-                       & To_Lower
-                           (Stub_Project_Prefix
-                            & Current_Infix
-                            & List_Of_Strings.Element (I_Cur))
+                       & To_Lower (Stub_Project_Prefix & Current_Infix & P)
                        & ".gpr";
                   begin
-                     if List_Of_Strings.Element (I_Cur)
-                       = Generate_Stub_Extension_Project.Proj
-                     then
+                     if P = Generate_Stub_Extension_Project.Proj then
                         Relative_I_Path :=
                           new String'
                             (+Relative_Path
@@ -1486,9 +1427,7 @@ package body Test.Skeleton.Source_Table is
                      Resolved_Dep_List.Append
                        ("""" & Relative_I_Path.all & """");
 
-                  elsif Arg_Proj.Limited_Withed.Contains
-                          (List_Of_Strings.Element (I_Cur))
-                  then
+                  elsif Arg_Proj.Limited_Withed.Contains (P) then
                      Resolved_Dep_List.Append
                        ("limited with """ & Relative_I_Path.all & """;");
                   else
@@ -1496,7 +1435,6 @@ package body Test.Skeleton.Source_Table is
                        ("with """ & Relative_I_Path.all & """;");
                   end if;
                end if;
-               Next (I_Cur);
             end loop;
 
             --  Output the resolved dependency list in the non-aggregate
@@ -1534,19 +1472,18 @@ package body Test.Skeleton.Source_Table is
 
                Get_Sources (Proj, Current_Proj_Present_Sources);
 
-               E_Cur := Current_Proj_Present_Sources.First;
-               if E_Cur /= String_Set.No_Element then
-                  S_Put (3, "for Source_Files use (");
+               if Current_Proj_Present_Sources.Is_Empty then
+                  S_Put (3, "for Source_Files use ();");
                   Put_New_Line;
                else
-                  S_Put (3, "for Source_Files use ();");
+                  S_Put (3, "for Source_Files use (");
                   Put_New_Line;
                end if;
 
-               while E_Cur /= String_Set.No_Element loop
+               for Cur in Current_Proj_Present_Sources.Iterate loop
                   declare
                      Source         : constant String :=
-                       String_Set.Element (E_Cur);
+                       Current_Proj_Present_Sources.Constant_Reference (Cur);
                      Stub_Data_Spec : constant String :=
                        Get_Source_Stub_Data_Spec (Source);
                      Stub_Data_Body : constant String :=
@@ -1569,11 +1506,12 @@ package body Test.Skeleton.Source_Table is
                      S_Put
                        (6, """" & Base_Name (Get_Source_Body (Source)) & """");
                      Sources_Names.Include (Base_Name (Source));
-                     Next (E_Cur);
 
                      S_Put
                        (0,
-                        (if E_Cur = String_Set.No_Element then ");" else ","));
+                        (if Cur = Current_Proj_Present_Sources.Last
+                         then ");"
+                         else ","));
                      Put_New_Line;
                   end;
                end loop;
@@ -1585,14 +1523,12 @@ package body Test.Skeleton.Source_Table is
             if Arg_Proj.Aggregate_Lib then
                S_Put (3, "for Project_Files use (");
                Put_New_Line;
-               I_Cur := Resolved_Dep_List.First;
-               while Has_Element (I_Cur) loop
+               for I_Cur in Resolved_Dep_List.Iterate loop
                   S_Put (6, Element (I_Cur));
-                  Next (I_Cur);
-                  if Has_Element (I_Cur) then
-                     S_Put (0, ",");
-                  else
+                  if I_Cur = Resolved_Dep_List.Last then
                      S_Put (0, ");");
+                  else
+                     S_Put (0, ",");
                   end if;
                   Put_New_Line;
                end loop;
@@ -1627,22 +1563,22 @@ package body Test.Skeleton.Source_Table is
             Put_New_Line;
 
             if not Arg_Proj.Aggregate_Lib then
-               E_Cur := Current_Proj_Present_Sources.First;
-               if E_Cur /= String_Set.No_Element then
+               if not Current_Proj_Present_Sources.Is_Empty then
                   S_Put (3, "package Coverage is");
                   Put_New_Line;
                   S_Put (6, "for Excluded_Units use (");
                   Put_New_Line;
 
-                  while E_Cur /= String_Set.No_Element loop
+                  for Cur in Current_Proj_Present_Sources.Iterate loop
                      S_Put
                        (9,
                         """"
                         & Get_Source_Unit_Name
-                            (Get_Source_Body (String_Set.Element (E_Cur)))
+                            (Get_Source_Body
+                               (Current_Proj_Present_Sources.Constant_Reference
+                                  (Cur)))
                         & """");
-                     Next (E_Cur);
-                     if E_Cur = String_Set.No_Element then
+                     if Cur = Current_Proj_Present_Sources.Last then
                         S_Put (0, ");");
                      else
                         S_Put (0, ",");
@@ -1662,11 +1598,8 @@ package body Test.Skeleton.Source_Table is
 
          <<Process_Imported>>
 
-         Cur := Arg_Proj.Imported_List.First;
-         while Cur /= List_Of_Strings.No_Element loop
-            Generate_Stub_Extension_Project_Aux
-              (List_Of_Strings.Element (Cur));
-            Next (Cur);
+         for P of Arg_Proj.Imported_List loop
+            Generate_Stub_Extension_Project_Aux (P);
          end loop;
       end Generate_Stub_Extension_Project_Aux;
 
@@ -1688,7 +1621,6 @@ package body Test.Skeleton.Source_Table is
 
       Excluded_Sources : String_Set.Set := String_Set.Empty_Set;
 
-      SS_Cur           : String_Set.Cursor;
       Subroot_Prj_Name : constant String :=
         Get_Source_Project_Name (File_Name);
 
@@ -1700,26 +1632,22 @@ package body Test.Skeleton.Source_Table is
       ------------------------------------
 
       procedure Set_Present_Subset_For_Project
-        (Proj : String; Current_Proj_Present_Sources : out String_Set.Set)
-      is
-         Cur : Source_File_Table.Cursor := SF_Table.First;
+        (Proj : String; Current_Proj_Present_Sources : out String_Set.Set) is
       begin
          Current_Proj_Present_Sources.Clear;
 
-         while Cur /= Source_File_Table.No_Element loop
+         for Cur in SF_Table.Iterate loop
             declare
                Key : constant String := Source_File_Table.Key (Cur);
             begin
-               if Source_File_Table.Element (Cur).Project_Name.all = Proj
+               if SF_Table.Constant_Reference (Cur).Project_Name.all = Proj
                  and then not Is_Body (Key)
                  and then Source_Stubbed (Key)
                  and then not Excluded_Sources.Contains (Base_Name (Key))
                then
-                  Current_Proj_Present_Sources.Include
-                    (Source_File_Table.Key (Cur));
+                  Current_Proj_Present_Sources.Include (Key);
                end if;
             end;
-            Next (Cur);
          end loop;
       end Set_Present_Subset_For_Project;
 
@@ -1745,10 +1673,8 @@ package body Test.Skeleton.Source_Table is
          Trace (Me_Verbose, "Root of subtree is " & Subroot_Prj_Name);
          Trace (Me_Verbose, "excluded sources are:");
          Increase_Indent (Me_Verbose);
-         SS_Cur := Excluded_Sources.First;
-         while SS_Cur /= String_Set.No_Element loop
-            Trace (Me_Verbose, String_Set.Element (SS_Cur));
-            Next (SS_Cur);
+         for Source of Excluded_Sources loop
+            Trace (Me_Verbose, Source);
          end loop;
          Decrease_Indent (Me_Verbose);
       end if;
@@ -1778,27 +1704,23 @@ package body Test.Skeleton.Source_Table is
       ------------------------------------
 
       procedure Set_Present_Subset_For_Project
-        (Proj : String; Current_Proj_Present_Sources : out String_Set.Set)
-      is
-         Cur : Source_File_Table.Cursor := SF_Table.First;
+        (Proj : String; Current_Proj_Present_Sources : out String_Set.Set) is
       begin
          Current_Proj_Present_Sources.Clear;
 
-         while Cur /= Source_File_Table.No_Element loop
+         for Cur in SF_Table.Iterate loop
             declare
                Key : constant String := Source_File_Table.Key (Cur);
             begin
-               if Source_File_Table.Element (Cur).Project_Name.all = Proj
+               if SF_Table.Constant_Reference (Cur).Project_Name.all = Proj
                  and then not Is_Body (Key)
                  and then Source_Stubbed (Key)
                  and then not Default_Stub_Exclusion_List.Contains
                                 (Base_Name (Key))
                then
-                  Current_Proj_Present_Sources.Include
-                    (Source_File_Table.Key (Cur));
+                  Current_Proj_Present_Sources.Include (Key);
                end if;
             end;
-            Next (Cur);
          end loop;
       end Set_Present_Subset_For_Project;
 
@@ -1862,20 +1784,14 @@ package body Test.Skeleton.Source_Table is
          end;
 
          --  Include all sources in the interface
+
          if not Source_List.Is_Empty then
-            declare
-               Cur : String_Set.Cursor := Source_List.First;
-            begin
-               while Cur /= String_Set.No_Element loop
-                  S_Put (0, """" & String_Set.Element (Cur) & """");
-
-                  Next (Cur);
-
-                  if Cur /= String_Set.No_Element then
-                     S_Put (0, ",");
-                  end if;
-               end loop;
-            end;
+            for Cur in Source_List.Iterate loop
+               S_Put (0, """" & String_Set.Element (Cur) & """");
+               if Cur /= Source_List.Last then
+                  S_Put (0, ",");
+               end if;
+            end loop;
          end if;
          S_Put (3, ");");
       end if;

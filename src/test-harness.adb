@@ -332,16 +332,10 @@ package body Test.Harness is
       S_Put (6, "for Default_Switches (""ada"") use");
       Put_New_Line;
       S_Put (8, "(""-g"", ""-gnatyM0""");
-      declare
-         Cur : List_Of_Strings.Cursor := Inherited_Switches.First;
-      begin
-         loop
-            exit when Cur = List_Of_Strings.No_Element;
-            S_Put (0, ", """ & List_Of_Strings.Element (Cur) & """");
-            List_Of_Strings.Next (Cur);
-         end loop;
-         Inherited_Switches.Clear;
-      end;
+      for Sw of Inherited_Switches loop
+         S_Put (0, ", """ & Sw & """");
+      end loop;
+      Inherited_Switches.Clear;
       S_Put (0, ") & Contract_Switches;");
       Put_New_Line;
       S_Put (3, "end Compiler;");
@@ -637,7 +631,6 @@ package body Test.Harness is
    -----------------------------
 
    procedure Test_Runner_Generator (Source_Prj : String) is
-      Iterator : List_Of_Strings.Cursor;
    begin
       if List_Of_Strings.Is_Empty (Suit_List) then
          Report_Std
@@ -676,14 +669,9 @@ package body Test.Harness is
       S_Put (0, GT_Marker_Begin);
       Put_New_Line;
 
-      Iterator := List_Of_Strings.First (Suit_List);
-      loop
-         exit when Iterator = List_Of_Strings.No_Element;
-
-         S_Put (0, "with " & List_Of_Strings.Element (Iterator) & ";");
+      for Suit of Suit_List loop
+         S_Put (0, "with " & Suit & ";");
          Put_New_Line;
-
-         List_Of_Strings.Next (Iterator);
       end loop;
 
       Put_New_Line;
@@ -701,18 +689,9 @@ package body Test.Harness is
       Put_New_Line;
       Put_New_Line;
 
-      Iterator := List_Of_Strings.First (Suit_List);
-      loop
-         exit when Iterator = List_Of_Strings.No_Element;
-
-         S_Put
-           (6,
-            "Add_Test (Result'Access, "
-            & List_Of_Strings.Element (Iterator)
-            & ".Suite);");
+      for Suit of Suit_List loop
+         S_Put (6, "Add_Test (Result'Access, " & Suit & ".Suite);");
          Put_New_Line;
-
-         List_Of_Strings.Next (Iterator);
       end loop;
 
       Put_New_Line;
@@ -1850,7 +1829,6 @@ package body Test.Harness is
             Project_Path       : constant String :=
               Test.Skeleton.Source_Table.Get_Project_Path (Project_Name);
 
-            Cur : Ada_Nodes_List.Cursor;
             use Ada_Nodes_List;
          begin
             SPI.Name_Extending := new String'(Current_TR.TR_Text_Name.all);
@@ -1871,11 +1849,9 @@ package body Test.Harness is
               new String'
                 (Recover_Test_Data_Unit_Name (Data.Test_Unit_Full_Name.all));
 
-            Cur := Stub_List.First;
-            while Cur /= Ada_Nodes_List.No_Element loop
+            for Stub of Stub_List loop
                declare
-                  S : constant String :=
-                    Ada_Nodes_List.Element (Cur).Unit.Get_Filename;
+                  S : constant String := Stub.Unit.Get_Filename;
                begin
                   --  If any source meant to be stubbed is from same
                   --  project and is actually stubbed, then stub dir should
@@ -1938,8 +1914,6 @@ package body Test.Harness is
                      end if;
                   end if;
                end;
-
-               Next (Cur);
             end loop;
          end;
 
@@ -2900,13 +2874,10 @@ package body Test.Harness is
       P : Separate_Project_Info;
 
       Imported : List_Of_Strings.List;
-      I_Cur    : List_Of_Strings.Cursor;
-      S_Cur    : List_Of_Strings.Cursor;
 
       Tmp, Current_Infix : String_Access;
 
-      Out_Dirs     : String_Set.Set;
-      Out_Dirs_Cur : String_Set.Cursor;
+      Out_Dirs : String_Set.Set;
 
       use String_Set;
 
@@ -3010,18 +2981,14 @@ package body Test.Harness is
            Test.Skeleton.Source_Table.Get_Imported_Projects
              (P.Name_Of_Extended.all);
 
-         I_Cur := Imported.First;
-         while I_Cur /= List_Of_Strings.No_Element loop
-            if Test.Skeleton.Source_Table.Project_Extended
-                 (List_Of_Strings.Element (I_Cur))
-            then
-               Tmp := new String'(List_Of_Strings.Element (I_Cur));
+         for I_P of Imported loop
+            if Test.Skeleton.Source_Table.Project_Extended (I_P) then
                declare
                   Imported_Stubbed_Path : constant String :=
-                    Test.Skeleton.Source_Table.Get_Project_Stub_Dir (Tmp.all)
+                    Test.Skeleton.Source_Table.Get_Project_Stub_Dir (I_P)
                     & Directory_Separator
                     & Unit_To_File_Name
-                        (Stub_Project_Prefix & Current_Infix.all & Tmp.all)
+                        (Stub_Project_Prefix & Current_Infix.all & I_P)
                     & ".gpr";
                   Relative_P            : constant String :=
                     +Relative_Path
@@ -3032,10 +2999,6 @@ package body Test.Harness is
                   Put_New_Line;
                end;
             end if;
-
-            Free (Tmp);
-
-            Next (I_Cur);
          end loop;
 
          S_Put
@@ -3123,13 +3086,11 @@ package body Test.Harness is
          Put_New_Line;
          Put_New_Line;
 
-         S_Cur := P.Sources_List.First;
-         if S_Cur /= List_Of_Strings.No_Element then
+         if not P.Sources_List.Is_Empty then
             S_Put (3, "for Source_Files use (");
             Put_New_Line;
 
-            while S_Cur /= List_Of_Strings.No_Element loop
-
+            for S_Cur in P.Sources_List.Iterate loop
                declare
                   Source_Name : constant String :=
                     Base_Name (List_Of_Strings.Element (S_Cur));
@@ -3138,11 +3099,7 @@ package body Test.Harness is
                   Sources_Names.Include (Source_Name);
                end;
 
-               Next (S_Cur);
-
-               S_Put
-                 (0,
-                  (if S_Cur = List_Of_Strings.No_Element then ");" else ","));
+               S_Put (0, (if S_Cur = P.Sources_List.Last then ");" else ","));
                Put_New_Line;
             end loop;
          end if;
@@ -3173,11 +3130,10 @@ package body Test.Harness is
 
          S_Put (3, "package Coverage is");
          Put_New_Line;
-         S_Cur := P.Units_List.First;
-         if S_Cur /= List_Of_Strings.No_Element then
+         if not P.Units_List.Is_Empty then
             S_Put (6, "for Excluded_Units use (");
             Put_New_Line;
-            while S_Cur /= List_Of_Strings.No_Element loop
+            for S_Cur in P.Units_List.Iterate loop
                S_Put
                  (9,
                   """"
@@ -3185,8 +3141,6 @@ package body Test.Harness is
                   & """"
                   & (if S_Cur = P.Units_List.Last then ");" else ","));
                Put_New_Line;
-
-               Next (S_Cur);
             end loop;
          end if;
          S_Put (3, "end Coverage;");
@@ -3309,33 +3263,18 @@ package body Test.Harness is
             Put_New_Line;
             Put_New_Line;
          else
-            Out_Dirs_Cur := Out_Dirs.First;
-            S_Put (5, "(""");
-            S_Put
-              (0,
-               +Relative_Path
-                  (Create (+String_Set.Element (Out_Dirs_Cur)),
-                   Create (+Dir_Name (P.Path_TD.all)))
-               & """");
-            loop
-               Next (Out_Dirs_Cur);
-               exit when Out_Dirs_Cur = String_Set.No_Element;
-
-               S_Put (0, ",");
-               Put_New_Line;
+            S_Put (5, "(");
+            for Out_Dir of Out_Dirs loop
                S_Put (6, """");
                S_Put
                  (0,
                   +Relative_Path
-                     (Create (+String_Set.Element (Out_Dirs_Cur)),
-                      Create (+Dir_Name (P.Path_TD.all)))
+                     (Create (+Out_Dir), Create (+Dir_Name (P.Path_TD.all)))
                   & """");
-
+               S_Put (0, ",");
+               Put_New_Line;
             end loop;
-            S_Put (0, ",");
-            Put_New_Line;
             S_Put (6, """../common"", ""."");");
-
             Put_New_Line;
             Put_New_Line;
          end if;
@@ -4782,7 +4721,6 @@ package body Test.Harness is
       Duplication : Duplication_Array := [others => False];
 
       Include_Units : Include_Sets.Set;
-      Include_Cur   : Include_Sets.Cursor;
 
       Type_Im  : String_Access;
       PUnit_Im : String_Access;
@@ -4907,13 +4845,11 @@ package body Test.Harness is
       Put_New_Line;
       Put_New_Line;
 
-      --  Adding dependancy units;
-      Include_Cur := Include_Units.First;
-      loop
-         exit when Include_Cur = Include_Sets.No_Element;
-         S_Put (0, "with " & Include_Sets.Element (Include_Cur) & ";");
+      --  Adding dependency units
+
+      for Include_Unit of Include_Units loop
+         S_Put (0, "with " & Include_Unit & ";");
          Put_New_Line;
-         Include_Sets.Next (Include_Cur);
       end loop;
 
       Put_New_Line;

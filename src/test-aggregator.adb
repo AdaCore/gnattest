@@ -192,13 +192,11 @@ package body Test.Aggregator is
    --------------------------------
 
    function Get_Next_Driver_To_Analyze return String is
-      Cur : TD_Tables.Cursor := TD_Table.First;
    begin
-      while Cur /= No_Element loop
+      for Cur in TD_Table.Iterate loop
          if Element (Cur) = Analysis then
             return Key (Cur);
          end if;
-         Next (Cur);
       end loop;
       return "";
    end Get_Next_Driver_To_Analyze;
@@ -208,13 +206,11 @@ package body Test.Aggregator is
    ----------------------------
 
    function Get_Next_Driver_To_Run return String is
-      Cur : TD_Tables.Cursor := TD_Table.First;
    begin
-      while Cur /= No_Element loop
+      for Cur in TD_Table.Iterate loop
          if Element (Cur) = Waiting then
             return Key (Cur);
          end if;
-         Next (Cur);
       end loop;
       return "";
    end Get_Next_Driver_To_Run;
@@ -729,13 +725,11 @@ package body Test.Aggregator is
    --------------------------
 
    function Unfinished_Processes return Boolean is
-      Cur : TD_Tables.Cursor := TD_Table.First;
    begin
-      while Cur /= No_Element loop
+      for Cur in TD_Table.Iterate loop
          if Element (Cur) = Processing then
             return True;
          end if;
-         Next (Cur);
       end loop;
       return False;
    end Unfinished_Processes;

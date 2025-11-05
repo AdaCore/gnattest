@@ -721,7 +721,6 @@ package body Test.Stub is
       Stub_Data      : Boolean := True;
       Limited_Withed : String_Set.Set)
    is
-      Cur : String_Set.Cursor := Limited_Withed.First;
       use String_Set;
    begin
       S_Put
@@ -766,10 +765,10 @@ package body Test.Stub is
 
       --  We need to put a regular with into the body for every limited with
       --  from the spec.
-      while Cur /= String_Set.No_Element loop
-         S_Put (0, "with " & String_Set.Element (Cur) & ";");
+
+      for LW of Limited_Withed loop
+         S_Put (0, "with " & LW & ";");
          New_Line_Count;
-         Next (Cur);
       end loop;
 
       S_Put (0, GT_Marker_End);
@@ -1481,9 +1480,6 @@ package body Test.Stub is
 
       Param_List : constant Stubbed_Parameter_Lists.List :=
         Get_Args_List (Node);
-      Cur        : Stubbed_Parameter_Lists.Cursor;
-
-      SP : Stubbed_Parameter;
 
       Suffix : constant String := Hash_Suffix (ID);
 
@@ -1586,10 +1582,7 @@ package body Test.Stub is
                & " + 1;");
             New_Line_Count;
             if not Param_List.Is_Empty then
-               Cur := Param_List.First;
-               while Cur /= Stubbed_Parameter_Lists.No_Element loop
-                  SP := Stubbed_Parameter_Lists.Element (Cur);
-
+               for SP of Param_List loop
                   if Is_Only_Limited_Withed (SP.Type_Elem.As_Type_Expr) then
                      Has_Limited_View_Params := True;
                   elsif Is_Limited (SP.Type_Elem.As_Type_Expr) then
@@ -1645,8 +1638,6 @@ package body Test.Stub is
                      New_Line_Count;
 
                   end if;
-
-                  Next (Cur);
                end loop;
             end if;
          else
@@ -1740,7 +1731,6 @@ package body Test.Stub is
 
       Param_List : constant Stubbed_Parameter_Lists.List :=
         Get_Args_List (Node);
-      Cur        : Stubbed_Parameter_Lists.Cursor;
 
       SP : Stubbed_Parameter;
 
@@ -1891,10 +1881,9 @@ package body Test.Stub is
             New_Line_Count;
 
             if not Param_List.Is_Empty then
-               Cur := Param_List.First;
-               while Cur /= Param_List.Last loop
-                  SP := Stubbed_Parameter_Lists.Element (Cur);
-
+               for Cur in Param_List.Iterate loop
+                  exit when Cur = Param_List.Last;
+                  SP := Param_List.Constant_Reference (Cur);
                   if Is_Only_Limited_Withed (SP.Type_Elem.As_Type_Expr) then
                      Has_Limited_View_Params := True;
                   elsif Is_Limited (SP.Type_Elem.As_Type_Expr) then
@@ -1950,8 +1939,6 @@ package body Test.Stub is
                      New_Line_Count;
 
                   end if;
-
-                  Next (Cur);
                end loop;
             end if;
 
@@ -3120,8 +3107,6 @@ package body Test.Stub is
    is
       Encl      : Ada_Node := Elem.P_Designated_Type_Decl.As_Ada_Node;
       Dict_Elem : Access_Dictionary_Entry;
-
-      D_Cur : Access_Dictionaries.Cursor;
    begin
       --  Types formal or not, declared in nested generic packages should not
       --  be added to the dictionary.
@@ -3134,14 +3119,10 @@ package body Test.Stub is
 
       Dict_Elem.Type_Decl := Elem.P_Designated_Type_Decl.As_Ada_Node;
 
-      D_Cur := Dictionary.First;
-      while D_Cur /= Access_Dictionaries.No_Element loop
-         if Access_Dictionaries.Element (D_Cur).Type_Decl = Dict_Elem.Type_Decl
-         then
+      for E of Dictionary loop
+         if E.Type_Decl = Dict_Elem.Type_Decl then
             return;
          end if;
-
-         Next (D_Cur);
       end loop;
 
       Dict_Elem.Entry_Str :=
@@ -3159,9 +3140,8 @@ package body Test.Stub is
    ---------------------------
 
    procedure Put_Dangling_Elements is
-      MD_Cur : Markered_Data_Maps.Cursor := Markered_Data.First;
-      ID     : Markered_Data_Id;
-      MD     : Markered_Data_Type;
+      ID : Markered_Data_Id;
+      MD : Markered_Data_Type;
    begin
 
       S_Put (3, "-------------------");
@@ -3172,10 +3152,10 @@ package body Test.Stub is
       New_Line_Count;
       New_Line_Count;
 
-      while MD_Cur /= Markered_Data_Maps.No_Element loop
+      for MD_Cur in Markered_Data.Iterate loop
 
          ID := Markered_Data_Maps.Key (MD_Cur);
-         MD := Markered_Data_Maps.Element (MD_Cur);
+         MD := Markered_Data.Constant_Reference (MD_Cur);
 
          if not (ID.Kind in Subprogram_MD | Task_MD | Entry_MD) then
             goto END_DANGLING;
@@ -3222,7 +3202,6 @@ package body Test.Stub is
          New_Line_Count;
 
          <<END_DANGLING>>
-         Next (MD_Cur);
       end loop;
    end Put_Dangling_Elements;
 
@@ -3237,7 +3216,6 @@ package body Test.Stub is
 
       Param_List : Stubbed_Parameter_Lists.List :=
         Filter_Private_Parameters (Get_Args_List (Node));
-      Cur        : Stubbed_Parameter_Lists.Cursor;
 
       Empty_Case : Boolean := Param_List.Is_Empty;
       Skip_Res   : constant Boolean :=
@@ -3250,8 +3228,6 @@ package body Test.Stub is
                             (Param_List.Last_Element.Type_Elem.As_Type_Expr));
       --  Do not generate a setter for abstract types, or anonymous access-to-
       --  subprogram types.
-
-      SP : Stubbed_Parameter;
 
       Count : Natural;
    begin
@@ -3272,14 +3248,9 @@ package body Test.Stub is
          & " is record");
       New_Line_Count;
 
-      Cur := Param_List.First;
-      while Cur /= Stubbed_Parameter_Lists.No_Element loop
-         SP := Stubbed_Parameter_Lists.Element (Cur);
-
+      for SP of Param_List loop
          S_Put (6, SP.Name.all & " : " & SP.Type_Full_Name_Image.all & ";");
          New_Line_Count;
-
-         Next (Cur);
       end loop;
 
       New_Line_Count;
@@ -3307,11 +3278,8 @@ package body Test.Stub is
          New_Line_Count;
          S_Put (5, "(");
 
-         Cur := Param_List.First;
          Count := 1;
-         while Cur /= Stubbed_Parameter_Lists.No_Element loop
-            SP := Stubbed_Parameter_Lists.Element (Cur);
-
+         for SP of Param_List loop
             if Count = 1 then
                S_Put
                  (0,
@@ -3345,7 +3313,6 @@ package body Test.Stub is
             end if;
             New_Line_Count;
 
-            Next (Cur);
             Count := Count + 1;
          end loop;
       else
@@ -3368,7 +3335,6 @@ package body Test.Stub is
 
       Param_List : Stubbed_Parameter_Lists.List :=
         Filter_Private_Parameters (Get_Args_List (Node));
-      Cur        : Stubbed_Parameter_Lists.Cursor;
 
       Empty_Case : Boolean := Param_List.Is_Empty;
       Skip_Res   : constant Boolean :=
@@ -3382,15 +3348,15 @@ package body Test.Stub is
       --  Do not generate a setter for abstract types, or anonymous access-to-
       --  subprogram types.
 
-      SP : Stubbed_Parameter;
-
       Count : Natural;
 
       Non_Limited_Parameters : Boolean := False;
    begin
       Trace (Me, "Generating default setter body for " & Node.Spec_Name.all);
       if Skip_Res and then not Empty_Case then
+
          --  No need to keep it in the parameters list
+
          Param_List.Delete_Last;
       end if;
       Empty_Case := Param_List.Is_Empty;
@@ -3400,12 +3366,10 @@ package body Test.Stub is
          New_Line_Count;
          S_Put (5, "(");
 
-         --  params declaration
-         Cur := Param_List.First;
-         Count := 1;
-         while Cur /= Stubbed_Parameter_Lists.No_Element loop
-            SP := Stubbed_Parameter_Lists.Element (Cur);
+         --  Params declaration
 
+         Count := 1;
+         for SP of Param_List loop
             if Count = 1 then
                S_Put
                  (0,
@@ -3438,8 +3402,6 @@ package body Test.Stub is
                S_Put (0, ";");
             end if;
             New_Line_Count;
-
-            Next (Cur);
             Count := Count + 1;
          end loop;
 
@@ -3447,10 +3409,8 @@ package body Test.Stub is
          New_Line_Count;
 
          --  Params setting
-         Cur := Param_List.First;
-         while Cur /= Stubbed_Parameter_Lists.No_Element loop
-            SP := Stubbed_Parameter_Lists.Element (Cur);
 
+         for SP of Param_List loop
             if not Is_Limited (SP.Type_Elem.As_Type_Expr) then
                S_Put
                  (6,
@@ -3466,8 +3426,6 @@ package body Test.Stub is
 
                Non_Limited_Parameters := True;
             end if;
-
-            Next (Cur);
          end loop;
          if not Non_Limited_Parameters then
             S_Put (6, "null;");
@@ -3499,16 +3457,12 @@ package body Test.Stub is
      (Param_List : Stubbed_Parameter_Lists.List)
       return Stubbed_Parameter_Lists.List
    is
-      SP  : Stubbed_Parameter;
-      Cur : Stubbed_Parameter_Lists.Cursor := Param_List.First;
       Res : Stubbed_Parameter_Lists.List := Stubbed_Parameter_Lists.Empty_List;
    begin
-      while Cur /= Stubbed_Parameter_Lists.No_Element loop
-         SP := Stubbed_Parameter_Lists.Element (Cur);
+      for SP of Param_List loop
          if not Is_Fully_Private (SP.Type_Elem.As_Type_Expr) then
             Res.Append (SP);
          end if;
-         Next (Cur);
       end loop;
 
       return Res;
@@ -3523,7 +3477,6 @@ package body Test.Stub is
       Stub_Data_File_Body : String;
       Data                : Data_Holder)
    is
-      Node      : Element_Node;
       Root_Node : constant Element_Node :=
         Element_Node_Trees.Element (First_Child (Data.Elem_Tree.Root));
 
@@ -3532,13 +3485,8 @@ package body Test.Stub is
           (Utils.Environment.Tool_Temp_Dir.all, "gnattest_tmp_stub_body");
       Success       : Boolean;
 
-      Cur    : Element_Node_Lists.Cursor;
-      MD_Cur : Markered_Data_Maps.Cursor;
-
       ID : Markered_Data_Id;
       MD : Markered_Data_Type;
-
-      D_Cur : Access_Dictionaries.Cursor;
    begin
       if Data.Flat_List.Is_Empty then
          Excluded_Test_Data_Files.Include (Base_Name (Stub_Data_File_Spec));
@@ -3569,19 +3517,14 @@ package body Test.Stub is
          & " is");
       New_Line_Count;
 
-      D_Cur := Dictionary.First;
-      while D_Cur /= Access_Dictionaries.No_Element loop
-         S_Put (3, Access_Dictionaries.Element (D_Cur).Entry_Str.all);
+      for E of Dictionary loop
+         S_Put (3, E.Entry_Str.all);
          New_Line_Count;
-         Next (D_Cur);
       end loop;
 
       New_Line_Count;
 
-      Cur := Data.Flat_List.First;
-      while Cur /= Element_Node_Lists.No_Element loop
-         Node := Element_Node_Lists.Element (Cur);
-
+      for Node of Data.Flat_List loop
          S_Put (0, GT_Marker_Begin);
          New_Line_Count;
          S_Put (3, Generate_MD_Id_String (Node.Spec));
@@ -3605,8 +3548,6 @@ package body Test.Stub is
          S_Put (0, GT_Marker_End);
          New_Line_Count;
          New_Line_Count;
-
-         Next (Cur);
       end loop;
 
       if not Markered_Subp_Data.Is_Empty then
@@ -3626,11 +3567,10 @@ package body Test.Stub is
          New_Line_Count;
          New_Line_Count;
 
-         MD_Cur := Markered_Subp_Data.First;
-         while MD_Cur /= Markered_Data_Maps.No_Element loop
+         for MD_Cur in Markered_Subp_Data.Iterate loop
 
             ID := Markered_Data_Maps.Key (MD_Cur);
-            MD := Markered_Data_Maps.Element (MD_Cur);
+            MD := Markered_Subp_Data.Constant_Reference (MD_Cur);
 
             S_Put (0, GT_Marker_Begin);
             New_Line_Count;
@@ -3646,7 +3586,6 @@ package body Test.Stub is
             S_Put (0, GT_Marker_End);
             New_Line_Count;
             New_Line_Count;
-            Next (MD_Cur);
          end loop;
 
       end if;
@@ -3701,10 +3640,7 @@ package body Test.Stub is
          & " is");
       New_Line_Count;
 
-      Cur := Data.Flat_List.First;
-      while Cur /= Element_Node_Lists.No_Element loop
-         Node := Element_Node_Lists.Element (Cur);
-
+      for Node of Data.Flat_List loop
          S_Put (0, GT_Marker_Begin);
          New_Line_Count;
          S_Put (3, Generate_MD_Id_String (Node.Spec));
@@ -3730,8 +3666,6 @@ package body Test.Stub is
          S_Put (0, GT_Marker_End);
          New_Line_Count;
          New_Line_Count;
-
-         Next (Cur);
       end loop;
 
       if not Markered_Subp_Data.Is_Empty then
@@ -3751,11 +3685,10 @@ package body Test.Stub is
          New_Line_Count;
          New_Line_Count;
 
-         MD_Cur := Markered_Subp_Data.First;
-         while MD_Cur /= Markered_Data_Maps.No_Element loop
+         for MD_Cur in Markered_Subp_Data.Iterate loop
 
             ID := Markered_Data_Maps.Key (MD_Cur);
-            MD := Markered_Data_Maps.Element (MD_Cur);
+            MD := Markered_Subp_Data.Constant_Reference (MD_Cur);
 
             S_Put (0, GT_Marker_Begin);
             New_Line_Count;
@@ -3772,7 +3705,6 @@ package body Test.Stub is
             S_Put (0, GT_Marker_End);
             New_Line_Count;
             New_Line_Count;
-            Next (MD_Cur);
          end loop;
 
       end if;

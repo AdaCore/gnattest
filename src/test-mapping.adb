@@ -105,25 +105,9 @@ package body Test.Mapping is
    ---------------------------
 
    procedure Generate_Mapping_File is
-      TC      : TC_Mapping;
-      TR      : TR_Mapping;
-      TP      : TP_Mapping;
-      DT      : DT_Mapping;
       TP_List : TP_Mapping_List.List;
 
-      TC_Cur : TC_Mapping_List.Cursor;
-      TR_Cur : TR_Mapping_List.Cursor;
-      TP_Cur : TP_Mapping_List.Cursor;
-      SP_Cur : SP_Mapping.Cursor;
-      DT_Cur : DT_Mapping_List.Cursor;
-
-      SI       : Stub_Unit_Mapping;
-      ES       : Entity_Stub_Mapping;
-      ES_Cur   : Entity_Stub_Mapping_List.Cursor;
-      Sloc_Cur : ES_List.Cursor;
-
-      UTP     : User_Test_Package;
-      UTP_Cur : UTP_Mapping_List.Cursor;
+      SI : Stub_Unit_Mapping;
 
       function Get_Path_Relative_To_XML (Path : String) return String
       is (+Relative_Path (Create (+Path), Create (+Harness_Dir.all)));
@@ -138,10 +122,7 @@ package body Test.Mapping is
       end if;
       Put_New_Line;
 
-      SP_Cur := Mapping.First;
-      loop
-         exit when SP_Cur = SP_Mapping.No_Element;
-
+      for SP_Cur in Mapping.Iterate loop
          S_Put
            (3,
             "<unit source_file="""
@@ -149,14 +130,9 @@ package body Test.Mapping is
             & """>");
          Put_New_Line;
 
-         TP_List := SP_Mapping.Element (SP_Cur).Test_Info;
+         TP_List := Mapping.Constant_Reference (SP_Cur).Test_Info;
          if TP_List /= TP_Mapping_List.Empty_List then
-            TP_Cur := TP_List.First;
-            loop
-               exit when TP_Cur = TP_Mapping_List.No_Element;
-
-               TP := TP_Mapping_List.Element (TP_Cur);
-
+            for TP of TP_List loop
                S_Put (6, "<test_unit target_file=""" & TP.TP_Name.all & """>");
                Put_New_Line;
 
@@ -183,12 +159,7 @@ package body Test.Mapping is
                   Put_New_Line;
                end if;
 
-               TR_Cur := TP.TR_List.First;
-               loop
-                  exit when TR_Cur = TR_Mapping_List.No_Element;
-
-                  TR := TR_Mapping_List.Element (TR_Cur);
-
+               for TR of TP.TR_List loop
                   S_Put
                     (9,
                      "<tested name="""
@@ -200,12 +171,7 @@ package body Test.Mapping is
                      & """>");
                   Put_New_Line;
 
-                  TC_Cur := TR.TC_List.First;
-                  loop
-                     exit when TC_Cur = TC_Mapping_List.No_Element;
-
-                     TC := TC_Mapping_List.Element (TC_Cur);
-
+                  for TC of TR.TC_List loop
                      S_Put
                        (12,
                         "<test_case name="""
@@ -230,24 +196,15 @@ package body Test.Mapping is
                      Put_New_Line;
                      S_Put (12, "</test_case>");
                      Put_New_Line;
-
-                     TC_Mapping_List.Next (TC_Cur);
                   end loop;
 
                   S_Put (9, "</tested>");
                   Put_New_Line;
-
-                  TR_Mapping_List.Next (TR_Cur);
                end loop;
 
                S_Put (9, "<dangling>");
                Put_New_Line;
-               DT_Cur := TP.DT_List.First;
-               loop
-                  exit when DT_Cur = DT_Mapping_List.No_Element;
-
-                  DT := DT_Mapping_List.Element (DT_Cur);
-
+               for DT of TP.DT_List loop
                   S_Put
                     (12,
                      "<test file="""
@@ -258,16 +215,12 @@ package body Test.Mapping is
                      & Trim (Natural'Image (DT.Column), Both)
                      & """/>");
                   Put_New_Line;
-
-                  DT_Mapping_List.Next (DT_Cur);
                end loop;
                S_Put (9, "</dangling>");
                Put_New_Line;
 
                S_Put (6, "</test_unit>");
                Put_New_Line;
-
-               TP_Mapping_List.Next (TP_Cur);
             end loop;
          end if;
 
@@ -284,9 +237,7 @@ package body Test.Mapping is
                & """>");
             Put_New_Line;
 
-            ES_Cur := SI.Entities.First;
-            while ES_Cur /= Entity_Stub_Mapping_List.No_Element loop
-               ES := Entity_Stub_Mapping_List.Element (ES_Cur);
+            for ES of SI.Entities loop
                S_Put
                  (9,
                   "<stubbed name="""
@@ -319,44 +270,34 @@ package body Test.Mapping is
 
                S_Put (9, "</stubbed>");
                Put_New_Line;
-
-               Next (ES_Cur);
             end loop;
 
             S_Put (9, "<dangling_stubs>");
             Put_New_Line;
-            Sloc_Cur := SI.D_Bodies.First;
-            while Sloc_Cur /= ES_List.No_Element loop
+            for Sloc of SI.D_Bodies loop
                S_Put
                  (12,
                   "<stub line="""
-                  & Trim
-                      (Natural'Image (ES_List.Element (Sloc_Cur).Line), Both)
+                  & Trim (Natural'Image (Sloc.Line), Both)
                   & """ column="""
-                  & Trim
-                      (Natural'Image (ES_List.Element (Sloc_Cur).Column), Both)
+                  & Trim (Natural'Image (Sloc.Column), Both)
                   & """/>");
                Put_New_Line;
-               Next (Sloc_Cur);
             end loop;
             S_Put (9, "</dangling_stubs>");
             Put_New_Line;
 
             S_Put (9, "<dangling_setters>");
             Put_New_Line;
-            Sloc_Cur := SI.D_Setters.First;
-            while Sloc_Cur /= ES_List.No_Element loop
+            for Sloc of SI.D_Setters loop
                S_Put
                  (12,
                   "<setter line="""
-                  & Trim
-                      (Natural'Image (ES_List.Element (Sloc_Cur).Line), Both)
+                  & Trim (Natural'Image (Sloc.Line), Both)
                   & """ column="""
-                  & Trim
-                      (Natural'Image (ES_List.Element (Sloc_Cur).Column), Both)
+                  & Trim (Natural'Image (Sloc.Column), Both)
                   & """/>");
                Put_New_Line;
-               Next (Sloc_Cur);
             end loop;
             S_Put (9, "</dangling_setters>");
             Put_New_Line;
@@ -367,18 +308,13 @@ package body Test.Mapping is
 
          S_Put (3, "</unit>");
          Put_New_Line;
-
-         SP_Mapping.Next (SP_Cur);
       end loop;
 
       if not Additional_Mapping.Is_Empty then
          S_Put (3, "<additional_tests>");
          Put_New_Line;
 
-         UTP_Cur := Additional_Mapping.First;
-         while UTP_Cur /= UTP_Mapping_List.No_Element loop
-            UTP := UTP_Mapping_List.Element (UTP_Cur);
-
+         for UTP of Additional_Mapping loop
             S_Put (6, "<test_unit target_file=""" & UTP.Name.all & """>");
             Put_New_Line;
             S_Put
@@ -418,10 +354,7 @@ package body Test.Mapping is
             end if;
             Put_New_Line;
 
-            TR_Cur := UTP.TR_List.First;
-            while TR_Cur /= TR_Mapping_List.No_Element loop
-               TR := TR_Mapping_List.Element (TR_Cur);
-
+            for TR of UTP.TR_List loop
                S_Put
                  (12,
                   "<test name="""
@@ -432,16 +365,12 @@ package body Test.Mapping is
                   & Trim (TR.Column'Img, Both)
                   & """/>");
                Put_New_Line;
-
-               Next (TR_Cur);
             end loop;
 
             S_Put (9, "</test_type>");
             Put_New_Line;
             S_Put (6, "</test_unit>");
             Put_New_Line;
-
-            Next (UTP_Cur);
          end loop;
 
          S_Put (3, "</additional_tests>");
@@ -493,13 +422,9 @@ package body Test.Mapping is
    procedure Generate_Set_Active_For_Filter is
       Index : Positive := 1;
 
-      SP_Cur  : SP_Mapping.Cursor;
       TP_List : TP_Mapping_List.List;
    begin
-      SP_Cur := Mapping.First;
-      loop
-         exit when SP_Cur = SP_Mapping.No_Element;
-
+      for SP_Cur in Mapping.Iterate loop
          TP_List := SP_Mapping.Element (SP_Cur).Test_Info;
 
          declare
@@ -526,8 +451,6 @@ package body Test.Mapping is
                   Index := Index + 1;
                end loop;
             end loop;
-
-            SP_Mapping.Next (SP_Cur);
          end;
       end loop;
 
@@ -537,7 +460,6 @@ package body Test.Mapping is
       Put_New_Line;
       S_Put (6, "end if;");
       Put_New_Line;
-
    end Generate_Set_Active_For_Filter;
 
    -----------------------------------
@@ -547,7 +469,6 @@ package body Test.Mapping is
    procedure Generate_Is_Active_For_Filter is
       Index : Positive := 1;
 
-      SP_Cur  : SP_Mapping.Cursor;
       TP_List : TP_Mapping_List.List;
 
       First_TC_Ever : Boolean := True;
@@ -557,11 +478,8 @@ package body Test.Mapping is
       is (Index = 1 and First_TC_Ever);
       --  Tells whether we should put IF instead of ELSIF
    begin
-      SP_Cur := Mapping.First;
-      loop
-         exit when SP_Cur = SP_Mapping.No_Element;
-
-         TP_List := SP_Mapping.Element (SP_Cur).Test_Info;
+      for SP_Cur in Mapping.Iterate loop
+         TP_List := Mapping.Constant_Reference (SP_Cur).Test_Info;
 
          declare
             Src : constant String := Base_Name (SP_Mapping.Key (SP_Cur));
@@ -607,8 +525,6 @@ package body Test.Mapping is
 
                end loop;
             end loop;
-
-            SP_Mapping.Next (SP_Cur);
          end;
       end loop;
 
