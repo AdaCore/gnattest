@@ -374,7 +374,7 @@ package body Utils.Projects is
            ("gnattest does not support abstract projects (without sources)");
       end if;
 
-      if Prj_Tree.Root_Project.Kind in Aggregate_Kind then
+      if Prj_Tree.Root_Project.Kind = K_Aggregate then
 
          if Num_File_Names (Cmd) /= 0 then
             Cmd_Error
@@ -655,7 +655,7 @@ package body Utils.Projects is
 
             Global_Project_Tree := Load_CLI_Project (Cmd);
 
-            if Global_Project_Tree.Root_Project.Kind not in Aggregate_Kind then
+            if Global_Project_Tree.Root_Project.Kind /= K_Aggregate then
 
                --  Extract gnattest arguments from project file
 

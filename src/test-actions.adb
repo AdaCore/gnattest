@@ -353,10 +353,11 @@ package body Test.Actions is
 
       --  If the tool project is an aggregate one, exit early and do nothing.
       --  The aggregated projects will be processed in sequence in subprocess
-      --  calls made by the driver.
+      --  calls made by the driver. Aggregate libraries are excluded: they are
+      --  processed as regular projects.
 
       if Project_Tree.Is_Defined
-        and then Project_Tree.Root_Project.Kind in Aggregate_Kind
+        and then Project_Tree.Root_Project.Kind = K_Aggregate
       then
          return;
       end if;

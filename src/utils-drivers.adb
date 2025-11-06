@@ -47,6 +47,7 @@ package body Utils.Drivers is
 
    use Test.Actions;
    use type GNAT.OS_Lib.String_Access;
+   use type GPR2.Project_Kind;
 
    procedure Driver (Cmd : Command_Line; Tool : in out Tool_State) is
       use String_Sets;
@@ -161,7 +162,7 @@ package body Utils.Drivers is
 
    begin
       if Project_Tree.Is_Defined
-        and then Project_Tree.Root_Project.Kind in GPR2.Aggregate_Kind
+        and then Project_Tree.Root_Project.Kind = GPR2.K_Aggregate
       then
          Aggregate.Process_Aggregated_Projects (Cmd);
       else
@@ -177,10 +178,11 @@ package body Utils.Drivers is
 
       --  If the project is an aggregate one, exit early and do nothing. The
       --  aggregated projects will be processed in sequence in subprocess calls
-      --  made by the driver.
+      --  made by the driver. Aggregate libraries are excluded: they are
+      --  processed as regular projects.
 
       if Project_Tree.Is_Defined
-        and then Project_Tree.Root_Project.Kind in GPR2.Aggregate_Kind
+        and then Project_Tree.Root_Project.Kind = GPR2.K_Aggregate
       then
          return;
       end if;
