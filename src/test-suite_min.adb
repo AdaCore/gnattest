@@ -408,7 +408,9 @@ package body Test.Suite_Min is
               Unit_JSON.Get (Subp_UID);
             Subp_Cov, Subp_Tot : Natural;
             Subp_Sloc          : constant String :=
-              TR_Mapping.Decl_File.all & ":" & Image (TR_Mapping.Decl_Line);
+              Ada.Directories.Simple_Name (TR_Mapping.Decl_File.all)
+              & ":"
+              & Image (TR_Mapping.Decl_Line);
          begin
             if not Subp_JSON.Is_Empty
               and then (Subp_Filter = null or else Subp_Sloc = Subp_Filter.all)
