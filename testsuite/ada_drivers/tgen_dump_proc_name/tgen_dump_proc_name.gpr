@@ -1,4 +1,5 @@
-with "../../../src/gnattest.gpr";
+with "../../../config.gpr";
+with "gnattest.gpr";
 with "gpr2";
 with "libadalang.gpr";
 
@@ -8,5 +9,5 @@ project TGen_Dump_Proc_Name is
    for Exec_Dir use "../bin/";
    for Main use ("tgen_dump_proc_name.adb");
 
-   package Compiler renames GNATtest.Compiler;
+   package Compiler renames Config.Compiler;
 end TGen_Dump_Proc_Name;
