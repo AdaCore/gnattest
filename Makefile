@@ -10,6 +10,9 @@ ALL_LIBRARY_TYPES = static static-pic relocatable
 ALL_BUILD_MODES = dev prod AddressSanitizer
 
 LIB_PROJECT = src/gnattest.gpr
+TGEN_RTS_PROJECTS = \
+	src/tgen/tgen_rts/tgen_rts.gpr \
+	src/tgen/tgen_rts/tgen_marshalling_rts.gpr
 
 BIN_PROJECT = src/build.gpr
 
@@ -30,95 +33,123 @@ RELOCATE_BUILD=--relocate-build-tree="$(BUILD_ROOT)" --root-dir=.
 BIN=$(BUILD_ROOT)/bin
 endif
 
-GPRBUILD = gprbuild -v -k -p \
-	   -j$(PROCESSORS) \
-	   $(RELOCATE_BUILD)
+# gpr* specific arguments
+GPR_ARGS = $(RELOCATE_BUILD)
 
 
 ifdef INSTRUMENTED
-# When instrumenting, expect a "GNATTEST_TRACE_DIR" variable at runtime
-# to indicate where to put trace files.
-GNATCOV_INSTR = gnatcov instrument \
-		-j$(PROCESSORS) \
-		--level=stmt \
-		--dump-filename-env-var=GNATTEST_TRACE_DIR
-GPRBUILD += --implicit-with=gnatcov_rts \
+GPR_ARGS += --implicit-with=gnatcov_rts \
 	   --src-subdirs=gnatcov-instr
 endif
+
 
 .PHONY: all
 all: bin lib testsuite_drivers
 
-.PHONY: lib
-lib:
-	which gprbuild
-	which gcc
+# Instrumenting the binary project gives instrumentation for lib and bin
+.PHONY: instrument
+instrument:
 ifdef INSTRUMENTED
-	for kind in $(ALL_LIBRARY_TYPES) ; do \
-		rm -f obj/lib/$$kind/*.lexch; \
-		$(GNATCOV_INSTR) \
-			-XLIBRARY_TYPE=$$kind \
-			-XBUILD_MODE=$(BUILD_MODE) \
-			-P $(LIB_PROJECT) ; \
-		$(GPRBUILD) \
-			-XLIBRARY_TYPE=$$kind \
-			-XBUILD_MODE=$(BUILD_MODE) \
-			-P $(LIB_PROJECT) ; \
-	done ;
-else
-	for kind in $(ALL_LIBRARY_TYPES) ; do \
-		rm -f obj/lib/$$kind/*.lexch; \
-		$(GPRBUILD) \
-			-XLIBRARY_TYPE=$$kind \
-			-XBUILD_MODE=$(BUILD_MODE) \
-			-P $(LIB_PROJECT) ; \
-	done ;
-endif
-
-.PHONY: bin
-bin:
-	which gprbuild
-	which gcc
-ifdef INSTRUMENTED
-	$(GNATCOV_INSTR) \
+# When instrumenting, expect a "GNATTEST_TRACE_DIR" variable at runtime
+# to indicate where to put trace files.
+	@echo "=========================================="
+	@echo "============= INSTRUMENT BIN ============="
+	@echo "=========================================="
+	gnatcov instrument \
+	 	-j$(PROCESSORS) \
+		$(RELOCATE_BUILD) \
+		--level=stmt \
+		--dump-filename-env-var=GNATTEST_TRACE_DIR \
 		-XLIBRARY_TYPE=$(LIBRARY_TYPE) \
 		-XXMLADA_BUILD=$(LIBRARY_TYPE) \
 		-XBUILD_MODE=$(BUILD_MODE) \
 		-P $(BIN_PROJECT) ;
+else
+# Instrumentation disabled: No-op
 endif
-	$(GPRBUILD) \
+
+.PHONY: lib
+lib: instrument
+	@echo "====================================="
+	@echo "============= BUILD LIB ============="
+	@echo "====================================="
+	which gprbuild
+	which gcc
+	rm -f obj/lib/$$kind/*.lexch; \
+	gprbuild \
+	 	-j$(PROCESSORS) \
+		$(GPR_ARGS) \
+		-XLIBRARY_TYPE=$(LIBRARY_TYPE) \
+		-XBUILD_MODE=$(BUILD_MODE) \
+		-P $(LIB_PROJECT)
+
+.PHONY: bin
+bin: instrument
+	@echo "====================================="
+	@echo "============= BUILD BIN ============="
+	@echo "====================================="
+	which gprbuild
+	which gcc
+	gprbuild \
+	 	-j$(PROCESSORS) \
+		$(GPR_ARGS) \
 		-XLIBRARY_TYPE=$(LIBRARY_TYPE) \
 		-XXMLADA_BUILD=$(LIBRARY_TYPE) \
 		-XBUILD_MODE=$(BUILD_MODE) \
 		-P $(BIN_PROJECT) ; \
 
-.PHONY: testsuite_drivers
-testsuite_drivers:
-	which gprbuild
-	which gcc
+# Allow for test drivers to be compiled with an externally built gnattest
+ifdef EXTERNAL_GNATTEST_GPR
+GNATTEST_GPR = $(EXTERNAL_GNATTEST_GPR)
+GNATCOV_EXTRA_ARGS = --externally-built-projects --no-subprojects
+else
+# Look at the source directory in any other case
+GNATTEST_GPR = $(shell pwd)/src
+endif
+
+.PHONY: instrument-drivers
+instrument-drivers:
 ifdef INSTRUMENTED
+	@echo "====================================="
+	@echo "====== INSTRUMENT TEST DRIVERS ======"
+	@echo "====================================="
+
 	for proj in $(TESTSUITE_PROJECTS) ; do \
-		$(GNATCOV_INSTR) \
+	 	echo "Instrumenting $$proj" ; \
+		GPR_PROJECT_PATH=$$GPR_PROJECT_PATH:$(GNATTEST_GPR) \
+		gnatcov instrument \
+			-j$(PROCESSORS) \
+			$(RELOCATE_BUILD) \
+			$(GNATCOV_EXTRA_ARGS) \
+			--level=stmt \
+			--dump-filename-env-var=GNATTEST_TRACE_DIR \
 			-XLIBRARY_TYPE=$(LIBRARY_TYPE) \
 			-XXMLADA_BUILD=$(LIBRARY_TYPE) \
 			-XBUILD_MODE=$(BUILD_MODE) \
 			-P $$proj \
-			--projects $(LIB_PROJECT) ; \
-		$(GPRBUILD) \
-			-XLIBRARY_TYPE=$(LIBRARY_TYPE) \
-			-XXMLADA_BUILD=$(LIBRARY_TYPE) \
-			-XBUILD_MODE=$(BUILD_MODE) \
-			-P $$proj ; \
+			--projects gnattest.gpr ; \
 	done
 else
+# Instrumentation disabled: No-op
+endif
+
+.PHONY: testsuite_drivers
+testsuite_drivers: instrument-drivers
+	@echo "====================================="
+	@echo "========= BUILD TEST DRIVERS ========"
+	@echo "====================================="
+	which gprbuild
+	which gcc
 	for proj in $(TESTSUITE_PROJECTS) ; do \
-		$(GPRBUILD) \
+		GPR_PROJECT_PATH=$$GPR_PROJECT_PATH:$(GNATTEST_GPR) \
+		gprbuild \
+			-j$(PROCESSORS) \
+			$(GPR_ARGS) \
 			-XLIBRARY_TYPE=$(LIBRARY_TYPE) \
 			-XXMLADA_BUILD=$(LIBRARY_TYPE) \
 			-XBUILD_MODE=$(BUILD_MODE) \
 			-P $$proj ; \
 	done
-endif
 
 .PHONY: test
 test: all
@@ -129,6 +160,7 @@ clean:
 	for proj in $(ALL_PROJECTS) ; do \
 		for build_mode in $(ALL_BUILD_MODES) ; do \
 			for library_type in $(ALL_LIBRARY_TYPES) ; do \
+				GPR_PROJECT_PATH=$$GPR_PROJECT_PATH:$(GNATTEST_GPR) \
 				gprclean $(RELOCATE_BUILD) \
 					-XLIBRARY_TYPE=$$library_type \
 					-XBUILD_MODE=$$build_mode \
@@ -136,19 +168,23 @@ clean:
 			done ; \
 		done ; \
 	done
+	$(RM) $(find . -name '*.sid')
 
 .PHONY: install-lib
 install-lib:
-	for kind in $(ALL_LIBRARY_TYPES) ; do \
-		gprinstall $(RELOCATE_BUILD) \
-			-XLIBRARY_TYPE=$$kind \
-			-XBUILD_MODE=$(BUILD_MODE) \
-			--prefix="$(DESTDIR)" \
-			--sources-subdir=include/$$(basename $(LIB_PROJECT) | cut -d. -f1) \
-			--build-name=$$kind \
-			--build-var=LIBRARY_TYPE \
-			-P $(LIB_PROJECT) -p -f ; \
-	done ;
+	@echo "=============================="
+	@echo "========= INSTALL LIB ========"
+	@echo "=============================="
+	gprinstall \
+		$(GPR_ARGS) \
+		-v \
+		-XLIBRARY_TYPE=$(LIBRARY_TYPE) \
+		-XBUILD_MODE=$(BUILD_MODE) \
+		--prefix="$(DESTDIR)" \
+		--sources-subdir=include/$$(basename $(LIB_PROJECT) | cut -d. -f1) \
+		--build-name=$(LIBRARY_TYPE) \
+		--build-var=LIBRARY_TYPE \
+		-P $(LIB_PROJECT) -p -f
 
 .PHONY: install-bin-strip
 install-bin-strip:

@@ -1,3 +1,4 @@
+with "../config.gpr";
 with "gnattest.gpr";
 
 project Build is
@@ -9,7 +10,7 @@ project Build is
 
    for Main use ("test-main.adb");
 
-   package Compiler renames GNATtest.Compiler;
+   package Compiler renames Config.Compiler;
 
    package Builder is
       for Executable ("test-main.adb") use "gnattest";

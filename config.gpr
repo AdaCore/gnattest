@@ -1,0 +1,36 @@
+-- Holds the conpiler configuration common to the binary, the library and the
+-- test drivers.
+abstract project Config is
+
+   type Build_Mode_Type is ("dev", "prod", "AddressSanitizer");
+   Build_Mode : Build_Mode_Type := external ("BUILD_MODE", "dev");
+
+   package Compiler is
+      for Driver ("Templates") use "";
+
+      Common_Switches := ("-fPIC", "-gnatX", "-gnatyg", "-g");
+      Dev_Switches :=
+        ("-gnatwae",
+         "-gnatw.u", -- warn inappropriate use of unordered enums
+         "-O0",
+         "-gnata",
+         "-gnatVa");
+
+      case Build_Mode is
+         when "dev" =>
+            for Default_Switches ("Ada") use
+               Common_Switches & Dev_Switches & ("-gnatf");
+         when "prod" =>
+            for Default_Switches ("Ada") use Common_Switches &
+              ("-Ofast",
+               --  T915-005: deactivate -gnatp, as this seems to cause
+               --  linking errors when linking the Ada Language Server
+               --  "-gnatp"
+               "-gnatn2");
+         when "AddressSanitizer" =>
+            for Default_Switches ("Ada") use
+               Common_Switches & Dev_Switches & ("-fsanitize=address");
+      end case;
+   end Compiler;
+
+end Config;
