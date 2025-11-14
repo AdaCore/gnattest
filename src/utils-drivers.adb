@@ -25,7 +25,6 @@ with Ada.Directories;
 with Ada.Exceptions;
 
 with GNAT.Command_Line;
-with GNAT.Directory_Operations; use GNAT.Directory_Operations;
 with GNAT.OS_Lib;
 
 with GPR2;
@@ -45,8 +44,6 @@ package body Utils.Drivers is
    use Common_Flag_Switches,
        Common_String_Switches,
        Common_String_Seq_Switches;
-
-   --  See libadalang_env/src/libadalang/ada/testsuite/ada/nameres.adb.
 
    use Tools;
    use type GNAT.OS_Lib.String_Access;
@@ -181,45 +178,10 @@ package body Utils.Drivers is
          Global_Report_Dir,
          Callback   => Local_Callback'Unrestricted_Access,
          Print_Help => Print_Help'Access);
-      --      Utils.Command_Lines.Common.Post.Postprocess_Common (Cmd);
 
       if Debug_Flag_C then
          Dump_Cmd (Cmd);
       end if;
-
-      --      Utils.Check_Parameters; -- ????Move into Init?
-
-      --  ????????????????Stuff from Environment:
-
-      declare
-         use GNAT.OS_Lib, Environment;
-      begin
-         Copy_Gnat_Adc;
-         pragma
-           Assert
-             (Get_Current_Dir = Tool_Current_Dir.all & Directory_Separator);
-
-      --         if not Incremental_Mode then
-      --            Change_Dir (Tool_Temp_Dir.all);
-      --            Utils.Compiler_Options.Store_I_Options;
-      --         end if;
-
-      --  Create output directory if necessary
-
-      --  if Out_Dir /= null then
-      --     Parallel_Make_Dir (Out_Dir.all, Give_Message => Verbose_Mode);
-      --  end if;
-      end;
-
-      --  In Incremental_Mode, we invoke the builder instead of doing the
-      --  normal tool processing. The inner invocations of this tool invoked by
-      --  the builder will do the normal tool processing.
-
-      --      if Utils.Options.Incremental_Mode then
-      --         Environment.Call_Builder;
-      --      else
-      --         Utils.Source_Table.Processing.Process_Sources;
-      --      end if;
 
       --  Create output directory if necessary
 
@@ -258,14 +220,6 @@ package body Utils.Drivers is
       Final (Tool, Cmd);
       Environment.Clean_Up;
       Unload;
-
-      --      if not Utils.Options.Incremental_Mode then
-      --         if not Utils.Source_Table.Processing
-      --             .All_Files_Successfully_Processed
-      --         then
-      --            GNAT.OS_Lib.OS_Exit (1);
-      --         end if;
-      --      end if;
 
       Utils.Main_Done := True;
 
