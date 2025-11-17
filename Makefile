@@ -2,12 +2,25 @@
 # To build in development mode, do "make LIBRARY_TYPE=static BUILD_MODE=dev".
 
 BUILD_MODE ?= dev
-LIBRARY_TYPE ?= static
 PROCESSORS ?= 0
 BUILD_ROOT ?=
 
 ALL_LIBRARY_TYPES = static static-pic relocatable
 ALL_BUILD_MODES = dev prod AddressSanitizer
+
+# When building the instrumented version, only make the static.
+ifdef INSTRUMENTED
+LIBRARY_TYPE ?= static
+else
+LIBRARY_TYPE ?= static static-pic relocatable
+endif
+
+INSTR_TARGETS = $(foreach libtype,$(LIBRARY_TYPE),instrument-$(libtype))
+LIB_TARGETS = $(foreach libtype,$(LIBRARY_TYPE),lib-$(libtype))
+BIN_TARGETS = $(foreach libtype,$(LIBRARY_TYPE),bin-$(libtype))
+INSTR_DRIVER_TARGETS = $(foreach libtype,$(LIBRARY_TYPE),instrument-drivers-$(libtype))
+TESTSUITE_DRIVER_TARGETS = $(foreach libtype,$(LIBRARY_TYPE),testsuite-drivers-$(libtype))
+INSTALL_LIB_TARGETS = $(foreach libtype,$(LIBRARY_TYPE),install-lib-$(libtype))
 
 LIB_PROJECT = src/gnattest.gpr
 TGEN_RTS_PROJECTS = \
@@ -47,56 +60,61 @@ endif
 all: bin lib testsuite_drivers
 
 # Instrumenting the binary project gives instrumentation for lib and bin
-.PHONY: instrument
-instrument:
+.PHONY: $(INSTR_TARGETS)
+$(INSTR_TARGETS):
 ifdef INSTRUMENTED
 # When instrumenting, expect a "GNATTEST_TRACE_DIR" variable at runtime
 # to indicate where to put trace files.
 	@echo "=========================================="
-	@echo "============= INSTRUMENT BIN ============="
+	@echo "============= $@ ============="
 	@echo "=========================================="
 	gnatcov instrument \
 	 	-j$(PROCESSORS) \
 		$(RELOCATE_BUILD) \
 		--level=stmt \
 		--dump-filename-env-var=GNATTEST_TRACE_DIR \
-		-XLIBRARY_TYPE=$(LIBRARY_TYPE) \
-		-XXMLADA_BUILD=$(LIBRARY_TYPE) \
+		-XLIBRARY_TYPE=$(subst instrument-,,$@) \
+		-XXMLADA_BUILD=$(subst instrument-,,$@) \
 		-XBUILD_MODE=$(BUILD_MODE) \
 		-P $(BIN_PROJECT) ;
 else
 # Instrumentation disabled: No-op
 endif
 
-.PHONY: lib
-lib: instrument
+.PHONY: $(LIB_TARGETS)
+$(LIB_TARGETS): lib-%: instrument-%
 	@echo "====================================="
-	@echo "============= BUILD LIB ============="
+	@echo "============= $@ ============="
 	@echo "====================================="
 	which gprbuild
 	which gcc
-	rm -f obj/lib/$$kind/*.lexch; \
 	gprbuild \
 	 	-j$(PROCESSORS) \
 		$(GPR_ARGS) \
-		-XLIBRARY_TYPE=$(LIBRARY_TYPE) \
+		-XLIBRARY_TYPE=$(subst lib-,,$@) \
 		-XBUILD_MODE=$(BUILD_MODE) \
 		-P $(LIB_PROJECT)
 
-.PHONY: bin
-bin: instrument
+.PHONY: lib
+lib: $(LIB_TARGETS)
+
+.PHONY: $(BIN_TARGETS)
+$(BIN_TARGETS): bin-%: instrument-%
 	@echo "====================================="
-	@echo "============= BUILD BIN ============="
+	@echo "============= $@ ============="
 	@echo "====================================="
 	which gprbuild
 	which gcc
 	gprbuild \
 	 	-j$(PROCESSORS) \
 		$(GPR_ARGS) \
-		-XLIBRARY_TYPE=$(LIBRARY_TYPE) \
-		-XXMLADA_BUILD=$(LIBRARY_TYPE) \
+		-XLIBRARY_TYPE=$(subst bin-,,$@) \
+		-XXMLADA_BUILD=$(subst bin-,,$@) \
 		-XBUILD_MODE=$(BUILD_MODE) \
 		-P $(BIN_PROJECT) ; \
+
+.PHONY: bin
+bin: $(BIN_TARGETS)
 
 # Allow for test drivers to be compiled with an externally built gnattest
 ifdef EXTERNAL_GNATTEST_GPR
@@ -107,15 +125,15 @@ else
 GNATTEST_GPR = $(shell pwd)/src
 endif
 
-.PHONY: instrument-drivers
-instrument-drivers:
+.PHONY: $(INSTR_DRIVER_TARGETS)
+$(INSTR_DRIVER_TARGETS):
 ifdef INSTRUMENTED
 	@echo "====================================="
-	@echo "====== INSTRUMENT TEST DRIVERS ======"
+	@echo "====== $@ ======"
 	@echo "====================================="
 
-	for proj in $(TESTSUITE_PROJECTS) ; do \
-	 	echo "Instrumenting $$proj" ; \
+	for proj in $(TESTSUITE_PROJECTS); do \
+		echo "Instrumenting $$proj" ; \
 		GPR_PROJECT_PATH=$$GPR_PROJECT_PATH:$(GNATTEST_GPR) \
 		gnatcov instrument \
 			-j$(PROCESSORS) \
@@ -123,20 +141,23 @@ ifdef INSTRUMENTED
 			$(GNATCOV_EXTRA_ARGS) \
 			--level=stmt \
 			--dump-filename-env-var=GNATTEST_TRACE_DIR \
-			-XLIBRARY_TYPE=$(LIBRARY_TYPE) \
-			-XXMLADA_BUILD=$(LIBRARY_TYPE) \
+			-XLIBRARY_TYPE=$(subst instrument-drivers-,,$@) \
+			-XXMLADA_BUILD=$(subst instrument-drivers-,,$@) \
 			-XBUILD_MODE=$(BUILD_MODE) \
 			-P $$proj \
 			--projects gnattest.gpr ; \
-	done
+		done
 else
 # Instrumentation disabled: No-op
 endif
 
-.PHONY: testsuite_drivers
-testsuite_drivers: instrument-drivers
+.PHONY: instrument-drivers
+instrument-drivers: $(INSTR_DRIVER_TARGETS)
+
+.PHONY: $(TESTSUITE_DRIVER_TARGETS)
+$(TESTSUITE_DRIVER_TARGETS): testsuite-drivers-%: instrument-drivers-%
 	@echo "====================================="
-	@echo "========= BUILD TEST DRIVERS ========"
+	@echo "========= $@ ========"
 	@echo "====================================="
 	which gprbuild
 	which gcc
@@ -145,11 +166,15 @@ testsuite_drivers: instrument-drivers
 		gprbuild \
 			-j$(PROCESSORS) \
 			$(GPR_ARGS) \
-			-XLIBRARY_TYPE=$(LIBRARY_TYPE) \
-			-XXMLADA_BUILD=$(LIBRARY_TYPE) \
+			-XLIBRARY_TYPE=$(subst testsuite-drivers-,,$@) \
+			-XXMLADA_BUILD=$(subst testsuite-drivers-,,$@) \
 			-XBUILD_MODE=$(BUILD_MODE) \
 			-P $$proj ; \
 	done
+
+.PHONY: testsuite_drivers
+testsuite_drivers: $(TESTSUITE_DRIVER_TARGETS)
+
 
 .PHONY: test
 test: all
@@ -170,21 +195,24 @@ clean:
 	done
 	$(RM) $(find . -name '*.sid')
 
-.PHONY: install-lib
-install-lib:
+.PHONY: $(INSTALL_LIB_TARGETS)
+$(INSTALL_LIB_TARGETS):
 	@echo "=============================="
-	@echo "========= INSTALL LIB ========"
+	@echo "========= $@ ========"
 	@echo "=============================="
 	gprinstall \
 		$(GPR_ARGS) \
 		-v \
-		-XLIBRARY_TYPE=$(LIBRARY_TYPE) \
+		-XLIBRARY_TYPE=$(subst install-lib-,,$@) \
 		-XBUILD_MODE=$(BUILD_MODE) \
 		--prefix="$(DESTDIR)" \
 		--sources-subdir=include/$$(basename $(LIB_PROJECT) | cut -d. -f1) \
-		--build-name=$(LIBRARY_TYPE) \
+		--build-name=$(subst install-lib-,,$@) \
 		--build-var=LIBRARY_TYPE \
 		-P $(LIB_PROJECT) -p -f
+
+.PHONY: install-lib
+install-lib: $(INSTALL_LIB_TARGETS)
 
 .PHONY: install-bin-strip
 install-bin-strip:
