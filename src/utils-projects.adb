@@ -1112,7 +1112,7 @@ package body Utils.Projects is
       return
         Q_Attribute_Id'
           (Pack => GPR2."+" (GPR2.Name_Type'("emulator")),
-           Attr => GPR2."+" (GPR2.Optional_Name_Type'("switches")));
+           Attr => GPR2."+" (GPR2.Optional_Name_Type'("board")));
    end Emulator_Board;
 
 end Utils.Projects;
