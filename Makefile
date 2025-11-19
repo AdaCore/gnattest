@@ -17,9 +17,6 @@ endif
 
 INSTR_TARGETS = $(foreach libtype,$(LIBRARY_TYPE),instrument-$(libtype))
 LIB_TARGETS = $(foreach libtype,$(LIBRARY_TYPE),lib-$(libtype))
-BIN_TARGETS = $(foreach libtype,$(LIBRARY_TYPE),bin-$(libtype))
-INSTR_DRIVER_TARGETS = $(foreach libtype,$(LIBRARY_TYPE),instrument-drivers-$(libtype))
-TESTSUITE_DRIVER_TARGETS = $(foreach libtype,$(LIBRARY_TYPE),testsuite-drivers-$(libtype))
 INSTALL_LIB_TARGETS = $(foreach libtype,$(LIBRARY_TYPE),install-lib-$(libtype))
 
 LIB_PROJECT = src/gnattest.gpr
@@ -98,8 +95,8 @@ $(LIB_TARGETS): lib-%: instrument-%
 .PHONY: lib
 lib: $(LIB_TARGETS)
 
-.PHONY: $(BIN_TARGETS)
-$(BIN_TARGETS): bin-%: instrument-%
+.PHONY: bin
+bin: instrument-static
 	@echo "====================================="
 	@echo "============= $@ ============="
 	@echo "====================================="
@@ -108,13 +105,11 @@ $(BIN_TARGETS): bin-%: instrument-%
 	gprbuild \
 	 	-j$(PROCESSORS) \
 		$(GPR_ARGS) \
-		-XLIBRARY_TYPE=$(subst bin-,,$@) \
-		-XXMLADA_BUILD=$(subst bin-,,$@) \
+		-XLIBRARY_TYPE=static \
+		-XXMLADA_BUILD=static \
 		-XBUILD_MODE=$(BUILD_MODE) \
 		-P $(BIN_PROJECT) ; \
 
-.PHONY: bin
-bin: $(BIN_TARGETS)
 
 # Allow for test drivers to be compiled with an externally built gnattest
 ifdef EXTERNAL_GNATTEST_GPR
@@ -125,8 +120,8 @@ else
 GNATTEST_GPR = $(shell pwd)/src
 endif
 
-.PHONY: $(INSTR_DRIVER_TARGETS)
-$(INSTR_DRIVER_TARGETS):
+.PHONY: instrument-drivers
+instrument-drivers:
 ifdef INSTRUMENTED
 	@echo "====================================="
 	@echo "====== $@ ======"
@@ -141,8 +136,8 @@ ifdef INSTRUMENTED
 			$(GNATCOV_EXTRA_ARGS) \
 			--level=stmt \
 			--dump-filename-env-var=GNATTEST_TRACE_DIR \
-			-XLIBRARY_TYPE=$(subst instrument-drivers-,,$@) \
-			-XXMLADA_BUILD=$(subst instrument-drivers-,,$@) \
+			-XLIBRARY_TYPE=static \
+			-XXMLADA_BUILD=static \
 			-XBUILD_MODE=$(BUILD_MODE) \
 			-P $$proj \
 			--projects gnattest.gpr ; \
@@ -151,11 +146,8 @@ else
 # Instrumentation disabled: No-op
 endif
 
-.PHONY: instrument-drivers
-instrument-drivers: $(INSTR_DRIVER_TARGETS)
-
-.PHONY: $(TESTSUITE_DRIVER_TARGETS)
-$(TESTSUITE_DRIVER_TARGETS): testsuite-drivers-%: instrument-drivers-%
+.PHONY: testsuite_drivers
+testsuite_drivers: instrument-drivers
 	@echo "====================================="
 	@echo "========= $@ ========"
 	@echo "====================================="
@@ -166,14 +158,11 @@ $(TESTSUITE_DRIVER_TARGETS): testsuite-drivers-%: instrument-drivers-%
 		gprbuild \
 			-j$(PROCESSORS) \
 			$(GPR_ARGS) \
-			-XLIBRARY_TYPE=$(subst testsuite-drivers-,,$@) \
-			-XXMLADA_BUILD=$(subst testsuite-drivers-,,$@) \
+			-XLIBRARY_TYPE=static \
+			-XXMLADA_BUILD=static \
 			-XBUILD_MODE=$(BUILD_MODE) \
 			-P $$proj ; \
 	done
-
-.PHONY: testsuite_drivers
-testsuite_drivers: $(TESTSUITE_DRIVER_TARGETS)
 
 
 .PHONY: test
