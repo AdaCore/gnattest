@@ -22,11 +22,11 @@ abstract project Config is
                Common_Switches & Dev_Switches & ("-gnatf");
          when "prod" =>
             for Default_Switches ("Ada") use Common_Switches &
-              ("-Ofast",
+              ("-O2",
                --  T915-005: deactivate -gnatp, as this seems to cause
                --  linking errors when linking the Ada Language Server
                --  "-gnatp"
-               "-gnatn2");
+               "-gnatn");
          when "AddressSanitizer" =>
             for Default_Switches ("Ada") use
                Common_Switches & Dev_Switches & ("-fsanitize=address");
