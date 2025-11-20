@@ -24,6 +24,7 @@ include:
       cpus: 16
       image: pe-base
       save-component: true
+      save-anod-logs: true
 
   # Testing
   - component: $CI_SERVER_FQDN/eng/gitlab-templates/test@~latest
