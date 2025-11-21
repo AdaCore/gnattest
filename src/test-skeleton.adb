@@ -566,7 +566,6 @@ package body Test.Skeleton is
       CU : Compilation_Unit;
 
       Test_Packages : String_Set.Set;
-      Cur           : String_Set.Cursor;
 
       procedure Get_Test_Packages_List (S_Data : Suites_Data_Type);
       --  Fills suite data sorting out routines from generic packages
@@ -799,13 +798,9 @@ package body Test.Skeleton is
                TP_List.Clear;
             end;
             Get_Test_Packages_List (Suite_Data_List);
-            Cur := Test_Packages.First;
-            loop
-               exit when Cur = String_Set.No_Element;
-
+            for Test_Package of Test_Packages loop
                Suite_Data :=
-                 Get_Suite_Components
-                   (Suite_Data_List, String_Set.Element (Cur));
+                 Get_Suite_Components (Suite_Data_List, Test_Package);
 
                if Suite_Data.Good_For_Suite then
                   if not Stub_Mode_ON and then not Separate_Drivers then
@@ -819,18 +814,14 @@ package body Test.Skeleton is
                      end if;
                   end if;
                end if;
-
-               String_Set.Next (Cur);
             end loop;
 
             if Stub_Mode_ON or else Separate_Drivers then
 
-               Cur := Test_Packages.First;
-               while Cur /= String_Set.No_Element loop
+               for Test_Package of Test_Packages loop
 
                   Suite_Data :=
-                    Get_Suite_Components
-                      (Suite_Data_List, String_Set.Element (Cur));
+                    Get_Suite_Components (Suite_Data_List, Test_Package);
 
                   if Suite_Data.Good_For_Suite then
                      Test.Harness.Generate_Test_Drivers
@@ -844,8 +835,6 @@ package body Test.Skeleton is
                      Test.Harness.Generate_Substitution_Test_Drivers
                        (Suite_Data);
                   end if;
-
-                  String_Set.Next (Cur);
                end loop;
             end if;
 
@@ -3790,7 +3779,6 @@ package body Test.Skeleton is
       Unit_Pref      : String_Access;
 
       Setters_Set : String_Set.Set;
-      Set_Cur     : String_Set.Cursor;
 
       Subp_Cur : Subp_Data_List.Cursor;
       Pack_Cur : Package_Info_List.Cursor;
@@ -3969,31 +3957,26 @@ package body Test.Skeleton is
       end Put_Persistent_Section;
 
       procedure Add_Buffered_TR_Slocs
-        (TP_List : in out TP_Mapping_List.List; Common_Time : String)
-      is
-         Cur : TR_SLOC_Buffer_Lists.Cursor := TR_SLOC_Buffer.First;
+        (TP_List : in out TP_Mapping_List.List; Common_Time : String) is
       begin
-         loop
-            exit when Cur = TR_SLOC_Buffer_Lists.No_Element;
-
-            if TR_SLOC_Buffer_Lists.Element (Cur).Test_T /= null then
+         for TR_SLOC of TR_SLOC_Buffer loop
+            if TR_SLOC.Test_T /= null then
                Add_TR
                  (TP_List,
-                  TR_SLOC_Buffer_Lists.Element (Cur).TPtarg.all,
-                  TR_SLOC_Buffer_Lists.Element (Cur).Test_F.all,
+                  TR_SLOC.TPtarg.all,
+                  TR_SLOC.Test_F.all,
                   "modified",
-                  TR_SLOC_Buffer_Lists.Element (Cur).Subp,
-                  TR_SLOC_Buffer_Lists.Element (Cur).TR_Line);
+                  TR_SLOC.Subp,
+                  TR_SLOC.TR_Line);
             else
                Add_TR
                  (TP_List,
-                  TR_SLOC_Buffer_Lists.Element (Cur).TPtarg.all,
-                  TR_SLOC_Buffer_Lists.Element (Cur).Test_F.all,
+                  TR_SLOC.TPtarg.all,
+                  TR_SLOC.Test_F.all,
                   Common_Time,
-                  TR_SLOC_Buffer_Lists.Element (Cur).Subp,
-                  TR_SLOC_Buffer_Lists.Element (Cur).TR_Line);
+                  TR_SLOC.Subp,
+                  TR_SLOC.TR_Line);
             end if;
-            TR_SLOC_Buffer_Lists.Next (Cur);
          end loop;
 
          TR_SLOC_Buffer.Clear;
@@ -5477,15 +5460,9 @@ package body Test.Skeleton is
                         New_Line_Count;
                         New_Line_Count;
                         if not Setters_Set.Is_Empty then
-                           Set_Cur := Setters_Set.First;
-                           while Set_Cur /= String_Set.No_Element loop
-                              S_Put
-                                (3,
-                                 "--  "
-                                 & String_Set.Element (Set_Cur)
-                                 & "( );");
+                           for Set of Setters_Set loop
+                              S_Put (3, "--  " & Set & "( );");
                               New_Line_Count;
-                              Next (Set_Cur);
                            end loop;
                            New_Line_Count;
                            Setters_Set.Clear;
@@ -5564,11 +5541,8 @@ package body Test.Skeleton is
                   & " has dangling test(s)");
             end if;
 
-            MD_Cur := Markered_Data_Map.First;
-            loop
-               exit when MD_Cur = Markered_Data_Maps.No_Element;
-
-               MD := Markered_Data_Maps.Element (MD_Cur);
+            for MD_Cur in Markered_Data_Map.Iterate loop
+               MD := Markered_Data_Map.Constant_Reference (MD_Cur);
 
                if Markered_Data_Maps.Key (MD_Cur).Hash.all /= "02" then
                   declare
@@ -5578,9 +5552,7 @@ package body Test.Skeleton is
                      Stub.Subp_Full_Hash :=
                        new String'(Markered_Data_Maps.Key (MD_Cur).Hash.all);
 
-                     Stub.Subp_Text_Name :=
-                       new String'
-                         (Markered_Data_Maps.Element (MD_Cur).Short_Name.all);
+                     Stub.Subp_Text_Name := new String'(MD.Short_Name.all);
 
                      Stub.Subp_Mangle_Name :=
                        new String'
@@ -5635,8 +5607,6 @@ package body Test.Skeleton is
                      New_Line_Count;
                   end;
                end if;
-
-               Markered_Data_Maps.Next (MD_Cur);
             end loop;
 
             Put_Persistent_Section (Body_Statements);
@@ -6682,15 +6652,9 @@ package body Test.Skeleton is
                         New_Line_Count;
                         New_Line_Count;
                         if not Setters_Set.Is_Empty then
-                           Set_Cur := Setters_Set.First;
-                           while Set_Cur /= String_Set.No_Element loop
-                              S_Put
-                                (3,
-                                 "--  "
-                                 & String_Set.Element (Set_Cur)
-                                 & "( );");
+                           for Set of Setters_Set loop
+                              S_Put (3, "--  " & Set & "( );");
                               New_Line_Count;
-                              Next (Set_Cur);
                            end loop;
                            New_Line_Count;
                            Setters_Set.Clear;
@@ -6768,11 +6732,8 @@ package body Test.Skeleton is
                   & " has dangling test(s)");
             end if;
 
-            MD_Cur := Markered_Data_Map.First;
-            loop
-               exit when MD_Cur = Markered_Data_Maps.No_Element;
-
-               MD := Markered_Data_Maps.Element (MD_Cur);
+            for MD_Cur in Markered_Data_Map.Iterate loop
+               MD := Markered_Data_Map.Constant_Reference (MD_Cur);
 
                if Markered_Data_Maps.Key (MD_Cur).Hash.all /= "02" then
                   declare
@@ -6789,8 +6750,7 @@ package body Test.Skeleton is
                         Stub.Subp_Mangle_Name :=
                           new String'
                             (Test_Routine_Prefix
-                             & Markered_Data_Maps.Element (MD_Cur)
-                                 .Short_Name.all
+                             & MD.Short_Name.all
                              & "_"
                              & Stub.Subp_Full_Hash
                                  (Stub.Subp_Full_Hash'First
@@ -6806,8 +6766,7 @@ package body Test.Skeleton is
                         Stub.Subp_Mangle_Name :=
                           new String'
                             (Test_Routine_Prefix
-                             & Markered_Data_Maps.Element (MD_Cur)
-                                 .Short_Name.all
+                             & MD.Short_Name.all
                              & "_"
                              & Stub.Subp_Full_Hash
                                  (Stub.Subp_Full_Hash'First
@@ -6849,8 +6808,6 @@ package body Test.Skeleton is
                      New_Line_Count;
                   end;
                end if;
-
-               Markered_Data_Maps.Next (MD_Cur);
             end loop;
 
             Put_Persistent_Section (Body_Statements);
@@ -7784,30 +7741,17 @@ package body Test.Skeleton is
       Line    : Natural;
       Column  : Natural)
    is
-      TP : TP_Mapping;
       TD : DT_Mapping;
-
-      TP_Cur : TP_Mapping_List.Cursor := TP_List.First;
    begin
-
       TD.File := new String'(Test_F);
       TD.Line := Line;
       TD.Column := Column;
 
-      loop
-         exit when TP_Cur = TP_Mapping_List.No_Element;
-
-         if TP_Mapping_List.Element (TP_Cur).TP_Name.all = TPtarg then
-            exit;
+      for TP of TP_List loop
+         if TP.TP_Name.all = TPtarg then
+            TP.DT_List.Append (TD);
          end if;
-
-         TP_Mapping_List.Next (TP_Cur);
       end loop;
-
-      TP := TP_Mapping_List.Element (TP_Cur);
-      TP.DT_List.Append (TD);
-      TP_List.Replace_Element (TP_Cur, TP);
-
    end Add_DT;
 
    ------------
@@ -8674,27 +8618,23 @@ package body Test.Skeleton is
         (if Subp.Has_TC_Info
          then Sanitize_TC_Name (Subp.TC_Info.Name.all)
          else "");
-      Cur        : Markered_Data_Maps.Cursor := MD_Map.First;
-      MD         : Markered_Data;
+
+      MD : Markered_Data;
    begin
       Trace (Me, "Looking for a compatible dangling test for " & Short_Name);
 
-      loop
-         exit when Cur = Markered_Data_Maps.No_Element;
-
-         MD := Markered_Data_Maps.Element (Cur);
+      for Cur in MD_Map.Iterate loop
+         MD := MD_Map.Constant_Reference (Cur);
          if MD.Short_Name_Used
            and then MD.Short_Name.all = Short_Name
            --  It is hard to understand what happens when test case
            --  name is changed, so we do not handle this scenario.
            and then Markered_Data_Maps.Key (Cur).TC_Hash.all = TC_Hash
          then
-            exit;
+            return Cur;
          end if;
-
-         Markered_Data_Maps.Next (Cur);
       end loop;
-      return Cur;
+      return Markered_Data_Maps.No_Element;
    end Find_Same_Short_Name;
 
    ---------------------------------
@@ -9412,7 +9352,6 @@ package body Test.Skeleton is
 
       Params  : constant Param_Spec_Array := Spec.P_Params;
       Str_Set : String_Set.Set;
-      Cur     : String_Set.Cursor;
    begin
       S_Put (0, GT_Marker_Begin);
       New_Line_Count;
@@ -9438,14 +9377,9 @@ package body Test.Skeleton is
       New_Line_Count;
 
       Str_Set := Current_Subp.TC_Info.Params_To_Temp;
-      Cur := Str_Set.First;
-      loop
-         exit when Cur = String_Set.No_Element;
-
-         S_Put (6, String_Set.Element (Cur));
+      for Str of Str_Set loop
+         S_Put (6, Str);
          New_Line_Count;
-
-         String_Set.Next (Cur);
       end loop;
 
       S_Put (3, "begin");
@@ -9577,7 +9511,6 @@ package body Test.Skeleton is
         Current_Subp.Subp_Declaration.As_Basic_Subp_Decl.P_Subp_Decl_Spec;
       Params  : constant Param_Spec_Array := Spec.P_Params;
       Str_Set : String_Set.Set;
-      Cur     : String_Set.Cursor;
    begin
       S_Put (0, GT_Marker_Begin);
       New_Line_Count;
@@ -9601,14 +9534,9 @@ package body Test.Skeleton is
       New_Line_Count;
 
       Str_Set := Current_Subp.TC_Info.Params_To_Temp;
-      Cur := Str_Set.First;
-      loop
-         exit when Cur = String_Set.No_Element;
-
-         S_Put (6, String_Set.Element (Cur));
+      for Str of Str_Set loop
+         S_Put (6, Str);
          New_Line_Count;
-
-         String_Set.Next (Cur);
       end loop;
 
       S_Put (3, "begin");
@@ -9722,28 +9650,23 @@ package body Test.Skeleton is
    -----------------------------
 
    procedure Update_Generic_Packages (Gen_Pack : Generic_Package) is
-      Cur : Generic_Package_Storage.Cursor := Gen_Package_Storage.First;
-      GP  : Generic_Package;
-
       use Generic_Package_Storage;
    begin
-      while Cur /= Generic_Package_Storage.No_Element loop
+      for Cur in Gen_Package_Storage.Iterate loop
+         if Gen_Package_Storage.Constant_Reference (Cur).Name.all
+           = Gen_Pack.Name.all
+         then
 
-         GP := Generic_Package_Storage.Element (Cur);
+            if Gen_Package_Storage.Constant_Reference (Cur).Sloc /= null then
 
-         if GP.Name.all = Gen_Pack.Name.all then
-            if GP.Sloc /= null then
                --  Same package can be added several times.
+
                return;
             end if;
-            GP.Sloc := Gen_Pack.Sloc;
-            Gen_Package_Storage.Replace_Element (Cur, GP);
+            Gen_Package_Storage.Reference (Cur).Sloc := Gen_Pack.Sloc;
             return;
          end if;
-
-         Next (Cur);
       end loop;
-
       Gen_Package_Storage.Append (Gen_Pack);
    end Update_Generic_Packages;
 
@@ -9752,30 +9675,31 @@ package body Test.Skeleton is
    -----------------------------
 
    procedure Update_Generic_Packages (Instantiation : String) is
-      Cur : Generic_Package_Storage.Cursor := Gen_Package_Storage.First;
-      GP  : Generic_Package;
+      GP : Generic_Package;
 
       use Generic_Package_Storage;
    begin
-      while Cur /= Generic_Package_Storage.No_Element loop
+      for Cur in Gen_Package_Storage.Iterate loop
+         if Gen_Package_Storage.Constant_Reference (Cur).Name.all
+           = Instantiation
+         then
 
-         GP := Generic_Package_Storage.Element (Cur);
+            if Gen_Package_Storage.Constant_Reference (Cur).Has_Instantiation
+            then
 
-         if GP.Name.all = Instantiation then
-            if GP.Has_Instantiation then
                --  Same package can be instantiated multiple times.
+
                return;
             end if;
             GP.Has_Instantiation := True;
-            Gen_Package_Storage.Replace_Element (Cur, GP);
+            Gen_Package_Storage.Reference (Cur).Has_Instantiation := True;
             return;
          end if;
-
-         Next (Cur);
       end loop;
 
       --  Instantiation is processed ahead of coresponding generic.
       --  Adding a template for it to later fill in the sloc.
+
       GP.Name := new String'(Instantiation);
       GP.Sloc := null;
       GP.Has_Instantiation := True;
@@ -9787,17 +9711,12 @@ package body Test.Skeleton is
    ------------------------
 
    procedure Report_Tests_Total is
-      Cur : Tests_Per_Unit.Cursor := Test_Info.First;
    begin
-      loop
-         exit when Cur = Tests_Per_Unit.No_Element;
-
+      for Cur in Test_Info.Iterate loop
          Report_Std
            (Natural'Image (Tests_Per_Unit.Element (Cur))
             & " testable subprograms in "
             & Base_Name (Tests_Per_Unit.Key (Cur)));
-
-         Tests_Per_Unit.Next (Cur);
       end loop;
 
       Test_Info.Clear;

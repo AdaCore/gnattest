@@ -3513,7 +3513,7 @@ package body TGen.Types.Translation is
       Comp_Unit_Idx : constant Positive :=
         Comp_Unit_Decl.P_Fully_Qualified_Name_Array'Last;
 
-      FQN : Ada_Qualified_Name :=
+      FQN : constant Ada_Qualified_Name :=
         (if not Type_Name.Is_Null
          then Convert_Qualified_Name (Type_Name.P_Fully_Qualified_Name_Array)
          else Ada_Identifier_Vectors.Empty);

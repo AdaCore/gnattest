@@ -515,13 +515,14 @@ package body Utils.Projects is
 
       procedure Get_Sources_From_Project is
          Sources : GPR2.Build.Source.Sets.Object;
-         --         Success  : Boolean := False;
 
-         Num_Names               : constant Natural := Num_File_Names (Cmd);
+         Num_Names : constant Natural := Num_File_Names (Cmd);
          --  Number of File_Names on the command line
-         Num_Files_Switches      : constant Natural :=
+
+         Num_Files_Switches : constant Natural :=
            Arg_Length (Cmd, Common.Files);
          --  Number of "-files=..." switches on the command line
+
          Argument_File_Specified : constant Boolean :=
            (if Arg (Cmd) = Update_All
             then Num_Files_Switches > 0
