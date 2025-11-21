@@ -52,6 +52,15 @@ GPR_ARGS += --implicit-with=gnatcov_rts \
 	   --src-subdirs=gnatcov-instr
 endif
 
+# HOST platform
+HOST   := $(shell gcc -dumpmachine)
+# Get PATH separator for the host
+ifeq ($(strip $(findstring mingw32, $(HOST))),mingw32)
+PSEP	= ;
+else
+PSEP	= :
+endif
+
 
 .PHONY: all
 all: bin lib testsuite_drivers
@@ -120,6 +129,8 @@ else
 GNATTEST_GPR = $(shell pwd)/src
 endif
 
+TEST_GPR_PROJECT_PATH = $(GPR_PROJECT_PATH)$(PSEP)$(GNATTEST_GPR)
+
 .PHONY: instrument-drivers
 instrument-drivers:
 ifdef INSTRUMENTED
@@ -129,7 +140,7 @@ ifdef INSTRUMENTED
 
 	for proj in $(TESTSUITE_PROJECTS); do \
 		echo "Instrumenting $$proj" ; \
-		GPR_PROJECT_PATH=$$GPR_PROJECT_PATH:$(GNATTEST_GPR) \
+		GPR_PROJECT_PATH=$(TEST_GPR_PROJECT_PATH) ; \
 		gnatcov instrument \
 			-j$(PROCESSORS) \
 			$(RELOCATE_BUILD) \
@@ -154,7 +165,7 @@ testsuite_drivers: instrument-drivers
 	which gprbuild
 	which gcc
 	for proj in $(TESTSUITE_PROJECTS) ; do \
-		GPR_PROJECT_PATH=$$GPR_PROJECT_PATH:$(GNATTEST_GPR) \
+		GPR_PROJECT_PATH=$(TEST_GPR_PROJECT_PATH) ; \
 		gprbuild \
 			-j$(PROCESSORS) \
 			$(GPR_ARGS) \
@@ -174,7 +185,7 @@ clean:
 	for proj in $(ALL_PROJECTS) ; do \
 		for build_mode in $(ALL_BUILD_MODES) ; do \
 			for library_type in $(ALL_LIBRARY_TYPES) ; do \
-				GPR_PROJECT_PATH=$$GPR_PROJECT_PATH:$(GNATTEST_GPR) \
+				GPR_PROJECT_PATH=$$GPR_PROJECT_PATH$(PSEP)$(GNATTEST_GPR) \
 				gprclean $(RELOCATE_BUILD) \
 					-XLIBRARY_TYPE=$$library_type \
 					-XBUILD_MODE=$$build_mode \
