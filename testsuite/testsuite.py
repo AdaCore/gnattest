@@ -122,14 +122,6 @@ class Testsuite(e3.testsuite.Testsuite):
         # the current directory.
         os.environ["PATH"] = "%s:." % os.environ["PATH"]
 
-        # Put the testsuite drivers in the PATH
-        script_dir = os.path.dirname(__file__)
-        os.environ["PATH"] = "{}{}{}".format(
-            os.path.abspath(os.path.join(script_dir, "ada_drivers", "bin")),
-            os.pathsep,
-            os.environ["PATH"],
-        )
-
         if self.main.args.setup_tgen_rts:
             # Copy the TGen_RTS sources from the tree to a temporary directory
             rts_build_dir = os.path.join(self.working_dir, "tgen_rts")
