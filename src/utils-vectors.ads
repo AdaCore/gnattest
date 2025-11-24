@@ -23,7 +23,6 @@
 
 pragma Warnings (Off); -- One of these will be unreferenced
 with Utils.Fast_Vectors;
-with Utils.Slow_Vectors;
 pragma Warnings (On);
 
 generic package Utils.Vectors renames Utils.Fast_Vectors;

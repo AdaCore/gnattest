@@ -21,8 +21,6 @@
 -- <http://www.gnu.org/licenses/>.                                          --
 ------------------------------------------------------------------------------
 
-with System.WCh_Con;
-
 package Utils.Command_Lines.Common is
 
    Common_Descriptor : Command_Line_Descriptor;
@@ -237,10 +235,7 @@ package Utils.Command_Lines.Common is
    ----------------
 
    function Wide_Character_Encoding (Cmd : Command_Line) return String;
-   function Wide_Character_Encoding
-     (Cmd : Command_Line) return System.WCh_Con.WC_Encoding_Method;
-   --  Libadalang wants the encoding as a String, whereas Pp.Buffers uses
-   --  WC_Encoding_Method.
+   --  Libadalang wants the encoding as a String
 
    function WCEM (Cmd : Command_Line) return Character;
    --  Return the single-character encoding letter

@@ -93,20 +93,4 @@ package body Utils.Command_Lines.Common is
            when others => raise Program_Error);
    end Wide_Character_Encoding;
 
-   function Wide_Character_Encoding
-     (Cmd : Command_Line) return System.WCh_Con.WC_Encoding_Method
-   is
-      use System.WCh_Con;
-   begin
-      return
-        (case WCEM (Cmd) is
-           when 'h'    => WCEM_Hex,
-           when 'u'    => WCEM_Upper,
-           when 's'    => WCEM_Shift_JIS,
-           when 'e'    => WCEM_EUC,
-           when '8'    => WCEM_UTF8,
-           when 'b'    => WCEM_Brackets,
-           when others => raise Program_Error);
-   end Wide_Character_Encoding;
-
 end Utils.Command_Lines.Common;
