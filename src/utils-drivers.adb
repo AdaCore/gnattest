@@ -45,12 +45,12 @@ package body Utils.Drivers is
        Common_String_Switches,
        Common_String_Seq_Switches;
 
-   use Tools;
+   use Test.Actions;
    use type GNAT.OS_Lib.String_Access;
 
    procedure Driver
      (Cmd                   : in out Command_Line;
-      Tool                  : in out Tool_State'Class;
+      Tool                  : in out Tool_State;
       Preprocessing_Allowed : Boolean := True;
       Callback              : Parse_Callback := null)
    is
