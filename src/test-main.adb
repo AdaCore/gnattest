@@ -44,14 +44,14 @@ procedure Test.Main is
       end if;
    end Callback;
 
-   Tool : Actions.Test_Tool;
+   Tool : Test.Actions.Tool_State;
    Cmd  : Command_Line (Test.Command_Lines.Descriptor'Access);
 
 begin
    --  By default, send errors to stdout
    Utils.Err_Out.Output_Enabled := True;
 
-   Test.Actions.Register_Specific_Attributes;
+   Test.Register_Specific_Attributes;
 
    Utils.Drivers.Driver (Cmd, Tool, Callback => Callback'Unrestricted_Access);
 end Test.Main;

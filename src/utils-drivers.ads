@@ -22,13 +22,14 @@
 ------------------------------------------------------------------------------
 
 with Utils.Command_Lines; use Utils.Command_Lines;
-with Utils.Tools;
+
+with Test.Actions;
 
 package Utils.Drivers is
 
    procedure Driver
      (Cmd                   : in out Command_Line;
-      Tool                  : in out Tools.Tool_State'Class;
+      Tool                  : in out Test.Actions.Tool_State;
       Preprocessing_Allowed : Boolean := True;
       Callback              : Parse_Callback := null);
 

@@ -2,7 +2,7 @@
 --                                                                          --
 --                                 GNATtest                                 --
 --                                                                          --
---                      Copyright (C) 2019-2022, AdaCore                    --
+--                       Copyright (C) 2021, AdaCore                        --
 --                                                                          --
 -- GNATtest  is  free  software; you  can  redistribute  it  and/or  modify --
 -- it  under  terms of the  GNU  General  Public  License  as  published by --
@@ -22,48 +22,88 @@
 ------------------------------------------------------------------------------
 
 with Libadalang.Analysis; use Libadalang.Analysis;
+
 with Utils.Command_Lines; use Utils.Command_Lines;
-with Utils.Tools;         use Utils.Tools;
 
 package Test.Actions is
 
-   type Test_Tool is new Tool_State with private;
+   --  Each tool should derive from Tool_State, and override the ops.
+   --  The driver calls Init, then First_Per_File_Action on each source file,
+   --  then First_Pass_Post_Process, then Second_Per_File_Action on each source
+   --  file, then Final.
 
-   procedure Register_Specific_Attributes;
-   --  Registers gnattest specific project attributes so that they can be
-   --  queried later.
+   type Pass_Kind is (First_Pass, Second_Pass);
 
-private
+   type Tool_State is tagged limited record
+      Context : Analysis_Context := No_Analysis_Context;
+      --  The only tool that needs access to the Context is gnatstub.
 
-   overriding
-   procedure Init (Tool : in out Test_Tool; Cmd : in out Command_Line);
-   overriding
+      Run_First_Pass : Boolean := False;
+      --  Whether the drive should skip the first pass or not. Saves time by
+      --  not re-instantiating LAL analysis contexts.
+   end record;
+
+   procedure Init (Tool : in out Tool_State; Cmd : in out Command_Line);
    procedure First_Per_File_Action
-     (Tool      : in out Test_Tool;
+     (Tool      : in out Tool_State;
       Cmd       : Command_Line;
       File_Name : String;
       Input     : String;
       BOM_Seen  : Boolean;
       Unit      : Analysis_Unit);
-   overriding
-   procedure First_Pass_Post_Process
-     (Tool : in out Test_Tool; Cmd : in out Command_Line);
-   overriding
    procedure Second_Per_File_Action
-     (Tool      : in out Test_Tool;
+     (Tool      : in out Tool_State;
       Cmd       : Command_Line;
       File_Name : String;
       Input     : String;
       BOM_Seen  : Boolean;
       Unit      : Analysis_Unit);
-   overriding
-   procedure Final (Tool : in out Test_Tool; Cmd : Command_Line);
-   overriding
-   procedure Tool_Help (Tool : Test_Tool);
-   overriding
-   procedure Second_Per_Invalid_File_Action
-     (Tool : in out Test_Tool; Cmd : Command_Line; File_Name : String);
+   --  Input is the contents of the file named by File_Name.
+   --  BOM_Seen is True if there was a BOM at the start of the file;
+   --  the BOM is not included in Input.
 
-   type Test_Tool is new Tool_State with null record;
+   procedure First_Per_Invalid_File_Action
+     (Tool : in out Tool_State; Cmd : Command_Line; File_Name : String)
+   is null;
+   procedure Second_Per_Invalid_File_Action
+     (Tool : in out Tool_State; Cmd : Command_Line; File_Name : String);
+   --  Called for invalid sources that don't make it to <Nth>_Per_File_Action
+
+   procedure First_Pass_Post_Process
+     (Tool : in out Tool_State; Cmd : in out Command_Line);
+   --  Called in between First_Per_File_Action and Second_Per_File_Action
+
+   procedure Process_File
+     (Tool                  : in out Tool_State;
+      Cmd                   : in out Command_Line;
+      File_Name             : String;
+      Counter               : Natural;
+      Syntax_Error          : out Boolean;
+      Reparse               : Boolean := False;
+      Pass                  : Pass_Kind := Second_Pass;
+      Preprocessing_Allowed : Boolean := False);
+   --  This class-wide procedure takes care of some bookkeeping, and then
+   --  dispatches to First_Per_File_Action or Second_Per_File_Action depending
+   --  on the .
+   --
+   --  If Tool.Context is nil, Process_File creates it. This is necessary
+   --  because we have to defer the Create_Context call until after we've read
+   --  the first file, because it might set the Wide_Character_Encoding via the
+   --  BOM. This makes the somewhat questionable assumption that all files have
+   --  the same encoding (which is necessary anyway if it's controlled by the
+   --  command line).
+   --
+   --  Counter is a count of the number of files left to process. This is used
+   --  to call Create_Context every N files, for some arbitrary N. Without
+   --  that, we use up huge amounts of memory when processing a lot of files,
+   --  due to caching in libadalang. But we don't want to call Create_Context
+   --  on every file, because that slows down processing a lot.
+   --
+   --  Reparse has the same meaning as the parameter of Get_From_File. The
+   --  reason this is needed is documented in Stub.Actions (search for the call
+   --  to Process_File).
+
+   procedure Final (Tool : in out Tool_State; Cmd : Command_Line);
+   procedure Tool_Help (Tool : Tool_State);
 
 end Test.Actions;

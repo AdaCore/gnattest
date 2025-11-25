@@ -2,7 +2,7 @@
 --                                                                          --
 --                                 GNATtest                                 --
 --                                                                          --
---                      Copyright (C) 2019-2023, AdaCore                    --
+--                     Copyright (C) 2021-2025, AdaCore                     --
 --                                                                          --
 -- GNATtest  is  free  software; you  can  redistribute  it  and/or  modify --
 -- it  under  terms of the  GNU  General  Public  License  as  published by --
@@ -31,34 +31,36 @@ with Ada.Strings.Unbounded;
 with Ada.Text_IO;
 
 with GNAT.Directory_Operations;
+with GNAT.Byte_Order_Mark;
 with GNAT.OS_Lib; use GNAT.OS_Lib;
 
 with GNATCOLL.JSON; use GNATCOLL.JSON;
 with GNATCOLL.Traces;
 with GNATCOLL.VFS;  use GNATCOLL.VFS;
 
+with Langkit_Support.Diagnostics;
+with Langkit_Support.File_Readers;
+
 with GPR2; use GPR2;
 pragma Warnings (Off);
 with GPR2.Build.Source.Sets;
 pragma Warnings (On);
-with GPR2.Path_Name;
 with GPR2.Path_Name.Set;
+with GPR2.Path_Name;
 with GPR2.Project.Attribute;
 with GPR2.Project.Attribute_Index;
-with GPR2.Project.Registry.Attribute;
-with GPR2.Project.Registry.Attribute.Description;
-with GPR2.Project.Registry.Pack;
-with GPR2.Project.Registry.Pack.Description;
 with GPR2.Project.Tree;
 with GPR2.Project.View;
 
-with Libadalang; use Libadalang;
+with Libadalang;               use Libadalang;
 with Libadalang.Common;
+with Libadalang.Iterators;     use Libadalang.Iterators;
+with Libadalang.Preprocessing; use Libadalang.Preprocessing;
 with Libadalang.Project_Provider;
 
 with Test.Aggregator;
-with Test.Command_Lines;         use Test.Command_Lines;
 with Test.Common;
+with Test.Command_Lines; use Test.Command_Lines;
 with Test.Generation;
 with Test.Harness;
 with Test.Harness.Source_Table;
@@ -66,13 +68,16 @@ with Test.Mapping;
 with Test.Skeleton;
 with Test.Skeleton.Source_Table;
 with Test.Suite_Min;
+
 with TGen.Libgen;
-with Utils;                      use Utils;
+
 with Utils.Command_Lines.Common; use Utils.Command_Lines.Common;
-with Utils_Debug;                use Utils_Debug;
-with Utils.Formatted_Output;
+with Utils.Err_Out;
+with Utils.Formatted_Output;     use Utils.Formatted_Output;
 with Utils.Projects;             use Utils.Projects;
-with Utils.String_Utilities;
+with Utils.String_Utilities;     use Utils.String_Utilities;
+
+with Utils_Debug;
 
 package body Test.Actions is
 
@@ -107,8 +112,6 @@ package body Test.Actions is
    --  This project needs to get loaded with the same environment as the
    --  argument one.
 
-   use Utils.Formatted_Output;
-
    pragma Warnings (Off); -- ????
    --  These use clauses will be necessary later.
    --  At least some of them.
@@ -123,11 +126,157 @@ package body Test.Actions is
    use Test_Boolean_Switches, Test_String_Switches, Test_String_Seq_Switches;
    pragma Warnings (On);
 
+   ------------------
+   -- Process_File --
+   ------------------
+
+   procedure Process_File
+     (Tool                  : in out Tool_State;
+      Cmd                   : in out Command_Line;
+      File_Name             : String;
+      Counter               : Natural;
+      Syntax_Error          : out Boolean;
+      Reparse               : Boolean := False;
+      Pass                  : Pass_Kind := Second_Pass;
+      Preprocessing_Allowed : Boolean := False)
+   is
+      use GNAT.Byte_Order_Mark;
+      --  We read the file into a String, and convert to wide
+      --  characters according to the encoding method.
+      --
+      --  No matter what the encoding method is, we recognize brackets
+      --  encoding, but not within comments.
+      --
+      --  These behaviors are intended to match what the compiler
+      --  does.
+
+      Input : String_Access := Read_File (File_Name);
+      First : Natural := 1;
+      --  First character of Input, skipping the BOM, if any
+
+      BOM      : BOM_Kind;
+      BOM_Len  : Natural;
+      BOM_Seen : Boolean := False;
+   begin
+
+      --  Call Create_Context if we don't have one, or after an arbitrary
+      --  number of files.
+
+      if Tool.Context = No_Analysis_Context or else Counter mod 100 = 0 then
+         declare
+            Default_Config : Libadalang.Preprocessing.File_Config;
+            File_Configs   : Libadalang.Preprocessing.File_Config_Maps.Map;
+            File_Reader    :
+              Langkit_Support.File_Readers.File_Reader_Reference :=
+                Langkit_Support.File_Readers.No_File_Reader_Reference;
+
+            Provider : constant Unit_Provider_Reference :=
+              Libadalang.Project_Provider.Create_Project_Unit_Provider
+                (Tree => Project_Tree);
+
+         begin
+            --  Check if there are preprocessing directives and if so, update
+            --  the File_Reader.
+
+            if Preprocessing_Allowed then
+               Libadalang.Preprocessing.Extract_Preprocessor_Data_From_Project
+                 (Tree           => Project_Tree,
+                  Default_Config => Default_Config,
+                  File_Configs   => File_Configs);
+
+               if Default_Config.Enabled or not File_Configs.Is_Empty then
+                  File_Reader :=
+                    Libadalang.Preprocessing.Create_Preprocessor
+                      (Default_Config, File_Configs);
+               end if;
+            end if;
+
+            Tool.Context :=
+              Create_Context
+                (Charset       => Wide_Character_Encoding (Cmd),
+                 File_Reader   => File_Reader,
+                 Unit_Provider => Provider);
+
+            --  If preprocessing is not allowed, ignore related diagnostics
+
+            if not Preprocessing_Allowed then
+               Disable_Preprocessor_Directives_Errors (Tool.Context);
+            end if;
+         end;
+      end if;
+
+      declare
+         Unit : constant Analysis_Unit :=
+           Get_From_File (Tool.Context, File_Name, Reparse => Reparse);
+      begin
+         Syntax_Error := False;
+
+         if Has_Diagnostics (Unit) then
+            Syntax_Error := True;
+            Utils.Err_Out.Put
+              ("Syntax errors in \1\n",
+               Ada.Directories.Simple_Name (File_Name));
+
+            for D of Libadalang.Analysis.Diagnostics (Unit) loop
+               Utils.Err_Out.Put
+                 ("\1\n", Langkit_Support.Diagnostics.To_Pretty_String (D));
+            end loop;
+            if Pass = First_Pass then
+               First_Per_Invalid_File_Action (Tool, Cmd, File_Name);
+            else
+               Second_Per_Invalid_File_Action (Tool, Cmd, File_Name);
+            end if;
+
+         else
+            --  Check for BOM at start of file. The only supported BOM is
+            --  UTF8_All. If present, when we're called from gnatpp, the
+            --  Wide_Character_Encoding should already be set to
+            --  WCEM_UTF8, but when we're called from xml2gnat, we need to
+            --  set it.
+            --
+            --  This needs to be done after the input file has been parsed by
+            --  LAL as we need to be able to set the context wide encoding from
+            --  the -W switch, but we do not want to set the context wide
+            --  encoding from the encoding found within a source's BOM.
+
+            Read_BOM (Input.all, BOM_Len, BOM);
+            if BOM = UTF8_All then
+               First := BOM_Len + 1; -- skip it
+               BOM_Seen := True;
+               Set_WCEM (Cmd, "8");
+            else
+               pragma Assert (BOM = Unknown); -- no BOM found
+            end if;
+
+            declare
+               Inp : String renames Input (First .. Input'Last);
+            begin
+               pragma Assert (not Root (Unit).Is_Null);
+               if Pass = First_Pass then
+                  First_Per_File_Action
+                    (Tool, Cmd, File_Name, Inp, BOM_Seen, Unit);
+               else
+                  Second_Per_File_Action
+                    (Tool, Cmd, File_Name, Inp, BOM_Seen, Unit);
+               end if;
+            end;
+
+            --  Restore encoding to not mess with potential LAL context
+            --  re-creations.
+
+            if BOM_Seen then
+               Restore_WCEM (Cmd);
+            end if;
+         end if;
+         Free (Input);
+      end;
+   end Process_File;
+
    ----------
    -- Init --
    ----------
 
-   procedure Init (Tool : in out Test_Tool; Cmd : in out Command_Line) is
+   procedure Init (Tool : in out Tool_State; Cmd : in out Command_Line) is
       Tmp   : GNAT.OS_Lib.String_Access;
       Files : File_Array_Access;
 
@@ -584,9 +733,9 @@ package body Test.Actions is
          Source : GPR2.Build.Source.Object;
 
       begin
-         Common.Recursive_Stubbing_ON := Arg (Cmd, Recursive_Stub);
-         Common.Stub_Mode_ON :=
-           Arg (Cmd, Stub) or else Common.Recursive_Stubbing_ON;
+         Test.Common.Recursive_Stubbing_ON := Arg (Cmd, Recursive_Stub);
+         Test.Common.Stub_Mode_ON :=
+           Arg (Cmd, Stub) or else Test.Common.Recursive_Stubbing_ON;
 
          for File of File_Names (Cmd) loop
             if not Contains (Ignored, Ada.Directories.Simple_Name (File.all))
@@ -1051,7 +1200,7 @@ package body Test.Actions is
          end if;
       end if;
 
-      if Common.Stub_Mode_ON then
+      if Test.Common.Stub_Mode_ON then
          Check_Stub;
          declare
             Excludes : constant String_Ref_Array :=
@@ -1117,9 +1266,14 @@ package body Test.Actions is
 
    end Init;
 
-   overriding
+   -----------------------------
+   -- First_Pass_Post_Process --
+   -----------------------------
+
    procedure First_Pass_Post_Process
-     (Tool : in out Test_Tool; Cmd : in out Command_Line) is
+     (Tool : in out Tool_State; Cmd : in out Command_Line)
+   is
+      pragma Unreferenced (Tool);
    begin
       --  We always need the lib support when running the generation harness
 
@@ -1136,7 +1290,7 @@ package body Test.Actions is
    -- Final --
    -----------
 
-   procedure Final (Tool : in out Test_Tool; Cmd : Command_Line) is
+   procedure Final (Tool : in out Tool_State; Cmd : Command_Line) is
       use Ada.Strings.Unbounded;
    begin
       --  Abort here if we the switch --dump-subp-hash is on. This return
@@ -1228,14 +1382,15 @@ package body Test.Actions is
    -- First_Per_File_Action --
    ---------------------------
 
-   overriding
    procedure First_Per_File_Action
-     (Tool      : in out Test_Tool;
+     (Tool      : in out Tool_State;
       Cmd       : Command_Line;
       File_Name : String;
       Input     : String;
       BOM_Seen  : Boolean;
-      Unit      : Analysis_Unit) is
+      Unit      : Analysis_Unit)
+   is
+      pragma Unreferenced (Tool, Cmd, File_Name, Input, BOM_Seen);
    begin
       Test.Generation.Process_Source (Unit);
    end First_Per_File_Action;
@@ -1245,7 +1400,7 @@ package body Test.Actions is
    ----------------------------
 
    procedure Second_Per_File_Action
-     (Tool      : in out Test_Tool;
+     (Tool      : in out Tool_State;
       Cmd       : Command_Line;
       File_Name : String;
       Input     : String;
@@ -1254,9 +1409,9 @@ package body Test.Actions is
    is
       use Libadalang.Common;
       use Ada.Strings.Unbounded;
-      pragma Unreferenced (Tool, Input, BOM_Seen); -- ????
+      pragma Unreferenced (Tool, Cmd, Input, BOM_Seen); -- ????
    begin
-      if Debug_Flag_V then
+      if Utils_Debug.Debug_Flag_V then
          Print (Unit);
          Put ("With trivia\n");
          PP_Trivia (Unit);
@@ -1316,9 +1471,8 @@ package body Test.Actions is
    -- Second_Per_Invalid_File_Action --
    ------------------------------------
 
-   overriding
    procedure Second_Per_Invalid_File_Action
-     (Tool : in out Test_Tool; Cmd : Command_Line; File_Name : String)
+     (Tool : in out Tool_State; Cmd : Command_Line; File_Name : String)
    is
       pragma Unreferenced (Tool, Cmd, File_Name);
    begin
@@ -1329,7 +1483,7 @@ package body Test.Actions is
    -- Tool_Help --
    ---------------
 
-   procedure Tool_Help (Tool : Test_Tool) is
+   procedure Tool_Help (Tool : Tool_State) is
       pragma Unreferenced (Tool);
    begin
       pragma Style_Checks ("M200"); -- Allow long lines
@@ -1462,6 +1616,53 @@ package body Test.Actions is
       pragma Style_Checks ("M79");
    end Tool_Help;
 
+   ------------------------------
+   -- Process_Additional_Tests --
+   ------------------------------
+
+   procedure Process_Additional_Tests (Cmd : Command_Line) is
+      Context  : Analysis_Context;
+      Provider : Unit_Provider_Reference;
+      Unit     : Analysis_Unit;
+
+      Current_Source : String_Access;
+
+      Additional_Tests_Project : constant GPR2.Project.Tree.Object :=
+        Load_Project (Cmd, Test.Common.Additional_Tests_Prj.all);
+      use Libadalang.Project_Provider;
+   begin
+      for Src of Additional_Tests_Project.Root_Project.Sources loop
+         if Src.Unit.Kind = S_Spec then
+            Test.Harness.Source_Table.Add_Source_To_Process
+              (Src.Path_Name.String_Value);
+         end if;
+      end loop;
+
+      Provider :=
+        Create_Project_Unit_Provider (Tree => Additional_Tests_Project);
+      Context :=
+        Create_Context
+          (Charset       => Wide_Character_Encoding (Cmd),
+           Unit_Provider => Provider);
+
+      Current_Source :=
+        new String'(Test.Harness.Source_Table.Next_Non_Processed_Source);
+      while Current_Source.all /= "" loop
+         Unit :=
+           Get_From_File
+             (Context,
+              Test.Harness.Source_Table.Get_Source_Full_Name
+                (Current_Source.all));
+
+         Test.Harness.Process_Source (Unit);
+
+         Free (Current_Source);
+         Current_Source :=
+           new String'(Test.Harness.Source_Table.Next_Non_Processed_Source);
+      end loop;
+      Free (Current_Source);
+   end Process_Additional_Tests;
+
    ----------------------------
    -- Process_Exclusion_List --
    ----------------------------
@@ -1545,163 +1746,6 @@ package body Test.Actions is
       end;
 
    end Process_Exclusion_List;
-
-   ----------------------------------
-   -- Register_Specific_Attributes --
-   ----------------------------------
-
-   procedure Register_Specific_Attributes is
-      package GPR2_RA renames GPR2.Project.Registry.Attribute;
-      package GPR2_RP renames GPR2.Project.Registry.Pack;
-   begin
-      GPR2_RP.Add (GPR2_GT_Package, GPR2_RP.Everywhere);
-      GPR2_RP.Description.Set_Package_Description
-        (GPR2_GT_Package,
-         "Specifies options used when calling the 'gnattest' program.");
-
-      GPR2_RA.Add
-        (Name                 => +Default_Switches_Attr,
-         Index_Type           => GPR2_RA.No_Index,
-         Value                => GPR2_RA.List,
-         Value_Case_Sensitive => True,
-         Is_Allowed_In        => GPR2_RA.Everywhere);
-      GPR2_RA.Description.Set_Attribute_Description
-        (+Default_Switches_Attr, "Switches passed to gnattest invocations.");
-
-      GPR2_RA.Add
-        (Name                 => +Switches_Attr,
-         Index_Type           => GPR2_RA.String_Index,
-         Value                => GPR2_RA.List,
-         Value_Case_Sensitive => True,
-         Is_Allowed_In        => GPR2_RA.Everywhere);
-      GPR2_RA.Description.Set_Attribute_Description
-        (+Switches_Attr,
-         "Switches passed to gnattest invocations for a specific file.");
-
-      GPR2_RA.Add
-        (Name                 => +Harness_Dir_Attr,
-         Index_Type           => GPR2_RA.No_Index,
-         Value                => GPR2_RA.Single,
-         Value_Case_Sensitive => True,
-         Is_Allowed_In        => GPR2_RA.Everywhere);
-      GPR2_RA.Description.Set_Attribute_Description
-        (+Harness_Dir_Attr, "Directory containing the gnattest harness.");
-
-      GPR2_RA.Add
-        (Name                 => +Subdir_Attr,
-         Index_Type           => GPR2_RA.No_Index,
-         Value                => GPR2_RA.Single,
-         Value_Case_Sensitive => True,
-         Is_Allowed_In        => GPR2_RA.Everywhere);
-      GPR2_RA.Description.Set_Attribute_Description
-        (+Subdir_Attr,
-         "Subdirectory corresponding to the source directory where to generate"
-         & " test packages.");
-
-      GPR2_RA.Add
-        (Name                 => +Tests_Root_Attr,
-         Index_Type           => GPR2_RA.No_Index,
-         Value                => GPR2_RA.Single,
-         Value_Case_Sensitive => True,
-         Is_Allowed_In        => GPR2_RA.Everywhere);
-      GPR2_RA.Description.Set_Attribute_Description
-        (+Tests_Root_Attr,
-         "Directory hosting the hierarchy of test packages.");
-
-      GPR2_RA.Add
-        (Name                 => +Tests_Dir_Attr,
-         Index_Type           => GPR2_RA.No_Index,
-         Value                => GPR2_RA.Single,
-         Value_Case_Sensitive => True,
-         Is_Allowed_In        => GPR2_RA.Everywhere);
-      GPR2_RA.Description.Set_Attribute_Description
-        (+Tests_Dir_Attr, "Directory containing all test packages.");
-
-      GPR2_RA.Add
-        (Name                 => +Additional_Tests_Attr,
-         Index_Type           => GPR2_RA.No_Index,
-         Value                => GPR2_RA.Single,
-         Value_Case_Sensitive => True,
-         Is_Allowed_In        => GPR2_RA.Everywhere);
-      GPR2_RA.Description.Set_Attribute_Description
-        (+Additional_Tests_Attr,
-         "List of projects containing additional tests to be added to the"
-         & " testsuite.");
-
-      GPR2_RA.Add
-        (Name                 => +Stubs_Dir_Attr,
-         Index_Type           => GPR2_RA.No_Index,
-         Value                => GPR2_RA.Single,
-         Value_Case_Sensitive => True,
-         Is_Allowed_In        => GPR2_RA.Everywhere);
-      GPR2_RA.Description.Set_Attribute_Description
-        (+Stubs_Dir_Attr, "Directory in which stubbed units are generated.");
-
-      GPR2_RA.Add
-        (Name                 => +Skeletons_Default_Attr,
-         Index_Type           => GPR2_RA.No_Index,
-         Value                => GPR2_RA.Single,
-         Value_Case_Sensitive => True,
-         Is_Allowed_In        => GPR2_RA.Everywhere);
-      GPR2_RA.Description.Set_Attribute_Description
-        (+Skeletons_Default_Attr,
-         "Default behavior of test skeletons (pass or fail).");
-
-      GPR2_RA.Add
-        (Name                 => +Stub_Exclusion_List_Attr,
-         Index_Type           => GPR2_RA.String_Index,
-         Value                => GPR2_RA.Single,
-         Value_Case_Sensitive => True,
-         Is_Allowed_In        => GPR2_RA.Everywhere);
-      GPR2_RA.Description.Set_Attribute_Description
-        (+Stub_Exclusion_List_Attr,
-         "List of spec:filename that should not be stubbed.");
-
-      GPR2_RA.Add
-        (Name                 => +Default_Stub_Exclusion_List_Attr,
-         Index_Type           => GPR2_RA.No_Index,
-         Value                => GPR2_RA.Single,
-         Value_Case_Sensitive => True,
-         Is_Allowed_In        => GPR2_RA.Everywhere);
-      GPR2_RA.Description.Set_Attribute_Description
-        (+Default_Stub_Exclusion_List_Attr,
-         "Response file to specify a stub exclusion list.");
-
-      --  Not really a gnattest specific attribute, but we still need to
-      --  inherit makefile attribute in test driver.
-
-      declare
-         GPR2_Make_Package : constant GPR2.Package_Id := +Name_Type'("make");
-      begin
-         GPR2_RP.Add (GPR2_Make_Package, GPR2_RP.Everywhere);
-         GPR2_RA.Add
-           (Name                 =>
-              (Pack => GPR2_Make_Package,
-               Attr => GPR2."+" (GPR2.Name_Type'("makefile"))),
-            Index_Type           => GPR2_RA.No_Index,
-            Value                => GPR2_RA.Single,
-            Value_Case_Sensitive => True,
-            Is_Allowed_In        => GPR2_RA.Everywhere);
-      end;
-
-      --  Needed for gnatcov integration
-
-      GPR2_RP.Add (+Name_Type'("coverage"), GPR2_RP.Everywhere);
-      GPR2_RA.Add
-        (Name                 => Coverage_Switches,
-         Index_Type           => GPR2_RA.File_Index,
-         Value                => GPR2_RA.List,
-         Value_Case_Sensitive => True,
-         Is_Allowed_In        => GPR2_RA.Everywhere);
-
-      GPR2_RP.Add (+Name_Type'("emulator"), GPR2_RP.Everywhere);
-      GPR2_RA.Add
-        (Name                 => Emulator_Board,
-         Index_Type           => GPR2_RA.No_Index,
-         Value                => GPR2_RA.Single,
-         Value_Case_Sensitive => True,
-         Is_Allowed_In        => GPR2_RA.Everywhere);
-   end Register_Specific_Attributes;
 
    ---------------------------
    -- Non_Null_Intersection --
@@ -2115,72 +2159,24 @@ package body Test.Actions is
       Test.Skeleton.Source_Table.Set_Direct_Stub_Output;
 
       --  Once stub dirs are set we can compare them with test dirs per source.
-      Skeleton.Source_Table.Reset_Source_Iterator;
-      Tmp := new String'(Skeleton.Source_Table.Next_Source_Name);
+      Test.Skeleton.Source_Table.Reset_Source_Iterator;
+      Tmp := new String'(Test.Skeleton.Source_Table.Next_Source_Name);
       while Tmp.all /= "" loop
-         if Skeleton.Source_Table.Get_Source_Output_Dir (Tmp.all)
-           = Skeleton.Source_Table.Get_Source_Stub_Dir (Tmp.all)
+         if Test.Skeleton.Source_Table.Get_Source_Output_Dir (Tmp.all)
+           = Test.Skeleton.Source_Table.Get_Source_Stub_Dir (Tmp.all)
          then
             Test.Common.Report_Std
               ("gnattest: "
-               & Skeleton.Source_Table.Get_Source_Stub_Dir (Tmp.all)
+               & Test.Skeleton.Source_Table.Get_Source_Stub_Dir (Tmp.all)
                & " is used for more than one purpose");
             Cmd_Error_No_Help
               ("gnattest: invalid stub directory, cannot mix up "
                & "stubs and tests");
          end if;
          Free (Tmp);
-         Tmp := new String'(Skeleton.Source_Table.Next_Source_Name);
+         Tmp := new String'(Test.Skeleton.Source_Table.Next_Source_Name);
       end loop;
 
-      Skeleton.Source_Table.Reset_Source_Iterator;
+      Test.Skeleton.Source_Table.Reset_Source_Iterator;
    end Check_Stub;
-
-   ------------------------------
-   -- Process_Additional_Tests --
-   ------------------------------
-
-   procedure Process_Additional_Tests (Cmd : Command_Line) is
-      Context  : Analysis_Context;
-      Provider : Unit_Provider_Reference;
-      Unit     : Analysis_Unit;
-
-      Current_Source : String_Access;
-
-      Additional_Tests_Project : constant GPR2.Project.Tree.Object :=
-        Load_Project (Cmd, Test.Common.Additional_Tests_Prj.all);
-      use Libadalang.Project_Provider;
-   begin
-      for Src of Additional_Tests_Project.Root_Project.Sources loop
-         if Src.Unit.Kind = S_Spec then
-            Test.Harness.Source_Table.Add_Source_To_Process
-              (Src.Path_Name.String_Value);
-         end if;
-      end loop;
-
-      Provider :=
-        Create_Project_Unit_Provider (Tree => Additional_Tests_Project);
-      Context :=
-        Create_Context
-          (Charset       => Wide_Character_Encoding (Cmd),
-           Unit_Provider => Provider);
-
-      Current_Source :=
-        new String'(Test.Harness.Source_Table.Next_Non_Processed_Source);
-      while Current_Source.all /= "" loop
-         Unit :=
-           Get_From_File
-             (Context,
-              Test.Harness.Source_Table.Get_Source_Full_Name
-                (Current_Source.all));
-
-         Test.Harness.Process_Source (Unit);
-
-         Free (Current_Source);
-         Current_Source :=
-           new String'(Test.Harness.Source_Table.Next_Non_Processed_Source);
-      end loop;
-      Free (Current_Source);
-   end Process_Additional_Tests;
-
 end Test.Actions;

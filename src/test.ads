@@ -23,4 +23,9 @@
 
 package Test is
    --  Root of GNATTest Toolset
+
+   procedure Register_Specific_Attributes;
+   --  Registers gnattest specific project attributes so that they can be
+   --  queried later.
+
 end Test;
