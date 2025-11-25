@@ -129,7 +129,7 @@ else
 GNATTEST_GPR = $(shell pwd)/src
 endif
 
-TEST_GPR_PROJECT_PATH = $(GPR_PROJECT_PATH)$(PSEP)$(GNATTEST_GPR)
+TEST_GPR_PROJECT_PATH = "$(GPR_PROJECT_PATH)$(PSEP)$(GNATTEST_GPR)"
 
 .PHONY: instrument-drivers
 instrument-drivers:
