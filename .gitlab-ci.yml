@@ -17,9 +17,11 @@ include:
       install-gnatformat: true
       install-gnatformat-extra-anod-args: -Qedge
 
-  # Build
+  # Build (instrumented)
   - component: $CI_SERVER_FQDN/eng/gitlab-templates/build@~latest
     inputs:
+      stage: build
+      job-name: instrumented-build
       anod-args: run build_$ACI_TRACK
       cpus: 16
       image: pe-base
@@ -29,11 +31,26 @@ include:
   # Testing
   - component: $CI_SERVER_FQDN/eng/gitlab-templates/test@~latest
     inputs:
+      needs: ["instrumented-build:linux"]
       job-name: gnattest
       anod-args: run test_$ACI_TRACK
       image: pe-base
       cpus: 16
       disk: 80
+
+  # Non instrumented builds of gnattest go into the testing stage, both Linux
+  # and Windows.
+  - component: $CI_SERVER_FQDN/eng/gitlab-templates/build@~latest
+    inputs:
+      stage: test
+      anod-args: build gnattest
+      linux: true
+      cpus: 8
+      disk: 80
+      windows: true
+      windows-cpus: 2
+      windows-mem: 8
+
 
   - component: $CI_SERVER_FQDN/eng/gitlab-templates/test@~latest
     inputs:
