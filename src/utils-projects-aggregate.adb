@@ -27,13 +27,14 @@ with Ada.Text_IO;
 
 with GPR2.Path_Name;
 
-with Utils.Command_Lines.Common; use Utils.Command_Lines.Common;
-with Utils.String_Utilities;     use Utils.String_Utilities;
+with Test.Command_Lines; use Test.Command_Lines;
+
+with Utils.String_Utilities; use Utils.String_Utilities;
 with Utils.Tool_Names;
 
 package body Utils.Projects.Aggregate is
 
-   use Common_Flag_Switches, Common_String_Switches;
+   use Test_Boolean_Switches, Test_String_Switches;
 
    use String_Access_Sets;
    Aggregated_Projects : String_Access_Set;
@@ -83,7 +84,7 @@ package body Utils.Projects.Aggregate is
               ("Processing aggregated project " & Prj_Name.all);
          end if;
          Args (Args'Last - 1) :=
-           Switch_Text (Common_Descriptor, To_All (Aggregated_Project_File));
+           Switch_Text (Descriptor, To_All (Aggregated_Project_File));
          Args (Args'Last) := Prj_Name;
 
          if Debug_Flag_C then

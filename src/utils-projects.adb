@@ -46,20 +46,21 @@ with GPR2.Project.Attribute;
 with Libadalang.Analysis;         use Libadalang.Analysis;
 with Libadalang.Project_Provider; use Libadalang.Project_Provider;
 
-with Utils.Command_Lines.Common; use Utils.Command_Lines.Common;
+with Test.Command_Lines; use Test.Command_Lines;
+
 with Utils.Environment;
 with Utils.Formatted_Output;
 with Utils.Projects.Aggregate;
-with Utils.String_Utilities;     use Utils.String_Utilities;
+with Utils.String_Utilities; use Utils.String_Utilities;
 with Utils.Versions;
 
 package body Utils.Projects is
    use Ada.Text_IO;
 
-   use Common_Flag_Switches,
-       Common_String_Switches,
-       Common_String_Seq_Switches,
-       Source_Selection_Switches;
+   use Source_Selection_Switches,
+       Test_Boolean_Switches,
+       Test_String_Switches,
+       Test_String_Seq_Switches;
 
    My_Project_Tree : aliased GPR2.Project.Tree.Object;
    --  Project tree for the user project
@@ -519,8 +520,7 @@ package body Utils.Projects is
          Num_Names : constant Natural := Num_File_Names (Cmd);
          --  Number of File_Names on the command line
 
-         Num_Files_Switches : constant Natural :=
-           Arg_Length (Cmd, Common.Files);
+         Num_Files_Switches : constant Natural := Arg_Length (Cmd, Files);
          --  Number of "-files=..." switches on the command line
 
          Argument_File_Specified : constant Boolean :=
@@ -853,7 +853,7 @@ package body Utils.Projects is
    procedure Post_Cmd_Line_1 (Cmd : Command_Line) is
       use Utils.Environment;
    begin
-      for Dbg of Arg (Cmd, Command_Lines.Common.Debug) loop
+      for Dbg of Arg (Cmd, Debug) loop
          Set_Debug_Options (Dbg.all);
       end loop;
 
@@ -941,12 +941,6 @@ package body Utils.Projects is
          Print_Help.all;
          Environment.Clean_Up;
          OS_Exit (0);
-      end if;
-
-      if Arg (Cmd, Cargs) then
-         Cmd_Error_No_Tool_Name
-           ("-cargs switch is no longer supported; use "
-            & "e.g. --wide-character-encoding=8 instead of -cargs -gnatW8");
       end if;
 
       if Arg (Cmd, Verbose) and then Arg (Cmd, Aggregated_Project_File) = null

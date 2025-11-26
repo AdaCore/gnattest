@@ -46,8 +46,9 @@ with Libadalang.Preprocessing;
 with Langkit_Support.Text;  use Langkit_Support.Text;
 with Langkit_Support.Slocs; use Langkit_Support.Slocs;
 
+with Test.Command_Lines; use Test.Command_Lines;
+
 with TGen.Libgen;
-with Utils.Command_Lines.Common; use Utils.Command_Lines.Common;
 
 package Test.Common is
 
