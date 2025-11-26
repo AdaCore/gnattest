@@ -56,9 +56,15 @@ endif
 HOST   := $(shell gcc -dumpmachine)
 # Get PATH separator for the host
 ifeq ($(strip $(findstring mingw32, $(HOST))),mingw32)
-PSEP	= ;
+PSEP = ;
 else
-PSEP	= :
+PSEP = :
+endif
+
+# Somehow we need to go through cygpath to get a proper Windows path name..
+CWD = $(shell pwd)
+ifdef CYGWIN
+CWD := $(shell cygpath -w $(CWD))
 endif
 
 
@@ -126,10 +132,13 @@ GNATTEST_GPR = $(EXTERNAL_GNATTEST_GPR)
 GNATCOV_EXTRA_ARGS = --externally-built-projects --no-subprojects
 else
 # Look at the source directory in any other case
-GNATTEST_GPR = $(shell pwd)/src
+GNATTEST_GPR = $(CWD)/src
 endif
 
-TEST_GPR_PROJECT_PATH = "$(GPR_PROJECT_PATH)$(PSEP)$(GNATTEST_GPR)"
+# Note: the quotes in the variable definition bellow are important to prevent
+# make from interpreting the Windows path separator ';' as actual command
+# sequences when setting the GPR_PROJECT_PATH in the rules bellow.
+TEST_GPR_PROJECT_PATH = "$(GNATTEST_GPR)$(PSEP)$(GPR_PROJECT_PATH)"
 
 .PHONY: instrument-drivers
 instrument-drivers:
@@ -140,7 +149,7 @@ ifdef INSTRUMENTED
 
 	for proj in $(TESTSUITE_PROJECTS); do \
 		echo "Instrumenting $$proj" ; \
-		GPR_PROJECT_PATH=$(TEST_GPR_PROJECT_PATH) ; \
+		GPR_PROJECT_PATH=$(TEST_GPR_PROJECT_PATH) \
 		gnatcov instrument \
 			-j$(PROCESSORS) \
 			$(RELOCATE_BUILD) \
@@ -165,7 +174,7 @@ testsuite_drivers: instrument-drivers
 	which gprbuild
 	which gcc
 	for proj in $(TESTSUITE_PROJECTS) ; do \
-		GPR_PROJECT_PATH=$(TEST_GPR_PROJECT_PATH) ; \
+		GPR_PROJECT_PATH=$(TEST_GPR_PROJECT_PATH) \
 		gprbuild \
 			-j$(PROCESSORS) \
 			$(GPR_ARGS) \
