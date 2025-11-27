@@ -918,7 +918,7 @@ package body Test.Skeleton.Source_Table is
       Trace (Me, "Mark_Projects_With_Stubbed_Sources");
       Increase_Indent (Me);
 
-      --  First, mark all projects that have sources that have been stubbed.
+      --  First, mark all projects that have sources that have been stubbed
       for SF of SF_Table loop
          if SF.Stub_Created then
             PR := PF_Table.Element (SF.Project_Name.all);
