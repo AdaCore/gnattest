@@ -54,6 +54,7 @@ include:
 
   - component: $CI_SERVER_FQDN/eng/gitlab-templates/test@~latest
     inputs:
+      needs: ["instrumented-build:linux"]
       job-name: gnattest-gnatfuzz
       anod-args: run test_gnatfuzz_tests
       image: pe-base
