@@ -23,7 +23,11 @@
 
 with GNATCOLL.Iconv;
 
-package body Utils.Command_Lines.Common is
+with GNAT.OS_Lib; use GNAT.OS_Lib;
+
+package body Test.Command_Lines is
+
+   use Test.Command_Lines.Test_String_Switches;
 
    Saved_WCEM : Character := ASCII.NUL;
 
@@ -93,4 +97,4 @@ package body Utils.Command_Lines.Common is
            when others => raise Program_Error);
    end Wide_Character_Encoding;
 
-end Utils.Command_Lines.Common;
+end Test.Command_Lines;

@@ -71,11 +71,10 @@ with Test.Suite_Min;
 
 with TGen.Libgen;
 
-with Utils.Command_Lines.Common; use Utils.Command_Lines.Common;
 with Utils.Err_Out;
-with Utils.Formatted_Output;     use Utils.Formatted_Output;
-with Utils.Projects;             use Utils.Projects;
-with Utils.String_Utilities;     use Utils.String_Utilities;
+with Utils.Formatted_Output; use Utils.Formatted_Output;
+with Utils.Projects;         use Utils.Projects;
+with Utils.String_Utilities; use Utils.String_Utilities;
 
 with Utils_Debug;
 
@@ -116,12 +115,7 @@ package body Test.Actions is
    --  These use clauses will be necessary later.
    --  At least some of them.
 
-   use Common_Flag_Switches,
-       Common_Boolean_Switches,
-       Ada_Version_Switches,
-       Common_String_Switches,
-       Common_String_Seq_Switches,
-       Common_Nat_Switches;
+   use Ada_Version_Switches, Test_Nat_Switches, Test_String_Seq_Switches;
 
    use Test_Boolean_Switches, Test_String_Switches, Test_String_Seq_Switches;
    pragma Warnings (On);
@@ -393,14 +387,12 @@ package body Test.Actions is
                 ("--dump-subp-hash",
                  Arg (Cmd, Dump_Subp_Hash).all,
                  Test.Common.Subp_Line_Nbr));
-         Utils.Command_Lines.Common.Common_Flag_Switches.Set_Arg
-           (Cmd, Quiet, True);
+         Test.Command_Lines.Test_Boolean_Switches.Set_Arg (Cmd, Quiet, True);
       end if;
 
       Test.Common.Instrument := Arg (Cmd, Dump_Test_Inputs);
 
-      Test.Common.Lang_Version :=
-        Utils.Command_Lines.Common.Ada_Version_Switches.Arg (Cmd);
+      Test.Common.Lang_Version := Arg (Cmd);
 
       --  Passed_Tests
       declare

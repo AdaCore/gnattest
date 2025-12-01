@@ -26,8 +26,9 @@ with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 
 with GNAT.OS_Lib;
 
-with Test.Common;                use Test.Common;
-with Utils.Command_Lines.Common; use Utils.Command_Lines.Common;
+with Test.Command_Lines; use Test.Command_Lines;
+with Test.Common;        use Test.Common;
+
 with Utils_Debug;
 with Utils.Environment;
 
@@ -97,7 +98,7 @@ package body Test.Subprocess is
    procedure Populate_X_Vars
      (Cmd : in out Argument_List; Gnattest_Cmd : Command_Line)
    is
-      use Common_String_Seq_Switches;
+      use Test_String_Seq_Switches;
       Ext_Vars : constant String_Ref_Array :=
         Arg (Gnattest_Cmd, External_Variable);
    begin

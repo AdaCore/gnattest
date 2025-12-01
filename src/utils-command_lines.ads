@@ -89,7 +89,7 @@ package Utils.Command_Lines is
    --  that a formal_part serves for a procedure. Step 2, on the other hand,
    --  is where we look at the actual command-line typed by the user.
 
-   --  See Utils.Command_Lines.Common for an example of Step 1, and see
+   --  See Test.Command_Lines for an example of Step 1, and see
    --  Utils.Projects for an example of Step 2.
 
    type Command_Line_Descriptor is limited private;

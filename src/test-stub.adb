@@ -24,6 +24,7 @@
 with GNATCOLL.Traces; use GNATCOLL.Traces;
 with GNATCOLL.VFS;    use GNATCOLL.VFS;
 
+with Test.Command_Lines;
 with Test.Common;  use Test.Common;
 with Test.Mapping; use Test.Mapping;
 with Test.Skeleton.Source_Table;
@@ -52,7 +53,6 @@ with Ada.Strings.Fixed;       use Ada.Strings.Fixed;
 with Ada.Characters.Handling; use Ada.Characters.Handling;
 
 with Utils.Command_Lines; use Utils.Command_Lines;
-with Utils.Command_Lines.Common;
 with Utils.Environment;
 
 package body Test.Stub is
@@ -785,7 +785,8 @@ package body Test.Stub is
       Add_Import           : Boolean := False;
       Add_Language_Version : Boolean := False)
    is
-      use Utils.Command_Lines.Common;
+      use Test.Command_Lines;
+
       ID : constant Markered_Data_Id :=
         (Import_MD,
          new String'(""),

@@ -29,21 +29,20 @@ with GNAT.OS_Lib;
 
 with GPR2;
 
-with Utils.Command_Lines.Common; use Utils.Command_Lines.Common;
+with Test.Command_Lines; use Test.Command_Lines;
+
 with Utils.Environment;
 with Utils.Err_Out;
-with Utils.Projects;             use Utils.Projects;
+with Utils.Projects;         use Utils.Projects;
 with Utils.Projects.Aggregate;
-with Utils.String_Utilities;     use Utils.String_Utilities;
+with Utils.String_Utilities; use Utils.String_Utilities;
 with Utils.Tool_Names;
 
 with Libadalang.Iterators; use Libadalang.Iterators;
 
 package body Utils.Drivers is
 
-   use Common_Flag_Switches,
-       Common_String_Switches,
-       Common_String_Seq_Switches;
+   use Test_Boolean_Switches, Test_String_Switches, Test_String_Seq_Switches;
 
    use Test.Actions;
    use type GNAT.OS_Lib.String_Access;
