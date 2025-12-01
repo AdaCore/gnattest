@@ -1210,7 +1210,7 @@ package body Test.Actions is
          end if;
          for Attr of Root_Prj.Attributes (+Stub_Exclusion_List_Attr) loop
             Process_Exclusion_List
-              (":" & String (Attr.Index.Text) & "=" & String (Attr.Value.Text),
+              (String (Attr.Index.Text) & ":" & String (Attr.Value.Text),
                From_Project => True);
          end loop;
       end if;
@@ -1531,11 +1531,11 @@ package body Test.Actions is
         (" --exclude-from-stubbing=file       - List of sources whose bodies should not\n");
       Put ("                                      be stubbed\n");
       Put
-        (" --exclude-from-stubbing:spec=file  - List of sources whose bodies should not\n");
+        (" --exclude-from-stubbing=spec:file  - List of sources whose bodies should not\n");
       Put
-        ("                                      be stubbed when testing unit whose\n");
+        ("                                        be stubbed when testing unit whose\n");
       Put
-        ("                                      specification is located in file spec\n");
+        ("                                        specification is located in file spec\n");
       Put ("\n");
 
       Put (" --harness-dir=dirname  - Output dir for test harness\n");
@@ -1665,24 +1665,42 @@ package body Test.Actions is
       use Ada.Text_IO;
       use Ada.Strings.Fixed;
       Idx   : Natural;
-      First : constant Natural := Value'First;
+      First : Natural := Value'First;
 
       F : File_Type;
 
-      Exclude_For_One_UUT : constant Boolean :=
+      Deprecated_Exclude_For_One_UUT : constant Boolean :=
         Value'Length > 3
         and then Value (First) = ':'
         and then Index (Value, "=") > First + 1;
+
+      Exclude_For_One_UUT : constant Boolean :=
+        Value'Length > 3 and then Index (Value, ":") > First + 1;
+      --  For the new interface (=spec:file instead of :spec=file), the equal
+      --  sign is eaten by the argument processing.
 
       S : String_Access;
 
       function Is_Comment (S : String) return Boolean
       is (S'Length >= 2 and then S (S'First .. S'First + 1) = "--");
+
+      use Test.Common;
    begin
-      if Exclude_For_One_UUT then
-         Idx := Index (Value, "=");
+      if Deprecated_Exclude_For_One_UUT or else Exclude_For_One_UUT then
+         if Deprecated_Exclude_For_One_UUT then
+            Report_Err
+              ("warning: (gnattest) --exclude-from-stubbing:spec=file is"
+               & " deprecated and will be removed in release 27."
+               & " Use --exclude-from-stubbing=spec:file instead");
+            Idx := Index (Value, "=");
+
+            First := First + 1; --  Skip the ':'
+
+         else
+            Idx := Index (Value, ":");
+         end if;
          declare
-            Unit   : constant String := Value (First + 1 .. Idx - 1);
+            Unit   : constant String := Value (First .. Idx - 1);
             F_Path : constant String :=
               Normalize_Pathname
                 (Name           => Value (Idx + 1 .. Value'Last),
