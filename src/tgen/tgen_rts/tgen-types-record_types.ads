@@ -171,10 +171,7 @@ package TGen.Types.Record_Types is
 
    function Image (Self : Record_Typ) return String;
 
-   function Is_Discriminated (Self : Record_Typ) return Boolean
-   is (not Self.Discriminant_Types.Is_Empty
-       or else (Self.Ancestor /= null
-                and then Is_Discriminated (Self.Ancestor.all)));
+   function Is_Discriminated (Self : Record_Typ) return Boolean;
    --  Self is discriminated if Self or one of its ancestors has at least
    --  one discriminant, i.e. the map of discriminant types has at least
    --  one element.

@@ -71,6 +71,18 @@ package body TGen.Types.Record_Types is
       Discriminated : Boolean;
       Variant       : Variant_Part_Acc := null) return Unbounded_String;
 
+   ----------------------
+   -- Is_Discriminated --
+   ----------------------
+
+   function Is_Discriminated (Self : Record_Typ) return Boolean is
+   begin
+      return
+        not Self.Discriminant_Types.Is_Empty
+        or else (Self.Ancestor /= null
+                 and then Is_Discriminated (Self.Ancestor.all));
+   end Is_Discriminated;
+
    -------------------------------
    -- Image_Internal_Components --
    -------------------------------
