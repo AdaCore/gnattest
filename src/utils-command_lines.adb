@@ -33,6 +33,8 @@ with GNAT.Command_Line;
 --  We don't use most of the facilities of GNAT.Command_Line.
 --  We use it mainly for the wildcard-expansion facility.
 
+with Test.Common;
+
 with Utils.Formatted_Output;
 with Utils.Tool_Names;
 
@@ -962,7 +964,22 @@ package body Utils.Command_Lines is
            Descriptor.Allowed_Switches (Switch).Alias;
          pragma Assert (Descriptor.Allowed_Switches (Alias).Enabled);
          Dyn        : Dynamically_Typed_Switch renames Cmd.Sw (Alias);
+
+         Deprecated_Cur : String_Vectors.Cursor :=
+           String_Vectors.Find (Cmd.Descriptor.Deprecated_Switches, Text);
       begin
+         if String_Vectors.Has_Element (Deprecated_Cur) then
+            Test.Common.Report_Err
+              ("warning: flag '"
+               & Text
+               & "' is deprecated and will be removed in release 27.");
+            Test.Common.Report_Err ("reason: the flag has no effect");
+
+            --  Remove the flag from the list to avoid printing the warning
+            --  more than once.
+            String_Vectors.Delete
+              (Cmd.Descriptor.Deprecated_Switches, Deprecated_Cur);
+         end if;
          Dyn.Text :=
            new String'(Descriptor.Allowed_Switches (Switch).Text.all);
          Dyn.Explicit := True;
