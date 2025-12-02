@@ -4,6 +4,9 @@ stages:
   - optional
   - check
 
+variables:
+  GNATFORMAT_DATE: 20251130
+
 include:
   # Issue check
   - component: $CI_SERVER_FQDN/eng/gitlab-templates/check-issue@~latest
@@ -15,7 +18,7 @@ include:
       anod-spec: gnattest
       gnatformat-args: -P src/build.gpr --check
       install-gnatformat: true
-      install-gnatformat-extra-anod-args: -Qedge
+      install-gnatformat-extra-anod-args: -Qdate=$GNATFORMAT_DATE
 
   # Build (instrumented)
   - component: $CI_SERVER_FQDN/eng/gitlab-templates/build@~latest
