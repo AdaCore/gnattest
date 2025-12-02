@@ -34,9 +34,10 @@ with GNAT.Command_Line;
 --  We don't use most of the facilities of GNAT.Command_Line.
 --  We use it mainly for the wildcard-expansion facility.
 
+with Test.Common;
+
 with Utils.Tool_Names;
 with Utils.Strings; use Utils.Strings;
-with Utils.String_Utilities;
 
 package body Utils.Command_Lines is
    use Ada.Text_IO;
@@ -1004,6 +1005,7 @@ package body Utils.Command_Lines is
       --  the current switch (as in "--switch arg").
 
       procedure Parse_One_Switch is
+         package SU renames String_Utilities;
          Text       : String renames Text_Args (Cur).all;
          pragma Assert (Text'First = 1);
          Descriptor : Command_Line_Descriptor renames Cmd.Descriptor.all;
@@ -1016,7 +1018,22 @@ package body Utils.Command_Lines is
            Descriptor.Allowed_Switches (Switch).Alias;
          pragma Assert (Descriptor.Allowed_Switches (Alias).Enabled);
          Dyn        : Dynamically_Typed_Switch renames Cmd.Sw (Alias);
+
+         Deprecated_Cur : SU.String_Vectors.Cursor :=
+           SU.String_Vectors.Find (Cmd.Descriptor.Deprecated_Switches, Text);
       begin
+         if SU.String_Vectors.Has_Element (Deprecated_Cur) then
+            Test.Common.Report_Err
+              ("warning: flag '"
+               & Text
+               & "' is deprecated and will be removed in release 27.");
+            Test.Common.Report_Err ("reason: the flag has no effect");
+
+            --  Remove the flag from the list to avoid printing the warning
+            --  more than once.
+            SU.String_Vectors.Delete
+              (Cmd.Descriptor.Deprecated_Switches, Deprecated_Cur);
+         end if;
          Dyn.Text :=
            new String'(Descriptor.Allowed_Switches (Switch).Text.all);
          Dyn.Explicit := True;
