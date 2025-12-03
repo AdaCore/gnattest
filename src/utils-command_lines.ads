@@ -751,6 +751,17 @@ private
       --  Allowed_Switches_Vector is built up by Step 1 (instantiations
       --  of _Switches generics). Then Step 2 (Parse) copies that into
       --  Allowed_Switches, and Allowed_Switches_Vector is no longer used.
+
+      Deprecated_Switches : String_Vector :=
+        (["--inheritance-check",
+          "--command-line",
+          "--test-filtering",
+          "--test-filtering-file-io",
+          "--no-harness-only"]);
+
+      --  Deprecated flags that will be removed once we switch to
+      --  GNATCOLL.Opt_Parse.
+
    end record;
 
    function Enabled
