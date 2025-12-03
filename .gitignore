@@ -7,6 +7,7 @@ lib
 # Testsuite output
 out
 testsuite/out
+testsuite/tmp
 
 # Python artifacts
 *.pyc
@@ -16,6 +17,7 @@ asis-testsuite
 testsuite/tests/asis
 internal_testsuite
 testsuite/tests/internal
+testsuite/internal-fuzz-testsuite
 
 # Clang artifacts
 .clang-format
