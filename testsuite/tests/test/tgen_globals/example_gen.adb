@@ -18,7 +18,7 @@ begin
    --  We should not produce a value for the Global Cst, as it is constant as
    --  its name indicates.
 
-   pkg_test_cst_11dedb213c57ec3a_Dump_TC
+   pkg_test_cst_31d52cd90dff32e2_Dump_TC
      (TGen_Marshalling_B         => False,
       TGen_Unit_JSON => Unit_JSON,
       TGen_Test_Origin    => "Dummy");
@@ -30,7 +30,7 @@ begin
    --  We should produce a value for the global Supported_Global as it is an
    --  implicit input of the subprogram.
 
-   pkg_test_supported_ff2074aeb77f6e9e_Dump_TC
+   pkg_test_supported_faef1fac082f2f13_Dump_TC
      (TGen_Marshalling_B                    => False,
       TGen_Marshalling_Pkg_Supported_Global => 3,
       TGen_Unit_JSON            => Unit_JSON,
@@ -44,7 +44,7 @@ begin
    --  We should not produce a value for Supported_Global as it is an output
    --  of the subprogram.
 
-   pkg_test_output_b0e4810aba0b5de7_Dump_TC
+   pkg_test_output_d42ab483bb79fcd3_Dump_TC
      (TGen_Marshalling_B         => False,
       TGen_Unit_JSON => Unit_JSON,
       TGen_Test_Origin    => "Dummy");
@@ -57,7 +57,7 @@ begin
    --  We should produce a value for the global Supported_Global as it is an
    --  explicit input of the subprogram.
 
-   pkg_test_input_2517761d8d4f768b_Dump_TC
+   pkg_test_input_0849a55cf28ff8b6_Dump_TC
      (TGen_Marshalling_B                    => False,
       TGen_Marshalling_Pkg_Supported_Global => 3,
       TGen_Unit_JSON            => Unit_JSON,
@@ -71,7 +71,7 @@ begin
    --  We should produce a value for the global Supported_Global as it is an
    --  explicit input of the subprogram.
 
-   pkg_test_in_out_e4a3f036cf7f496b_Dump_TC
+   pkg_test_in_out_dfc27d824aa770a2_Dump_TC
      (TGen_Marshalling_B                    => False,
       TGen_Marshalling_Pkg_Supported_Global => 3,
       TGen_Unit_JSON            => Unit_JSON,

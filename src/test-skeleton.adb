@@ -6968,7 +6968,8 @@ package body Test.Skeleton is
 
          declare
             Subp_Hash : constant String :=
-              Test.Common.Mangle_Hash_16 (Subp => Subp.Subp_Declaration);
+              TGen.LAL_Utils.Short_Hash
+                (Subp => Subp.Subp_Declaration.As_Basic_Decl);
          begin
             if TGen_JSON_TC.Has_Subprogram (Test_Cases, Subp_Hash) then
                Subprogram_TC :=
@@ -7835,7 +7836,10 @@ package body Test.Skeleton is
               (TR_Name   => new String'(Subp.Subp_Text_Name.all),
                Line      => Natural (Subp_Name_Span.Start_Line),
                Column    => Natural (Subp_Name_Span.Start_Column),
-               TR_Hash   => new String'(Subp.Subp_Full_Hash.all),
+               TGen_Hash =>
+                 new String'
+                   (TGen.LAL_Utils.Short_Hash
+                      (Subp.Subp_Declaration.As_Basic_Decl)),
                Decl_Line => Natural (Subp_Span.Start_Line),
                Decl_File =>
                  new String'

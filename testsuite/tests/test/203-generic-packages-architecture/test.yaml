@@ -4,3 +4,6 @@ description: |
 driver: gnattest_tgen
 
 suppress_test_dump: True
+
+control:
+    - [XFAIL, 'True', 'Test loading for generic instances broken, see #80']

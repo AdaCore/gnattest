@@ -86,8 +86,8 @@ package Test.Mapping is
       Column : Natural;
       --  Sloc for the subprogram under test
 
-      TR_Hash : String_Access;
-      --  Full hash for the subprogram under test
+      TGen_Hash : String_Access;
+      --  Full TGen hash for the subprogram under test
 
       TC_List : TC_Mapping_List.List;
       --  List of testcases holding the information above, if there are

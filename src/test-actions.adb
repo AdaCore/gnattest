@@ -69,6 +69,7 @@ with Test.Skeleton;
 with Test.Skeleton.Source_Table;
 with Test.Suite_Min;
 
+with TGen.LAL_Utils;
 with TGen.Libgen;
 
 with Utils.Err_Out;
@@ -1418,7 +1419,8 @@ package body Test.Actions is
                     and then Natural (Node.Sloc_Range.Start_Line)
                              = Test.Common.Subp_Line_Nbr
                   then
-                     Ada.Text_IO.Put_Line (Test.Common.Mangle_Hash_16 (Node));
+                     Ada.Text_IO.Put_Line
+                       (TGen.LAL_Utils.Short_Hash (Node.As_Basic_Decl));
                      Found_Hash := True;
                      return Stop;
                   end if;

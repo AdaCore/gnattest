@@ -33,8 +33,6 @@ with Libadalang.Analysis;  use Libadalang.Analysis;
 with Libadalang.Common;    use Libadalang.Common;
 with Libadalang.Expr_Eval; use Libadalang.Expr_Eval;
 
-with Test.Common;
-
 with TGen.LAL_Utils;            use TGen.LAL_Utils;
 with TGen.Types.Array_Types;    use TGen.Types.Array_Types;
 with TGen.Types.Constraints;    use TGen.Types.Constraints;
@@ -3972,8 +3970,8 @@ package body TGen.Types.Translation is
         Ultimate_Enclosing_Compilation_Unit (N)
           .P_Fully_Qualified_Name_Array'Last;
 
-      UID      : constant String := Test.Common.Mangle_Hash_16 (Subp => N);
-      Long_UID : constant String := Test.Common.Mangle_Hash_Full (Subp => N);
+      Long_UID : constant String := Subp_Hash (Subp => N);
+      UID      : String renames Long_UID (1 .. 16);
 
       Designated_Decl : Basic_Decl := N;
    begin
