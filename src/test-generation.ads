@@ -33,11 +33,6 @@ with Utils.Command_Lines; use Utils.Command_Lines;
 
 package Test.Generation is
 
-   procedure Run_First_Pass_Tool (Cmd : Command_Line);
-   --  Run a new instance of Test.Actions.Test_Tool that will process all
-   --  sources to find the subprogram of interest and generate, build and run
-   --  the generation harness.
-
    procedure Process_Source (Unit : Analysis_Unit);
    --  Iterate over the subprograms defined in Unit and include them in the
    --  TGen.Libgen context so that the subprograms get included in the value

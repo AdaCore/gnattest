@@ -26,11 +26,8 @@ with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with GNAT.OS_Lib;
 
 with Test.Common;     use Test.Common;
-with Test.Command_Lines;
 with Test.Subprocess; use Test.Subprocess;
-with Test.Actions;
 
-with Utils.Drivers;     use Utils.Drivers;
 with Utils.Environment; use Utils.Environment;
 with Utils_Debug;       use Utils_Debug;
 
@@ -183,18 +180,6 @@ package body Test.Generation is
       end if;
       return Into;
    end Traverse_Helper;
-
-   -------------------------
-   -- Run_First_Pass_Tool --
-   -------------------------
-
-   procedure Run_First_Pass_Tool (Cmd : Command_Line) is
-      pragma Unreferenced (Cmd);
-      First_Pass_Tool : Test.Actions.Tool_State;
-      First_Pass_Cmd  : Command_Line (Test.Command_Lines.Descriptor'Access);
-   begin
-      Driver (Cmd => First_Pass_Cmd, Tool => First_Pass_Tool);
-   end Run_First_Pass_Tool;
 
    --------------------
    -- Process_Source --
