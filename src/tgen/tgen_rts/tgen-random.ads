@@ -35,6 +35,15 @@ package TGen.Random is
 
    Generator_Instance : GNAT.Random_Numbers.Generator;
 
+   Seed_Env_Var : constant String := "TGEN_RANDOM_SEED";
+
+   Default_Seed : Unsigned_32;
+   --  Default seed initialized from the above env variable if defined, or the
+   --  current time otherwise. Initialized during the package elaboration.
+
+   procedure Reset (N : Unsigned_32 := Default_Seed);
+   --  Reset the random number generator, using the provided seed
+
    function Draw_Bits (N : Positive) return Unsigned_128
    with Pre => N <= Unsigned_128'Size;
    --  Return N random Bits as an Unsigned_128, up to a maximum of 128 bits

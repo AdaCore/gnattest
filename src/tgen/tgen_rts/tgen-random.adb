@@ -35,6 +35,15 @@ package body TGen.Random is
      TGen.Logging.Create_Trace
        (Ada.Strings.Unbounded.To_Unbounded_String ("RANDOM"));
 
+   -----------
+   -- Reset --
+   -----------
+
+   procedure Reset (N : Unsigned_32 := Default_Seed) is
+   begin
+      GNAT.Random_Numbers.Reset (Generator_Instance, N);
+   end Reset;
+
    ---------------
    -- Draw_Bits --
    ---------------
@@ -469,9 +478,7 @@ package body TGen.Random is
       end case;
    end Random;
 
-   Seed_Env_Var : constant String := "TGEN_RANDOM_SEED";
-   Seed         : Unsigned_32;
-   Y2K          : constant Time :=
+   Y2K : constant Time :=
      Time_Of (Year => 2000, Month => 1, Day => 1, Seconds => 0.0);
    --  First day of Year 2000, to get a duration
 
@@ -479,13 +486,22 @@ package body TGen.Random is
      Ada.Unchecked_Conversion (Duration, Interfaces.Unsigned_64);
 
 begin
+   Default_Seed := Unsigned_32'Mod (To_U64 (Clock - Y2K));
    if Ada.Environment_Variables.Exists (Seed_Env_Var) then
-      Seed :=
-        Unsigned_32'Value (Ada.Environment_Variables.Value (Seed_Env_Var));
-   else
-      Seed := Unsigned_32'Mod (To_U64 (Clock - Y2K));
+      begin
+         Default_Seed :=
+           Unsigned_32'Value (Ada.Environment_Variables.Value (Seed_Env_Var));
+      exception
+         when Constraint_Error =>
+            TGen.Logging.Trace
+              (Random_Trace,
+               "Could interpret the value of "
+               & Seed_Env_Var
+               & " as an unsigned32, using the default seed (current time).");
+      end;
    end if;
    TGen.Logging.Trace
-     (Random_Trace, "Random generator seed is " & Unsigned_32'Image (Seed));
-   GNAT.Random_Numbers.Reset (Generator_Instance, Seed);
+     (Random_Trace,
+      "Random generator default seed is " & Unsigned_32'Image (Default_Seed));
+   Reset;
 end TGen.Random;
