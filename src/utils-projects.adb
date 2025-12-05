@@ -981,6 +981,10 @@ package body Utils.Projects is
             use GNAT.Directory_Operations;
          begin
             if File_Extension (File_Name.all) = ".gpr" then
+               Test.Common.Report_Err
+                 ("Passing a GPR file as a positional argument is deprecated"
+                  & " and will be removed in release 27. Use -P instead");
+
                Set_Arg (Cmd, Project_File, File_Name.all);
             end if;
          end Look_For_GPR;
