@@ -69,7 +69,7 @@ include:
             paths:
               - src/tgen/**/*
               - src/test-*
-              - src/util-*
+              - src/utils-*
               - share/tgen/templates/**/*
               - testsuite/testsuite.py
               - testsuite/drivers/gnattest_tgen.py
