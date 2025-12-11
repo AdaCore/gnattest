@@ -1,0 +1,14 @@
+description: |
+  This is a regression test. gnattest used to not properly
+  reset the computed common root for all sources of a project when
+  passing a relative argument to --test-root. This resulted in spurious
+  paths being generated for the tests in the following conditions:
+  - The project tree contained at least two projects A and B where:
+    - B is the root project
+    - A is a dependency of B. It sorts lower than B in lexicographical order
+    - A is *not* nested in some subdirectory relative to A
+    - There isn't a single source directory in A containing all others.
+  In this test, instead of generating the tests for "nested/prj_1" in foo/
+  they would have been generated under foo/nested/prj_1/.
+
+driver: shell_script

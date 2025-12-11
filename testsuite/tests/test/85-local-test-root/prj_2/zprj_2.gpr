@@ -1,0 +1,5 @@
+project ZPrj_2 is
+
+   for Object_Dir use "obj";
+
+end ZPrj_2;
