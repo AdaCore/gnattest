@@ -1,0 +1,4 @@
+description: Basic test for --tests-root, with an absolute argument
+  passed to gnattest
+
+driver: shell_script
