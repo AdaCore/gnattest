@@ -46,6 +46,7 @@
 
       Num_Tests : Natural := 0;
    begin
+      TGen.Random.Reset;
       Strat.Init;
       while Strat.Has_Next
            and then (Num_Tests < @_NUM_TESTS_@ or else @_NUM_TESTS_@ = 0)
@@ -91,6 +92,7 @@
       File  : Ada.Streams.Stream_IO.File_Type;
       Stream : Ada.Streams.Stream_IO.Stream_Access;
    begin
+      TGen.Random.Reset;
       for Test_Num in 1 .. @_NUM_TESTS_@ loop
          Generate_One : declare
             Values   : constant TGen.JSON.JSON_Value :=

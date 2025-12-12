@@ -1539,6 +1539,7 @@ package body TGen.Libgen is
       Put_Line (F_Body, "with TGen.JSON;");
       Put_Line (F_Body, "with TGen.Types;");
       Put_Line (F_Body, "with TGen.Strategies;");
+      Put_Line (F_Body, "with TGen.Random;");
       New_Line (F_Body);
 
       for Dep of Support_Packs loop
