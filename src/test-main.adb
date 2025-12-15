@@ -32,18 +32,6 @@ procedure Test.Main is
 
    --  Main procedure for gnattest
 
-   procedure Callback (Phase : Parse_Phase; Swit : Dynamically_Typed_Switch);
-
-   procedure Callback (Phase : Parse_Phase; Swit : Dynamically_Typed_Switch) is
-      pragma Unreferenced (Swit); -- ????
-   begin
-      if Phase = Cmd_Line_1 then
-         null; -- ????
-
-         return;
-      end if;
-   end Callback;
-
    Tool : Test.Actions.Tool_State;
    Cmd  : Command_Line (Test.Command_Lines.Descriptor'Access);
 
@@ -53,5 +41,5 @@ begin
 
    Test.Register_Specific_Attributes;
 
-   Utils.Drivers.Driver (Cmd, Tool, Callback => Callback'Unrestricted_Access);
+   Utils.Drivers.Driver (Cmd, Tool);
 end Test.Main;
