@@ -1664,18 +1664,13 @@ package body Test.Actions is
    is
       use Ada.Text_IO;
       use Ada.Strings.Fixed;
-      Idx   : Natural;
-      First : Natural := Value'First;
+      First     : constant Natural := Value'First;
+      Colon_Idx : constant Natural := Index (Value, ":");
 
       F : File_Type;
 
-      Deprecated_Exclude_For_One_UUT : constant Boolean :=
-        Value'Length > 3
-        and then Value (First) = ':'
-        and then Index (Value, "=") > First + 1;
-
       Exclude_For_One_UUT : constant Boolean :=
-        Value'Length > 3 and then Index (Value, ":") > First + 1;
+        Value'Length > 3 and then Colon_Idx > First + 1;
       --  For the new interface (=spec:file instead of :spec=file), the equal
       --  sign is eaten by the argument processing.
 
@@ -1686,24 +1681,12 @@ package body Test.Actions is
 
       use Test.Common;
    begin
-      if Deprecated_Exclude_For_One_UUT or else Exclude_For_One_UUT then
-         if Deprecated_Exclude_For_One_UUT then
-            Report_Err
-              ("warning: (gnattest) --exclude-from-stubbing:spec=file is"
-               & " deprecated and will be removed in release 27."
-               & " Use --exclude-from-stubbing=spec:file instead");
-            Idx := Index (Value, "=");
-
-            First := First + 1; --  Skip the ':'
-
-         else
-            Idx := Index (Value, ":");
-         end if;
+      if Exclude_For_One_UUT then
          declare
-            Unit   : constant String := Value (First .. Idx - 1);
+            Unit   : constant String := Value (First .. Colon_Idx - 1);
             F_Path : constant String :=
               Normalize_Pathname
-                (Name           => Value (Idx + 1 .. Value'Last),
+                (Name           => Value (Colon_Idx + 1 .. Value'Last),
                  Resolve_Links  => False,
                  Case_Sensitive => False);
          begin
