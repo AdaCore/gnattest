@@ -66,6 +66,8 @@ package TGen.Types.Array_Types is
 
    type Unconstrained_Array_Typ is new Array_Typ with null record;
 
+   type Unconstrained_Array_Typ_Access is access Unconstrained_Array_Typ;
+
    function Image (Self : Unconstrained_Array_Typ) return String;
 
    function Kind (Self : Unconstrained_Array_Typ) return Typ_Kind
@@ -91,6 +93,8 @@ package TGen.Types.Array_Types is
       Index_Constraints : Index_Constraint_Arr (1 .. Num_Dims);
    end record;
    --  Represents a constrained array type
+
+   type Constrained_Array_Typ_Access is access Constrained_Array_Typ;
 
    function Image (Self : Constrained_Array_Typ) return String;
 

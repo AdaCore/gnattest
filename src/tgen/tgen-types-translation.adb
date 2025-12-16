@@ -1353,9 +1353,6 @@ package body TGen.Types.Translation is
             Constraint_Nodes : constant Local_Ada_Node_Arr :=
               Gather_Index_Constraint_Nodes (Decl.As_Ada_Node, Num_Indices);
 
-            type Constrained_Array_Typ_Access is
-              access Constrained_Array_Typ (Num_Dims => Num_Indices);
-
             Res_Typ : constant Constrained_Array_Typ_Access :=
               new Constrained_Array_Typ'
                 (Num_Dims          => Num_Indices,
@@ -1700,8 +1697,6 @@ package body TGen.Types.Translation is
       function Translate_Unconstrained
         (Def : Array_Type_Def) return Translation_Result
       is
-         type Unconstrained_Array_Typ_Access is access Unconstrained_Array_Typ;
-
          Indices_List : constant Unconstrained_Array_Index_List :=
            Def.F_Indices.As_Unconstrained_Array_Indices.F_Types;
          Num_Indices  : constant Positive := Indices_List.Last_Child_Index;
