@@ -31,7 +31,6 @@ with Ada.Strings.Equal_Case_Insensitive;
 with Ada.Strings.Fixed;       use Ada.Strings.Fixed;
 with Ada.Text_IO;
 
-with GNAT.Directory_Operations;
 with GNAT.Traceback.Symbolic;
 
 with GNATCOLL.Traces;
@@ -964,30 +963,8 @@ package body Utils.Projects is
          --  Set File_Name to the full name if -P specified. If the file
          --  doesn't exist, or is not a regular file, give an error.
 
-         procedure Look_For_GPR (File_Name : in out String_Ref);
-         --  Look for a project file among argument sources. This allows
-         --  to support invocation of tool with a project file without -P
-         --  for example:
-         --    gnattest simple.gpr
-
          procedure Append_One (File_Name : String);
          --  Append one file name onto Cmd
-
-         ------------------
-         -- Look_For_GPR --
-         ------------------
-
-         procedure Look_For_GPR (File_Name : in out String_Ref) is
-            use GNAT.Directory_Operations;
-         begin
-            if File_Extension (File_Name.all) = ".gpr" then
-               Test.Common.Report_Err
-                 ("Passing a GPR file as a positional argument is deprecated"
-                  & " and will be removed in release 27. Use -P instead");
-
-               Set_Arg (Cmd, Project_File, File_Name.all);
-            end if;
-         end Look_For_GPR;
 
          ----------------------
          -- Update_File_Name --
@@ -1034,24 +1011,6 @@ package body Utils.Projects is
          end Append_One;
 
       begin
-         if Arg (Cmd, Project_File) = null then
-            Iter_File_Names (Cmd, Look_For_GPR'Access);
-
-            if Arg (Cmd, Project_File) /= null then
-               --  We need to remove the project file from argument sources
-               declare
-                  Old : constant String_Ref_Array := File_Names (Cmd);
-               begin
-                  Clear_File_Names (Cmd);
-                  for F of Old loop
-                     if F.all /= Arg (Cmd, Project_File).all then
-                        Append_File_Name (Cmd, F.all);
-                     end if;
-                  end loop;
-               end;
-            end if;
-         end if;
-
          if Arg (Cmd, Project_File) /= null then
             Process_Project
               (Cmd, Cmd_Args, Global_Report_Dir, My_Project_Tree, Callback);
