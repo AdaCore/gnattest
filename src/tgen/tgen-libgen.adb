@@ -1533,8 +1533,10 @@ package body TGen.Libgen is
       if Bin_Tests then
          Put_Line (F_Body, "with Ada.Streams.Stream_IO;");
          Put_Line (F_Body, "with Ada.Strings.Fixed;");
+         Put_Line (F_Body, "with GNAT.OS_Lib;");
       end if;
 
+      Put_Line (F_Body, "with Ada.Environment_Variables;");
       Put_Line (F_Body, "with TGen;");
       Put_Line (F_Body, "with TGen.JSON;");
       Put_Line (F_Body, "with TGen.Types;");
@@ -1687,15 +1689,12 @@ package body TGen.Libgen is
             Assocs.Insert (Assoc ("OUTPUT_FN", Output_FNs));
             Assocs.Insert (Assoc ("GLOBAL_INPUT_FN", Global_Input_FNs));
             Assocs.Insert (Assoc ("GLOBAL_OUTPUT_FN", Global_Output_FNs));
+            Assocs.Insert (Assoc ("TC_DIR", Test_Output_Dir));
             Assocs.Insert
               (Assoc
                  ("TC_NAME",
                   Unbounded_String'
-                    (Test_Output_Dir
-                     & GNAT.OS_Lib.Directory_Separator
-                     & (+Subp_Name)
-                     & "-"
-                     & (+As_Function_Typ (Subp).Long_UID))));
+                    (+Subp_Name & "-" & (+As_Function_Typ (Subp).Long_UID))));
             Assocs.Insert
               (Assoc
                  ("TC_FORMAT", String'(if Bin_Tests then "BIN" else "JSON")));
@@ -1707,6 +1706,14 @@ package body TGen.Libgen is
       --  Generate the body of the global generation routine
 
       Put_Line (F_Body, "   procedure Generate is");
+      Put_Line
+        (F_Body,
+         "      Output_Dir : constant String := "
+         & "Ada.Environment_Variables.Value "
+         & "(""TGEN_GENERATION_OUTPUT_DIR"", """
+         & Test_Output_Dir
+         & """);");
+
       if not Bin_Tests then
          Put_Line
            (F_Body,
@@ -1717,20 +1724,23 @@ package body TGen.Libgen is
          if Ctx.Generic_Package_Instantiations.Contains (Pkg_Name) then
             Put_Line
               (F_Body,
-               "        TGen.JSON.Utils.Create ("""
-               & Test_Output_Dir
+               "        TGen.JSON.Utils.Create ("
+               & "Output_Dir & '"
                & GNAT.OS_Lib.Directory_Separator
+               & "' & """
                & Ada.Characters.Handling.To_Lower
                    (To_Symbol (Pkg_Name_With_Generic, Sep => '_'))
                & ".json"");");
          else
             Put_Line
               (F_Body,
-               "        TGen.JSON.Utils.Create ("""
-               & Test_Output_Dir
+               "        TGen.JSON.Utils.Create ("
+               & "Output_Dir & '"
                & GNAT.OS_Lib.Directory_Separator
+               & "' & """
                & To_Filename (Pkg_Name)
-               & ".json"");");
+               & """ & "
+               & """.json"");");
          end if;
          Put_Line
            (F_Body,

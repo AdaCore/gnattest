@@ -1,0 +1,7 @@
+description: |
+  Make sure that the variable `TGEN_GENERATION_OUTPUT_DIR` is affecting
+  where the generation harness outputs the testcases.
+
+driver: shell_script
+
+default-gpr: true
