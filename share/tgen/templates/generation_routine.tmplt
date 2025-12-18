@@ -103,15 +103,6 @@
               @_INPUT_FN_@ (Values.Get ("param_values").Get ("@_PARAM_NAME_@"));
 @@END_TABLE@@
          begin
-           if Values.Has_Field ("global_values")
-              and then Values.Get ("global_values") /= TGen.JSON.JSON_Null
-           then
-              null;
-@@TABLE@@
-              @_GLOBAL_NAME_@ :=
-                @_GLOBAL_INPUT_FN_@ (Values.Get ("global_values").Get ("@_GLOBAL_NAME_@"));
-@@END_TABLE@@
-            end if;
             Ada.Streams.Stream_IO.Create
               (File,
                Name =>
