@@ -1848,12 +1848,23 @@ package body Test.Actions is
    procedure Check_Separate_Root is
       use Test.Common;
 
-      RD_Name : constant Virtual_File :=
+      Root_Dir_VF : constant Virtual_File :=
         GNATCOLL.VFS.Create (+Separate_Root_Dir.all);
+      --  Virtual file corresponding to the value passed to --tests-root
 
-      Tmp, Buff    : String_Access;
+      Tmp, Buff : String_Access;
+
       Maximin_Root : String_Access;
-      Root_Length  : Integer;
+      --  Longest common prefix for all source files. If Root_Dir_VF is an
+      --  absolute path this is computed taking into account all source files,
+      --  otherwise this is computed per-project.
+      --
+      --  For instance, if we have two files in the project tree, one at
+      --  /foo/bar/baz/qux.ads and the other one at /foo/bar/baz-top/blop.ads,
+      --  this should be computed to /foo/bar/
+
+      Root_Length : Integer;
+      --  Shortcut for Maximin_Root.all'Length.
 
       Future_Dirs : File_Array_Access := new File_Array'(Empty_File_Array);
       --  List of dirs to be generated. The list is checked for intersections
@@ -1918,8 +1929,22 @@ package body Test.Actions is
       end Common_Root;
 
    begin
+      if Root_Dir_VF.Is_Absolute_Path then
 
-      if RD_Name.Is_Absolute_Path then
+         --  Absolute path passed to `--tests-root`.
+         --
+         --  Compute the common path for all sources <root>. All sources are
+         --  thus of the form <root>/<unique_part>/simple_name.
+         --
+         --  The test for each source will thus be placed in
+         --  Root_Dir_VF/<unique_part>
+         --
+         --  For instance, if we have a project with a source
+         --  /foo/bar/baz/src/qux.ads and another one with a source
+         --  /foo/bar/mlem/src/plop.ads,
+         --  then the <common_part> would be /foo/bar/, and the <unique_part>
+         --  would be baz/src for the first source, and mlem/src for
+         --  the second.
 
          Test.Skeleton.Source_Table.Reset_Location_Iterator;
          Tmp := new String'(Test.Skeleton.Source_Table.Next_Source_Location);
@@ -1985,9 +2010,27 @@ package body Test.Actions is
          Test.Skeleton.Source_Table.Set_Separate_Root (Maximin_Root.all);
       else
 
+         --  Same idea as the absolute path, except we only need to compute the
+         --  common part among the sources of a single project. The Root_Dir_VF
+         --  path is interpreted relative to the object directory of each
+         --  project.
+
          loop
             Project := Current (Iterator);
             exit when Project = No_Project;
+
+            --  As the test root is local to each project, reset it as well as
+            --  the length of each project to ensure we don't have any funny
+            --  business.
+
+            if Maximin_Root /= null then
+               Free (Maximin_Root);
+            end if;
+            Root_Length := 0;
+
+            --  First check wether some source directory contains all the
+            --  others. If so, use that as starting root candidate to ensure
+            --  we fully replicate the source directory nesting.
 
             declare
                Dirs : constant File_Array := Project.Source_Dirs (False);
@@ -2023,6 +2066,10 @@ package body Test.Actions is
                   end loop;
                end if;
             end;
+
+            --  Refine the root, in case there was no nesting between all the
+            --  source dirs, or a source file lives outside of one of the
+            --  source dirs.
 
             Files := Project.Source_Files;
 
