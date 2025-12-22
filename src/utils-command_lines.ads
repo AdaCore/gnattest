@@ -638,8 +638,6 @@ package Utils.Command_Lines is
       return String_Ref;
    --  Switch_Text (To_All (Some_Switch)) --> "--some-switch"
 
-   procedure Dump_Descriptor (Descriptor : Command_Line_Descriptor);
-
    function To_Argument_List_Access
      (Args : String_Access_Vector) return Argument_List_Access
    is (new Argument_List'(To_Array (Args)));

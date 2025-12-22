@@ -1446,33 +1446,6 @@ package body Utils.Command_Lines is
       end loop;
    end Dump_Cmd;
 
-   procedure Dump_Descriptor (Descriptor : Command_Line_Descriptor) is
-      pragma Assert (Descriptor.Allowed_Switches /= null);
-      pragma Assert (Is_Empty (Descriptor.Allowed_Switches_Vector));
-      --  Assert that Freeze_Descriptor has been called
-   begin
-      for J in Descriptor.Allowed_Switches'Range loop
-         declare
-            X : Switch_Descriptor renames Descriptor.Allowed_Switches (J);
-            S : constant String :=
-              (if X.Kind in String_Switch | String_Seq_Switch
-               then Syntax (Descriptor, J)'Img
-               else "");
-         begin
-            Put_Line
-              (J'Img
-               & " "
-               & X.Kind'Img
-               & S
-               & " "
-               & X.Text.all
-               & (if X.Alias = J then "" else X.Alias'Img)
-               & " "
-               & (if X.Enabled then "" else " DISABLED"));
-         end;
-      end loop;
-   end Dump_Descriptor;
-
    ----------
    -- Args --
    ----------
