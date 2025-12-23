@@ -80,8 +80,7 @@ package body Utils.Projects is
      (Cmd               : in out Command_Line;
       Cmd_Args          : String_Vector;
       Global_Report_Dir : out String_Ref;
-      My_Project_Tree   : out GPR2.Project.Tree.Object;
-      Callback          : Parse_Callback);
+      My_Project_Tree   : out GPR2.Project.Tree.Object);
 
    -----------------
    -- Attr_String --
@@ -270,8 +269,7 @@ package body Utils.Projects is
      (Cmd               : in out Command_Line;
       Cmd_Args          : String_Vector;
       Global_Report_Dir : out String_Ref;
-      My_Project_Tree   : out GPR2.Project.Tree.Object;
-      Callback          : Parse_Callback)
+      My_Project_Tree   : out GPR2.Project.Tree.Object)
    is
       procedure Load_Tool_Project;
 
@@ -653,7 +651,6 @@ package body Utils.Projects is
               (Project_Switches,
                Cmd,
                Phase              => Project_File,
-               Callback           => Callback,
                Collect_File_Names => False);
          end if;
       end Extract_Gnattest_Options;
@@ -723,11 +720,7 @@ package body Utils.Projects is
          --  override each other.
 
          Parse
-           (Cmd_Args,
-            Cmd,
-            Phase              => Cmd_Line_2,
-            Callback           => Callback,
-            Collect_File_Names => False);
+           (Cmd_Args, Cmd, Phase => Cmd_Line_2, Collect_File_Names => False);
 
          Get_Sources_From_Project;
          Set_Global_Result_Dirs;
@@ -901,7 +894,6 @@ package body Utils.Projects is
    procedure Process_Command_Line
      (Cmd               : in out Command_Line;
       Global_Report_Dir : out String_Ref;
-      Callback          : Parse_Callback := null;
       Print_Help        : not null access procedure)
    is
       --  We have to Parse the command line BEFORE we Parse the project file,
@@ -926,7 +918,6 @@ package body Utils.Projects is
          Cmd,
          Collect_File_Names => True,
          Phase              => Cmd_Line_1,
-         Callback           => Callback,
          Ignore_Errors      => True);
       Post_Cmd_Line_1 (Cmd);
 
@@ -948,11 +939,7 @@ package body Utils.Projects is
       end if;
       if Error_Detected (Cmd) then
          Parse
-           (Cmd_Args,
-            Cmd,
-            Phase              => Cmd_Line_1,
-            Callback           => null,
-            Collect_File_Names => False);
+           (Cmd_Args, Cmd, Phase => Cmd_Line_1, Collect_File_Names => False);
 
          --  Can't get here, because Parse will have raised Command_Line_Error
          raise Program_Error;
@@ -1013,7 +1000,7 @@ package body Utils.Projects is
       begin
          if Arg (Cmd, Project_File) /= null then
             Process_Project
-              (Cmd, Cmd_Args, Global_Report_Dir, My_Project_Tree, Callback);
+              (Cmd, Cmd_Args, Global_Report_Dir, My_Project_Tree);
 
             --  Do not create a temporary directory when processing an
             --  aggregate project.

@@ -922,7 +922,6 @@ package body Utils.Command_Lines is
      (Text_Args          : String_Vector;
       Cmd                : in out Command_Line;
       Phase              : Parse_Phase;
-      Callback           : Parse_Callback;
       Collect_File_Names : Boolean;
       Ignore_Errors      : Boolean);
    --  This does the actual parsing work, after Parse has initialized things.
@@ -931,7 +930,6 @@ package body Utils.Command_Lines is
      (Text_Args          : String_Vector;
       Cmd                : in out Command_Line;
       Phase              : Parse_Phase;
-      Callback           : Parse_Callback;
       Collect_File_Names : Boolean;
       Ignore_Errors      : Boolean)
    is
@@ -1101,10 +1099,6 @@ package body Utils.Command_Lines is
                   <<Use_Default>>
                end;
          end case;
-
-         if Callback /= null then
-            Callback (Phase, Dyn);
-         end if;
       end Parse_One_Switch;
 
    begin
@@ -1174,7 +1168,6 @@ package body Utils.Command_Lines is
      (Text_Args          : String_Vector;
       Cmd                : in out Command_Line;
       Phase              : Parse_Phase;
-      Callback           : Parse_Callback;
       Collect_File_Names : Boolean;
       Ignore_Errors      : Boolean := False)
    is
@@ -1244,8 +1237,7 @@ package body Utils.Command_Lines is
 
       --  Finally, parse the Text_Args into Cmd
 
-      Parse_Helper
-        (Text_Args, Cmd, Phase, Callback, Collect_File_Names, Ignore_Errors);
+      Parse_Helper (Text_Args, Cmd, Phase, Collect_File_Names, Ignore_Errors);
    end Parse;
 
    function File_Name_Is_Less_Than (Left, Right : String_Ref) return Boolean;

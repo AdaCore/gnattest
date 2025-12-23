@@ -588,7 +588,6 @@ package Utils.Command_Lines is
      (Text_Args          : String_Vector;
       Cmd                : in out Command_Line;
       Phase              : Parse_Phase;
-      Callback           : Parse_Callback;
       Collect_File_Names : Boolean;
       Ignore_Errors      : Boolean := False);
    --  Given Text_Args (from the command line, project file, or elsewhere),

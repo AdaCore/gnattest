@@ -30,7 +30,6 @@ package Utils.Drivers is
    procedure Driver
      (Cmd                   : in out Command_Line;
       Tool                  : in out Test.Actions.Tool_State;
-      Preprocessing_Allowed : Boolean := True;
-      Callback              : Parse_Callback := null);
+      Preprocessing_Allowed : Boolean := True);
 
 end Utils.Drivers;

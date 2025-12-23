@@ -164,7 +164,6 @@ package Utils.Projects is
    procedure Process_Command_Line
      (Cmd               : in out Command_Line;
       Global_Report_Dir : out String_Ref;
-      Callback          : Parse_Callback := null;
       Print_Help        : not null access procedure);
    --  Processes the command line and (if specified on the command line) the
    --  project file.
