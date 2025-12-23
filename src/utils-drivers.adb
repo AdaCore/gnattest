@@ -47,11 +47,7 @@ package body Utils.Drivers is
    use Test.Actions;
    use type GNAT.OS_Lib.String_Access;
 
-   procedure Driver
-     (Cmd                   : in out Command_Line;
-      Tool                  : in out Tool_State;
-      Preprocessing_Allowed : Boolean := True)
-   is
+   procedure Driver (Cmd : in out Command_Line; Tool : in out Tool_State) is
       use String_Sets;
 
       procedure Process_Files;
@@ -103,8 +99,7 @@ package body Utils.Drivers is
                      F_Name.all,
                      Counter,
                      Has_Syntax_Err,
-                     Pass                  => First_Pass,
-                     Preprocessing_Allowed => Preprocessing_Allowed);
+                     Pass => First_Pass);
                   if Has_Syntax_Err and then not Utils.Syntax_Errors then
                      Utils.Syntax_Errors := True;
                   end if;
@@ -138,8 +133,7 @@ package body Utils.Drivers is
                   F_Name.all,
                   Counter,
                   Has_Syntax_Err,
-                  Pass                  => Second_Pass,
-                  Preprocessing_Allowed => Preprocessing_Allowed);
+                  Pass => Second_Pass);
                if Has_Syntax_Err and then not Utils.Syntax_Errors then
                   Utils.Syntax_Errors := True;
                end if;

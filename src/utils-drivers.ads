@@ -28,8 +28,6 @@ with Test.Actions;
 package Utils.Drivers is
 
    procedure Driver
-     (Cmd                   : in out Command_Line;
-      Tool                  : in out Test.Actions.Tool_State;
-      Preprocessing_Allowed : Boolean := True);
+     (Cmd : in out Command_Line; Tool : in out Test.Actions.Tool_State);
 
 end Utils.Drivers;

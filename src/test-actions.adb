@@ -125,14 +125,13 @@ package body Test.Actions is
    ------------------
 
    procedure Process_File
-     (Tool                  : in out Tool_State;
-      Cmd                   : in out Command_Line;
-      File_Name             : String;
-      Counter               : Natural;
-      Syntax_Error          : out Boolean;
-      Reparse               : Boolean := False;
-      Pass                  : Pass_Kind := Second_Pass;
-      Preprocessing_Allowed : Boolean := False)
+     (Tool         : in out Tool_State;
+      Cmd          : in out Command_Line;
+      File_Name    : String;
+      Counter      : Natural;
+      Syntax_Error : out Boolean;
+      Reparse      : Boolean := False;
+      Pass         : Pass_Kind := Second_Pass)
    is
       use GNAT.Byte_Order_Mark;
       --  We read the file into a String, and convert to wide
@@ -172,17 +171,15 @@ package body Test.Actions is
             --  Check if there are preprocessing directives and if so, update
             --  the File_Reader.
 
-            if Preprocessing_Allowed then
-               Libadalang.Preprocessing.Extract_Preprocessor_Data_From_Project
-                 (Tree           => Project_Tree,
-                  Default_Config => Default_Config,
-                  File_Configs   => File_Configs);
+            Libadalang.Preprocessing.Extract_Preprocessor_Data_From_Project
+              (Tree           => Project_Tree,
+               Default_Config => Default_Config,
+               File_Configs   => File_Configs);
 
-               if Default_Config.Enabled or not File_Configs.Is_Empty then
-                  File_Reader :=
-                    Libadalang.Preprocessing.Create_Preprocessor
-                      (Default_Config, File_Configs);
-               end if;
+            if Default_Config.Enabled or not File_Configs.Is_Empty then
+               File_Reader :=
+                 Libadalang.Preprocessing.Create_Preprocessor
+                   (Default_Config, File_Configs);
             end if;
 
             Tool.Context :=
@@ -190,12 +187,6 @@ package body Test.Actions is
                 (Charset       => Wide_Character_Encoding (Cmd),
                  File_Reader   => File_Reader,
                  Unit_Provider => Provider);
-
-            --  If preprocessing is not allowed, ignore related diagnostics
-
-            if not Preprocessing_Allowed then
-               Disable_Preprocessor_Directives_Errors (Tool.Context);
-            end if;
          end;
       end if;
 
