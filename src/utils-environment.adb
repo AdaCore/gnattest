@@ -176,21 +176,4 @@ package body Utils.Environment is
          Cmd_Error ("cannot create the temp directory " & Tool_Temp_Dir.all);
    end Create_Temp_Dir;
 
-   -------------------
-   -- Copy_Gnat_Adc --
-   -------------------
-
-   procedure Copy_Gnat_Adc is
-      Success : Boolean;
-   begin
-      if Is_Regular_File ("gnat.adc") then
-         Copy_File
-           (Name     =>
-              Tool_Current_Dir.all & Directory_Separator & "gnat.adc",
-            Pathname => Tool_Temp_Dir.all & Directory_Separator & "gnat.adc",
-            Success  => Success,
-            Mode     => Copy);
-      end if;
-   end Copy_Gnat_Adc;
-
 end Utils.Environment;

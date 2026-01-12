@@ -39,10 +39,6 @@ package Utils.Environment is
    --  If a non-empty Obj_Dir is specified, temporary directory is created
    --  inside the Obj_Dir.
 
-   procedure Copy_Gnat_Adc;
-   --  Copies the "gnat.adc" file from the Tool_Current_Dir to the
-   --  Tool_Temp_Dir.
-
    procedure Clean_Up;
    --  Performs the general final clean-up actions, including closing and
    --  deleting of all files in the temporary directory and deleting this
@@ -55,28 +51,6 @@ package Utils.Environment is
 
    Initial_Dir : constant String := Normalize_Pathname (Get_Current_Dir);
    --  This is the current directory at the time the current process started.
-
-   Tool_Current_Dir : String_Access;
-   --  This is the full path name of the current directory when the user
-   --  invoked the tool. This is the same as Initial_Dir, except in the case of
-   --  an inner invocation.
-   --
-   --  If --outer-dir=/some/path was passed on the command line, then this is
-   --  an inner invocation, and this is set to "/some/path". In incremental
-   --  mode (with a project file), the builder sets the current directory for
-   --  the inner invocations to a subdirectory of the object directory
-   --  (Tool_Inner_Dir below). So the outer invocation passes --outer-dir to
-   --  allow the inner one to find the original directory in which the tool was
-   --  run. We switch to this directory during command-line processing, so we
-   --  can find files based on what the user expects. For example, for
-   --
-   --     gnatcheck -rules -from-file=rules.txt
-   --
-   --  we want to look for rules.txt in the directory where gnatcheck was
-   --  originally run from.
-   --
-   --  Thus, Tool_Current_Dir in the inner invocation is the same as
-   --  Tool_Current_Dir in the outer invocation.
 
    Tool_Temp_Dir : String_Access;
    --  Contains the full path name of the temporary directory created by the

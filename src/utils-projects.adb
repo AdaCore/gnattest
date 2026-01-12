@@ -72,10 +72,6 @@ package body Utils.Projects is
    --  of main units. Otherwise (-U was not specified, or was specified without
    --  main unit names), returns empty array.
 
-   procedure Post_Cmd_Line_1 (Cmd : Command_Line);
-   --  This is called by Process_Command_Line after the first pass through
-   --  the command-line arguments.
-
    procedure Process_Project
      (Cmd               : in out Command_Line;
       Cmd_Args          : String_Vector;
@@ -838,21 +834,6 @@ package body Utils.Projects is
          Cmd_Error ("cannot read arguments from " & Par_File_Name);
    end Read_File_Names_From_File;
 
-   ---------------------
-   -- Post_Cmd_Line_1 --
-   ---------------------
-
-   procedure Post_Cmd_Line_1 (Cmd : Command_Line) is
-      use Utils.Environment;
-   begin
-      for Dbg of Arg (Cmd, Debug) loop
-         Set_Debug_Options (Dbg.all);
-      end loop;
-
-      Tool_Current_Dir := new String'(Initial_Dir);
-   --  Leave Tool_Inner_Dir = null
-   end Post_Cmd_Line_1;
-
    -----------------------
    -- Unit_Name_To_Unit --
    -----------------------
@@ -919,7 +900,10 @@ package body Utils.Projects is
          Collect_File_Names => True,
          Phase              => Cmd_Line_1,
          Ignore_Errors      => True);
-      Post_Cmd_Line_1 (Cmd);
+
+      for Dbg of Arg (Cmd, Debug) loop
+         Set_Debug_Options (Dbg.all);
+      end loop;
 
       if Arg (Cmd, Version) then
          Versions.Print_Tool_Version;
