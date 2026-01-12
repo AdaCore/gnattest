@@ -52,8 +52,6 @@ package body Utils.Drivers is
 
       procedure Process_Files;
 
-      procedure Print_Help;
-
       Global_Report_Dir : String_Ref;
 
       procedure Include_One (File_Name : String);
@@ -144,16 +142,11 @@ package body Utils.Drivers is
          pragma Assert (Counter = 0);
       end Process_Files;
 
-      procedure Print_Help is
-      begin
-         Tool_Help (Tool);
-      end Print_Help;
-
       --  Start of processing for Driver
 
    begin
       Process_Command_Line
-        (Cmd, Global_Report_Dir, Print_Help => Print_Help'Access);
+        (Cmd, Global_Report_Dir, Print_Help => Tool_Help'Access);
 
       if Debug_Flag_C then
          Dump_Cmd (Cmd);

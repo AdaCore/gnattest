@@ -1466,8 +1466,7 @@ package body Test.Actions is
    -- Tool_Help --
    ---------------
 
-   procedure Tool_Help (Tool : Tool_State) is
-      pragma Unreferenced (Tool);
+   procedure Tool_Help is
    begin
       pragma Style_Checks ("M200"); -- Allow long lines
       Put ("usage: gnattest -Pprj [opts] {filename}\n");
