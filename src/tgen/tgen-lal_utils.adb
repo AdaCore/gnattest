@@ -25,8 +25,6 @@ with Ada.Characters.Handling;
 
 with Libadalang.Common; use Libadalang.Common;
 
-with Test.Common;
-
 package body TGen.LAL_Utils is
 
    -----------------------
@@ -80,6 +78,11 @@ package body TGen.LAL_Utils is
       return Res;
    end Convert_Qualified_Name;
 
+   function Subp_Hash
+     (Subp : Libadalang.Analysis.Basic_Decl) return GNAT.SHA1.Message_Digest
+   is (GNAT.SHA1.Digest
+         (Langkit_Support.Text.Image (Subp.P_Unique_Identifying_Name)));
+
    ------------------------
    -- JSON_Test_Filename --
    ------------------------
@@ -116,7 +119,7 @@ package body TGen.LAL_Utils is
               (Map_Operator_Name
                  (To_String (Unbounded_String (FQN.Last_Element)))));
       end if;
-      FQN.Append (To_Unbounded_String (Test.Common.Mangle_Hash_Full (Subp)));
+      FQN.Append (To_Unbounded_String (Subp_Hash (Subp)));
       return To_Filename (FQN);
    end Default_Blob_Test_Filename;
 

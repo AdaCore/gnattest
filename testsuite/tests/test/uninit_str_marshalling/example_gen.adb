@@ -11,12 +11,12 @@ procedure Example_Gen is
 
 begin
 
-   my_file_is_null_df697b40227a3e08_Dump_TC
+   my_file_is_null_00034b63eaeed04a_Dump_TC
      (TGen_Marshalling_S         => String_Inst,
       TGen_Unit_JSON => Unit_JSON,
       TGen_Test_Origin    => "First write");
 
-   my_file_is_null_df697b40227a3e08_Dump_TC
+   my_file_is_null_00034b63eaeed04a_Dump_TC
      (TGen_Marshalling_S         => String_Inst,
       TGen_Unit_JSON => Unit_JSON,
       TGen_Test_Origin    => "First write");

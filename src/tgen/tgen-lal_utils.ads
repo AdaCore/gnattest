@@ -23,6 +23,8 @@
 
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 
+with GNAT.SHA1;
+
 with Langkit_Support.Text; use Langkit_Support.Text;
 
 with Libadalang.Analysis;
@@ -56,6 +58,21 @@ package TGen.LAL_Utils is
    function Convert_Qualified_Name
      (Text_QN : Libadalang.Analysis.Unbounded_Text_Type_Array)
       return Ada_Qualified_Name;
+
+   function Subp_Hash
+     (Subp : Libadalang.Analysis.Basic_Decl) return GNAT.SHA1.Message_Digest;
+   --  Return a hash uniquely identifying this subprogram's declaration. This
+   --  function takes into account the the full profile of the subprogram,
+   --  which includes the fully qualified names of the subprogram, its
+   --  parameters, the return type if it is a function as well as the
+   --  instantiation context that may be attached to Subp.
+
+   subtype Short_Digest is String (1 .. 16);
+
+   function Short_Hash
+     (Subp : Libadalang.Analysis.Basic_Decl) return Short_Digest
+   is (Subp_Hash (Subp) (1 .. 16));
+   --  Returns the first 16 characters of the Subp_Hash result
 
    function JSON_Test_Filename
      (Subp : Libadalang.Analysis.Basic_Decl) return String

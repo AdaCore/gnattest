@@ -403,7 +403,7 @@ package body Test.Suite_Min is
 
       for TR_Mapping of Unit_Mapping.TR_List loop
          declare
-            Subp_UID           : String renames TR_Mapping.TR_Hash.all;
+            Subp_UID           : String renames TR_Mapping.TGen_Hash.all;
             Subp_JSON          : constant JSON_Value :=
               Unit_JSON.Get (Subp_UID);
             Subp_Cov, Subp_Tot : Natural;
@@ -463,7 +463,7 @@ package body Test.Suite_Min is
    is
       Trace_Dir         : constant String :=
         Tool_Temp_Dir.all & Dir_Sep & "harness_traces" & Dir_Sep;
-      Subp_UID          : String renames Subp_Mapping.TR_Hash.all;
+      Subp_UID          : String renames Subp_Mapping.TGen_Hash.all;
       Current_Trace_Idx : Natural := 0;
       First_Cov         : Boolean := True;
       Origin_Test_Vec   : constant JSON_Array :=
