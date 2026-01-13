@@ -922,7 +922,6 @@ package body Utils.Command_Lines is
      (Text_Args          : String_Vector;
       Cmd                : in out Command_Line;
       Phase              : Parse_Phase;
-      Callback           : Parse_Callback;
       Collect_File_Names : Boolean;
       Ignore_Errors      : Boolean);
    --  This does the actual parsing work, after Parse has initialized things.
@@ -931,7 +930,6 @@ package body Utils.Command_Lines is
      (Text_Args          : String_Vector;
       Cmd                : in out Command_Line;
       Phase              : Parse_Phase;
-      Callback           : Parse_Callback;
       Collect_File_Names : Boolean;
       Ignore_Errors      : Boolean)
    is
@@ -1101,10 +1099,6 @@ package body Utils.Command_Lines is
                   <<Use_Default>>
                end;
          end case;
-
-         if Callback /= null then
-            Callback (Phase, Dyn);
-         end if;
       end Parse_One_Switch;
 
    begin
@@ -1174,7 +1168,6 @@ package body Utils.Command_Lines is
      (Text_Args          : String_Vector;
       Cmd                : in out Command_Line;
       Phase              : Parse_Phase;
-      Callback           : Parse_Callback;
       Collect_File_Names : Boolean;
       Ignore_Errors      : Boolean := False)
    is
@@ -1244,8 +1237,7 @@ package body Utils.Command_Lines is
 
       --  Finally, parse the Text_Args into Cmd
 
-      Parse_Helper
-        (Text_Args, Cmd, Phase, Callback, Collect_File_Names, Ignore_Errors);
+      Parse_Helper (Text_Args, Cmd, Phase, Collect_File_Names, Ignore_Errors);
    end Parse;
 
    function File_Name_Is_Less_Than (Left, Right : String_Ref) return Boolean;
@@ -1445,33 +1437,6 @@ package body Utils.Command_Lines is
          <<Continue>>
       end loop;
    end Dump_Cmd;
-
-   procedure Dump_Descriptor (Descriptor : Command_Line_Descriptor) is
-      pragma Assert (Descriptor.Allowed_Switches /= null);
-      pragma Assert (Is_Empty (Descriptor.Allowed_Switches_Vector));
-      --  Assert that Freeze_Descriptor has been called
-   begin
-      for J in Descriptor.Allowed_Switches'Range loop
-         declare
-            X : Switch_Descriptor renames Descriptor.Allowed_Switches (J);
-            S : constant String :=
-              (if X.Kind in String_Switch | String_Seq_Switch
-               then Syntax (Descriptor, J)'Img
-               else "");
-         begin
-            Put_Line
-              (J'Img
-               & " "
-               & X.Kind'Img
-               & S
-               & " "
-               & X.Text.all
-               & (if X.Alias = J then "" else X.Alias'Img)
-               & " "
-               & (if X.Enabled then "" else " DISABLED"));
-         end;
-      end loop;
-   end Dump_Descriptor;
 
    ----------
    -- Args --

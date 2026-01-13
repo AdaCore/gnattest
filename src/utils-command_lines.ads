@@ -588,7 +588,6 @@ package Utils.Command_Lines is
      (Text_Args          : String_Vector;
       Cmd                : in out Command_Line;
       Phase              : Parse_Phase;
-      Callback           : Parse_Callback;
       Collect_File_Names : Boolean;
       Ignore_Errors      : Boolean := False);
    --  Given Text_Args (from the command line, project file, or elsewhere),
@@ -637,8 +636,6 @@ package Utils.Command_Lines is
      (Descriptor : Command_Line_Descriptor; Switch : All_Switches)
       return String_Ref;
    --  Switch_Text (To_All (Some_Switch)) --> "--some-switch"
-
-   procedure Dump_Descriptor (Descriptor : Command_Line_Descriptor);
 
    function To_Argument_List_Access
      (Args : String_Access_Vector) return Argument_List_Access

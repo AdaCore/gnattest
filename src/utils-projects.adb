@@ -31,7 +31,6 @@ with Ada.Strings.Equal_Case_Insensitive;
 with Ada.Strings.Fixed;       use Ada.Strings.Fixed;
 with Ada.Text_IO;
 
-with GNAT.Directory_Operations;
 with GNAT.Traceback.Symbolic;
 
 with GNATCOLL.Traces;
@@ -81,8 +80,7 @@ package body Utils.Projects is
      (Cmd               : in out Command_Line;
       Cmd_Args          : String_Vector;
       Global_Report_Dir : out String_Ref;
-      My_Project_Tree   : out GPR2.Project.Tree.Object;
-      Callback          : Parse_Callback);
+      My_Project_Tree   : out GPR2.Project.Tree.Object);
 
    -----------------
    -- Attr_String --
@@ -271,8 +269,7 @@ package body Utils.Projects is
      (Cmd               : in out Command_Line;
       Cmd_Args          : String_Vector;
       Global_Report_Dir : out String_Ref;
-      My_Project_Tree   : out GPR2.Project.Tree.Object;
-      Callback          : Parse_Callback)
+      My_Project_Tree   : out GPR2.Project.Tree.Object)
    is
       procedure Load_Tool_Project;
 
@@ -654,7 +651,6 @@ package body Utils.Projects is
               (Project_Switches,
                Cmd,
                Phase              => Project_File,
-               Callback           => Callback,
                Collect_File_Names => False);
          end if;
       end Extract_Gnattest_Options;
@@ -724,11 +720,7 @@ package body Utils.Projects is
          --  override each other.
 
          Parse
-           (Cmd_Args,
-            Cmd,
-            Phase              => Cmd_Line_2,
-            Callback           => Callback,
-            Collect_File_Names => False);
+           (Cmd_Args, Cmd, Phase => Cmd_Line_2, Collect_File_Names => False);
 
          Get_Sources_From_Project;
          Set_Global_Result_Dirs;
@@ -902,7 +894,6 @@ package body Utils.Projects is
    procedure Process_Command_Line
      (Cmd               : in out Command_Line;
       Global_Report_Dir : out String_Ref;
-      Callback          : Parse_Callback := null;
       Print_Help        : not null access procedure)
    is
       --  We have to Parse the command line BEFORE we Parse the project file,
@@ -927,7 +918,6 @@ package body Utils.Projects is
          Cmd,
          Collect_File_Names => True,
          Phase              => Cmd_Line_1,
-         Callback           => Callback,
          Ignore_Errors      => True);
       Post_Cmd_Line_1 (Cmd);
 
@@ -949,11 +939,7 @@ package body Utils.Projects is
       end if;
       if Error_Detected (Cmd) then
          Parse
-           (Cmd_Args,
-            Cmd,
-            Phase              => Cmd_Line_1,
-            Callback           => null,
-            Collect_File_Names => False);
+           (Cmd_Args, Cmd, Phase => Cmd_Line_1, Collect_File_Names => False);
 
          --  Can't get here, because Parse will have raised Command_Line_Error
          raise Program_Error;
@@ -964,30 +950,8 @@ package body Utils.Projects is
          --  Set File_Name to the full name if -P specified. If the file
          --  doesn't exist, or is not a regular file, give an error.
 
-         procedure Look_For_GPR (File_Name : in out String_Ref);
-         --  Look for a project file among argument sources. This allows
-         --  to support invocation of tool with a project file without -P
-         --  for example:
-         --    gnattest simple.gpr
-
          procedure Append_One (File_Name : String);
          --  Append one file name onto Cmd
-
-         ------------------
-         -- Look_For_GPR --
-         ------------------
-
-         procedure Look_For_GPR (File_Name : in out String_Ref) is
-            use GNAT.Directory_Operations;
-         begin
-            if File_Extension (File_Name.all) = ".gpr" then
-               Test.Common.Report_Err
-                 ("Passing a GPR file as a positional argument is deprecated"
-                  & " and will be removed in release 27. Use -P instead");
-
-               Set_Arg (Cmd, Project_File, File_Name.all);
-            end if;
-         end Look_For_GPR;
 
          ----------------------
          -- Update_File_Name --
@@ -1034,27 +998,9 @@ package body Utils.Projects is
          end Append_One;
 
       begin
-         if Arg (Cmd, Project_File) = null then
-            Iter_File_Names (Cmd, Look_For_GPR'Access);
-
-            if Arg (Cmd, Project_File) /= null then
-               --  We need to remove the project file from argument sources
-               declare
-                  Old : constant String_Ref_Array := File_Names (Cmd);
-               begin
-                  Clear_File_Names (Cmd);
-                  for F of Old loop
-                     if F.all /= Arg (Cmd, Project_File).all then
-                        Append_File_Name (Cmd, F.all);
-                     end if;
-                  end loop;
-               end;
-            end if;
-         end if;
-
          if Arg (Cmd, Project_File) /= null then
             Process_Project
-              (Cmd, Cmd_Args, Global_Report_Dir, My_Project_Tree, Callback);
+              (Cmd, Cmd_Args, Global_Report_Dir, My_Project_Tree);
 
             --  Do not create a temporary directory when processing an
             --  aggregate project.

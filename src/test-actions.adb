@@ -125,14 +125,13 @@ package body Test.Actions is
    ------------------
 
    procedure Process_File
-     (Tool                  : in out Tool_State;
-      Cmd                   : in out Command_Line;
-      File_Name             : String;
-      Counter               : Natural;
-      Syntax_Error          : out Boolean;
-      Reparse               : Boolean := False;
-      Pass                  : Pass_Kind := Second_Pass;
-      Preprocessing_Allowed : Boolean := False)
+     (Tool         : in out Tool_State;
+      Cmd          : in out Command_Line;
+      File_Name    : String;
+      Counter      : Natural;
+      Syntax_Error : out Boolean;
+      Reparse      : Boolean := False;
+      Pass         : Pass_Kind := Second_Pass)
    is
       use GNAT.Byte_Order_Mark;
       --  We read the file into a String, and convert to wide
@@ -172,17 +171,15 @@ package body Test.Actions is
             --  Check if there are preprocessing directives and if so, update
             --  the File_Reader.
 
-            if Preprocessing_Allowed then
-               Libadalang.Preprocessing.Extract_Preprocessor_Data_From_Project
-                 (Tree           => Project_Tree,
-                  Default_Config => Default_Config,
-                  File_Configs   => File_Configs);
+            Libadalang.Preprocessing.Extract_Preprocessor_Data_From_Project
+              (Tree           => Project_Tree,
+               Default_Config => Default_Config,
+               File_Configs   => File_Configs);
 
-               if Default_Config.Enabled or not File_Configs.Is_Empty then
-                  File_Reader :=
-                    Libadalang.Preprocessing.Create_Preprocessor
-                      (Default_Config, File_Configs);
-               end if;
+            if Default_Config.Enabled or not File_Configs.Is_Empty then
+               File_Reader :=
+                 Libadalang.Preprocessing.Create_Preprocessor
+                   (Default_Config, File_Configs);
             end if;
 
             Tool.Context :=
@@ -190,12 +187,6 @@ package body Test.Actions is
                 (Charset       => Wide_Character_Encoding (Cmd),
                  File_Reader   => File_Reader,
                  Unit_Provider => Provider);
-
-            --  If preprocessing is not allowed, ignore related diagnostics
-
-            if not Preprocessing_Allowed then
-               Disable_Preprocessor_Directives_Errors (Tool.Context);
-            end if;
          end;
       end if;
 
@@ -1664,18 +1655,13 @@ package body Test.Actions is
    is
       use Ada.Text_IO;
       use Ada.Strings.Fixed;
-      Idx   : Natural;
-      First : Natural := Value'First;
+      First     : constant Natural := Value'First;
+      Colon_Idx : constant Natural := Index (Value, ":");
 
       F : File_Type;
 
-      Deprecated_Exclude_For_One_UUT : constant Boolean :=
-        Value'Length > 3
-        and then Value (First) = ':'
-        and then Index (Value, "=") > First + 1;
-
       Exclude_For_One_UUT : constant Boolean :=
-        Value'Length > 3 and then Index (Value, ":") > First + 1;
+        Value'Length > 3 and then Colon_Idx > First + 1;
       --  For the new interface (=spec:file instead of :spec=file), the equal
       --  sign is eaten by the argument processing.
 
@@ -1686,24 +1672,12 @@ package body Test.Actions is
 
       use Test.Common;
    begin
-      if Deprecated_Exclude_For_One_UUT or else Exclude_For_One_UUT then
-         if Deprecated_Exclude_For_One_UUT then
-            Report_Err
-              ("warning: (gnattest) --exclude-from-stubbing:spec=file is"
-               & " deprecated and will be removed in release 27."
-               & " Use --exclude-from-stubbing=spec:file instead");
-            Idx := Index (Value, "=");
-
-            First := First + 1; --  Skip the ':'
-
-         else
-            Idx := Index (Value, ":");
-         end if;
+      if Exclude_For_One_UUT then
          declare
-            Unit   : constant String := Value (First .. Idx - 1);
+            Unit   : constant String := Value (First .. Colon_Idx - 1);
             F_Path : constant String :=
               Normalize_Pathname
-                (Name           => Value (Idx + 1 .. Value'Last),
+                (Name           => Value (Colon_Idx + 1 .. Value'Last),
                  Resolve_Links  => False,
                  Case_Sensitive => False);
          begin

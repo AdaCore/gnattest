@@ -47,30 +47,12 @@ package body Utils.Drivers is
    use Test.Actions;
    use type GNAT.OS_Lib.String_Access;
 
-   procedure Driver
-     (Cmd                   : in out Command_Line;
-      Tool                  : in out Tool_State;
-      Preprocessing_Allowed : Boolean := True;
-      Callback              : Parse_Callback := null)
-   is
+   procedure Driver (Cmd : in out Command_Line; Tool : in out Tool_State) is
       use String_Sets;
-
-      procedure Local_Callback
-        (Phase : Parse_Phase; Swit : Dynamically_Typed_Switch);
-      --  This processes the Common switches, and then calls the tool-specific
-      --  Callback passed in.
 
       procedure Process_Files;
 
       procedure Print_Help;
-
-      procedure Local_Callback
-        (Phase : Parse_Phase; Swit : Dynamically_Typed_Switch) is
-      begin
-         if Callback /= null then
-            Callback (Phase, Swit);
-         end if;
-      end Local_Callback;
 
       Global_Report_Dir : String_Ref;
 
@@ -117,8 +99,7 @@ package body Utils.Drivers is
                      F_Name.all,
                      Counter,
                      Has_Syntax_Err,
-                     Pass                  => First_Pass,
-                     Preprocessing_Allowed => Preprocessing_Allowed);
+                     Pass => First_Pass);
                   if Has_Syntax_Err and then not Utils.Syntax_Errors then
                      Utils.Syntax_Errors := True;
                   end if;
@@ -152,8 +133,7 @@ package body Utils.Drivers is
                   F_Name.all,
                   Counter,
                   Has_Syntax_Err,
-                  Pass                  => Second_Pass,
-                  Preprocessing_Allowed => Preprocessing_Allowed);
+                  Pass => Second_Pass);
                if Has_Syntax_Err and then not Utils.Syntax_Errors then
                   Utils.Syntax_Errors := True;
                end if;
@@ -173,10 +153,7 @@ package body Utils.Drivers is
 
    begin
       Process_Command_Line
-        (Cmd,
-         Global_Report_Dir,
-         Callback   => Local_Callback'Unrestricted_Access,
-         Print_Help => Print_Help'Access);
+        (Cmd, Global_Report_Dir, Print_Help => Print_Help'Access);
 
       if Debug_Flag_C then
          Dump_Cmd (Cmd);
