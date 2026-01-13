@@ -103,6 +103,6 @@ package Test.Actions is
    --  to Process_File).
 
    procedure Final (Tool : in out Tool_State; Cmd : Command_Line);
-   procedure Tool_Help (Tool : Tool_State);
+   procedure Tool_Help;
 
 end Test.Actions;
