@@ -1,0 +1,11 @@
+description: |
+    Generate tests using TGen for a user code that creates tasks during
+    its elaboration.
+
+default-gpr: True
+
+suppress_test_dump: True
+
+suppress_test_runner_execution: True
+
+driver: gnattest_tgen

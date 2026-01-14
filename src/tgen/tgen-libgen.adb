@@ -1900,6 +1900,9 @@ package body TGen.Libgen is
             end if;
          end;
       end loop;
+
+      Put_Line (Main_File, "with GNAT.OS_Lib;");
+
       New_Line (Main_File);
       Put_Line (Main_File, "procedure Generation_Main is");
       Put_Line (Main_File, "begin");
@@ -1930,6 +1933,11 @@ package body TGen.Libgen is
             end if;
          end;
       end loop;
+
+      --  Call `exit(2)` explicitly to avoid hanging forever if the user
+      --  spawned some tasks that doesn't terminate during the elaboration.
+
+      Put_Line (Main_File, "   GNAT.OS_Lib.Os_Exit (0);");
       Put_Line (Main_File, "end Generation_Main;");
       Close (Main_File);
    exception
