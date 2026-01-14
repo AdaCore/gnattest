@@ -127,6 +127,9 @@ class GNATTestTgenDriver(BaseDriver):
 
         self.shell(gprbuild_args)
 
+        if self.test_env.get("suppress_test_runner_execution", False):
+            return
+
         # Finally, run the test harness. Do not register failure exit codes as
         # it is likely that some tests may crash the subprogram under test.
         td_runner = os.path.join(os.path.dirname(td_prj), "test_runner")
