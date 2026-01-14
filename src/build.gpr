@@ -20,8 +20,4 @@ project Build is
       for Default_Switches ("Ada") use ("-Es");
    end Binder;
 
-   package Linker is
-      for Default_Switches ("Ada") use GNATtest.Linker'Switches ("Ada");
-   end Linker;
-
 end Build;

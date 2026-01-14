@@ -6,7 +6,7 @@ PROCESSORS ?= 0
 BUILD_ROOT ?=
 
 ALL_LIBRARY_TYPES = static static-pic relocatable
-ALL_BUILD_MODES = dev prod AddressSanitizer
+ALL_BUILD_MODES = dev prod
 
 # When building the instrumented version, only make the static.
 ifdef INSTRUMENTED
@@ -87,7 +87,7 @@ ifdef INSTRUMENTED
 		--dump-filename-env-var=GNATTEST_TRACE_DIR \
 		-XLIBRARY_TYPE=$(subst instrument-,,$@) \
 		-XXMLADA_BUILD=$(subst instrument-,,$@) \
-		-XBUILD_MODE=$(BUILD_MODE) \
+		-XGNATTEST_BUILD_MODE=$(BUILD_MODE) \
 		-P $(BIN_PROJECT) ;
 else
 # Instrumentation disabled: No-op
@@ -104,7 +104,7 @@ $(LIB_TARGETS): lib-%: instrument-%
 	 	-j$(PROCESSORS) \
 		$(GPR_ARGS) \
 		-XLIBRARY_TYPE=$(subst lib-,,$@) \
-		-XBUILD_MODE=$(BUILD_MODE) \
+		-XGNATTEST_BUILD_MODE=$(BUILD_MODE) \
 		-P $(LIB_PROJECT)
 
 .PHONY: lib
@@ -122,7 +122,7 @@ bin: instrument-static
 		$(GPR_ARGS) \
 		-XLIBRARY_TYPE=static \
 		-XXMLADA_BUILD=static \
-		-XBUILD_MODE=$(BUILD_MODE) \
+		-XGNATTEST_BUILD_MODE=$(BUILD_MODE) \
 		-P $(BIN_PROJECT) ; \
 
 
@@ -158,7 +158,7 @@ ifdef INSTRUMENTED
 			--dump-filename-env-var=GNATTEST_TRACE_DIR \
 			-XLIBRARY_TYPE=static \
 			-XXMLADA_BUILD=static \
-			-XBUILD_MODE=$(BUILD_MODE) \
+			-XGNATTEST_BUILD_MODE=$(BUILD_MODE) \
 			-P $$proj \
 			--projects gnattest.gpr ; \
 		done
@@ -180,7 +180,7 @@ testsuite_drivers: instrument-drivers
 			$(GPR_ARGS) \
 			-XLIBRARY_TYPE=static \
 			-XXMLADA_BUILD=static \
-			-XBUILD_MODE=$(BUILD_MODE) \
+			-XGNATTEST_BUILD_MODE=$(BUILD_MODE) \
 			-P $$proj ; \
 	done
 
@@ -197,7 +197,7 @@ clean:
 				GPR_PROJECT_PATH=$$GPR_PROJECT_PATH$(PSEP)$(GNATTEST_GPR) \
 				gprclean $(RELOCATE_BUILD) \
 					-XLIBRARY_TYPE=$$library_type \
-					-XBUILD_MODE=$$build_mode \
+					-XGNATTEST_BUILD_MODE=$$build_mode \
 					-q -P $$proj; \
 			done ; \
 		done ; \
@@ -213,7 +213,7 @@ $(INSTALL_LIB_TARGETS):
 		$(GPR_ARGS) \
 		-v \
 		-XLIBRARY_TYPE=$(subst install-lib-,,$@) \
-		-XBUILD_MODE=$(BUILD_MODE) \
+		-XGNATTEST_BUILD_MODE=$(BUILD_MODE) \
 		--prefix="$(DESTDIR)" \
 		--sources-subdir=include/$$(basename $(LIB_PROJECT) | cut -d. -f1) \
 		--build-name=$(subst install-lib-,,$@) \

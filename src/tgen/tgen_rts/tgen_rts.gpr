@@ -2,7 +2,7 @@ library project TGen_RTS is
    type Any_Library_Type is ("static", "relocatable", "static-pic");
    Library_Type : Any_Library_Type := external ("LIBRARY_TYPE", "static");
    type Build_Mode_Type is ("dev", "prod");
-   Build_Mode : Build_Mode_Type := external("BUILD_MODE", "dev");
+   Build_Mode : Build_Mode_Type := external ("TGEN_RTS_BUILD_MODE", external("BUILD_MODE", "prod"));
 
    for Library_Name use "tgen";
    for Library_Kind use Library_Type;
