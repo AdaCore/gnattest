@@ -2,8 +2,8 @@
 -- test drivers.
 abstract project Config is
 
-   type Build_Mode_Type is ("dev", "prod", "AddressSanitizer");
-   Build_Mode : Build_Mode_Type := external ("BUILD_MODE", "dev");
+   type Build_Mode_Type is ("dev", "prod");
+   Build_Mode : Build_Mode_Type := external ("GNATTEST_BUILD_MODE", external("BUILD_MODE", "prod"));
 
    package Compiler is
       for Driver ("Templates") use "";
@@ -27,9 +27,6 @@ abstract project Config is
                --  linking errors when linking the Ada Language Server
                --  "-gnatp"
                "-gnatn");
-         when "AddressSanitizer" =>
-            for Default_Switches ("Ada") use
-               Common_Switches & Dev_Switches & ("-fsanitize=address");
       end case;
    end Compiler;
 

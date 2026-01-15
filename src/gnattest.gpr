@@ -11,8 +11,6 @@ library project GNATtest is
    type Library_Type_Type is ("static", "static-pic", "relocatable");
    Library_Type : Library_Type_Type := external ("LIBRARY_TYPE", "static");
 
-   Build_Mode : Config.Build_Mode_Type := external ("BUILD_MODE", "dev");
-
    for Source_Dirs use
      (".", "tgen", "tgen/tgen_rts",
       "../share/tgen/templates",
@@ -28,15 +26,6 @@ library project GNATtest is
    for Languages use ("Ada", "Templates");
 
    package Compiler renames Config.Compiler;
-
-   package Linker is
-      case Build_Mode is
-         when "AddressSanitizer" =>
-            for Switches ("Ada") use ("-fsanitize=address");
-         when others =>
-            null;
-      end case;
-   end Linker;
 
    package Naming is
       for Implementation_Suffix ("Templates") use ".tmplt";
