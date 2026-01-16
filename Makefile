@@ -2,6 +2,8 @@
 # To build in development mode, do "make LIBRARY_TYPE=static BUILD_MODE=dev".
 
 BUILD_MODE ?= dev
+GNATTEST_BUILD_MODE ?= $(BUILD_MODE)
+TGEN_RTS_BUILD_MODE ?= $(BUILD_MODE)
 PROCESSORS ?= 0
 BUILD_ROOT ?=
 
@@ -87,7 +89,8 @@ ifdef INSTRUMENTED
 		--dump-filename-env-var=GNATTEST_TRACE_DIR \
 		-XLIBRARY_TYPE=$(subst instrument-,,$@) \
 		-XXMLADA_BUILD=$(subst instrument-,,$@) \
-		-XGNATTEST_BUILD_MODE=$(BUILD_MODE) \
+		-XGNATTEST_BUILD_MODE=$(GNATTEST_BUILD_MODE) \
+		-XTGEN_RTS_BUILD_MODE=$(TGEN_RTS_BUILD_MODE) \
 		-P $(BIN_PROJECT) ;
 else
 # Instrumentation disabled: No-op
@@ -104,7 +107,8 @@ $(LIB_TARGETS): lib-%: instrument-%
 	 	-j$(PROCESSORS) \
 		$(GPR_ARGS) \
 		-XLIBRARY_TYPE=$(subst lib-,,$@) \
-		-XGNATTEST_BUILD_MODE=$(BUILD_MODE) \
+		-XGNATTEST_BUILD_MODE=$(GNATTEST_BUILD_MODE) \
+		-XTGEN_RTS_BUILD_MODE=$(TGEN_RTS_BUILD_MODE) \
 		-P $(LIB_PROJECT)
 
 .PHONY: lib
@@ -122,7 +126,8 @@ bin: instrument-static
 		$(GPR_ARGS) \
 		-XLIBRARY_TYPE=static \
 		-XXMLADA_BUILD=static \
-		-XGNATTEST_BUILD_MODE=$(BUILD_MODE) \
+		-XGNATTEST_BUILD_MODE=$(GNATTEST_BUILD_MODE) \
+		-XTGEN_RTS_BUILD_MODE=$(TGEN_RTS_BUILD_MODE) \
 		-P $(BIN_PROJECT) ; \
 
 
@@ -158,7 +163,8 @@ ifdef INSTRUMENTED
 			--dump-filename-env-var=GNATTEST_TRACE_DIR \
 			-XLIBRARY_TYPE=static \
 			-XXMLADA_BUILD=static \
-			-XGNATTEST_BUILD_MODE=$(BUILD_MODE) \
+			-XGNATTEST_BUILD_MODE=$(GNATTEST_BUILD_MODE) \
+			-XTGEN_RTS_BUILD_MODE=$(TGEN_RTS_BUILD_MODE) \
 			-P $$proj \
 			--projects gnattest.gpr ; \
 		done
@@ -180,7 +186,8 @@ testsuite_drivers: instrument-drivers
 			$(GPR_ARGS) \
 			-XLIBRARY_TYPE=static \
 			-XXMLADA_BUILD=static \
-			-XGNATTEST_BUILD_MODE=$(BUILD_MODE) \
+			-XGNATTEST_BUILD_MODE=$(GNATTEST_BUILD_MODE) \
+			-XTGEN_RTS_BUILD_MODE=$(TGEN_RTS_BUILD_MODE) \
 			-P $$proj ; \
 	done
 
@@ -213,7 +220,8 @@ $(INSTALL_LIB_TARGETS):
 		$(GPR_ARGS) \
 		-v \
 		-XLIBRARY_TYPE=$(subst install-lib-,,$@) \
-		-XGNATTEST_BUILD_MODE=$(BUILD_MODE) \
+		-XGNATTEST_BUILD_MODE=$(GNATTEST_BUILD_MODE) \
+		-XTGEN_RTS_BUILD_MODE=$(TGEN_RTS_BUILD_MODE) \
 		--prefix="$(DESTDIR)" \
 		--sources-subdir=include/$$(basename $(LIB_PROJECT) | cut -d. -f1) \
 		--build-name=$(subst install-lib-,,$@) \
