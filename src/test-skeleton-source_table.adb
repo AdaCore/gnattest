@@ -127,6 +127,122 @@ package body Test.Skeleton.Source_Table is
    procedure Reset_Source_Process_Iterator;
    --  Sets SF_Iterator to the begining of SF_Table.
 
+   function Normalize_Source_Name (Source_Name : String) return String;
+   --  Normalize a source name using standard options (no link resolution,
+   --  case insensitive). This is used consistently throughout the package.
+
+   procedure Initialize_Source_Name_Strings (Fname : String);
+   --  Initialize Short_Source_Name_String and Full_Source_Name_String
+   --  from a given file name.
+
+   procedure Cleanup_Source_Name_Strings;
+   --  Free Short_Source_Name_String and Full_Source_Name_String.
+
+   procedure Set_SF_Record_Suffixless_Name (SF_Rec : in out SF_Record);
+   --  Extract and set the suffixless name in the SF_Record based on
+   --  Short_Source_Name_String.
+
+   procedure Update_SF_Record
+     (Source_Name : String;
+      Updater     : access procedure (SF_Rec : in out SF_Record));
+   --  Retrieve an SF_Record from the table, apply the updater procedure,
+   --  and replace it back in the table.
+
+   procedure Extract_Last_Name_Index
+     (Name : String_Access; First_Idx : out Natural; Last_Idx : out Natural);
+   --  Extract the indexes o the last name of a full qualified name string.
+   --  First_Idx is the index pointing to the begining of the last name.
+   --  Last_Idx is the index pointing to the end of the last name.
+
+   function Get_GPR2_Owning_View_From_Name
+     (Name : String_Access) return Project.View.Object
+   is (Project_Tree.Root_Project.Visible_Source
+         (GPR2.Path_Name.Create (GNATCOLL.VFS.Create (+Name.all)))
+         .Owning_View);
+   --  Helper function. Return a GPR2 owned project view for a given name.
+
+   ---------------------------
+   -- Normalize_Source_Name --
+   ---------------------------
+
+   function Normalize_Source_Name (Source_Name : String) return String is
+   begin
+      return
+        Normalize_Pathname
+          (Name           => Source_Name,
+           Resolve_Links  => False,
+           Case_Sensitive => False);
+   end Normalize_Source_Name;
+
+   ------------------------------------
+   -- Initialize_Source_Name_Strings --
+   ------------------------------------
+
+   procedure Initialize_Source_Name_Strings (Fname : String) is
+   begin
+      Short_Source_Name_String := new String'(Base_Name (Fname));
+      Full_Source_Name_String := new String'(Normalize_Source_Name (Fname));
+   end Initialize_Source_Name_Strings;
+
+   ----------------------------------
+   -- Cleanup_Source_Name_Strings --
+   ----------------------------------
+
+   procedure Cleanup_Source_Name_Strings is
+   begin
+      Free (Short_Source_Name_String);
+      Free (Full_Source_Name_String);
+   end Cleanup_Source_Name_Strings;
+
+   ------------------------------------
+   -- Set_SF_Record_Suffixless_Name --
+   ------------------------------------
+
+   procedure Set_SF_Record_Suffixless_Name (SF_Rec : in out SF_Record) is
+      First_Idx : Natural;
+      Last_Idx  : Natural;
+   begin
+      Extract_Last_Name_Index (Short_Source_Name_String, First_Idx, Last_Idx);
+      SF_Rec.Suffixless_Name :=
+        new String'(Short_Source_Name_String.all (First_Idx .. Last_Idx));
+   end Set_SF_Record_Suffixless_Name;
+
+   ----------------------
+   -- Update_SF_Record --
+   ----------------------
+
+   procedure Update_SF_Record
+     (Source_Name : String;
+      Updater     : access procedure (SF_Rec : in out SF_Record))
+   is
+      SF_Rec : SF_Record;
+      SN     : constant String := Normalize_Source_Name (Source_Name);
+   begin
+      SF_Rec := Source_File_Table.Element (SF_Table, SN);
+      Updater (SF_Rec);
+      Replace (SF_Table, SN, SF_Rec);
+   end Update_SF_Record;
+
+   -----------------------------
+   -- Extract_Last_Name_Index --
+   -----------------------------
+
+   procedure Extract_Last_Name_Index
+     (Name : String_Access; First_Idx : out Natural; Last_Idx : out Natural) is
+   begin
+      First_Idx := Name'First;
+      Last_Idx := Name'Last;
+
+      for J in reverse First_Idx + 1 .. Last_Idx loop
+
+         if Name (J) = '.' then
+            Last_Idx := J - 1;
+            exit;
+         end if;
+
+      end loop;
+   end Extract_Last_Name_Index;
+
    procedure Generate_Stub_Extension_Project
      (Proj             : String;
       Current_Infix    : String;
@@ -188,9 +304,6 @@ package body Test.Skeleton.Source_Table is
    -----------------------------
 
    procedure Add_Source_To_Process (Fname : String) is
-      First_Idx : Natural;
-      Last_Idx  : Natural;
-
       New_SF_Record : SF_Record;
    begin
       Trace (Me, "adding source: " & Fname);
@@ -201,11 +314,7 @@ package body Test.Skeleton.Source_Table is
       end if;
 
       --  Check if we already have a file with the same short name:
-      Short_Source_Name_String := new String'(Base_Name (Fname));
-      Full_Source_Name_String :=
-        new String'
-          (Normalize_Pathname
-             (Fname, Resolve_Links => False, Case_Sensitive => False));
+      Initialize_Source_Name_Strings (Fname);
 
       if Source_Present (Full_Source_Name_String.all)
         and then Get_Source_Status (Full_Source_Name_String.all)
@@ -226,20 +335,7 @@ package body Test.Skeleton.Source_Table is
       New_SF_Record.Full_Source_Name :=
         new String'(Full_Source_Name_String.all);
 
-      First_Idx := Short_Source_Name_String'First;
-      Last_Idx := Short_Source_Name_String'Last;
-
-      for J in reverse First_Idx + 1 .. Last_Idx loop
-
-         if Short_Source_Name_String (J) = '.' then
-            Last_Idx := J - 1;
-            exit;
-         end if;
-
-      end loop;
-
-      New_SF_Record.Suffixless_Name :=
-        new String'(Short_Source_Name_String.all (First_Idx .. Last_Idx));
+      Set_SF_Record_Suffixless_Name (New_SF_Record);
 
       New_SF_Record.Status := Waiting;
 
@@ -320,8 +416,7 @@ package body Test.Skeleton.Source_Table is
       Sources_Left := Sources_Left + 1;
       Total_Sources := Total_Sources + 1;
 
-      Free (Short_Source_Name_String);
-      Free (Full_Source_Name_String);
+      Cleanup_Source_Name_Strings;
 
    end Add_Source_To_Process;
 
@@ -332,37 +427,17 @@ package body Test.Skeleton.Source_Table is
    procedure Add_Body_To_Process
      (Fname : String; Pname : String; Uname : String)
    is
-      First_Idx : Natural;
-      Last_Idx  : Natural;
-
       New_SF_Record : SF_Record;
    begin
       Trace (Me, "adding " & Fname & " from project " & Pname);
       --  Check if we already have a file with the same short name:
-      Short_Source_Name_String := new String'(Base_Name (Fname));
-      Full_Source_Name_String :=
-        new String'
-          (Normalize_Pathname
-             (Fname, Resolve_Links => False, Case_Sensitive => False));
+      Initialize_Source_Name_Strings (Fname);
 
       --  Making the new SF_Record
       New_SF_Record.Full_Source_Name :=
         new String'(Full_Source_Name_String.all);
 
-      First_Idx := Short_Source_Name_String'First;
-      Last_Idx := Short_Source_Name_String'Last;
-
-      for J in reverse First_Idx + 1 .. Last_Idx loop
-
-         if Short_Source_Name_String (J) = '.' then
-            Last_Idx := J - 1;
-            exit;
-         end if;
-
-      end loop;
-
-      New_SF_Record.Suffixless_Name :=
-        new String'(Short_Source_Name_String.all (First_Idx .. Last_Idx));
+      Set_SF_Record_Suffixless_Name (New_SF_Record);
 
       New_SF_Record.Status := To_Stub_Body;
 
@@ -378,8 +453,7 @@ package body Test.Skeleton.Source_Table is
             Resolve_Links  => False,
             Case_Sensitive => False));
 
-      Free (Short_Source_Name_String);
-      Free (Full_Source_Name_String);
+      Cleanup_Source_Name_Strings;
    end Add_Body_To_Process;
 
    ------------------------
@@ -387,9 +461,6 @@ package body Test.Skeleton.Source_Table is
    ------------------------
 
    procedure Add_Body_Reference (Fname : String) is
-      First_Idx : Natural;
-      Last_Idx  : Natural;
-
       New_SF_Record : SF_Record;
    begin
       Trace (Me, "adding source (as reference): " & Fname);
@@ -399,11 +470,7 @@ package body Test.Skeleton.Source_Table is
          return;
       end if;
 
-      Short_Source_Name_String := new String'(Base_Name (Fname));
-      Full_Source_Name_String :=
-        new String'
-          (Normalize_Pathname
-             (Fname, Resolve_Links => False, Case_Sensitive => False));
+      Initialize_Source_Name_Strings (Fname);
 
       --  Already present specs should not be overridden
       if SF_Table.Find (Full_Source_Name_String.all)
@@ -416,20 +483,7 @@ package body Test.Skeleton.Source_Table is
       New_SF_Record.Full_Source_Name :=
         new String'(Full_Source_Name_String.all);
 
-      First_Idx := Short_Source_Name_String'First;
-      Last_Idx := Short_Source_Name_String'Last;
-
-      for J in reverse First_Idx + 1 .. Last_Idx loop
-
-         if Short_Source_Name_String (J) = '.' then
-            Last_Idx := J - 1;
-            exit;
-         end if;
-
-      end loop;
-
-      New_SF_Record.Suffixless_Name :=
-        new String'(Short_Source_Name_String.all (First_Idx .. Last_Idx));
+      Set_SF_Record_Suffixless_Name (New_SF_Record);
 
       New_SF_Record.Status := Body_Reference;
 
@@ -464,8 +518,7 @@ package body Test.Skeleton.Source_Table is
       end;
       Insert (SF_Table, Full_Source_Name_String.all, New_SF_Record);
 
-      Free (Short_Source_Name_String);
-      Free (Full_Source_Name_String);
+      Cleanup_Source_Name_Strings;
    end Add_Body_Reference;
 
    ----------------------------------
@@ -573,11 +626,7 @@ package body Test.Skeleton.Source_Table is
    ---------------------
 
    function Get_Source_Body (Source_Name : String) return String is
-      SN  : constant String :=
-        Normalize_Pathname
-          (Name           => Source_Name,
-           Resolve_Links  => False,
-           Case_Sensitive => False);
+      SN  : constant String := Normalize_Source_Name (Source_Name);
       SFR : SF_Record;
    begin
       if Source_Present (SN) then
@@ -603,11 +652,7 @@ package body Test.Skeleton.Source_Table is
    ---------------------------
 
    function Get_Source_Instr_Body (Source_Name : String) return String is
-      SN  : constant String :=
-        Normalize_Pathname
-          (Name           => Source_Name,
-           Resolve_Links  => False,
-           Case_Sensitive => False);
+      SN  : constant String := Normalize_Source_Name (Source_Name);
       SFR : SF_Record;
    begin
       SFR := Source_File_Table.Element (SF_Table, SN);
@@ -623,11 +668,7 @@ package body Test.Skeleton.Source_Table is
    --  Get_Source_Output_Dir  --
    -----------------------------
    function Get_Source_Output_Dir (Source_Name : String) return String is
-      SN : constant String :=
-        Normalize_Pathname
-          (Name           => Source_Name,
-           Resolve_Links  => False,
-           Case_Sensitive => False);
+      SN : constant String := Normalize_Source_Name (Source_Name);
       SR : constant SF_Record := Source_File_Table.Element (SF_Table, SN);
    begin
       if SR.Test_Destination = null then
@@ -642,11 +683,7 @@ package body Test.Skeleton.Source_Table is
    ------------------------
 
    function Get_Source_Project_Name (Source_Name : String) return String is
-      SN : constant String :=
-        Normalize_Pathname
-          (Name           => Source_Name,
-           Resolve_Links  => False,
-           Case_Sensitive => False);
+      SN : constant String := Normalize_Source_Name (Source_Name);
    begin
       return Source_File_Table.Element (SF_Table, SN).Project_Name.all;
    end Get_Source_Project_Name;
@@ -656,11 +693,7 @@ package body Test.Skeleton.Source_Table is
    --------------------------
 
    function Get_Source_Unit_Name (Source_Name : String) return String is
-      SN : constant String :=
-        Normalize_Pathname
-          (Name           => Source_Name,
-           Resolve_Links  => False,
-           Case_Sensitive => False);
+      SN : constant String := Normalize_Source_Name (Source_Name);
    begin
       return Source_File_Table.Element (SF_Table, SN).Unit_Name.all;
    end Get_Source_Unit_Name;
@@ -670,11 +703,7 @@ package body Test.Skeleton.Source_Table is
    -------------------------
 
    function Get_Source_Stub_Dir (Source_Name : String) return String is
-      SN : constant String :=
-        Normalize_Pathname
-          (Name           => Source_Name,
-           Resolve_Links  => False,
-           Case_Sensitive => False);
+      SN : constant String := Normalize_Source_Name (Source_Name);
    begin
       return Source_File_Table.Element (SF_Table, SN).Stub_Destination.all;
    end Get_Source_Stub_Dir;
@@ -684,11 +713,7 @@ package body Test.Skeleton.Source_Table is
    -------------------------------
 
    function Get_Source_Stub_Data_Body (Source_Name : String) return String is
-      SN : constant String :=
-        Normalize_Pathname
-          (Name           => Source_Name,
-           Resolve_Links  => False,
-           Case_Sensitive => False);
+      SN : constant String := Normalize_Source_Name (Source_Name);
    begin
       return Source_File_Table.Element (SF_Table, SN).Stub_Data_Base_Body.all;
    end Get_Source_Stub_Data_Body;
@@ -698,11 +723,7 @@ package body Test.Skeleton.Source_Table is
    -------------------------------
 
    function Get_Source_Stub_Data_Spec (Source_Name : String) return String is
-      SN : constant String :=
-        Normalize_Pathname
-          (Name           => Source_Name,
-           Resolve_Links  => False,
-           Case_Sensitive => False);
+      SN : constant String := Normalize_Source_Name (Source_Name);
    begin
       return Source_File_Table.Element (SF_Table, SN).Stub_Data_Base_Spec.all;
    end Get_Source_Stub_Data_Spec;
@@ -711,11 +732,7 @@ package body Test.Skeleton.Source_Table is
    --  Get_Source_Status  --
    -------------------------
    function Get_Source_Status (Source_Name : String) return SF_Status is
-      SN : constant String :=
-        Normalize_Pathname
-          (Name           => Source_Name,
-           Resolve_Links  => False,
-           Case_Sensitive => False);
+      SN : constant String := Normalize_Source_Name (Source_Name);
    begin
       return Source_File_Table.Element (SF_Table, SN).Status;
    end Get_Source_Status;
@@ -724,11 +741,7 @@ package body Test.Skeleton.Source_Table is
    --  Get_Source_Suffixless_Name  --
    ----------------------------------
    function Get_Source_Suffixless_Name (Source_Name : String) return String is
-      SN : constant String :=
-        Normalize_Pathname
-          (Name           => Source_Name,
-           Resolve_Links  => False,
-           Case_Sensitive => False);
+      SN : constant String := Normalize_Source_Name (Source_Name);
    begin
       return Source_File_Table.Element (SF_Table, SN).Suffixless_Name.all;
    end Get_Source_Suffixless_Name;
@@ -738,11 +751,7 @@ package body Test.Skeleton.Source_Table is
    --------------------------
 
    function Get_Source_Instr_Dir (Source_Name : String) return String is
-      SN : constant String :=
-        Normalize_Pathname
-          (Name           => Source_Name,
-           Resolve_Links  => False,
-           Case_Sensitive => False);
+      SN : constant String := Normalize_Source_Name (Source_Name);
    begin
       return Source_File_Table.Element (SF_Table, SN).Inst_Dir.all;
    end Get_Source_Instr_Dir;
@@ -869,11 +878,7 @@ package body Test.Skeleton.Source_Table is
    -------------
 
    function Is_Body (Source_Name : String) return Boolean is
-      SN : constant String :=
-        Normalize_Pathname
-          (Name           => Source_Name,
-           Resolve_Links  => False,
-           Case_Sensitive => False);
+      SN : constant String := Normalize_Source_Name (Source_Name);
    begin
       return
         Source_File_Table.Element (SF_Table, SN).Corresponding_Body = null;
@@ -947,16 +952,19 @@ package body Test.Skeleton.Source_Table is
    -------------------------
 
    procedure Mark_Sourse_Stubbed (Source_Name : String) is
-      SF_Rec : SF_Record;
-      SN     : constant String :=
-        Normalize_Pathname
-          (Name           => Source_Name,
-           Resolve_Links  => False,
-           Case_Sensitive => False);
+      procedure Set_Stub_Created (SF_Rec : in out SF_Record);
+      --  Set Stub_Created flag to `True` in the source file record.
+
+      ----------------------
+      -- Set_Stub_Created --
+      ----------------------
+
+      procedure Set_Stub_Created (SF_Rec : in out SF_Record) is
+      begin
+         SF_Rec.Stub_Created := True;
+      end Set_Stub_Created;
    begin
-      SF_Rec := Source_File_Table.Element (SF_Table, SN);
-      SF_Rec.Stub_Created := True;
-      Replace (SF_Table, SN, SF_Rec);
+      Update_SF_Record (Source_Name, Set_Stub_Created'Access);
    end Mark_Sourse_Stubbed;
 
    ---------------------------------
@@ -1085,22 +1093,25 @@ package body Test.Skeleton.Source_Table is
       SF_Process_Iterator := First (SF_Table);
    end Reset_Source_Process_Iterator;
 
-   ------------------
-   --  Set_Status  --
-   ------------------
+   -------------------------
+   --  Set_Source_Status  --
+   -------------------------
 
    procedure Set_Source_Status (Source_Name : String; New_Status : SF_Status)
    is
-      SF_Rec : SF_Record;
-      SN     : constant String :=
-        Normalize_Pathname
-          (Name           => Source_Name,
-           Resolve_Links  => False,
-           Case_Sensitive => False);
+      procedure Set_Status (SF_Rec : in out SF_Record);
+      --  Set the status to `New_Status` in the source file record.
+
+      ------------------
+      --  Set_Status  --
+      ------------------
+
+      procedure Set_Status (SF_Rec : in out SF_Record) is
+      begin
+         SF_Rec.Status := New_Status;
+      end Set_Status;
    begin
-      SF_Rec := Source_File_Table.Element (SF_Table, SN);
-      SF_Rec.Status := New_Status;
-      Replace (SF_Table, SN, SF_Rec);
+      Update_SF_Record (Source_Name, Set_Status'Access);
    end Set_Source_Status;
 
    -------------------------
@@ -1192,11 +1203,7 @@ package body Test.Skeleton.Source_Table is
          if TD_Name.Is_Absolute_Path then
             SF_Rec.Test_Destination := new String'(Test_Dir_Name.all);
          else
-            View :=
-              Project_Tree.Root_Project.Visible_Source
-                (GPR2.Path_Name.Create
-                   (GNATCOLL.VFS.Create (+SF_Rec.Full_Source_Name.all)))
-                .Owning_View;
+            View := Get_GPR2_Owning_View_From_Name (SF_Rec.Full_Source_Name);
             SF_Rec.Test_Destination :=
               new String'
                 (View.Object_Directory.String_Value
@@ -1223,11 +1230,7 @@ package body Test.Skeleton.Source_Table is
       for Cur in SF_Table.Iterate loop
          SF_Rec := Source_File_Table.Element (Cur);
 
-         View :=
-           Project_Tree.Root_Project.Visible_Source
-             (GPR2.Path_Name.Create
-                (GNATCOLL.VFS.Create (+SF_Rec.Full_Source_Name.all)))
-             .Owning_View;
+         View := Get_GPR2_Owning_View_From_Name (SF_Rec.Full_Source_Name);
          View := Outermost_Extending (View);
 
          --  Better use subdirs to separate stubs from different projects.
@@ -1258,17 +1261,21 @@ package body Test.Skeleton.Source_Table is
    --------------------
 
    procedure Set_Output_Dir (Source_Name : String; Output_Dir : String) is
-      SF_Rec : SF_Record;
-      SN     : constant String :=
-        Normalize_Pathname
-          (Name           => Source_Name,
-           Resolve_Links  => False,
-           Case_Sensitive => False);
+      procedure Set_Destination (SF_Rec : in out SF_Record);
+      --  Set destination to `Output_Dir` in the source file record.
+      --  `Output_Dir` is copied and heap allocated.
+
+      ---------------------
+      -- Set_Destination --
+      ---------------------
+
+      procedure Set_Destination (SF_Rec : in out SF_Record) is
+      begin
+         SF_Rec.Test_Destination := new String'(Output_Dir);
+      end Set_Destination;
    begin
       Trace (Me, "Set_Output_Dir for " & Source_Name);
-      SF_Rec := SF_Table.Element (SN);
-      SF_Rec.Test_Destination := new String'(Output_Dir);
-      Replace (SF_Table, SN, SF_Rec);
+      Update_SF_Record (Source_Name, Set_Destination'Access);
    end Set_Output_Dir;
 
    ----------------------
@@ -1276,11 +1283,7 @@ package body Test.Skeleton.Source_Table is
    ----------------------
 
    function Source_Present (Source_Name : String) return Boolean is
-      SN : constant String :=
-        Normalize_Pathname
-          (Name           => Source_Name,
-           Resolve_Links  => False,
-           Case_Sensitive => False);
+      SN : constant String := Normalize_Source_Name (Source_Name);
    begin
       return Contains (SF_Table, SN);
    end Source_Present;
@@ -1290,11 +1293,7 @@ package body Test.Skeleton.Source_Table is
    --------------------
 
    function Source_Stubbed (Source_Name : String) return Boolean is
-      SN : constant String :=
-        Normalize_Pathname
-          (Name           => Source_Name,
-           Resolve_Links  => False,
-           Case_Sensitive => False);
+      SN : constant String := Normalize_Source_Name (Source_Name);
    begin
       return Source_File_Table.Element (SF_Table, SN).Stub_Created;
    end Source_Stubbed;
