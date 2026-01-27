@@ -569,17 +569,8 @@ package body Test.Skeleton.Source_Table is
    function SF_Table_Empty return Boolean is
       Empty : constant Boolean := Is_Empty (SF_Table);
    begin
-      if Empty then
-         return Empty;
-      else
-         for SF of SF_Table loop
-            if SF.Status /= To_Stub_Body then
-               return False;
-            end if;
-         end loop;
-
-         return True;
-      end if;
+      return
+        Empty or else (for all SF of SF_Table => SF.Status = To_Stub_Body);
    end SF_Table_Empty;
 
    ---------------------------

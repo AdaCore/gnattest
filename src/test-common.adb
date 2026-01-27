@@ -833,9 +833,7 @@ package body Test.Common is
          return;
       end if;
 
-      for I in 1 .. Offset loop
-         Ada.Text_IO.Put (Ada.Text_IO.Standard_Output, " ");
-      end loop;
+      Ada.Text_IO.Put (Ada.Text_IO.Standard_Output, Offset * ' ');
 
       Ada.Text_IO.Put_Line (Ada.Text_IO.Standard_Output, Message);
    end Report_Std;
@@ -1054,12 +1052,7 @@ package body Test.Common is
    function Is_Private (Node : Ada_Node'Class) return Boolean is
       P_List : constant Ada_Node_Array := Parents (Node);
    begin
-      for P of P_List loop
-         if P.Kind = Ada_Private_Part then
-            return True;
-         end if;
-      end loop;
-      return False;
+      return (for some P of P_List => P.Kind = Ada_Private_Part);
    end Is_Private;
 
    ---------------------------------

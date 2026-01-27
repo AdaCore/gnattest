@@ -1790,25 +1790,10 @@ package body Test.Skeleton is
          Type_Dec : Type_Decl;
 
          function Is_Overridden
-           (Subp : Basic_Decl; Decls : Basic_Decl_Array) return Boolean;
+           (Subp : Basic_Decl; Decls : Basic_Decl_Array) return Boolean
+         is (for all Dec of Decls => Subp /= Dec);
          --  Checks whether given inherited subprogram is hidden by an
          --  overriding one.
-
-         -------------------
-         -- Is_Overridden --
-         -------------------
-
-         function Is_Overridden
-           (Subp : Basic_Decl; Decls : Basic_Decl_Array) return Boolean is
-         begin
-            for Dec of Decls loop
-               if Subp = Dec then
-                  return False;
-               end if;
-            end loop;
-
-            return True;
-         end Is_Overridden;
 
          Test_Routine         : Test.Harness.Test_Routine_Info_Enhanced;
          Test_Routine_Wrapper : Test_Routine_Info_Enhanced_Wrapper;
@@ -3938,8 +3923,8 @@ package body Test.Skeleton is
          MD_Cur := Find (Markered_Data_Map, UH);
          if MD_Cur /= Markered_Data_Maps.No_Element then
             MD := Markered_Data_Maps.Element (MD_Cur);
-            for I in MD.TR_Text.First_Index .. MD.TR_Text.Last_Index loop
-               S_Put (0, MD.TR_Text.Element (I));
+            for Txt of MD.TR_Text loop
+               S_Put (0, Txt);
                New_Line_Count;
             end loop;
             Markered_Data_Map.Delete (MD_Cur);
@@ -3988,19 +3973,10 @@ package body Test.Skeleton is
       is
          Unimplemented_Line : constant String := """Test not implemented.""";
       begin
-
-         if TR_Text.Is_Empty then
-            return True;
-         end if;
-
-         for I in TR_Text.First_Index .. TR_Text.Last_Index loop
-            if Index (TR_Text.Element (I), Unimplemented_Line) /= 0 then
-               return True;
-            end if;
-         end loop;
-
-         return False;
-
+         return
+           TR_Text.Is_Empty
+           or else (for some S of TR_Text =>
+                      Index (S, Unimplemented_Line) /= 0);
       end Is_Unimplemented_Test;
 
       function Markered_Data_Map_Is_Empty return Boolean is
@@ -9287,13 +9263,9 @@ package body Test.Skeleton is
    is
       Nesting : constant Ada_Node_Array := Parents (Elem);
    begin
-      for I in Nesting'First + 1 .. Nesting'Last loop
-         if Kind (Nesting (I)) = Ada_Generic_Package_Decl then
-            return False;
-         end if;
-      end loop;
-
-      return True;
+      return
+        (for all I in Nesting'First + 1 .. Nesting'Last =>
+           Kind (Nesting (I)) /= Ada_Generic_Package_Decl);
    end Is_Declared_In_Regular_Package;
 
    ------------------------

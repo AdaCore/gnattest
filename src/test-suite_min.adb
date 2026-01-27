@@ -643,16 +643,12 @@ package body Test.Suite_Min is
    function Unit_Has_Subp
      (Unit_Mapping : TP_Mapping; Subp_Sloc : String_Ref) return Boolean is
    begin
-      for Subp_Mapping of Unit_Mapping.TR_List loop
-         if Ada.Directories.Simple_Name (Subp_Mapping.Decl_File.all)
+      return
+        (for some Subp_Mapping of Unit_Mapping.TR_List =>
+           Ada.Directories.Simple_Name (Subp_Mapping.Decl_File.all)
            & ":"
            & Image (Subp_Mapping.Decl_Line)
-           = Subp_Sloc.all
-         then
-            return True;
-         end if;
-      end loop;
-      return False;
+           = Subp_Sloc.all);
    end Unit_Has_Subp;
 
    -------------------

@@ -537,19 +537,15 @@ package body Utils.Projects is
               constant GPR2.Build.Compilation_Unit.Unit_Location_Vector :=
                 My_Project_Tree.Root_Project.Mains;
          begin
-            if Mains.Length = 0 then
-               return False;
-            end if;
+            return
+              Mains.Length /= 0
+              --  Empty Mains assumed to be non Ada-only
 
-            for Main of Mains loop
-               if My_Project_Tree.Root_Project.Visible_Source (Main.Source)
-                    .Language
-                 /= Ada_Language
-               then
-                  return False;
-               end if;
-            end loop;
-            return True;
+              and then (for all Main of Mains =>
+                          My_Project_Tree.Root_Project.Visible_Source
+                            (Main.Source)
+                            .Language
+                          = Ada_Language);
          end Has_Ada_Mains_Only;
 
       begin
