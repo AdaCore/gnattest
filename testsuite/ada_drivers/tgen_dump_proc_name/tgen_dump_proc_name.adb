@@ -31,9 +31,9 @@ procedure TGen_Dump_Proc_Name is
    begin
       Opts.Add_Switch (GPR2.Options.P, Project_Filename);
       if not Prj_Tree.Load
-        (Options              => Opts,
-         Artifacts_Info_Level => GPR2.Sources_Units,
-         With_Runtime         => True)
+               (Options              => Opts,
+                Artifacts_Info_Level => GPR2.Sources_Units,
+                With_Runtime         => True)
       then
          raise Program_Error
            with "aborted: could not load project " & Project_Filename;
@@ -67,6 +67,5 @@ begin
            (Test.Common.TGen_Libgen_Ctx,
             TGen.Strings.To_Qualified_Name ("user_instantiation"),
             Ada.Strings.Unbounded.To_Unbounded_String
-              ("TGen_Generic_Instantiation_user_instantiation.Instance."
-               & "Plus_Two"))));
+              ("user_instantiation.Plus_Two"))));
 end TGen_Dump_Proc_Name;
