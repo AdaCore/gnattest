@@ -108,6 +108,10 @@ package Utils.String_Utilities is
    --  Replaces all occurrences of From in S with To. In the second form, S is
    --  freed.
 
+   procedure Replace_Char_Inplace (S : in out String; From, To : Character);
+   function Replace_Char (S : String; From, To : Character) return String;
+   --  Replaces all occurrences of character From in S with To.
+
    function Must_Replace (S, From, To : W_Str) return W_Str;
    function Must_Replace
      (S : W_Str_Access; From, To : W_Str) return W_Str_Access;

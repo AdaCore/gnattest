@@ -692,18 +692,10 @@ package body Test.Actions is
       end if;
 
       --  Checking if argument project has IDE package specified.
-      if Root_Prj.Has_Package (+"ide") then
-         Test.Common.IDE_Package_Present := True;
-      else
-         Test.Common.IDE_Package_Present := False;
-      end if;
+      Test.Common.IDE_Package_Present := Root_Prj.Has_Package (+"ide");
 
       --  Checking if argument project has Make package specified.
-      if Root_Prj.Has_Package (+"make") then
-         Test.Common.Make_Package_Present := True;
-      else
-         Test.Common.Make_Package_Present := False;
-      end if;
+      Test.Common.Make_Package_Present := Root_Prj.Has_Package (+"make");
 
       --  We need to fill a local source table since gnattest actually needs
       --  info not only on current source but on any particular one or even

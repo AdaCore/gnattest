@@ -406,6 +406,22 @@ package body Utils.String_Utilities is
       return Replace_All (S, From, To, Ignore);
    end Replace_All;
 
+   procedure Replace_Char_Inplace (S : in out String; From, To : Character) is
+   begin
+      for I in S'Range loop
+         if S (I) = From then
+            S (I) := To;
+         end if;
+      end loop;
+   end Replace_Char_Inplace;
+
+   function Replace_Char (S : String; From, To : Character) return String is
+      S1 : String := S;
+   begin
+      Replace_Char_Inplace (S1, From, To);
+      return S1;
+   end Replace_Char;
+
    function Must_Replace (S, From, To : W_Str) return W_Str is
       Replaced : Boolean;
    begin

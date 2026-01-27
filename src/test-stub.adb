@@ -54,6 +54,7 @@ with Ada.Characters.Handling; use Ada.Characters.Handling;
 
 with Utils.Command_Lines; use Utils.Command_Lines;
 with Utils.Environment;
+with Utils.String_Utilities;
 
 package body Test.Stub is
    Me         : constant Trace_Handle := Create ("Stubs", Default => Off);
@@ -2379,33 +2380,21 @@ package body Test.Stub is
 
    begin
       if Get_Nesting (Decl) = "Standard" then
-         declare
-            S : String :=
-              Node_Image (Decl.P_Defining_Name) & Attr_Suff & "_Access";
-         begin
-            for I in S'Range loop
-               if S (I) = '.' then
-                  S (I) := '_';
-               end if;
-            end loop;
-            return S;
-         end;
+         return
+           Utils.String_Utilities.Replace_Char
+             (Node_Image (Decl.P_Defining_Name) & Attr_Suff & "_Access",
+              From => '.',
+              To   => '_');
       else
-         declare
-            S : String :=
-              Encode
+         return
+           Utils.String_Utilities.Replace_Char
+             (Encode
                 (Decl.P_Defining_Name.P_Fully_Qualified_Name,
                  Decl.Unit.Get_Charset)
               & Attr_Suff
-              & "_Access";
-         begin
-            for I in S'Range loop
-               if S (I) = '.' then
-                  S (I) := '_';
-               end if;
-            end loop;
-            return S;
-         end;
+              & "_Access",
+              From => '.',
+              To   => '_');
       end if;
 
    end Get_Access_Type_Name;
