@@ -58,26 +58,53 @@ package body Test.Aggregator is
 
    TD_Table : TD_Tables.Map := Empty_Map;
 
-   function Get_Next_Driver_To_Run return String;
-   --  Returns the path to next test driver that has not been run yet
+   function Get_Next_Driver_With_Status (Status : TD_Status) return String;
+   --  Returns the first path in TD_Table with the given Status, or an empty
+   --  string if there is none.
 
-   function Get_Next_Driver_To_Analyze return String;
+   function Get_Next_Driver_To_Run return String
+   is (Get_Next_Driver_With_Status (Waiting));
+   --  Returns the path to next test driver that has not been run yet, or an
+   --  empty string if there is none.
+
+   function Get_Next_Driver_To_Analyze return String
+   is (Get_Next_Driver_With_Status (Analysis));
    --  Returns the path to next test driver that has been run but the output
-   --  has not yet been processed.
+   --  has not yet been processed, or an empty string if there is none.
 
-   procedure Mark_As_Processing (S : String);
+   generic
+      ST : TD_Status;
+   procedure Mark_As (S : String);
+   --  Marks the test driver with the given status
+
+   -------------
+   -- Mark_As --
+   -------------
+
+   procedure Mark_As (S : String) is
+      Cur : constant TD_Tables.Cursor := TD_Table.Find (S);
+   begin
+      if Cur = No_Element then
+         Cmd_Error_No_Help ("no test driver " & S & " in source table");
+      else
+         TD_Table.Replace_Element (Cur, ST);
+      end if;
+   end Mark_As;
+
+   procedure Mark_As_Processing is new Mark_As (ST => Processing);
    --  Marks the test driver as being processed
 
-   procedure Mark_As_Done (S : String);
+   procedure Mark_As_Done is new Mark_As (ST => Done);
    --  Marks the test driver as processed
 
-   procedure Mark_As_Invalid (S : String);
+   procedure Mark_As_Invalid is new Mark_As (ST => Invalid);
    --  Marks the test driver as invalid
 
-   procedure Mark_As_Analysis (S : String);
+   procedure Mark_As_Analysis is new Mark_As (ST => Analysis);
    --  Marks the test driver good for analysis
 
-   function Unfinished_Processes return Boolean;
+   function Unfinished_Processes return Boolean
+   is (for some TD of TD_Table => TD = Processing);
    --  Indicates if there are still any test drivers that have not terminated
    --  yet.
 
@@ -187,33 +214,19 @@ package body Test.Aggregator is
       return Idx;
    end Get_Index_For_New_Process;
 
-   --------------------------------
-   -- Get_Next_Driver_To_Analyze --
-   --------------------------------
+   ---------------------------------
+   -- Get_Next_Driver_With_Status --
+   ---------------------------------
 
-   function Get_Next_Driver_To_Analyze return String is
+   function Get_Next_Driver_With_Status (Status : TD_Status) return String is
    begin
       for Cur in TD_Table.Iterate loop
-         if Element (Cur) = Analysis then
+         if Element (Cur) = Status then
             return Key (Cur);
          end if;
       end loop;
       return "";
-   end Get_Next_Driver_To_Analyze;
-
-   ----------------------------
-   -- Get_Next_Driver_To_Run --
-   ----------------------------
-
-   function Get_Next_Driver_To_Run return String is
-   begin
-      for Cur in TD_Table.Iterate loop
-         if Element (Cur) = Waiting then
-            return Key (Cur);
-         end if;
-      end loop;
-      return "";
-   end Get_Next_Driver_To_Run;
+   end Get_Next_Driver_With_Status;
 
    ----------------------------------
    -- Set_Terminated_Process_Index --
@@ -255,61 +268,6 @@ package body Test.Aggregator is
       end loop;
       Decrease_Indent (Me);
    end Set_Terminated_Process_Index;
-
-   ----------------------
-   -- Mark_As_Analysis --
-   ----------------------
-   procedure Mark_As_Analysis (S : String) is
-      Cur : constant TD_Tables.Cursor := TD_Table.Find (S);
-   begin
-      if Cur = No_Element then
-         Cmd_Error_No_Help ("no test driver " & S & " in source table");
-      else
-         TD_Table.Replace_Element (Cur, Analysis);
-      end if;
-   end Mark_As_Analysis;
-
-   ------------------
-   -- Mark_As_Done --
-   ------------------
-
-   procedure Mark_As_Done (S : String) is
-      Cur : constant TD_Tables.Cursor := TD_Table.Find (S);
-   begin
-      if Cur = No_Element then
-         Cmd_Error_No_Help ("no test driver " & S & " in source table");
-      else
-         TD_Table.Replace_Element (Cur, Done);
-      end if;
-   end Mark_As_Done;
-
-   ---------------------
-   -- Mark_As_Invalid --
-   ---------------------
-
-   procedure Mark_As_Invalid (S : String) is
-      Cur : constant TD_Tables.Cursor := TD_Table.Find (S);
-   begin
-      if Cur = No_Element then
-         Cmd_Error_No_Help ("no test driver " & S & " in source table");
-      else
-         TD_Table.Replace_Element (Cur, Invalid);
-      end if;
-   end Mark_As_Invalid;
-
-   ------------------------
-   -- Mark_As_Processing --
-   ------------------------
-
-   procedure Mark_As_Processing (S : String) is
-      Cur : constant TD_Tables.Cursor := TD_Table.Find (S);
-   begin
-      if Cur = No_Element then
-         Cmd_Error_No_Help ("no test driver " & S & " in source table");
-      else
-         TD_Table.Replace_Element (Cur, Processing);
-      end if;
-   end Mark_As_Processing;
 
    -------------------
    -- Not_A_Comment --
@@ -719,20 +677,6 @@ package body Test.Aggregator is
       Last_Finished := Idx;
       Decrease_Indent (Me);
    end Store_Process_Termination;
-
-   --------------------------
-   -- Unfinished_Processes --
-   --------------------------
-
-   function Unfinished_Processes return Boolean is
-   begin
-      for Cur in TD_Table.Iterate loop
-         if Element (Cur) = Processing then
-            return True;
-         end if;
-      end loop;
-      return False;
-   end Unfinished_Processes;
 
    -------------------------
    -- Add_Drivers_To_List --
