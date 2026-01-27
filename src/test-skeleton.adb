@@ -8537,21 +8537,15 @@ package body Test.Skeleton is
    ----------------------
 
    function Sanitize_TC_Name (TC_Name : String) return String is
-      Name : String := Trim (TC_Name, Both);
+      Name : constant String :=
+        Utils.String_Utilities.Replace_Char
+          (Trim (TC_Name, Both), From => ' ', To => '_');
 
       Tmp  : String_Access := new String'("");
       Buff : String_Access;
 
       Underscore : Boolean := True;
    begin
-
-      for I in Name'Range loop
-
-         if Name (I) = ' ' then
-            Name (I) := '_';
-         end if;
-
-      end loop;
 
       for I in Name'Range loop
 
@@ -9047,17 +9041,14 @@ package body Test.Skeleton is
 
       Output_Prj : GNAT.OS_Lib.String_Access;
 
-      Source_Prj_Name : String :=
-        Base_Name (Source_Prj, File_Extension (Source_Prj));
+      Source_Prj_Name : constant String :=
+        Utils.String_Utilities.Replace_Char
+          (Base_Name (Source_Prj, File_Extension (Source_Prj)),
+           From => '-',
+           To   => '_');
 
       use GNAT.OS_Lib;
    begin
-      for I in Source_Prj_Name'Range loop
-         if Source_Prj_Name (I) = '-' then
-            Source_Prj_Name (I) := '_';
-         end if;
-      end loop;
-
       Reset_Source_Iterator;
       loop
          Tmp_Str := new String'(Next_Source_Name);

@@ -48,6 +48,7 @@ with Test.Mapping;              use Test.Mapping;
 with Test.Harness.Source_Table; use Test.Harness.Source_Table;
 with Utils.Command_Lines;       use Utils.Command_Lines;
 with Utils.Projects;            use Utils.Projects;
+with Utils.String_Utilities;
 
 package body Test.Harness is
 
@@ -3352,17 +3353,8 @@ package body Test.Harness is
    -- Path_To_Unix --
    ------------------
 
-   function Path_To_Unix (S : String) return String is
-      S1 : String := (S);
-   begin
-      for I in S1'Range loop
-         if S1 (I) = '\' then
-            S1 (I) := '/';
-         end if;
-      end loop;
-
-      return S1;
-   end Path_To_Unix;
+   function Path_To_Unix (S : String) return String
+   is (Utils.String_Utilities.Replace_Char (S, From => '\', To => '/'));
 
    -----------------------------------
    -- Generate_Common_Harness_Files --
