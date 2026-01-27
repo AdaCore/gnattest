@@ -2035,10 +2035,8 @@ package body TGen.Libgen is
       Parent_Pack_Name : TGen.Strings.Ada_Qualified_Name;
       Subp_FQN         : Unbounded_String) return Unbounded_String
    is
-      Typ_Set_Cursor       : constant Types_Per_Package_Maps.Cursor :=
+      Typ_Set_Cursor : constant Types_Per_Package_Maps.Cursor :=
         Ctx.Generation_Map.Find (Parent_Pack_Name);
-      Is_Top_Level_Generic : constant Boolean :=
-        Ctx.Generic_Package_Instantiations.Contains (Parent_Pack_Name);
    begin
       if not Typ_Set_Cursor.Has_Element then
          raise Program_Error with "Sub program isn't present";
@@ -2047,17 +2045,11 @@ package body TGen.Libgen is
       for Ty of Typ_Set_Cursor.Element loop
          declare
             Ty_FQN : constant Unbounded_String :=
-              To_Unbounded_String
-                (Ty.all.FQN
-                   (No_Std            => True,
-                    Top_Level_Generic => Is_Top_Level_Generic));
+              To_Unbounded_String (Ty.all.FQN (No_Std => True));
          begin
             if Ada.Strings.Unbounded.Equal_Case_Insensitive (Ty_FQN, Subp_FQN)
             then
-               return
-                 To_Unbounded_String
-                   (Ty.all.Slug (Top_Level_Generic => Is_Top_Level_Generic)
-                    & "_Dump_TC");
+               return To_Unbounded_String (Ty.all.Slug & "_Dump_TC");
             end if;
          end;
       end loop;
