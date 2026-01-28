@@ -1326,13 +1326,6 @@ package body Utils.Command_Lines is
       end loop;
    end Iter_File_Names;
 
-   function Switch_Text
-     (Descriptor : Command_Line_Descriptor; Switch : All_Switches)
-      return String_Ref is
-   begin
-      return Descriptor.Allowed_Switches (Switch).Text;
-   end Switch_Text;
-
    procedure Dump_Cmd (Cmd : Command_Line; Verbose : Boolean := False) is
       Descriptor : Command_Line_Descriptor renames Cmd.Descriptor.all;
       Sw         : Dynamically_Typed_Switches renames Cmd.Sw.all;

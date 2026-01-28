@@ -632,11 +632,6 @@ package Utils.Command_Lines is
    procedure Dump_Cmd (Cmd : Command_Line; Verbose : Boolean := False);
    --  Debugging printout. Without Verbose, skips defaulted args.
 
-   function Switch_Text
-     (Descriptor : Command_Line_Descriptor; Switch : All_Switches)
-      return String_Ref;
-   --  Switch_Text (To_All (Some_Switch)) --> "--some-switch"
-
    function To_Argument_List_Access
      (Args : String_Access_Vector) return Argument_List_Access
    is (new Argument_List'(To_Array (Args)));

@@ -34,7 +34,7 @@ with Utils.Tool_Names;
 
 package body Utils.Projects.Aggregate is
 
-   use Test_Boolean_Switches, Test_String_Switches;
+   use Test_Boolean_Switches;
 
    use String_Access_Sets;
    Aggregated_Projects : String_Access_Set;
@@ -83,8 +83,7 @@ package body Utils.Projects.Aggregate is
             Ada.Text_IO.Put_Line
               ("Processing aggregated project " & Prj_Name.all);
          end if;
-         Args (Args'Last - 1) :=
-           Switch_Text (Descriptor, To_All (Aggregated_Project_File));
+         Args (Args'Last - 1) := +"--aggregated-project-file";
          Args (Args'Last) := Prj_Name;
 
          if Debug_Flag_C then
