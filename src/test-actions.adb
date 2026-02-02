@@ -35,7 +35,6 @@ with GNAT.Byte_Order_Mark;
 with GNAT.OS_Lib; use GNAT.OS_Lib;
 
 with GNATCOLL.JSON; use GNATCOLL.JSON;
-with GNATCOLL.Traces;
 with GNATCOLL.VFS;  use GNATCOLL.VFS;
 
 with Langkit_Support.Diagnostics;
@@ -207,10 +206,9 @@ package body Test.Actions is
                Utils.Err_Out.Put
                  ("\1\n", Langkit_Support.Diagnostics.To_Pretty_String (D));
             end loop;
-            if Pass = First_Pass then
-               First_Per_Invalid_File_Action (Tool, Cmd, File_Name);
-            else
-               Second_Per_Invalid_File_Action (Tool, Cmd, File_Name);
+
+            if Pass = Second_Pass then
+               Test.Common.Source_Processing_Failed := True;
             end if;
 
          else
@@ -239,8 +237,7 @@ package body Test.Actions is
             begin
                pragma Assert (not Root (Unit).Is_Null);
                if Pass = First_Pass then
-                  First_Per_File_Action
-                    (Tool, Cmd, File_Name, Inp, BOM_Seen, Unit);
+                  Test.Generation.Process_Source (Unit);
                else
                   Second_Per_File_Action
                     (Tool, Cmd, File_Name, Inp, BOM_Seen, Unit);
@@ -358,7 +355,6 @@ package body Test.Actions is
          return Result;
       end Process_Comma_Separated_String;
    begin
-      GNATCOLL.Traces.Parse_Config_File;
       Test.Common.Verbose := Arg (Cmd, Verbose);
       Test.Common.Quiet := Arg (Cmd, Quiet);
 
@@ -1354,23 +1350,6 @@ package body Test.Actions is
       end if;
    end Final;
 
-   ---------------------------
-   -- First_Per_File_Action --
-   ---------------------------
-
-   procedure First_Per_File_Action
-     (Tool      : in out Tool_State;
-      Cmd       : Command_Line;
-      File_Name : String;
-      Input     : String;
-      BOM_Seen  : Boolean;
-      Unit      : Analysis_Unit)
-   is
-      pragma Unreferenced (Tool, Cmd, File_Name, Input, BOM_Seen);
-   begin
-      Test.Generation.Process_Source (Unit);
-   end First_Per_File_Action;
-
    ----------------------------
    -- Second_Per_File_Action --
    ----------------------------
@@ -1443,18 +1422,6 @@ package body Test.Actions is
          Test.Skeleton.Process_Source (Unit);
       end if;
    end Second_Per_File_Action;
-
-   ------------------------------------
-   -- Second_Per_Invalid_File_Action --
-   ------------------------------------
-
-   procedure Second_Per_Invalid_File_Action
-     (Tool : in out Tool_State; Cmd : Command_Line; File_Name : String)
-   is
-      pragma Unreferenced (Tool, Cmd, File_Name);
-   begin
-      Test.Common.Source_Processing_Failed := True;
-   end Second_Per_Invalid_File_Action;
 
    ---------------
    -- Tool_Help --
