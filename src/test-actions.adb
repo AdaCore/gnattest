@@ -207,10 +207,9 @@ package body Test.Actions is
                Utils.Err_Out.Put
                  ("\1\n", Langkit_Support.Diagnostics.To_Pretty_String (D));
             end loop;
-            if Pass = First_Pass then
-               First_Per_Invalid_File_Action (Tool, Cmd, File_Name);
-            else
-               Second_Per_Invalid_File_Action (Tool, Cmd, File_Name);
+
+            if Pass = Second_Pass then
+               Test.Common.Source_Processing_Failed := True;
             end if;
 
          else
@@ -1443,18 +1442,6 @@ package body Test.Actions is
          Test.Skeleton.Process_Source (Unit);
       end if;
    end Second_Per_File_Action;
-
-   ------------------------------------
-   -- Second_Per_Invalid_File_Action --
-   ------------------------------------
-
-   procedure Second_Per_Invalid_File_Action
-     (Tool : in out Tool_State; Cmd : Command_Line; File_Name : String)
-   is
-      pragma Unreferenced (Tool, Cmd, File_Name);
-   begin
-      Test.Common.Source_Processing_Failed := True;
-   end Second_Per_Invalid_File_Action;
 
    ---------------
    -- Tool_Help --
