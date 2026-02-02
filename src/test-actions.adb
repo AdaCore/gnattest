@@ -238,8 +238,7 @@ package body Test.Actions is
             begin
                pragma Assert (not Root (Unit).Is_Null);
                if Pass = First_Pass then
-                  First_Per_File_Action
-                    (Tool, Cmd, File_Name, Inp, BOM_Seen, Unit);
+                  Test.Generation.Process_Source (Unit);
                else
                   Second_Per_File_Action
                     (Tool, Cmd, File_Name, Inp, BOM_Seen, Unit);
@@ -1352,23 +1351,6 @@ package body Test.Actions is
          Ada.Command_Line.Set_Exit_Status (Ada.Command_Line.Failure);
       end if;
    end Final;
-
-   ---------------------------
-   -- First_Per_File_Action --
-   ---------------------------
-
-   procedure First_Per_File_Action
-     (Tool      : in out Tool_State;
-      Cmd       : Command_Line;
-      File_Name : String;
-      Input     : String;
-      BOM_Seen  : Boolean;
-      Unit      : Analysis_Unit)
-   is
-      pragma Unreferenced (Tool, Cmd, File_Name, Input, BOM_Seen);
-   begin
-      Test.Generation.Process_Source (Unit);
-   end First_Per_File_Action;
 
    ----------------------------
    -- Second_Per_File_Action --

@@ -27,11 +27,6 @@ with Utils.Command_Lines; use Utils.Command_Lines;
 
 package Test.Actions is
 
-   --  Each tool should derive from Tool_State, and override the ops.
-   --  The driver calls Init, then First_Per_File_Action on each source file,
-   --  then First_Pass_Post_Process, then Second_Per_File_Action on each source
-   --  file, then Final.
-
    type Pass_Kind is (First_Pass, Second_Pass);
 
    type Tool_State is tagged limited record
@@ -44,13 +39,6 @@ package Test.Actions is
    end record;
 
    procedure Init (Tool : in out Tool_State; Cmd : in out Command_Line);
-   procedure First_Per_File_Action
-     (Tool      : in out Tool_State;
-      Cmd       : Command_Line;
-      File_Name : String;
-      Input     : String;
-      BOM_Seen  : Boolean;
-      Unit      : Analysis_Unit);
    procedure Second_Per_File_Action
      (Tool      : in out Tool_State;
       Cmd       : Command_Line;
