@@ -28,6 +28,8 @@ with Utils.Err_Out;
 with Test.Actions;
 with Test.Command_Lines;
 
+with GNATCOLL.Traces;
+
 procedure Test.Main is
 
    --  Main procedure for gnattest
@@ -36,6 +38,8 @@ procedure Test.Main is
    Cmd  : Command_Line (Test.Command_Lines.Descriptor'Access);
 
 begin
+   GNATCOLL.Traces.Parse_Config_File;
+
    --  By default, send errors to stdout
    Utils.Err_Out.Output_Enabled := True;
 

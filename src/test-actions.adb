@@ -35,7 +35,6 @@ with GNAT.Byte_Order_Mark;
 with GNAT.OS_Lib; use GNAT.OS_Lib;
 
 with GNATCOLL.JSON; use GNATCOLL.JSON;
-with GNATCOLL.Traces;
 with GNATCOLL.VFS;  use GNATCOLL.VFS;
 
 with Langkit_Support.Diagnostics;
@@ -356,7 +355,6 @@ package body Test.Actions is
          return Result;
       end Process_Comma_Separated_String;
    begin
-      GNATCOLL.Traces.Parse_Config_File;
       Test.Common.Verbose := Arg (Cmd, Verbose);
       Test.Common.Quiet := Arg (Cmd, Quiet);
 
