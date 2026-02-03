@@ -31,7 +31,6 @@ with Ada.Strings.Unbounded;
 with Ada.Text_IO;
 
 with GNAT.Directory_Operations;
-with GNAT.Byte_Order_Mark;
 with GNAT.OS_Lib; use GNAT.OS_Lib;
 
 with GNATCOLL.JSON; use GNATCOLL.JSON;
@@ -111,6 +110,9 @@ package body Test.Actions is
    --  This project needs to get loaded with the same environment as the
    --  argument one.
 
+   procedure Dump_Subprogram_Hash (File_Name : String; Unit : Analysis_Unit);
+   --  Print the hash of the subprogram at file:line in the standard output.
+
    pragma Warnings (Off); -- ????
    --  These use clauses will be necessary later.
    --  At least some of them.
@@ -131,25 +133,7 @@ package body Test.Actions is
       Counter      : Natural;
       Syntax_Error : out Boolean;
       Reparse      : Boolean := False;
-      Pass         : Pass_Kind := Second_Pass)
-   is
-      use GNAT.Byte_Order_Mark;
-      --  We read the file into a String, and convert to wide
-      --  characters according to the encoding method.
-      --
-      --  No matter what the encoding method is, we recognize brackets
-      --  encoding, but not within comments.
-      --
-      --  These behaviors are intended to match what the compiler
-      --  does.
-
-      Input : String_Access := Read_File (File_Name);
-      First : Natural := 1;
-      --  First character of Input, skipping the BOM, if any
-
-      BOM      : BOM_Kind;
-      BOM_Len  : Natural;
-      BOM_Seen : Boolean := False;
+      Pass         : Pass_Kind := Second_Pass) is
    begin
 
       --  Call Create_Context if we don't have one, or after an arbitrary
@@ -212,46 +196,34 @@ package body Test.Actions is
             end if;
 
          else
-            --  Check for BOM at start of file. The only supported BOM is
-            --  UTF8_All. If present, when we're called from gnatpp, the
-            --  Wide_Character_Encoding should already be set to
-            --  WCEM_UTF8, but when we're called from xml2gnat, we need to
-            --  set it.
-            --
-            --  This needs to be done after the input file has been parsed by
-            --  LAL as we need to be able to set the context wide encoding from
-            --  the -W switch, but we do not want to set the context wide
-            --  encoding from the encoding found within a source's BOM.
-
-            Read_BOM (Input.all, BOM_Len, BOM);
-            if BOM = UTF8_All then
-               First := BOM_Len + 1; -- skip it
-               BOM_Seen := True;
-               Set_WCEM (Cmd, "8");
-            else
-               pragma Assert (BOM = Unknown); -- no BOM found
-            end if;
-
             declare
-               Inp : String renames Input (First .. Input'Last);
+               use Ada.Strings.Unbounded;
             begin
                pragma Assert (not Root (Unit).Is_Null);
-               if Pass = First_Pass then
-                  Test.Generation.Process_Source (Unit);
-               else
-                  Second_Per_File_Action
-                    (Tool, Cmd, File_Name, Inp, BOM_Seen, Unit);
-               end if;
+               case Pass is
+                  when First_Pass  =>
+                     Test.Generation.Process_Source (Unit);
+
+                  when Second_Pass =>
+                     if Utils_Debug.Debug_Flag_V then
+                        Print (Unit);
+                        Put ("With trivia\n");
+                        PP_Trivia (Unit);
+                     end if;
+
+                     if Test.Common.Subp_File_Name /= null then
+                        Dump_Subprogram_Hash (File_Name, Unit);
+                        return;
+                     end if;
+
+                     if Test.Common.Harness_Only then
+                        Test.Harness.Process_Source (Unit);
+                     else
+                        Test.Skeleton.Process_Source (Unit);
+                     end if;
+               end case;
             end;
-
-            --  Restore encoding to not mess with potential LAL context
-            --  re-creations.
-
-            if BOM_Seen then
-               Restore_WCEM (Cmd);
-            end if;
          end if;
-         Free (Input);
       end;
    end Process_File;
 
@@ -1354,74 +1326,51 @@ package body Test.Actions is
    -- Second_Per_File_Action --
    ----------------------------
 
-   procedure Second_Per_File_Action
-     (Tool      : in out Tool_State;
-      Cmd       : Command_Line;
-      File_Name : String;
-      Input     : String;
-      BOM_Seen  : Boolean;
-      Unit      : Analysis_Unit)
-   is
+   procedure Dump_Subprogram_Hash (File_Name : String; Unit : Analysis_Unit) is
       use Libadalang.Common;
       use Ada.Strings.Unbounded;
-      pragma Unreferenced (Tool, Cmd, Input, BOM_Seen); -- ????
    begin
-      if Utils_Debug.Debug_Flag_V then
-         Print (Unit);
-         Put ("With trivia\n");
-         PP_Trivia (Unit);
-      end if;
+      if Ada.Directories.Simple_Name (Test.Common.Subp_File_Name.all)
+        = Ada.Directories.Simple_Name (File_Name)
+      then
+         declare
+            Found_Hash : Boolean := False;
 
-      if Test.Common.Subp_File_Name /= null then
-         if Ada.Directories.Simple_Name (Test.Common.Subp_File_Name.all)
-           = Ada.Directories.Simple_Name (File_Name)
-         then
-            declare
-               Found_Hash : Boolean := False;
+            function Visit (Node : Ada_Node'Class) return Visit_Status;
 
-               function Visit (Node : Ada_Node'Class) return Visit_Status;
-
-               function Visit (Node : Ada_Node'Class) return Visit_Status is
-               begin
-                  if Found_Hash then
-                     return Stop;
-                  end if;
-                  if Kind (Node) in Ada_Basic_Subp_Decl
-                    and then Natural (Node.Sloc_Range.Start_Line)
-                             = Test.Common.Subp_Line_Nbr
-                  then
-                     Ada.Text_IO.Put_Line
-                       (TGen.LAL_Utils.Short_Hash (Node.As_Basic_Decl));
-                     Found_Hash := True;
-                     return Stop;
-                  end if;
-                  return Into;
-               end Visit;
-
+            function Visit (Node : Ada_Node'Class) return Visit_Status is
             begin
-               Traverse (Root (Unit), Visit'Access);
-               if not Found_Hash then
-                  Ada.Text_IO.Put
-                    ("Subprogram in "
-                     & Test.Common.Subp_File_Name.all
-                     & " at line "
-                     & Natural'Image (Test.Common.Subp_Line_Nbr)
-                     & " could not be found.");
-                  return;
+               if Found_Hash then
+                  return Stop;
                end if;
-            end;
+               if Kind (Node) in Ada_Basic_Subp_Decl
+                 and then Natural (Node.Sloc_Range.Start_Line)
+                          = Test.Common.Subp_Line_Nbr
+               then
+                  Ada.Text_IO.Put_Line
+                    (TGen.LAL_Utils.Short_Hash (Node.As_Basic_Decl));
+                  Found_Hash := True;
+                  return Stop;
+               end if;
+               return Into;
+            end Visit;
 
-         end if;
-         return;
+         begin
+            Traverse (Root (Unit), Visit'Access);
+            if not Found_Hash then
+               Ada.Text_IO.Put
+                 ("Subprogram in "
+                  & Test.Common.Subp_File_Name.all
+                  & " at line "
+                  & Natural'Image (Test.Common.Subp_Line_Nbr)
+                  & " could not be found.");
+               return;
+            end if;
+         end;
 
       end if;
-
-      if Test.Common.Harness_Only then
-         Test.Harness.Process_Source (Unit);
-      else
-         Test.Skeleton.Process_Source (Unit);
-      end if;
-   end Second_Per_File_Action;
+      return;
+   end Dump_Subprogram_Hash;
 
    ---------------
    -- Tool_Help --

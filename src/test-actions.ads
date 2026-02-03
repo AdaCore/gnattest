@@ -39,16 +39,6 @@ package Test.Actions is
    end record;
 
    procedure Init (Tool : in out Tool_State; Cmd : in out Command_Line);
-   procedure Second_Per_File_Action
-     (Tool      : in out Tool_State;
-      Cmd       : Command_Line;
-      File_Name : String;
-      Input     : String;
-      BOM_Seen  : Boolean;
-      Unit      : Analysis_Unit);
-   --  Input is the contents of the file named by File_Name.
-   --  BOM_Seen is True if there was a BOM at the start of the file;
-   --  the BOM is not included in Input.
 
    procedure First_Pass_Post_Process
      (Tool : in out Tool_State; Cmd : in out Command_Line);
