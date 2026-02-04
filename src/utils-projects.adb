@@ -73,8 +73,8 @@ package body Utils.Projects is
    --  Project tree for the user project
 
    function Main_Unit_Names (Cmd : Command_Line) return String_Ref_Array
-   is (if Arg (Cmd) = Update_All
-       then (if Num_File_Names (Cmd) = 0 then [] else File_Names (Cmd))
+   is (if Arg (Cmd) = Update_All and then Num_File_Names (Cmd) /= 0
+       then File_Names (Cmd)
        else []);
    --  If "-U main_unit_1 main_unit_2 ..." was specified, this returns the list
    --  of main units. Otherwise (-U was not specified, or was specified without
@@ -85,7 +85,8 @@ package body Utils.Projects is
    --  are Ada mains, no C/C++ or other languages.
 
    function Get_Main_Files
-     (Prj : GPR2.Project.Tree.Object; Cmd : Command_Line) return Source_Vector;
+     (Prj : GPR2.Project.Tree.Object; CLI_Mains : String_Ref_Array)
+      return Source_Vector;
    --  Return a list of main files, either from the CLI if provided, or from
    --  the GPR file.
 
@@ -95,6 +96,20 @@ package body Utils.Projects is
    --  Provided that the tool arguments contain '-U main_unit' parameter,
    --  tries to get the full closure of main_unit and to store it as tool
    --  argument files.
+
+   procedure Get_Sources_From_Project
+     (Prj : GPR2.Project.Tree.Object; Cmd : in out Command_Line);
+   --  Extracts and stores the list of sources of the project to process as
+   --  tool arguments.
+   --
+   --  More documentation is needed:
+   --
+   --  * when we extract the sources from the project * what happens when
+   --    o there is no -U option
+   --    o -U option is specified, but without the main unit
+   --    o -U option is specified with the main unit name
+   --
+   --  ??? Extended projects???
 
    procedure Process_Project
      (Cmd               : in out Command_Line;
@@ -293,19 +308,6 @@ package body Utils.Projects is
    is
       procedure Load_Tool_Project;
 
-      procedure Get_Sources_From_Project;
-      --  Extracts and stores the list of sources of the project to process as
-      --  tool arguments.
-      --
-      --  More documentation is needed:
-      --
-      --  * when we extract the sources from the project * what happens when
-      --    o there is no -U option
-      --    o -U option is specified, but without the main unit
-      --    o -U option is specified with the main unit name
-      --
-      --  ??? Extended projects???
-
       procedure Load_Aggregated_Project;
       --  Loads My_Project_Tree (that is supposed to be an aggregate project),
       --  then unloads it and loads in the same environment the project passed
@@ -352,81 +354,6 @@ package body Utils.Projects is
          My_Project_Tree := Load_Project (Cmd, Aggregated_Name);
          pragma Assert (My_Project_Tree.Root_Project.Kind /= GPR2.K_Aggregate);
       end Load_Aggregated_Project;
-
-      ------------------------------
-      -- Get_Sources_From_Project --
-      ------------------------------
-
-      procedure Get_Sources_From_Project is
-         Sources : GPR2.Build.Source.Sets.Object;
-
-         Num_Names : constant Natural := Num_File_Names (Cmd);
-         --  Number of File_Names on the command line
-
-         Num_Files_Switches : constant Natural := Arg_Length (Cmd, Files);
-         --  Number of "-files=..." switches on the command line
-
-         Argument_File_Specified : constant Boolean :=
-           (if Arg (Cmd) = Update_All
-            then Num_Files_Switches > 0
-            else Num_Names > 0 or else Num_Files_Switches > 0);
-         --  True if we have source files specified on the command line. If -U
-         --  (Update_All) was specified, then the "file name" (if any) is taken
-         --  to be the main unit name, not a file name.
-
-      begin
-         --  We get file names from the project file if no file names were
-         --  given on the command line, either directly, or via one or more
-         --  "-files=par_file_name" switches.
-
-         if not Argument_File_Specified then
-            if Arg (Cmd) = No_Subprojects
-              or else
-                (Main_Unit_Names (Cmd)'Length = 0
-                 and then
-                   (Arg (Cmd) = Update_All
-                    or else not Has_Ada_Mains_Only (My_Project_Tree)))
-            then
-               if Arg (Cmd) = No_Subprojects then
-                  Sources := My_Project_Tree.Root_Project.Sources;
-               else
-                  Sources := My_Project_Tree.Root_Project.Visible_Sources;
-               end if;
-
-               for S of Sources loop
-                  if not S.Owning_View.Is_Externally_Built
-                    and then S.Language = Ada_Language
-                  then
-                     Append_File_Name (Cmd, S.Path_Name.String_Value);
-                  end if;
-               end loop;
-
-               if Arg (Cmd) = Update_All then
-                  if Num_File_Names (Cmd) = 0 then
-                     Cmd_Error
-                       (Arg (Cmd, Project_File).all
-                        & " does not contain source files");
-                  end if;
-               end if;
-
-            else
-               declare
-                  Mains : constant Source_Vector :=
-                    Get_Main_Files (My_Project_Tree, Cmd);
-               begin
-
-                  --  We first need to erase the main unit names from the
-                  --  command line to avoid duplicates.
-                  Clear_File_Names (Cmd);
-
-                  for Src of Get_Files_From_Closure (My_Project_Tree, Mains)
-                  loop
-                     Append_File_Name (Cmd, Src);
-                  end loop;
-               end;
-            end if;
-         end if;
-      end Get_Sources_From_Project;
 
       ------------------------------
       -- Extract_Gnattest_Options --
@@ -555,7 +482,7 @@ package body Utils.Projects is
          Parse
            (Cmd_Args, Cmd, Phase => Cmd_Line_2, Collect_File_Names => False);
 
-         Get_Sources_From_Project;
+         Get_Sources_From_Project (My_Project_Tree, Cmd);
          Set_Global_Result_Dirs;
       end if;
    end Process_Project;
@@ -894,10 +821,9 @@ package body Utils.Projects is
         Mains.Length /= 0
         --  Empty Mains assumed to be non Ada-only
 
-        and then
-          (for all Main of Mains =>
-             Prj.Root_Project.Visible_Source (Main.Source).Language
-             = Ada_Language);
+        and then (for all Main of Mains =>
+                    Prj.Root_Project.Visible_Source (Main.Source).Language
+                    = Ada_Language);
    end Has_Ada_Mains_Only;
 
    --------------------
@@ -905,14 +831,14 @@ package body Utils.Projects is
    --------------------
 
    function Get_Main_Files
-     (Prj : GPR2.Project.Tree.Object; Cmd : Command_Line) return Source_Vector
+     (Prj : GPR2.Project.Tree.Object; CLI_Mains : String_Ref_Array)
+      return Source_Vector
    is
-      Result   : Source_Vector;
-      CLI_Main : constant String_Ref_Array := Main_Unit_Names (Cmd);
+      Result : Source_Vector;
    begin
       --  If we have main files given as CLI arguments, use them
-      if CLI_Main'Length > 0 then
-         for F of CLI_Main loop
+      if CLI_Mains'Length > 0 then
+         for F of CLI_Mains loop
             Result.Append
               (My_Project_Tree.Root_Project.Visible_Source
                  (Simple_Name (F.all)));
@@ -1077,5 +1003,91 @@ package body Utils.Projects is
       when others =>
          Cmd_Error_No_Tool_Name ("could not get closure of specified sources");
    end Get_Files_From_Closure;
+
+   ------------------------------
+   -- Get_Sources_From_Project --
+   ------------------------------
+
+   procedure Get_Sources_From_Project
+     (Prj : GPR2.Project.Tree.Object; Cmd : in out Command_Line)
+   is
+      All_Update : constant Boolean := Arg (Cmd) = Update_All;
+      No_Subprjs : constant Boolean := Arg (Cmd) = No_Subprojects;
+
+      Num_Names : constant Natural := Num_File_Names (Cmd);
+      --  Number of File_Names on the command line
+
+      Num_Files_Switches : constant Natural := Arg_Length (Cmd, Files);
+      --  Number of "-files=..." switches on the command line
+
+      Argument_File_Specified : constant Boolean :=
+        (if All_Update
+         then Num_Files_Switches > 0
+         else Num_Names > 0 or else Num_Files_Switches > 0);
+      --  True if we have source files specified on the command line. If -U
+      --  (Update_All) was specified, then the "file name" (if any) is taken
+      --  to be the main unit name, not a file name.
+
+      CLI_Main_Unit_Names : constant String_Ref_Array := Main_Unit_Names (Cmd);
+
+   begin
+      --  We get file names from the project file if no file names were
+      --  given on the command line, either directly, or via one or more
+      --  "-files=par_file_name" switches.
+
+      if Argument_File_Specified then
+         return;
+      end if;
+
+      if No_Subprjs
+        or else (CLI_Main_Unit_Names'Length = 0
+                 and then (All_Update or else not Has_Ada_Mains_Only (Prj)))
+      then
+
+         --  IF --no-subprojects is passed, or there is no Main provided from
+         --  CLI and none is usable from the project file, THEN select all
+         --  sources of the project.
+
+         declare
+            Sources : constant GPR2.Build.Source.Sets.Object :=
+              (if No_Subprjs
+               then Prj.Root_Project.Sources
+               else Prj.Root_Project.Visible_Sources);
+         begin
+            for S of Sources loop
+               if not S.Owning_View.Is_Externally_Built
+                 and then S.Language = Ada_Language
+               then
+                  Append_File_Name (Cmd, S.Path_Name.String_Value);
+               end if;
+            end loop;
+         end;
+
+         if All_Update and then Num_File_Names (Cmd) = 0 then
+            Cmd_Error
+              (Arg (Cmd, Project_File).all & " does not contain source files");
+         end if;
+
+      else
+
+         --  ELSE, Compute the source file list from the closure of the Mains.
+         --  If any, use Mains from the CLI. Otherwise use those found in the
+         --  project file.
+
+         declare
+            Mains : constant Source_Vector :=
+              Get_Main_Files (Prj, CLI_Main_Unit_Names);
+         begin
+
+            --  We first need to erase the main unit names from the
+            --  command line to avoid duplicates.
+            Clear_File_Names (Cmd);
+
+            for Src of Get_Files_From_Closure (Prj, Mains) loop
+               Append_File_Name (Cmd, Src);
+            end loop;
+         end;
+      end if;
+   end Get_Sources_From_Project;
 
 end Utils.Projects;
