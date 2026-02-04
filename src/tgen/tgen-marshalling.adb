@@ -467,30 +467,16 @@ package body TGen.Marshalling is
       --  Function computing the indentation for component handling
 
       --  Initial spacing for records
-      RW_Init_Spacing   : constant Natural := 6;
-      Max_Init_Spacing  : constant Natural := 9;
-      Size_Init_Spacing : constant Natural := 9;
+      RW_Init_Spacing  : constant Natural := 6;
       --  Incremental spacing for record variants
-      Var_Incr_Spacing  : constant Natural := 6;
+      Var_Incr_Spacing : constant Natural := 6;
       --  Spacing for arrays
-      RW_Arr_Spacing    : constant Natural := 9;
-      Max_Arr_Spacing   : constant Natural := 6;
-      Size_Arr_Spacing  : constant Natural := 9;
-
-      function Max_Spacing (Spacing : Natural) return String
-      is (if Typ in Array_Typ'Class
-          then [1 .. Max_Arr_Spacing => ' ']
-          else [1 .. Max_Init_Spacing + Spacing * Var_Incr_Spacing => ' ']);
+      RW_Arr_Spacing   : constant Natural := 9;
 
       function RW_Spacing (Spacing : Natural) return String
       is (if Typ in Array_Typ'Class
           then [1 .. RW_Arr_Spacing => ' ']
           else [1 .. RW_Init_Spacing + Spacing * Var_Incr_Spacing => ' ']);
-
-      function Size_Spacing (Spacing : Natural) return String
-      is (if Typ in Array_Typ'Class
-          then [1 .. Size_Arr_Spacing => ' ']
-          else [1 .. Size_Init_Spacing + Spacing * Var_Incr_Spacing => ' ']);
       --  Tags for the components of the header if any, their types, their
       --  prefix and the corresponding Ada Value.
 
@@ -503,26 +489,22 @@ package body TGen.Marshalling is
          Read_Indexed_Tag : out Unbounded_String;
          Write_Tag        : out Unbounded_String;
          Ancestor_WT      : out Unbounded_String;
-         Size_Tag         : out Unbounded_String;
-         Size_Max_Tag     : out Unbounded_String;
          Spacing          : Natural);
-      --  Generate the parts of the subprograms Read, Write, Size, and Size_Max
+      --  Generate the parts of the subprograms Read and Write
       --  for a component Comp_Name of type Comp_Ty. Also generate base
       --  functions for Comp_Ty.
       --  Spacing is used to tabulate the generated code, see ..._Spacing
       --  above.
 
       procedure Collect_Info_For_Components
-        (Components   : Component_Maps.Map;
-         Read_Tag     : in out Vector_Tag;
-         Write_Tag    : in out Vector_Tag;
-         Ancestor_WT  : in out Vector_Tag;
-         Size_Tag     : in out Vector_Tag;
-         Size_Max_Tag : in out Vector_Tag;
-         Spacing      : Natural;
-         Object_Name  : String);
+        (Components  : Component_Maps.Map;
+         Read_Tag    : in out Vector_Tag;
+         Write_Tag   : in out Vector_Tag;
+         Ancestor_WT : in out Vector_Tag;
+         Spacing     : Natural;
+         Object_Name : String);
       --  Go over the components in Components and generate the parts of the
-      --  subprograms Read, Write, Size, and Size_Max for the components.
+      --  subprograms Read and Write for the components.
       --  Along the way, generate base functions for the component types.
       --  Spacing is used to tabulate the generated code Object_Name is the
       --  name of the object we are traversing.
@@ -533,12 +515,10 @@ package body TGen.Marshalling is
          Read_Tag      : out Tag;
          Write_Tag     : out Tag;
          Ancestor_WT   : out Tag;
-         Size_Tag      : out Tag;
-         Size_Max_Tag  : out Vector_Tag;
          Spacing       : Natural;
          Object_Name   : String);
       --  Instanciate the variant part templates to create strings for the
-      --  operations Read, Write, Size, and Size_Max on a variant part V.
+      --  operations Read and Write on a variant part V.
       --  Spacing is used to tabulate the generated code Object_Name is the
       --  name of the object we are traversing.
 
@@ -555,8 +535,6 @@ package body TGen.Marshalling is
          Read_Indexed_Tag : out Unbounded_String;
          Write_Tag        : out Unbounded_String;
          Ancestor_WT      : out Unbounded_String;
-         Size_Tag         : out Unbounded_String;
-         Size_Max_Tag     : out Unbounded_String;
          Spacing          : Natural)
       is
          Named_Comp_Ty    : constant TGen.Types.Typ'Class :=
@@ -594,11 +572,6 @@ package body TGen.Marshalling is
              (Assocs
               & Assoc ("SPACING", RW_Spacing (Spacing))
               & Assoc ("FOR_ANCESTOR", "True"));
-         Size_Tag :=
-           Component_Size (Assocs & Assoc ("SPACING", Size_Spacing (Spacing)));
-         Size_Max_Tag :=
-           Component_Size_Max
-             (Assocs & Assoc ("SPACING", Max_Spacing (Spacing)));
       end Collect_Info_For_Component;
 
       ---------------------------------
@@ -606,14 +579,12 @@ package body TGen.Marshalling is
       ---------------------------------
 
       procedure Collect_Info_For_Components
-        (Components   : Component_Maps.Map;
-         Read_Tag     : in out Vector_Tag;
-         Write_Tag    : in out Vector_Tag;
-         Ancestor_WT  : in out Vector_Tag;
-         Size_Tag     : in out Vector_Tag;
-         Size_Max_Tag : in out Vector_Tag;
-         Spacing      : Natural;
-         Object_Name  : String) is
+        (Components  : Component_Maps.Map;
+         Read_Tag    : in out Vector_Tag;
+         Write_Tag   : in out Vector_Tag;
+         Ancestor_WT : in out Vector_Tag;
+         Spacing     : Natural;
+         Object_Name : String) is
       begin
          --  Go over the record components to fill the associations
 
@@ -626,8 +597,6 @@ package body TGen.Marshalling is
                Read_Indexed : Unbounded_String;
                Write        : Unbounded_String;
                Ancestor_W   : Unbounded_String;
-               Size         : Unbounded_String;
-               Size_Max     : Unbounded_String;
             begin
                Collect_Info_For_Component
                  (Record_Component,
@@ -638,14 +607,10 @@ package body TGen.Marshalling is
                   Read_Indexed,
                   Write,
                   Ancestor_W,
-                  Size,
-                  Size_Max,
                   Spacing);
                Read_Tag := Read_Tag & Read;
                Write_Tag := Write_Tag & Write;
                Ancestor_WT := Ancestor_WT & Ancestor_W;
-               Size_Tag := Size_Tag & Size;
-               Size_Max_Tag := Size_Max_Tag & Size_Max;
             end;
          end loop;
       end Collect_Info_For_Components;
@@ -660,8 +625,6 @@ package body TGen.Marshalling is
          Read_Tag      : out Tag;
          Write_Tag     : out Tag;
          Ancestor_WT   : out Tag;
-         Size_Tag      : out Tag;
-         Size_Max_Tag  : out Vector_Tag;
          Spacing       : Natural;
          Object_Name   : String)
       is
@@ -670,17 +633,13 @@ package body TGen.Marshalling is
            Discriminants (V.Discr_Name);
          Discr_Typ_FQN : constant String := Discr_Typ.all.FQN (No_Std => True);
 
-         Choices_Tag          : Matrix_Tag;
-         Comp_Read_Tag        : Matrix_Tag;
-         Comp_Write_Tag       : Matrix_Tag;
-         Ancestor_CWT         : Matrix_Tag;
-         Comp_Size_Tag        : Matrix_Tag;
-         Comp_Size_Max_Tag    : Matrix_Tag;
-         Variant_Read_Tag     : Vector_Tag;
-         Variant_Write_Tag    : Vector_Tag;
-         Ancestor_VWT         : Vector_Tag;
-         Variant_Size_Tag     : Vector_Tag;
-         Variant_Size_Max_Tag : Vector_Tag;
+         Choices_Tag       : Matrix_Tag;
+         Comp_Read_Tag     : Matrix_Tag;
+         Comp_Write_Tag    : Matrix_Tag;
+         Ancestor_CWT      : Matrix_Tag;
+         Variant_Read_Tag  : Vector_Tag;
+         Variant_Write_Tag : Vector_Tag;
+         Ancestor_VWT      : Vector_Tag;
 
       begin
          for V_Choice of V.Variant_Choices loop
@@ -694,26 +653,20 @@ package body TGen.Marshalling is
             --  Handle the components
 
             declare
-               Comp_Read     : Tag;
-               Comp_Write    : Tag;
-               Ancestor_CW   : Tag;
-               Comp_Size     : Tag;
-               Comp_Size_Max : Tag;
+               Comp_Read   : Tag;
+               Comp_Write  : Tag;
+               Ancestor_CW : Tag;
             begin
                Collect_Info_For_Components
                  (V_Choice.Components,
                   Comp_Read,
                   Comp_Write,
                   Ancestor_CW,
-                  Comp_Size,
-                  Comp_Size_Max,
                   Spacing     => Spacing + 1,
                   Object_Name => Object_Name);
                Comp_Read_Tag := Comp_Read_Tag & Comp_Read;
                Comp_Write_Tag := Comp_Write_Tag & Comp_Write;
                Ancestor_CWT := Ancestor_CWT & Ancestor_CW;
-               Comp_Size_Tag := Comp_Size_Tag & Comp_Size;
-               Comp_Size_Max_Tag := Comp_Size_Max_Tag & Comp_Size_Max;
             end;
 
             --  Handle the nested variant if any
@@ -722,15 +675,11 @@ package body TGen.Marshalling is
                Variant_Read_Tag := Variant_Read_Tag & "";
                Variant_Write_Tag := Variant_Write_Tag & "";
                Ancestor_VWT := Ancestor_VWT & "";
-               Variant_Size_Tag := Variant_Size_Tag & "";
-               Variant_Size_Max_Tag := Variant_Size_Max_Tag & "";
             else
                declare
-                  Variant_Read     : Tag;
-                  Variant_Write    : Tag;
-                  Ancestor_VW      : Tag;
-                  Variant_Size     : Tag;
-                  Variant_Size_Max : Tag;
+                  Variant_Read  : Tag;
+                  Variant_Write : Tag;
+                  Ancestor_VW   : Tag;
                begin
                   Collect_Info_For_Variants
                     (V_Choice.Variant.all,
@@ -738,16 +687,11 @@ package body TGen.Marshalling is
                      Variant_Read,
                      Variant_Write,
                      Ancestor_VW,
-                     Variant_Size,
-                     Variant_Size_Max,
                      Spacing + 1,
                      Object_Name);
                   Variant_Read_Tag := Variant_Read_Tag & Variant_Read;
                   Variant_Write_Tag := Variant_Write_Tag & Variant_Write;
                   Ancestor_VWT := Ancestor_VWT & Ancestor_VW;
-                  Variant_Size_Tag := Variant_Size_Tag & Variant_Size;
-                  Variant_Size_Max_Tag :=
-                    Variant_Size_Max_Tag & Variant_Size_Max;
                end;
             end if;
          end loop;
@@ -782,18 +726,6 @@ package body TGen.Marshalling is
                      2 => Assoc ("ANCESTOR_COMPONENT_ACTION", Ancestor_CWT),
                      3 => Assoc ("VARIANT_PART", Ancestor_VWT),
                      4 => Assoc ("SPACING", RW_Spacing (Spacing))]);
-            Size_Tag :=
-              +Variant_Size
-                 (Assocs
-                  & [1 => Assoc ("COMPONENT_SIZE", Comp_Size_Tag),
-                     2 => Assoc ("VARIANT_PART", Variant_Size_Tag),
-                     3 => Assoc ("SPACING", Size_Spacing (Spacing))]);
-            Size_Max_Tag :=
-              +Variant_Size_Max
-                 (Assocs
-                  & [1 => Assoc ("COMPONENT_SIZE_MAX", Comp_Size_Max_Tag),
-                     2 => Assoc ("VARIANT_PART", Variant_Size_Max_Tag),
-                     3 => Assoc ("SPACING", Max_Spacing (Spacing))]);
          end;
       end Collect_Info_For_Variants;
 
@@ -960,8 +892,6 @@ package body TGen.Marshalling is
             Component_Read_Indexed : Unbounded_String;
             Component_Write        : Unbounded_String;
             Ancestor_CW            : Unbounded_String;
-            Component_Size         : Unbounded_String;
-            Component_Size_Max     : Unbounded_String;
          begin
             --  Contruct the calls for the components
             --  Ancestor_CW is only useful for tagged records, but needs to
@@ -976,8 +906,6 @@ package body TGen.Marshalling is
                Component_Read_Indexed,
                Component_Write,
                Ancestor_CW,
-               Component_Size,
-               Component_Size_Max,
                1);
 
             --  Generate the basic operations
@@ -985,19 +913,17 @@ package body TGen.Marshalling is
             declare
                Assocs : constant Translate_Table :=
                  Common_Assocs
-                 & [1  => Assoc ("COMPONENT_READ", Component_Read),
-                    2  => Assoc ("COMPONENT_WRITE", Component_Write),
-                    3  => Assoc ("COMPONENT_SIZE", Component_Size),
-                    4  => Assoc ("COMPONENT_SIZE_MAX", Component_Size_Max),
-                    5  =>
+                 & [1 => Assoc ("COMPONENT_READ", Component_Read),
+                    2 => Assoc ("COMPONENT_WRITE", Component_Write),
+                    3 =>
                       Assoc ("COMP_TYP", Named_Comp_Ty.FQN (No_Std => True)),
-                    6  => Assoc ("ADA_DIM", Ada_Dim_Tag),
-                    7  => Assoc ("FIRST_NAME", First_Name_Tag),
-                    8  => Assoc ("LAST_NAME", Last_Name_Tag),
-                    9  => Assoc ("BOUND_TYP", Comp_Typ_Tag),
-                    10 =>
+                    4 => Assoc ("ADA_DIM", Ada_Dim_Tag),
+                    5 => Assoc ("FIRST_NAME", First_Name_Tag),
+                    6 => Assoc ("LAST_NAME", Last_Name_Tag),
+                    7 => Assoc ("BOUND_TYP", Comp_Typ_Tag),
+                    8 =>
                       Assoc ("COMPONENT_READ_INDEXED", Component_Read_Indexed),
-                    11 => Assoc ("AS_ANCESTOR", Ancestor_CW)];
+                    9 => Assoc ("AS_ANCESTOR", Ancestor_CW)];
 
             begin
                Print_Array (Assocs);
@@ -1043,13 +969,9 @@ package body TGen.Marshalling is
             Component_Read_Indexed : Tag;
             Component_Write        : Tag;
             Ancestor_CW            : Tag;
-            Component_Size         : Tag;
-            Component_Size_Max     : Tag;
             Variant_Read           : Tag;
             Variant_Write          : Tag;
             Ancestor_VW            : Tag;
-            Variant_Size           : Tag;
-            Variant_Size_Max       : Tag;
             As_Ancestor            : Tag;
          begin
 
@@ -1077,8 +999,6 @@ package body TGen.Marshalling is
                Component_Read,
                Component_Write,
                Ancestor_CW,
-               Component_Size,
-               Component_Size_Max,
                Object_Name => Object_Name,
                Spacing     => 0);
 
@@ -1095,8 +1015,6 @@ package body TGen.Marshalling is
                         Variant_Read,
                         Variant_Write,
                         Ancestor_VW,
-                        Variant_Size,
-                        Variant_Size_Max,
                         Object_Name => Object_Name,
                         Spacing     => 0);
                   end if;
@@ -1112,21 +1030,17 @@ package body TGen.Marshalling is
                  Common_Assocs
                  & [1  => Assoc ("COMPONENT_READ", Component_Read),
                     2  => Assoc ("COMPONENT_WRITE", Component_Write),
-                    3  => Assoc ("COMPONENT_SIZE", Component_Size),
-                    4  => Assoc ("COMPONENT_SIZE_MAX", Component_Size_Max),
-                    5  => Assoc ("VARIANT_READ", Variant_Read),
-                    6  => Assoc ("VARIANT_WRITE", Variant_Write),
-                    7  => Assoc ("ANCESTOR_VARIANT_WRITE", Ancestor_VW),
-                    8  => Assoc ("VARIANT_SIZE", Variant_Size),
-                    9  => Assoc ("VARIANT_SIZE_MAX", Variant_Size_Max),
-                    10 => Assoc ("DISCR_NAME", Discr_Name_Tag),
-                    11 => Assoc ("DISCR_TYP", Comp_Typ_Tag),
-                    12 =>
+                    3  => Assoc ("VARIANT_READ", Variant_Read),
+                    4  => Assoc ("VARIANT_WRITE", Variant_Write),
+                    5  => Assoc ("ANCESTOR_VARIANT_WRITE", Ancestor_VW),
+                    6  => Assoc ("DISCR_NAME", Discr_Name_Tag),
+                    7  => Assoc ("DISCR_TYP", Comp_Typ_Tag),
+                    8  =>
                       Assoc ("COMPONENT_READ_INDEXED", Component_Read_Indexed),
-                    13 => Assoc ("ANCESTOR_TY_PREFIX", Ancestor_Ty_Prefix),
-                    14 => Assoc ("ANCESTOR_TY_NAME", Ancestor_Ty_Name),
-                    15 => Assoc ("ANCESTOR_COMPONENT_WRITE", Ancestor_CW),
-                    16 => Assoc ("AS_ANCESTOR", As_Ancestor)];
+                    9  => Assoc ("ANCESTOR_TY_PREFIX", Ancestor_Ty_Prefix),
+                    10 => Assoc ("ANCESTOR_TY_NAME", Ancestor_Ty_Name),
+                    11 => Assoc ("ANCESTOR_COMPONENT_WRITE", Ancestor_CW),
+                    12 => Assoc ("AS_ANCESTOR", As_Ancestor)];
             begin
                Print_Record (Assocs);
             end;

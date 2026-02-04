@@ -95,30 +95,9 @@ private
       --  Generate a call to write a record / array component
 
       with
-        function Component_Size
-          (Assocs : Translate_Table) return Unbounded_String;
-      --  Generate a call to get the size of a record / array component
-
-      with
-        function Component_Size_Max
-          (Assocs : Translate_Table) return Unbounded_String;
-      --  Generate a call to get the maximal size of a record / array
-      --  component.
-
-      with
         function Variant_Read_Write
           (Assocs : Translate_Table) return Unbounded_String;
       --  Generate a variant part as part of a read / write action procedure
-
-      with
-        function Variant_Size
-          (Assocs : Translate_Table) return Unbounded_String;
-      --  Generate a variant part as part of a size procedure
-
-      with
-        function Variant_Size_Max
-          (Assocs : Translate_Table) return Unbounded_String;
-      --  Generate a variant part as part of a maximal size procedure
 
       with procedure Print_Header (Assocs : Translate_Table);
       --  Output a header (un)marshallers (for an unconstrained type)
@@ -176,11 +155,6 @@ private
    --     TAGAda_Marshalling_First  : Typ := Typ'First;
    --     TAGAda_Marshalling_Last   : Typ := Typ'Last);
    --
-   --  function TAGAda_Marshalling_Typ_Size
-   --    (TAGAda_Marshalling_First  : Typ := Typ'First;
-   --     TAGAda_Marshalling_Last   : Typ := Typ'Last)
-   --     return Natural;
-   --
    --  The additional First and Last parameters are used to handle anonymous
    --  subtypes in record or array components.
    --
@@ -198,17 +172,6 @@ private
    --     TAGAda_Marshalling_Offset : in out Offset_Type;
    --     TAGAda_Marshalling_V      : out Typ);
    --
-   --  function TAGAda_Marshalling_Typ_Size
-   --    (TAGAda_Marshalling_V : Typ)
-   --    return Natural;
-   --
-   --  function TAGAda_Marshalling_Typ_Size_Max
-   --    return Natural;
-   --
-   --  The Size and Size_Max functions should be the same here, except if Typ
-   --  contains component with dynamic bounds which we do not handle well
-   --  currently.
-   --
    --  For composite types with headers, we generate:
    --
    --  type TAGAda_Marshalling_Typ_Header_Type is record
@@ -223,10 +186,6 @@ private
    --    (TAGAda_Marshalling_Stream : not null access Root_Stream_Type'Class;
    --     TAGAda_Marshalling_V      : Typ);
    --
-   --  function TAGAda_Marshalling_Typ_Bit_Size_Header return Natural;
-   --
-   --  function TAGAda_Marshalling_Typ_Byte_Size_Header return Natural;
-   --
    --  procedure TAGAda_Marshalling_Typ_Write
    --    (TAGAda_Marshalling_Stream : not null access Root_Stream_Type'Class;
    --     TAGAda_Marshalling_Buffer : in out Unsigned_8;
@@ -238,34 +197,6 @@ private
    --     TAGAda_Marshalling_Buffer : in out Unsigned_8;
    --     TAGAda_Marshalling_Offset : in out Offset_Type;
    --     TAGAda_Marshalling_V      : out Typ);
-   --
-   --  function TAGAda_Marshalling_Typ_Size
-   --    (TAGAda_Marshalling_V : Typ)
-   --    return Natural;
-   --
-   --  function TAGAda_Marshalling_Typ_Size_Max
-   --    (<Min and Max value of discriminants or array bounds>)
-   --    return Natural;
-   --
-   --  If the type can be used as a component (see Needs_Wrapper), we also
-   --  generate:
-   --
-   --  procedure TAGAda_Marshalling_Typ_Write_All
-   --    (TAGAda_Marshalling_Stream : not null access Root_Stream_Type'Class;
-   --     TAGAda_Marshalling_Buffer : in out Unsigned_8;
-   --     TAGAda_Marshalling_Offset : in out Offset_Type;
-   --     TAGAda_Marshalling_V      : Typ);
-   --
-   --  procedure TAGAda_Marshalling_Typ_Read_All
-   --    (TAGAda_Marshalling_Stream : not null access Root_Stream_Type'Class;
-   --     TAGAda_Marshalling_Buffer : in out Unsigned_8;
-   --     TAGAda_Marshalling_Offset : in out Offset_Type;
-   --     TAGAda_Marshalling_V      : out Typ);
-   --
-   --  function TAGAda_Marshalling_Typ_Size_Max_All return Natural;
-   --
-   --  They also marshall the header and add some padding so that there is
-   --  enough room to read a correct value if the header is mutated.
 
    procedure Put_Line (Str : US_Access; Added : String);
 

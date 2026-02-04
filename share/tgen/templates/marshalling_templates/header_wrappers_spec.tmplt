@@ -15,5 +15,3 @@
       @_GLOBAL_PREFIX_@_Buffer : in out Interfaces.Unsigned_8;
       @_GLOBAL_PREFIX_@_Offset : in out TGen.Marshalling_Lib.Offset_Type;
       @_GLOBAL_PREFIX_@_V      : out TGen.TGen_Std.@_TY_NAME_@);
-
-   function @_TY_PREFIX_@_Size_Max_All return Natural;

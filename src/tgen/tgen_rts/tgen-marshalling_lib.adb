@@ -103,7 +103,7 @@ package body TGen.Marshalling_Lib is
             Read_Remainder (Stream, Buffer, Offset, Num, Byte);
             Val := Long_Long_Long_Unsigned (Byte);
             M := Shift_Right (M, Natural (Num));
-            Base := 2**Natural (Num);
+            Base := 2 ** Natural (Num);
          end;
       end if;
 
@@ -134,63 +134,6 @@ package body TGen.Marshalling_Lib is
       Val := Long_Long_Long_Unsigned'Min (Val, Max);
    end Read;
 
-   ------------------
-   -- Read_Padding --
-   ------------------
-
-   procedure Read_Padding
-     (Stream : not null access Ada.Streams.Root_Stream_Type'Class;
-      Buffer : in out Unsigned_8;
-      Offset : in out Offset_Type;
-      Size   : Natural)
-   is
-      Padding : Natural := Size;
-
-   begin
-      --  If Padding is 0, there is nothing to read
-
-      if Padding = 0 then
-         return;
-      end if;
-
-      --  Try to read from the buffer if it is not empty
-
-      if Offset > 0 then
-         declare
-            Discard : Unsigned_8;
-            Num     : constant Offset_Type :=
-              (if Padding < 8
-               then Offset_Type'Min (-Offset, Offset_Type (Padding))
-               else -Offset);
-         begin
-            Read_Remainder (Stream, Buffer, Offset, Num, Discard);
-            Padding := Padding - Natural (Num);
-         end;
-      end if;
-
-      --  Read complete bytes from the stream
-
-      while Padding >= 8 loop
-         declare
-            Discard : Unsigned_8;
-         begin
-            Unsigned_8'Read (Stream, Discard);
-            Padding := Padding - 8;
-         end;
-      end loop;
-
-      --  Read the remaining bits from the buffer
-
-      if Padding > 0 then
-         declare
-            Discard : Unsigned_8;
-         begin
-            Read_Remainder
-              (Stream, Buffer, Offset, Offset_Type (Padding), Discard);
-         end;
-      end if;
-   end Read_Padding;
-
    --------------------
    -- Read_Remainder --
    --------------------
@@ -218,7 +161,7 @@ package body TGen.Marshalling_Lib is
       end if;
 
       --  Truncate V to its expected length
-      V := V and (2**Natural (Num) - 1);
+      V := V and (2 ** Natural (Num) - 1);
       Offset := Offset + Num;
    end Read_Remainder;
 
@@ -242,7 +185,7 @@ package body TGen.Marshalling_Lib is
               (if M < 128
                then Offset_Type'Min (-Offset, Size (Unsigned_8 (M)))
                else -Offset);
-            Mask : constant Long_Long_Long_Unsigned := 2**Natural (Num) - 1;
+            Mask : constant Long_Long_Long_Unsigned := 2 ** Natural (Num) - 1;
          begin
             Write_Remainder
               (Stream, Buffer, Offset, Num, Unsigned_8 (V and Mask));
@@ -264,46 +207,6 @@ package body TGen.Marshalling_Lib is
            (Stream, Buffer, Offset, Size (Unsigned_8 (M)), Unsigned_8 (V));
       end if;
    end Write;
-
-   -------------------
-   -- Write_Padding --
-   -------------------
-
-   procedure Write_Padding
-     (Stream : not null access Ada.Streams.Root_Stream_Type'Class;
-      Buffer : in out Unsigned_8;
-      Offset : in out Offset_Type;
-      Size   : Natural)
-   is
-      Padding : Natural := Size;
-   begin
-      --  If there are some bits in the buffer, first try to complete it
-
-      if Offset /= 0 then
-         declare
-            Num : constant Offset_Type :=
-              (if Padding < 8
-               then Offset_Type'Min (-Offset, Offset_Type (Padding))
-               else -Offset);
-         begin
-            Write_Remainder (Stream, Buffer, Offset, Num, 0);
-            Padding := Padding - Natural (Num);
-         end;
-      end if;
-
-      --  Write complete bytes to stream
-
-      while Padding >= 8 loop
-         Unsigned_8'Write (Stream, 0);
-         Padding := Padding - 8;
-      end loop;
-
-      --  Add the remaining bits to Buffer
-
-      if Padding /= 0 then
-         Write_Remainder (Stream, Buffer, Offset, Offset_Type (Padding), 0);
-      end if;
-   end Write_Padding;
 
    ---------------------
    -- Write_Remainder --
@@ -344,23 +247,6 @@ package body TGen.Marshalling_Lib is
 
       function Denorm (V : Long_Long_Long_Unsigned; F : T) return T'Base
       is (T'Val (T'Pos (F) + Long_Long_Long_Unsigned'Pos (V)));
-
-      -----------
-      -- Size --
-      -----------
-
-      function Size (First : T := T_First; Last : T := T_Last) return Natural
-      is
-         Max : Long_Long_Long_Unsigned := Norm (Last, First);
-      begin
-         for I in 0 .. 128 loop
-            if Max = 0 then
-               return I;
-            end if;
-            Max := Shift_Right (Max, 1);
-         end loop;
-         raise Program_Error;
-      end Size;
 
       -----------
       -- Write --
@@ -423,15 +309,6 @@ package body TGen.Marshalling_Lib is
           (T       => Long_Long_Long_Integer,
            T_First => Long_Long_Long_Integer'First,
            T_Last  => Long_Long_Long_Integer'Last);
-
-      -----------
-      -- Size --
-      -----------
-
-      function Size (First : T := T_First; Last : T := T_Last) return Natural
-      is (Impl.Size
-            (Long_Long_Long_Integer'Integer_Value (First),
-             Long_Long_Long_Integer'Integer_Value (Last)));
 
       -----------
       -- Write --
@@ -500,15 +377,6 @@ package body TGen.Marshalling_Lib is
           (T       => Long_Long_Long_Integer,
            T_First => Long_Long_Long_Integer'First,
            T_Last  => Long_Long_Long_Integer'Last);
-
-      -----------
-      -- Size --
-      -----------
-
-      function Size (First : T := T_First; Last : T := T_Last) return Natural
-      is (Impl.Size
-            (Long_Long_Long_Integer'Integer_Value (First),
-             Long_Long_Long_Integer'Integer_Value (Last)));
 
       -----------
       -- Write --
@@ -581,16 +449,6 @@ package body TGen.Marshalling_Lib is
             when 53     => Double,
             when 64     => Extended,
             when others => raise Program_Error);
-
-      -----------
-      -- Size --
-      -----------
-
-      function Size (First : T := T_First; Last : T := T_Last) return Natural
-      is (case Get_Precision is
-            when Single   => 32,
-            when Double   => 64,
-            when Extended => 128);
 
       -----------
       -- Write --
@@ -863,8 +721,9 @@ package body TGen.Marshalling_Lib is
       is
       begin
          if F < 0
-           and then Long_Long_Long_Integer (L)
-                    > Long_Long_Long_Integer'Last + Long_Long_Long_Integer (F)
+           and then
+             Long_Long_Long_Integer (L)
+             > Long_Long_Long_Integer'Last + Long_Long_Long_Integer (F)
          then
             Max := Long_Long_Long_Unsigned'Last;
             Use_Coarse := True;
@@ -875,24 +734,6 @@ package body TGen.Marshalling_Lib is
             Use_Coarse := False;
          end if;
       end Setup_Use_Coarse;
-
-      -----------
-      -- Size --
-      -----------
-
-      function Size (First : T := T_First; Last : T := T_Last) return Natural
-      is
-         Max : Long_Long_Long_Unsigned;
-      begin
-         Setup_Use_Coarse (First, Last, Max);
-         for I in 0 .. 128 loop
-            if Max = 0 then
-               return I;
-            end if;
-            Max := Shift_Right (Max, 1);
-         end loop;
-         raise Program_Error;
-      end Size;
 
       -----------
       -- Write --
@@ -954,23 +795,6 @@ package body TGen.Marshalling_Lib is
 
       function Denorm (V : Long_Long_Long_Unsigned; F : T) return T'Base
       is (T'Base (Long_Long_Long_Unsigned (F) + V));
-
-      -----------
-      -- Size --
-      -----------
-
-      function Size (First : T := T_First; Last : T := T_Last) return Natural
-      is
-         Max : Long_Long_Long_Unsigned := Norm (Last, First);
-      begin
-         for I in 0 .. 128 loop
-            if Max = 0 then
-               return I;
-            end if;
-            Max := Shift_Right (Max, 1);
-         end loop;
-         raise Program_Error;
-      end Size;
 
       -----------
       -- Write --

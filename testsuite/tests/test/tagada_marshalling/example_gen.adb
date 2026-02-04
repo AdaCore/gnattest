@@ -370,18 +370,4 @@ begin
 
    Test_Pred;
 
-   Ada.Text_IO.Put_Line
-     ("Size of String headers in bytes:"
-      & TGen_Marshalling_standard_String_Byte_Size_Header'Image);
-   Ada.Text_IO.Put_Line
-     ("Size of Matrix headers in bytes:"
-      & TGen_Marshalling_my_file_Matrix_Byte_Size_Header'Image);
-   Ada.Text_IO.Put_Line
-     ("Size of Shape headers in bytes:"
-      & TGen_Marshalling_my_file_Shape_Byte_Size_Header'Image);
-   Ada.Text_IO.Put_Line
-     ("Size used by the compiler for Small_Shape_Array (Small_Shape_Array'Size):" & Small_Shape_Array'Size'Image);
-   Ada.Text_IO.Put_Line
-     ("Maximal size computed (Small_Shape_Array_Max_All):"
-      & TGen_Marshalling_my_file_Small_Shape_Array_Size_Max_All'Image);
 end;

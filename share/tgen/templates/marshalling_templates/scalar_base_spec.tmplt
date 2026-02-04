@@ -32,10 +32,3 @@
         @_TY_PREFIX_@_First@_BASE_SUFFIX()_@;
       @_GLOBAL_PREFIX_@_Last   : TGen.TGen_Std.@_TY_NAME_@ :=
         @_TY_PREFIX_@_Last@_BASE_SUFFIX()_@);
-
-   function @_TY_PREFIX_@_Size@_BASE_SUFFIX()_@
-     (@_GLOBAL_PREFIX_@_First  : TGen.TGen_Std.@_TY_NAME_@ :=
-        @_TY_PREFIX_@_First@_BASE_SUFFIX()_@;
-      @_GLOBAL_PREFIX_@_Last   : TGen.TGen_Std.@_TY_NAME_@ :=
-        @_TY_PREFIX_@_Last@_BASE_SUFFIX()_@)
-      return Natural;

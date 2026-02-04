@@ -61,8 +61,6 @@ package TGen.Marshalling.Binary_Marshallers is
    --    (TAGAda_Marshalling_Stream : not null access Root_Stream_Type'Class;
    --     TAGAda_Marshalling_V      : Typ);
    --
-   --  function TAGAda_Marshalling_Typ_Size_Header return Natural;
-   --
    --  procedure TAGAda_Marshalling_Typ_Output
    --    (TAGAda_Marshalling_Stream : not null access Root_Stream_Type'Class;
    --     TAGAda_Marshalling_V      : Shape);

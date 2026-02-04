@@ -166,27 +166,3 @@
          Interfaces.Unsigned_8'Write (@_GLOBAL_PREFIX_@_Stream, @_GLOBAL_PREFIX_@_Buffer);
       end if;
    end @_TY_PREFIX_@_Output_Header;
-
-   function @_TY_PREFIX_@_Bit_Size_Header return Natural is
-   begin
-      return @_GLOBAL_PREFIX_@_Nb_Bits : Natural := 0 do
-@@IF@@ @_FIRST_NAME_@ /= ""
-@@TABLE@@
-         @_GLOBAL_PREFIX_@_Nb_Bits := @_GLOBAL_PREFIX_@_Nb_Bits + @_COMP_PREFIX_@_Size_Base;
-@@END_TABLE@@
-         @_GLOBAL_PREFIX_@_Nb_Bits := @_GLOBAL_PREFIX_@_Nb_Bits * 2;
-@@ELSE@@
-@@TABLE@@
-         @_GLOBAL_PREFIX_@_Nb_Bits := @_GLOBAL_PREFIX_@_Nb_Bits + @_COMP_PREFIX_@_Size;
-@@END_TABLE@@
-@@IF@@ @_ANCESTOR_TY_PREFIX_@ /= ""
-         @_GLOBAL_PREFIX_@_Nb_Bits := @_GLOBAL_PREFIX_@_Nb_Bits + @_ANCESTOR_TY_PREFIX_@_Bit_Size_Header;
-@@END_IF@@
-@@END_IF@@
-      end return;
-   end @_TY_PREFIX_@_Bit_Size_Header;
-
-   function @_TY_PREFIX_@_Byte_Size_Header return Natural is
-   begin
-      return (@_TY_PREFIX_@_Bit_Size_Header + 7) / 8;
-   end @_TY_PREFIX_@_Byte_Size_Header;

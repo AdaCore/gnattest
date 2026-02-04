@@ -5,8 +5,6 @@
 @@--  @_TY_NAME_@ Name of the current type.
 @@--
 @@INCLUDE@@ util.tmplt
-   @_TY_PREFIX_@_Size_Max_All_Const : constant Natural :=
-      @_TY_PREFIX_@_Size_Max;
 
    procedure @_TY_PREFIX_@_Write_All
      (@_GLOBAL_PREFIX_@_Stream : not null access Ada.Streams.Root_Stream_Type'Class;
@@ -21,11 +19,6 @@
       @_TY_PREFIX_@_Write
         (@_GLOBAL_PREFIX_@_Stream, @_GLOBAL_PREFIX_@_Buffer,
          @_GLOBAL_PREFIX_@_Offset, @_GLOBAL_PREFIX_@_V);
-      Write_Padding
-        (@_GLOBAL_PREFIX_@_Stream, @_GLOBAL_PREFIX_@_Buffer,
-         @_GLOBAL_PREFIX_@_Offset,
-         Size => @_TY_PREFIX_@_Size_Max_All_Const -
-            @_TY_PREFIX_@_Size (@_GLOBAL_PREFIX_@_V));
    end @_TY_PREFIX_@_Write_All;
 
    procedure @_TY_PREFIX_@_Read_All
@@ -44,16 +37,8 @@
       @_TY_PREFIX_@_Read
         (@_GLOBAL_PREFIX_@_Stream, @_GLOBAL_PREFIX_@_Buffer,
          @_GLOBAL_PREFIX_@_Offset, @_GLOBAL_PREFIX_@_V);
-      Read_Padding
-        (@_GLOBAL_PREFIX_@_Stream, @_GLOBAL_PREFIX_@_Buffer,
-         @_GLOBAL_PREFIX_@_Offset,
-         Size => @_TY_PREFIX_@_Size_Max_All_Const -
-            @_TY_PREFIX_@_Size (@_GLOBAL_PREFIX_@_V));
 
       if @_GLOBAL_PREFIX_@_V not in TGen.TGen_Std.@_TY_NAME_@ then
         raise TGen.Marshalling_Lib.Invalid_Value;
       end if;
    end @_TY_PREFIX_@_Read_All;
-
-   function @_TY_PREFIX_@_Size_Max_All return Natural is
-      (@_TY_PREFIX_@_Size_Max_All_Const + @_TY_PREFIX_@_Bit_Size_Header);

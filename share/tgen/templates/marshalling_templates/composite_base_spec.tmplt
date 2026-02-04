@@ -9,9 +9,6 @@
 @@--  @_DISCR_NAME_@ Same as above for the discriminants of records.
 @@--  @_COMP_TYP_@ Index types for arrays, and types of the discriminants for
 @@--       records.
-@@--  @_SIZE_MAX_PUB_@ True if the Size_Max function can be declared in the
-@@--       public part. This will be False if one of the discriminant types, or
-@@--       index types is not visible outside of the private part.
 @@--
 @@INCLUDE@@ util.tmplt
 
@@ -28,7 +25,3 @@
       @_GLOBAL_PREFIX_@_Buffer : in out Interfaces.Unsigned_8;
       @_GLOBAL_PREFIX_@_Offset : in out TGen.Marshalling_Lib.Offset_Type;
       @_GLOBAL_PREFIX_@_V      : out TGen.TGen_Std.@_TY_NAME_@);
-
-   function @_TY_PREFIX_@_Size
-     (@_GLOBAL_PREFIX_@_V : TGen.TGen_Std.@_TY_NAME_@)
-     return Natural;
