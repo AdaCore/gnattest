@@ -85,10 +85,9 @@ package body Utils.Projects is
    --  Return a list of main files, either from the CLI if provided, or from
    --  the GPR file.
 
-   procedure Get_Files_From_Closure
-     (Prj   : GPR2.Project.Tree.Object;
-      Cmd   : in out Command_Line;
-      Mains : Source_Vector);
+   function Get_Files_From_Closure
+     (Prj : GPR2.Project.Tree.Object; Mains : Source_Vector)
+      return String_Vector;
    --  Provided that the tool arguments contain '-U main_unit' parameter,
    --  tries to get the full closure of main_unit and to store it as tool
    --  argument files.
@@ -430,8 +429,20 @@ package body Utils.Projects is
                end if;
 
             else
-               Get_Files_From_Closure
-                 (My_Project_Tree, Cmd, Get_Main_Files (My_Project_Tree, Cmd));
+               declare
+                  Mains : constant Source_Vector :=
+                    Get_Main_Files (My_Project_Tree, Cmd);
+               begin
+
+                  --  We first need to erase the main unit names from the
+                  --  command line to avoid duplicates.
+                  Clear_File_Names (Cmd);
+
+                  for Src of Get_Files_From_Closure (My_Project_Tree, Mains)
+                  loop
+                     Append_File_Name (Cmd, Src);
+                  end loop;
+               end;
             end if;
          end if;
       end Get_Sources_From_Project;
@@ -919,11 +930,11 @@ package body Utils.Projects is
    -- Get_Files_From_Closure --
    ----------------------------
 
-   procedure Get_Files_From_Closure
-     (Prj   : GPR2.Project.Tree.Object;
-      Cmd   : in out Command_Line;
-      Mains : Source_Vector)
+   function Get_Files_From_Closure
+     (Prj : GPR2.Project.Tree.Object; Mains : Source_Vector)
+      return String_Vector
    is
+      Result   : String_Vector;
       Provider : constant Unit_Provider_Reference :=
         Create_Project_Unit_Provider (Tree => Prj);
 
@@ -1051,20 +1062,17 @@ package body Utils.Projects is
          Formatted_Output.Put ("could not get complete closure\n");
       end if;
 
-      --  We first need to erase the main unit names from the command
-      --  line to avoid duplicates.
-      Clear_File_Names (Cmd);
-
       if Debug_Flag_U then
          Formatted_Output.Put ("Closure:\n");
       end if;
       for Src of Closure loop
-         Append_File_Name (Cmd, Src.String_Value);
+         Result.Append (Src.String_Value);
          if Debug_Flag_U then
             Formatted_Output.Put ("\1\n", String (Src.Base_Name));
          end if;
       end loop;
 
+      return Result;
    exception
       when others =>
          Cmd_Error_No_Tool_Name ("could not get closure of specified sources");
