@@ -23,6 +23,7 @@
 
 with Ada.Characters.Handling; use Ada.Characters.Handling;
 with Ada.Containers.Indefinite_Ordered_Sets;
+with Ada.Containers.Vectors;
 with Ada.Directories;
 with Ada.Environment_Variables;
 with Ada.Exceptions;
@@ -61,6 +62,13 @@ package body Utils.Projects is
        Test_String_Switches,
        Test_String_Seq_Switches;
 
+   package Source_Vectors is new
+     Ada.Containers.Vectors
+       (Element_Type => GPR2.Build.Source.Object,
+        Index_Type   => Positive,
+        "="          => GPR2.Build.Source."=");
+   subtype Source_Vector is Source_Vectors.Vector;
+
    My_Project_Tree : aliased GPR2.Project.Tree.Object;
    --  Project tree for the user project
 
@@ -71,6 +79,11 @@ package body Utils.Projects is
    --  If "-U main_unit_1 main_unit_2 ..." was specified, this returns the list
    --  of main units. Otherwise (-U was not specified, or was specified without
    --  main unit names), returns empty array.
+
+   function Get_Main_Files
+     (Prj : GPR2.Project.Tree.Object; Cmd : Command_Line) return Source_Vector;
+   --  Return a list of main files, either from the CLI if provided, or from
+   --  the GPR file.
 
    procedure Process_Project
      (Cmd               : in out Command_Line;
@@ -269,7 +282,8 @@ package body Utils.Projects is
    is
       procedure Load_Tool_Project;
 
-      procedure Get_Files_From_Closure;
+      procedure Get_Files_From_Closure
+        (Cmd : in out Command_Line; Mains : Source_Vector);
       --  Provided that the tool arguments contain '-U main_unit' parameter,
       --  tries to get the full closure of main_unit and to store it as tool
       --  argument files.
@@ -338,17 +352,14 @@ package body Utils.Projects is
       -- Get_Files_From_Closure --
       ----------------------------
 
-      procedure Get_Files_From_Closure is
+      procedure Get_Files_From_Closure
+        (Cmd : in out Command_Line; Mains : Source_Vector)
+      is
          Provider : constant Unit_Provider_Reference :=
            Create_Project_Unit_Provider (Tree => My_Project_Tree);
 
          Ctx : constant Analysis_Context :=
            Create_Context (Unit_Provider => Provider);
-
-         Mains          : constant String_Ref_Array := Main_Unit_Names (Cmd);
-         Mains_From_Prj :
-           constant GPR2.Build.Compilation_Unit.Unit_Location_Vector :=
-             My_Project_Tree.Root_Project.Mains;
 
          package Path_Sets is new
            Ada.Containers.Indefinite_Ordered_Sets
@@ -466,18 +477,9 @@ package body Utils.Projects is
          --  Mains on the command line take precedence over the ones specified
          --  in the project file.
 
-         if Mains'Length > 0 then
-            for Main of Mains loop
-               Process_Source
-                 (My_Project_Tree.Root_Project.Visible_Source
-                    (Simple_Name (Main.all)));
-            end loop;
-         else
-            for Main of Mains_From_Prj loop
-               Process_Source
-                 (My_Project_Tree.Root_Project.Visible_Source (Main.Source));
-            end loop;
-         end if;
+         for Main of Mains loop
+            Process_Source (Main);
+         end loop;
 
          if Closure_Incomplete then
             Formatted_Output.Put ("could not get complete closure\n");
@@ -541,11 +543,11 @@ package body Utils.Projects is
               Mains.Length /= 0
               --  Empty Mains assumed to be non Ada-only
 
-              and then (for all Main of Mains =>
-                          My_Project_Tree.Root_Project.Visible_Source
-                            (Main.Source)
-                            .Language
-                          = Ada_Language);
+              and then
+                (for all Main of Mains =>
+                   My_Project_Tree.Root_Project.Visible_Source (Main.Source)
+                     .Language
+                   = Ada_Language);
          end Has_Ada_Mains_Only;
 
       begin
@@ -555,9 +557,10 @@ package body Utils.Projects is
 
          if not Argument_File_Specified then
             if Arg (Cmd) = No_Subprojects
-              or else (Main_Unit_Names (Cmd)'Length = 0
-                       and then (Arg (Cmd) = Update_All
-                                 or else not Has_Ada_Mains_Only))
+              or else
+                (Main_Unit_Names (Cmd)'Length = 0
+                 and then
+                   (Arg (Cmd) = Update_All or else not Has_Ada_Mains_Only))
             then
                if Arg (Cmd) = No_Subprojects then
                   Sources := My_Project_Tree.Root_Project.Sources;
@@ -582,7 +585,8 @@ package body Utils.Projects is
                end if;
 
             else
-               Get_Files_From_Closure;
+               Get_Files_From_Closure
+                 (Cmd, Get_Main_Files (My_Project_Tree, Cmd));
             end if;
          end if;
       end Get_Sources_From_Project;
@@ -1039,5 +1043,31 @@ package body Utils.Projects is
           (Pack => GPR2."+" (GPR2.Name_Type'("emulator")),
            Attr => GPR2."+" (GPR2.Optional_Name_Type'("board")));
    end Emulator_Board;
+
+   --------------------
+   -- Get_Main_Files --
+   --------------------
+
+   function Get_Main_Files
+     (Prj : GPR2.Project.Tree.Object; Cmd : Command_Line) return Source_Vector
+   is
+      Result   : Source_Vector;
+      CLI_Main : constant String_Ref_Array := Main_Unit_Names (Cmd);
+   begin
+      --  If we have main files given as CLI arguments, use them
+      if CLI_Main'Length > 0 then
+         for F of CLI_Main loop
+            Result.Append
+              (My_Project_Tree.Root_Project.Visible_Source
+                 (Simple_Name (F.all)));
+         end loop;
+      else
+         for Main of Prj.Root_Project.Mains loop
+            Result.Append (Prj.Root_Project.Visible_Source (Main.Source));
+         end loop;
+      end if;
+
+      return Result;
+   end Get_Main_Files;
 
 end Utils.Projects;
