@@ -85,6 +85,14 @@ package body Utils.Projects is
    --  Return a list of main files, either from the CLI if provided, or from
    --  the GPR file.
 
+   procedure Get_Files_From_Closure
+     (Prj   : GPR2.Project.Tree.Object;
+      Cmd   : in out Command_Line;
+      Mains : Source_Vector);
+   --  Provided that the tool arguments contain '-U main_unit' parameter,
+   --  tries to get the full closure of main_unit and to store it as tool
+   --  argument files.
+
    procedure Process_Project
      (Cmd               : in out Command_Line;
       Cmd_Args          : String_Vector;
@@ -282,12 +290,6 @@ package body Utils.Projects is
    is
       procedure Load_Tool_Project;
 
-      procedure Get_Files_From_Closure
-        (Cmd : in out Command_Line; Mains : Source_Vector);
-      --  Provided that the tool arguments contain '-U main_unit' parameter,
-      --  tries to get the full closure of main_unit and to store it as tool
-      --  argument files.
-
       procedure Get_Sources_From_Project;
       --  Extracts and stores the list of sources of the project to process as
       --  tool arguments.
@@ -347,163 +349,6 @@ package body Utils.Projects is
          My_Project_Tree := Load_Project (Cmd, Aggregated_Name);
          pragma Assert (My_Project_Tree.Root_Project.Kind /= GPR2.K_Aggregate);
       end Load_Aggregated_Project;
-
-      ----------------------------
-      -- Get_Files_From_Closure --
-      ----------------------------
-
-      procedure Get_Files_From_Closure
-        (Cmd : in out Command_Line; Mains : Source_Vector)
-      is
-         Provider : constant Unit_Provider_Reference :=
-           Create_Project_Unit_Provider (Tree => My_Project_Tree);
-
-         Ctx : constant Analysis_Context :=
-           Create_Context (Unit_Provider => Provider);
-
-         package Path_Sets is new
-           Ada.Containers.Indefinite_Ordered_Sets
-             (Element_Type => GPR2.Path_Name.Object,
-              "<"          => GPR2.Path_Name."<",
-              "="          => GPR2.Path_Name."=");
-         subtype Path_Set is Path_Sets.Set;
-
-         Closure_Incomplete : Boolean := False;
-
-         Closure : Path_Set;
-         --  Cumulative closure of given main(s)
-
-         procedure Update_Closure
-           (New_Source : GPR2.Path_Name.Object;
-            View       : GPR2.Project.View.Object);
-         --  Calculate unit dependencies with LAL and update the source closure
-         --  accordingly.
-
-         procedure Process_CU
-           (Kind     : Unit_Kind;
-            View     : GPR2.Project.View.Object;
-            Path     : Path_Name.Object;
-            Index    : Unit_Index;
-            Sep_Name : Optional_Name_Type);
-         --  Callback for GPR2.Build.Compilation_Unit.For_All_Part calling
-         --  Update_Closure on the given CU.
-
-         procedure Process_Source (Src : GPR2.Build.Source.Object);
-         --  Process the given source and update the source closure
-         --  accordingly.
-
-         --------------------
-         -- Update_Closure --
-         --------------------
-
-         procedure Update_Closure
-           (New_Source : GPR2.Path_Name.Object;
-            View       : GPR2.Project.View.Object)
-         is
-            Unit : Analysis_Unit;
-            CU   : Compilation_Unit;
-         begin
-            if Closure.Contains (New_Source) or else View.Is_Externally_Built
-            then
-               return;
-            end if;
-            Closure.Insert (New_Source);
-
-            Unit := Ctx.Get_From_File (String (New_Source.Name));
-            CU := Unit.Root.As_Compilation_Unit;
-
-            for Dep of CU.P_Unit_Dependencies loop
-               declare
-                  Src : constant GPR2.Build.Source.Object :=
-                    My_Project_Tree.Root_Project.Visible_Source
-                      (GPR2.Path_Name.Create (+Dep.Unit.Get_Filename));
-               begin
-                  --  LAL always return a dependency to the Standard unit,
-                  --  which does not have a corresponding source.
-
-                  if Src.Is_Defined then
-                     Process_Source (Src);
-                  end if;
-               end;
-
-            end loop;
-
-         exception
-            when Ex : others =>
-               Closure_Incomplete := True;
-               Formatted_Output.Put
-                 ("\1\n",
-                  "could not get dependencies of "
-                  & String (New_Source.Base_Name));
-               if Debug_Flag_U then
-                  Formatted_Output.Put
-                    ("\1\n",
-                     Ada.Exceptions.Exception_Name (Ex)
-                     & " : "
-                     & Ada.Exceptions.Exception_Message (Ex)
-                     & ASCII.LF
-                     & GNAT.Traceback.Symbolic.Symbolic_Traceback (Ex));
-               end if;
-         end Update_Closure;
-
-         ----------------
-         -- Process_CU --
-         ----------------
-
-         procedure Process_CU
-           (Kind     : Unit_Kind;
-            View     : GPR2.Project.View.Object;
-            Path     : Path_Name.Object;
-            Index    : Unit_Index;
-            Sep_Name : Optional_Name_Type)
-         is
-            pragma Unreferenced (Kind, Index, Sep_Name);
-         begin
-            Update_Closure (Path, View);
-         end Process_CU;
-
-         --------------------
-         -- Process_Source --
-         --------------------
-
-         procedure Process_Source (Src : GPR2.Build.Source.Object) is
-            CU : constant GPR2.Build.Compilation_Unit.Object :=
-              Unit_Name_To_Unit (String (Src.Unit.Name));
-         begin
-            CU.For_All_Part (Process_CU'Access);
-         end Process_Source;
-
-      begin
-         --  Mains on the command line take precedence over the ones specified
-         --  in the project file.
-
-         for Main of Mains loop
-            Process_Source (Main);
-         end loop;
-
-         if Closure_Incomplete then
-            Formatted_Output.Put ("could not get complete closure\n");
-         end if;
-
-         --  We first need to erase the main unit names from the command
-         --  line to avoid duplicates.
-         Clear_File_Names (Cmd);
-
-         if Debug_Flag_U then
-            Formatted_Output.Put ("Closure:\n");
-         end if;
-         for Src of Closure loop
-            Append_File_Name (Cmd, Src.String_Value);
-            if Debug_Flag_U then
-               Formatted_Output.Put ("\1\n", String (Src.Base_Name));
-            end if;
-         end loop;
-
-      exception
-         when others =>
-            Cmd_Error_No_Tool_Name
-              ("could not get closure of specified sources");
-      end Get_Files_From_Closure;
 
       ------------------------------
       -- Get_Sources_From_Project --
@@ -586,7 +431,7 @@ package body Utils.Projects is
 
             else
                Get_Files_From_Closure
-                 (Cmd, Get_Main_Files (My_Project_Tree, Cmd));
+                 (My_Project_Tree, Cmd, Get_Main_Files (My_Project_Tree, Cmd));
             end if;
          end if;
       end Get_Sources_From_Project;
@@ -1069,5 +914,160 @@ package body Utils.Projects is
 
       return Result;
    end Get_Main_Files;
+
+   ----------------------------
+   -- Get_Files_From_Closure --
+   ----------------------------
+
+   procedure Get_Files_From_Closure
+     (Prj   : GPR2.Project.Tree.Object;
+      Cmd   : in out Command_Line;
+      Mains : Source_Vector)
+   is
+      Provider : constant Unit_Provider_Reference :=
+        Create_Project_Unit_Provider (Tree => Prj);
+
+      Ctx : constant Analysis_Context :=
+        Create_Context (Unit_Provider => Provider);
+
+      package Path_Sets is new
+        Ada.Containers.Indefinite_Ordered_Sets
+          (Element_Type => GPR2.Path_Name.Object,
+           "<"          => GPR2.Path_Name."<",
+           "="          => GPR2.Path_Name."=");
+      subtype Path_Set is Path_Sets.Set;
+
+      Closure_Incomplete : Boolean := False;
+
+      Closure : Path_Set;
+      --  Cumulative closure of given main(s)
+
+      procedure Update_Closure
+        (New_Source : GPR2.Path_Name.Object; View : GPR2.Project.View.Object);
+      --  Calculate unit dependencies with LAL and update the source closure
+      --  accordingly.
+
+      procedure Process_CU
+        (Kind     : Unit_Kind;
+         View     : GPR2.Project.View.Object;
+         Path     : Path_Name.Object;
+         Index    : Unit_Index;
+         Sep_Name : Optional_Name_Type);
+      --  Callback for GPR2.Build.Compilation_Unit.For_All_Part calling
+      --  Update_Closure on the given CU.
+
+      procedure Process_Source (Src : GPR2.Build.Source.Object);
+      --  Process the given source and update the source closure
+      --  accordingly.
+
+      --------------------
+      -- Update_Closure --
+      --------------------
+
+      procedure Update_Closure
+        (New_Source : GPR2.Path_Name.Object; View : GPR2.Project.View.Object)
+      is
+         Unit : Analysis_Unit;
+         CU   : Compilation_Unit;
+      begin
+         if Closure.Contains (New_Source) or else View.Is_Externally_Built then
+            return;
+         end if;
+         Closure.Insert (New_Source);
+
+         Unit := Ctx.Get_From_File (String (New_Source.Name));
+         CU := Unit.Root.As_Compilation_Unit;
+
+         for Dep of CU.P_Unit_Dependencies loop
+            declare
+               Src : constant GPR2.Build.Source.Object :=
+                 Prj.Root_Project.Visible_Source
+                   (GPR2.Path_Name.Create (+Dep.Unit.Get_Filename));
+            begin
+               --  LAL always return a dependency to the Standard unit,
+               --  which does not have a corresponding source.
+
+               if Src.Is_Defined then
+                  Process_Source (Src);
+               end if;
+            end;
+
+         end loop;
+
+      exception
+         when Ex : others =>
+            Closure_Incomplete := True;
+            Formatted_Output.Put
+              ("\1\n",
+               "could not get dependencies of "
+               & String (New_Source.Base_Name));
+            if Debug_Flag_U then
+               Formatted_Output.Put
+                 ("\1\n",
+                  Ada.Exceptions.Exception_Name (Ex)
+                  & " : "
+                  & Ada.Exceptions.Exception_Message (Ex)
+                  & ASCII.LF
+                  & GNAT.Traceback.Symbolic.Symbolic_Traceback (Ex));
+            end if;
+      end Update_Closure;
+
+      ----------------
+      -- Process_CU --
+      ----------------
+
+      procedure Process_CU
+        (Kind     : Unit_Kind;
+         View     : GPR2.Project.View.Object;
+         Path     : Path_Name.Object;
+         Index    : Unit_Index;
+         Sep_Name : Optional_Name_Type)
+      is
+         pragma Unreferenced (Kind, Index, Sep_Name);
+      begin
+         Update_Closure (Path, View);
+      end Process_CU;
+
+      --------------------
+      -- Process_Source --
+      --------------------
+
+      procedure Process_Source (Src : GPR2.Build.Source.Object) is
+         CU : constant GPR2.Build.Compilation_Unit.Object :=
+           Unit_Name_To_Unit (String (Src.Unit.Name));
+      begin
+         CU.For_All_Part (Process_CU'Access);
+      end Process_Source;
+
+   begin
+      --  Mains on the command line take precedence over the ones specified
+      --  in the project file.
+
+      for Main of Mains loop
+         Process_Source (Main);
+      end loop;
+
+      if Closure_Incomplete then
+         Formatted_Output.Put ("could not get complete closure\n");
+      end if;
+
+      --  We first need to erase the main unit names from the command
+      --  line to avoid duplicates.
+      Clear_File_Names (Cmd);
+
+      if Debug_Flag_U then
+         Formatted_Output.Put ("Closure:\n");
+      end if;
+      for Src of Closure loop
+         Append_File_Name (Cmd, Src.String_Value);
+         if Debug_Flag_U then
+            Formatted_Output.Put ("\1\n", String (Src.Base_Name));
+         end if;
+      end loop;
+
+   exception
+      when others =>
+         Cmd_Error_No_Tool_Name ("could not get closure of specified sources");
+   end Get_Files_From_Closure;
 
 end Utils.Projects;
