@@ -80,6 +80,10 @@ package body Utils.Projects is
    --  of main units. Otherwise (-U was not specified, or was specified without
    --  main unit names), returns empty array.
 
+   function Has_Ada_Mains_Only (Prj : GPR2.Project.Tree.Object) return Boolean;
+   --  Checks that root project has mains specified and all of them
+   --  are Ada mains, no C/C++ or other languages.
+
    function Get_Main_Files
      (Prj : GPR2.Project.Tree.Object; Cmd : Command_Line) return Source_Vector;
    --  Return a list of main files, either from the CLI if provided, or from
@@ -370,30 +374,6 @@ package body Utils.Projects is
          --  (Update_All) was specified, then the "file name" (if any) is taken
          --  to be the main unit name, not a file name.
 
-         function Has_Ada_Mains_Only return Boolean;
-         --  Checks that root project has mains specified and all of them
-         --  are Ada mains, no C/C++ or other languages.
-
-         ------------------------
-         -- Has_Ada_Mains_Only --
-         ------------------------
-
-         function Has_Ada_Mains_Only return Boolean is
-            Mains :
-              constant GPR2.Build.Compilation_Unit.Unit_Location_Vector :=
-                My_Project_Tree.Root_Project.Mains;
-         begin
-            return
-              Mains.Length /= 0
-              --  Empty Mains assumed to be non Ada-only
-
-              and then
-                (for all Main of Mains =>
-                   My_Project_Tree.Root_Project.Visible_Source (Main.Source)
-                     .Language
-                   = Ada_Language);
-         end Has_Ada_Mains_Only;
-
       begin
          --  We get file names from the project file if no file names were
          --  given on the command line, either directly, or via one or more
@@ -404,7 +384,8 @@ package body Utils.Projects is
               or else
                 (Main_Unit_Names (Cmd)'Length = 0
                  and then
-                   (Arg (Cmd) = Update_All or else not Has_Ada_Mains_Only))
+                   (Arg (Cmd) = Update_All
+                    or else not Has_Ada_Mains_Only (My_Project_Tree)))
             then
                if Arg (Cmd) = No_Subprojects then
                   Sources := My_Project_Tree.Root_Project.Sources;
@@ -899,6 +880,25 @@ package body Utils.Projects is
           (Pack => GPR2."+" (GPR2.Name_Type'("emulator")),
            Attr => GPR2."+" (GPR2.Optional_Name_Type'("board")));
    end Emulator_Board;
+
+   ------------------------
+   -- Has_Ada_Mains_Only --
+   ------------------------
+
+   function Has_Ada_Mains_Only (Prj : GPR2.Project.Tree.Object) return Boolean
+   is
+      Mains : constant GPR2.Build.Compilation_Unit.Unit_Location_Vector :=
+        Prj.Root_Project.Mains;
+   begin
+      return
+        Mains.Length /= 0
+        --  Empty Mains assumed to be non Ada-only
+
+        and then
+          (for all Main of Mains =>
+             Prj.Root_Project.Visible_Source (Main.Source).Language
+             = Ada_Language);
+   end Has_Ada_Mains_Only;
 
    --------------------
    -- Get_Main_Files --
