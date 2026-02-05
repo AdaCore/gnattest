@@ -35,26 +35,11 @@ package TGen.Marshalling_Lib is
 
    type Biggest_Int is mod System.Max_Binary_Modulus;
 
-   procedure Write_Padding
-     (Stream : not null access Ada.Streams.Root_Stream_Type'Class;
-      Buffer : in out Unsigned_8;
-      Offset : in out Offset_Type;
-      Size   : Natural);
-
-   procedure Read_Padding
-     (Stream : not null access Ada.Streams.Root_Stream_Type'Class;
-      Buffer : in out Unsigned_8;
-      Offset : in out Offset_Type;
-      Size   : Natural);
-
    generic
       type T is (<>);
       T_First : T;
       T_Last : T;
    package Read_Write_Enum is
-
-      function Size (First : T := T_First; Last : T := T_Last) return Natural;
-      --  Return the number of bits used for values of the type
 
       procedure Write
         (Stream : not null access Ada.Streams.Root_Stream_Type'Class;
@@ -80,9 +65,6 @@ package TGen.Marshalling_Lib is
       T_Last : T;
    package Read_Write_Signed is
 
-      function Size (First : T := T_First; Last : T := T_Last) return Natural;
-      --  Return the number of bits used for values of the type
-
       procedure Write
         (Stream : not null access Ada.Streams.Root_Stream_Type'Class;
          Buffer : in out Unsigned_8;
@@ -106,9 +88,6 @@ package TGen.Marshalling_Lib is
       T_First : T;
       T_Last : T;
    package Read_Write_Unsigned is
-
-      function Size (First : T := T_First; Last : T := T_Last) return Natural;
-      --  Return the number of bits used for values of the type
 
       procedure Write
         (Stream : not null access Ada.Streams.Root_Stream_Type'Class;
@@ -134,9 +113,6 @@ package TGen.Marshalling_Lib is
       T_Last : T;
    package Read_Write_Decimal_Fixed is
 
-      function Size (First : T := T_First; Last : T := T_Last) return Natural;
-      --  Return the number of bits used for values of the type
-
       procedure Write
         (Stream : not null access Ada.Streams.Root_Stream_Type'Class;
          Buffer : in out Unsigned_8;
@@ -161,9 +137,6 @@ package TGen.Marshalling_Lib is
       T_Last : T;
    package Read_Write_Ordinary_Fixed is
       --!format on
-
-      function Size (First : T := T_First; Last : T := T_Last) return Natural;
-      --  Return the number of bits used for values of the type
 
       procedure Write
         (Stream : not null access Ada.Streams.Root_Stream_Type'Class;
@@ -200,9 +173,6 @@ package TGen.Marshalling_Lib is
            "Unsupported floating-point type");
       --  We only support standard floating point formats in targets that
       --  support them.
-
-      function Size (First : T := T_First; Last : T := T_Last) return Natural;
-      --  Return the number of bits used for values of the type
 
       procedure Write
         (Stream : not null access Ada.Streams.Root_Stream_Type'Class;

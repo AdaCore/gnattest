@@ -3,7 +3,3 @@
 @@--  @_TY_NAME_@ Name of the current type.
 @@--
    --  Definitions constants for the size of the header of @_TY_NAME_@
-
-   @_TY_PREFIX_@_Bit_Size_Header : constant Natural := 0;
-
-   @_TY_PREFIX_@_Byte_Size_Header : constant Natural := 0;

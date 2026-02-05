@@ -70,14 +70,7 @@ package body TGen.Marshalling.JSON_Marshallers is
         (Assocs : Translate_Table) return Unbounded_String;
       function Component_Write
         (Assocs : Translate_Table) return Unbounded_String;
-      function Component_Size
-        (Assocs : Translate_Table) return Unbounded_String;
-      function Component_Size_Max
-        (Assocs : Translate_Table) return Unbounded_String;
       function Variant_Read_Write
-        (Assocs : Translate_Table) return Unbounded_String;
-      function Variant_Size (Assocs : Translate_Table) return Unbounded_String;
-      function Variant_Size_Max
         (Assocs : Translate_Table) return Unbounded_String;
       procedure Print_Header (Assocs : Translate_Table);
       procedure Print_Default_Header (Assocs : Translate_Table) is null;
@@ -117,26 +110,6 @@ package body TGen.Marshalling.JSON_Marshallers is
          return Parse (Component_Read_Indexed_Template, Assocs);
       end Component_Read_Indexed;
 
-      --------------------
-      -- Component_Size --
-      --------------------
-
-      function Component_Size
-        (Assocs : Translate_Table with Unreferenced) return Unbounded_String is
-      begin
-         return +"";
-      end Component_Size;
-
-      ------------------------
-      -- Component_Size_Max --
-      ------------------------
-
-      function Component_Size_Max
-        (Assocs : Translate_Table with Unreferenced) return Unbounded_String is
-      begin
-         return +"";
-      end Component_Size_Max;
-
       ------------------------
       -- Variant_Read_Write --
       ------------------------
@@ -146,26 +119,6 @@ package body TGen.Marshalling.JSON_Marshallers is
       begin
          return Parse (Variant_Read_Write_Template, Assocs);
       end Variant_Read_Write;
-
-      ------------------
-      -- Variant_Size --
-      ------------------
-
-      function Variant_Size
-        (Assocs : Translate_Table with Unreferenced) return Unbounded_String is
-      begin
-         return +"";
-      end Variant_Size;
-
-      ----------------------
-      -- Variant_Size_Max --
-      ----------------------
-
-      function Variant_Size_Max
-        (Assocs : Translate_Table with Unreferenced) return Unbounded_String is
-      begin
-         return +"";
-      end Variant_Size_Max;
 
       ------------------
       -- Print_Header --
@@ -250,11 +203,7 @@ package body TGen.Marshalling.JSON_Marshallers is
            Component_Read                => Component_Read,
            Component_Read_Indexed        => Component_Read_Indexed,
            Component_Write               => Component_Write,
-           Component_Size                => Component_Size,
-           Component_Size_Max            => Component_Size_Max,
            Variant_Read_Write            => Variant_Read_Write,
-           Variant_Size                  => Variant_Size,
-           Variant_Size_Max              => Variant_Size_Max,
            Print_Header                  => Print_Header,
            Print_Default_Header          => Print_Default_Header,
            Print_Scalar                  => Print_Scalar,

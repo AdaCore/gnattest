@@ -26,8 +26,6 @@ with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with GNAT.OS_Lib; use GNAT.OS_Lib;
 
 with TGen.Templates;
-with TGen.Types.Array_Types;  use TGen.Types.Array_Types;
-with TGen.Types.Record_Types; use TGen.Types.Record_Types;
 
 package body TGen.Marshalling.Binary_Marshallers is
 
@@ -72,14 +70,7 @@ package body TGen.Marshalling.Binary_Marshallers is
         (Assocs : Translate_Table) return Unbounded_String;
       function Component_Write
         (Assocs : Translate_Table) return Unbounded_String;
-      function Component_Size
-        (Assocs : Translate_Table) return Unbounded_String;
-      function Component_Size_Max
-        (Assocs : Translate_Table) return Unbounded_String;
       function Variant_Read_Write
-        (Assocs : Translate_Table) return Unbounded_String;
-      function Variant_Size (Assocs : Translate_Table) return Unbounded_String;
-      function Variant_Size_Max
         (Assocs : Translate_Table) return Unbounded_String;
       procedure Print_Header (Assocs : Translate_Table);
       procedure Print_Default_Header (Assocs : Translate_Table);
@@ -125,26 +116,6 @@ package body TGen.Marshalling.Binary_Marshallers is
               Assocs & Assoc ("ACTION", "Write"));
       end Component_Write;
 
-      --------------------
-      -- Component_Size --
-      --------------------
-
-      function Component_Size
-        (Assocs : Translate_Table) return Unbounded_String is
-      begin
-         return Parse (Component_Size_Template, Assocs);
-      end Component_Size;
-
-      ------------------------
-      -- Component_Size_Max --
-      ------------------------
-
-      function Component_Size_Max
-        (Assocs : Translate_Table) return Unbounded_String is
-      begin
-         return Parse (Component_Size_Max_Template, Assocs);
-      end Component_Size_Max;
-
       ------------------------
       -- Variant_Read_Write --
       ------------------------
@@ -154,26 +125,6 @@ package body TGen.Marshalling.Binary_Marshallers is
       begin
          return Parse (Variant_Read_Write_Template, Assocs);
       end Variant_Read_Write;
-
-      ------------------
-      -- Variant_Size --
-      ------------------
-
-      function Variant_Size (Assocs : Translate_Table) return Unbounded_String
-      is
-      begin
-         return Parse (Variant_Size_Template, Assocs);
-      end Variant_Size;
-
-      ----------------------
-      -- Variant_Size_Max --
-      ----------------------
-
-      function Variant_Size_Max
-        (Assocs : Translate_Table) return Unbounded_String is
-      begin
-         return Parse (Variant_Size_Max_Template, Assocs);
-      end Variant_Size_Max;
 
       ------------------
       -- Print_Header --
@@ -223,29 +174,10 @@ package body TGen.Marshalling.Binary_Marshallers is
       -----------------
 
       procedure Print_Array (Assocs : Translate_Table) is
-
-         --  Check that the Size_Max function can be declared in the public
-         --  part of the support package: this is not the case as soon as
-         --  one of the index types of the array is fully private.
-
-         Size_Max_Pub : constant Boolean :=
-           not (for some Idx_Typ of Array_Typ'Class (Typ).Index_Types =>
-                  Idx_Typ.all.Fully_Private);
       begin
          Put_Line (Spec_Part, Parse (Composite_Base_Spec_Template, Assocs));
          New_Line (Spec_Part);
-
-         if Size_Max_Pub then
-            Put_Line (Spec_Part, Parse (Composite_Size_Max_Template, Assocs));
-         else
-            Put_Line
-              (Private_Part, Parse (Composite_Size_Max_Template, Assocs));
-         end if;
          Put_Line (Body_Part, Parse (Array_Read_Write_Template, Assocs));
-         New_Line (Body_Part);
-         Put_Line (Body_Part, Parse (Array_Size_Template, Assocs));
-         New_Line (Body_Part);
-         Put_Line (Body_Part, Parse (Array_Size_Max_Template, Assocs));
          New_Line (Body_Part);
 
       end Print_Array;
@@ -264,33 +196,10 @@ package body TGen.Marshalling.Binary_Marshallers is
       ------------------
 
       procedure Print_Record (Assocs : Translate_Table) is
-
-         --  Check wether the Size_Max function can be placed in the public
-         --  part: This is not the case as soon as one of the discriminants
-         --  is fully private.
-
-         pragma Style_Checks (Off);
-         Size_Max_Pub : constant Boolean :=
-           not (Typ in Record_Typ'Class
-                and then Is_Discriminated (Record_Typ'Class (Typ)))
-           or else not (for some Disc_Typ of
-                          Record_Typ'Class (Typ).Discriminant_Types =>
-                          Disc_Typ.Fully_Private);
-         pragma Style_Checks (On);
       begin
          Put_Line (Spec_Part, Parse (Composite_Base_Spec_Template, Assocs));
          New_Line (Spec_Part);
-         if Size_Max_Pub then
-            Put_Line (Spec_Part, Parse (Composite_Size_Max_Template, Assocs));
-         else
-            Put_Line
-              (Private_Part, Parse (Composite_Size_Max_Template, Assocs));
-         end if;
          Put_Line (Body_Part, Parse (Record_Read_Write_Template, Assocs));
-         New_Line (Body_Part);
-         Put_Line (Body_Part, Parse (Record_Size_Template, Assocs));
-         New_Line (Body_Part);
-         Put_Line (Body_Part, Parse (Record_Size_Max_Template, Assocs));
          New_Line (Body_Part);
       end Print_Record;
 
@@ -315,11 +224,7 @@ package body TGen.Marshalling.Binary_Marshallers is
            Component_Read                => Component_Read,
            Component_Read_Indexed        => Component_Read_Indexed,
            Component_Write               => Component_Write,
-           Component_Size                => Component_Size,
-           Component_Size_Max            => Component_Size_Max,
            Variant_Read_Write            => Variant_Read_Write,
-           Variant_Size                  => Variant_Size,
-           Variant_Size_Max              => Variant_Size_Max,
            Print_Header                  => Print_Header,
            Print_Default_Header          => Print_Default_Header,
            Print_Scalar                  => Print_Scalar,

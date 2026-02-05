@@ -32,14 +32,8 @@ package TGen.Templates is
         Template_Folder & "array_read_write.tmplt";
       Component_Read_Write_Template    : constant String :=
         Template_Folder & "component_read_write.tmplt";
-      Component_Size_Max_Template      : constant String :=
-        Template_Folder & "component_size_max.tmplt";
-      Component_Size_Template          : constant String :=
-        Template_Folder & "component_size.tmplt";
       Composite_Base_Spec_Template     : constant String :=
         Template_Folder & "composite_base_spec.tmplt";
-      Composite_Size_Max_Template      : constant String :=
-        Template_Folder & "composite_size_max.tmplt";
       Header_Body_Template             : constant String :=
         Template_Folder & "header_body.tmplt";
       Header_Private_Template          : constant String :=
@@ -58,10 +52,6 @@ package TGen.Templates is
         Template_Folder & "in_out_spec.tmplt";
       Record_Read_Write_Template       : constant String :=
         Template_Folder & "record_read_write.tmplt";
-      Record_Size_Max_Template         : constant String :=
-        Template_Folder & "record_size_max.tmplt";
-      Record_Size_Template             : constant String :=
-        Template_Folder & "record_size.tmplt";
       Scalar_Base_Spec_Template        : constant String :=
         Template_Folder & "scalar_base_spec.tmplt";
       Scalar_Base_Private_Template     : constant String :=
@@ -70,14 +60,6 @@ package TGen.Templates is
         Template_Folder & "scalar_read_write.tmplt";
       Variant_Read_Write_Template      : constant String :=
         Template_Folder & "variant_read_write.tmplt";
-      Variant_Size_Max_Template        : constant String :=
-        Template_Folder & "variant_size_max.tmplt";
-      Variant_Size_Template            : constant String :=
-        Template_Folder & "variant_size.tmplt";
-      Array_Size_Max_Template          : constant String :=
-        Template_Folder & "array_size_max.tmplt";
-      Array_Size_Template              : constant String :=
-        Template_Folder & "array_size.tmplt";
       Derived_Private_Subtype_Template : constant String :=
         Template_Folder & "derived_private_subtype.tmplt";
    end Binary_Marshalling;
