@@ -111,6 +111,11 @@ package body Utils.Projects is
    --
    --  ??? Extended projects???
 
+   procedure Extract_Gnattest_Options
+     (Prj : GPR2.Project.Tree.Object; Cmd : in out Command_Line);
+   --  Extract gnattest options from the Test.Switches/Default_Switches/
+   --  Gnattest_Switches project attributes.
+
    procedure Process_Project
      (Cmd               : in out Command_Line;
       Cmd_Args          : String_Vector;
@@ -318,10 +323,6 @@ package body Utils.Projects is
       procedure Set_Global_Result_Dirs;
       --  Sets the directory to place the global tool results into.
 
-      procedure Extract_Gnattest_Options;
-      --  Extract gnattest options from the Test.Switches/Default_Switches/
-      --  Gnattest_Switches project attributes.
-
       -----------------------
       -- Load_Tool_Project --
       -----------------------
@@ -354,66 +355,6 @@ package body Utils.Projects is
          My_Project_Tree := Load_Project (Cmd, Aggregated_Name);
          pragma Assert (My_Project_Tree.Root_Project.Kind /= GPR2.K_Aggregate);
       end Load_Aggregated_Project;
-
-      ------------------------------
-      -- Extract_Gnattest_Options --
-      ------------------------------
-
-      procedure Extract_Gnattest_Options is
-         function Process_Attr
-           (Id    : Q_Attribute_Id;
-            Index : GPR2.Project.Attribute_Index.Object :=
-              GPR2.Project.Attribute_Index.Undefined) return String_Vector;
-         --  Return the list values for the given attribute Id with the given
-         --  index. If the attribute is not defined for the loaded project,
-         --  return an empty vector.
-
-         ------------------
-         -- Process_Attr --
-         ------------------
-
-         function Process_Attr
-           (Id    : Q_Attribute_Id;
-            Index : GPR2.Project.Attribute_Index.Object :=
-              GPR2.Project.Attribute_Index.Undefined) return String_Vector
-         is
-            Attr_Value : GPR2.Project.Attribute.Object;
-            Result     : String_Vector;
-         begin
-            if My_Project_Tree.Root_Project.Check_Attribute
-                 (Id, Index => Index, Result => Attr_Value)
-            then
-               for Val of Attr_Value.Values loop
-                  Result.Append (String (Val.Text));
-               end loop;
-            end if;
-            return Result;
-         end Process_Attr;
-
-         Project_Switches : String_Vector :=
-           Process_Attr (+Default_Switches_Attr);
-      begin
-         if Num_File_Names (Cmd) = 1 then
-            declare
-               File_Switches : constant String_Vector :=
-                 Process_Attr
-                   (+Switches_Attr,
-                    GPR2.Project.Attribute_Index.Create
-                      (File_Names (Cmd) (1).all));
-            begin
-               if not File_Switches.Is_Empty then
-                  Project_Switches := File_Switches;
-               end if;
-            end;
-         end if;
-         if not Project_Switches.Is_Empty then
-            Parse
-              (Project_Switches,
-               Cmd,
-               Phase              => Project_File,
-               Collect_File_Names => False);
-         end if;
-      end Extract_Gnattest_Options;
 
       ----------------------------
       -- Set_Global_Result_Dirs --
@@ -472,7 +413,7 @@ package body Utils.Projects is
       --  project itself.
 
       else
-         Extract_Gnattest_Options;
+         Extract_Gnattest_Options (My_Project_Tree, Cmd);
 
          --  Now we need to Parse again, so command-line args override project
          --  file args. This needs to be done before getting sources from the
@@ -1089,5 +1030,67 @@ package body Utils.Projects is
          end;
       end if;
    end Get_Sources_From_Project;
+
+   ------------------------------
+   -- Extract_Gnattest_Options --
+   ------------------------------
+
+   procedure Extract_Gnattest_Options
+     (Prj : GPR2.Project.Tree.Object; Cmd : in out Command_Line)
+   is
+      function Process_Attr
+        (Id    : Q_Attribute_Id;
+         Index : GPR2.Project.Attribute_Index.Object :=
+           GPR2.Project.Attribute_Index.Undefined) return String_Vector;
+      --  Return the list values for the given attribute Id with the given
+      --  index. If the attribute is not defined for the loaded project,
+      --  return an empty vector.
+
+      ------------------
+      -- Process_Attr --
+      ------------------
+
+      function Process_Attr
+        (Id    : Q_Attribute_Id;
+         Index : GPR2.Project.Attribute_Index.Object :=
+           GPR2.Project.Attribute_Index.Undefined) return String_Vector
+      is
+         Attr_Value : GPR2.Project.Attribute.Object;
+         Result     : String_Vector;
+      begin
+         if Prj.Root_Project.Check_Attribute
+              (Id, Index => Index, Result => Attr_Value)
+         then
+            for Val of Attr_Value.Values loop
+               Result.Append (String (Val.Text));
+            end loop;
+         end if;
+         return Result;
+      end Process_Attr;
+
+      Project_Switches : String_Vector :=
+        Process_Attr (+Default_Switches_Attr);
+   begin
+      if Num_File_Names (Cmd) = 1 then
+         declare
+            File_Switches : constant String_Vector :=
+              Process_Attr
+                (+Switches_Attr,
+                 GPR2.Project.Attribute_Index.Create
+                   (File_Names (Cmd) (1).all));
+         begin
+            if not File_Switches.Is_Empty then
+               Project_Switches := File_Switches;
+            end if;
+         end;
+      end if;
+      if not Project_Switches.Is_Empty then
+         Parse
+           (Project_Switches,
+            Cmd,
+            Phase              => Project_File,
+            Collect_File_Names => False);
+      end if;
+   end Extract_Gnattest_Options;
 
 end Utils.Projects;
