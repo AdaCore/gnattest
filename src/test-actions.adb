@@ -1117,6 +1117,8 @@ package body Test.Actions is
             Test.Common.TGen_Strat_Kind := TGen.Libgen.Stateful;
          end if;
 
+         Test.Common.Gen_Bin_Tests := Arg (Cmd, Gen_Test_Binary);
+
          --  Activate the first pass
 
          Tool.Run_First_Pass := True;
@@ -1477,6 +1479,8 @@ package body Test.Actions is
         (" --no-test-filtering                - Suppress test filtering in generated driver\n");
       Put
         (" --gen-test-vectors                 - Generate test inputs for supported subprograms (experimental)\n");
+      Put
+        (" --gen-test-binary                  - Generate test inputs in binary format (experimental, requires --gen-test-vectors)\n");
       Put
         (" --gen-test-num=n                   - Specify the number of test inputs to be generated (experimental, defaults to 5)\n");
       Put

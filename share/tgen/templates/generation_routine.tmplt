@@ -89,15 +89,23 @@
    procedure Gen_@_SUBP_NAME_@_@_SUBP_UID_@
    is
       Subp  : TGen.Types.Typ_Access renames @_FN_TYP_REF_@;
+@@IF@@ @_ENUM_STRAT_@
+      Strat : TGen.Strategies.Strategy_Type'Class := Subp.all.Default_Enum_Strategy;
+@@ELSE@@
       Strat : TGen.Strategies.Strategy_Type'Class := Subp.all.Default_Strategy;
+@@END_IF@@
       File  : Ada.Streams.Stream_IO.File_Type;
       Stream : Ada.Streams.Stream_IO.Stream_Access;
       Output_Dir : constant String :=
          Ada.Environment_Variables.Value
             ("TGEN_GENERATION_OUTPUT_DIR", "@_TC_DIR_@");
+      Num_Tests : Natural := 0;
    begin
       TGen.Random.Reset;
-      for Test_Num in 1 .. @_NUM_TESTS_@ loop
+      Strat.Init;
+      while Strat.Has_Next
+           and then (Num_Tests < @_NUM_TESTS_@ or else @_NUM_TESTS_@ = 0)
+      loop
          Generate_One : declare
             Values   : constant TGen.JSON.JSON_Value :=
               Subp.all.Encode
@@ -111,7 +119,7 @@
               (File,
                Name =>
                  Output_Dir & GNAT.OS_Lib.Directory_Separator & "@_TC_NAME_@-" & Ada.Strings.Fixed.Trim
-                   (Positive'Image (Test_Num), Ada.Strings.Both));
+                   (Positive'Image (Num_Tests), Ada.Strings.Both));
             Stream := Ada.Streams.Stream_IO.Stream (File);
 @@TABLE@@
             @_OUTPUT_FN_@ (Stream, Ada_@_PARAM_NAME_@);
@@ -120,6 +128,7 @@
             @_GLOBAL_OUTPUT_FN_@ (Stream, @_GLOBAL_NAME_@);
 @@END_TABLE@@
             Ada.Streams.Stream_IO.Close (File);
+            Num_Tests := Num_Tests + 1;
          end Generate_One;
       end loop;
    end Gen_@_SUBP_NAME_@_@_SUBP_UID_@;
