@@ -1,0 +1,5 @@
+description: Ensure that gnattest emits an error when one of the switches
+  controlling test generation is specified without --gen-test-vectors also
+  present on the command line.
+
+driver: shell_script

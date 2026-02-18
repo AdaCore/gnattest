@@ -1117,6 +1117,8 @@ package body Test.Actions is
             Test.Common.TGen_Strat_Kind := TGen.Libgen.Stateful;
          end if;
 
+         Test.Common.Gen_Bin_Tests := Arg (Cmd, Gen_Test_Binary);
+
          --  Activate the first pass
 
          Tool.Run_First_Pass := True;
@@ -1142,6 +1144,26 @@ package body Test.Actions is
                     ("--gen-test-num should be a natural integer");
             end;
          end if;
+      else
+         declare
+            type All_Switches_Array is
+              array (Positive range <>) of All_Switches;
+            All_Gen_Test_Switches : constant All_Switches_Array :=
+              (To_All (Gen_Test_Binary),
+               To_All (Gen_Test_Num),
+               To_All (Gen_Test_Subprograms),
+               To_All (Enum_Strat));
+         begin
+            for Sw of All_Gen_Test_Switches loop
+               if Present (Cmd, Sw) then
+                  Cmd_Error
+                    (Switch_Text (Cmd, Sw)
+                     & " requires "
+                     & Switch_Text (Cmd, To_All (Gen_Test_Vectors))
+                     & " to also be present on the command line.");
+               end if;
+            end loop;
+         end;
       end if;
 
       if Test.Common.Stub_Mode_ON then
@@ -1477,6 +1499,8 @@ package body Test.Actions is
         (" --no-test-filtering                - Suppress test filtering in generated driver\n");
       Put
         (" --gen-test-vectors                 - Generate test inputs for supported subprograms (experimental)\n");
+      Put
+        (" --gen-test-binary                  - Generate test inputs in binary format (experimental, requires --gen-test-vectors)\n");
       Put
         (" --gen-test-num=n                   - Specify the number of test inputs to be generated (experimental, defaults to 5)\n");
       Put

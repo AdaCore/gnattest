@@ -66,6 +66,7 @@ package Test.Command_Lines is
       Enum_Strat,
       Minimize,
       Include_Subp_Name,
+      Gen_Test_Binary,
 
       --  Moved from the late Utils.Command_Lines.Common
 

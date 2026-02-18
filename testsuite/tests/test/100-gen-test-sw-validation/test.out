@@ -1,0 +1,9 @@
+gnattest: --gen-test-binary requires --gen-test-vectors to also be present on the command line.
+try "gnattest --help" for more information.
+gnattest: --enum-strat requires --gen-test-vectors to also be present on the command line.
+try "gnattest --help" for more information.
+gnattest: --gen-test-num requires --gen-test-vectors to also be present on the command line.
+try "gnattest --help" for more information.
+gnattest: --gen-test-subprograms requires --gen-test-vectors to also be present on the command line.
+try "gnattest --help" for more information.
+>>>program returned status code 1

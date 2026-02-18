@@ -1,0 +1,9 @@
+description: Check that gnattest can generate tests in binary format directly,
+  and that when instructed to used an enumerative strat, that it actually does.
+  This is checked by checking the number of tests that are generated.
+  The random strategy always generates 5 tests per subprogram by default,
+  whereas for enum strats this is dependent on the type. For a simple
+  subprogram with two discrete parameter only 4 tests should be
+  generated.
+
+driver: shell_script
