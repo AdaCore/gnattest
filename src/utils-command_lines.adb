@@ -1462,4 +1462,23 @@ package body Utils.Command_Lines is
       Formatted_Output.Put ("\n");
    end Print_Command_Line;
 
+   -----------------
+   -- Switch_Text --
+   -----------------
+
+   function Switch_Text (Cmd : Command_Line; Sw : All_Switches) return String
+   is
+   begin
+      return Cmd.Descriptor.Allowed_Switches (Sw).Text.all;
+   end Switch_Text;
+
+   -------------
+   -- Present --
+   -------------
+
+   function Present (Cmd : Command_Line; Sw : All_Switches) return Boolean is
+   begin
+      return Cmd.Sw (Sw).Explicit;
+   end Present;
+
 end Utils.Command_Lines;

@@ -677,6 +677,12 @@ package Utils.Command_Lines is
    --  Prints the command line composed of Command_Name and Args to standard
    --  output for debugging.
 
+   function Switch_Text (Cmd : Command_Line; Sw : All_Switches) return String;
+   --  Return the long form text corresponding to this switch
+
+   function Present (Cmd : Command_Line; Sw : All_Switches) return Boolean;
+   --  Return whether Sw was explicitly present on the parsed command line
+
 private
 
    type All_Switches is new Positive;
