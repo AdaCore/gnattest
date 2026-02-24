@@ -1,0 +1,20 @@
+with "test.gpr";
+with "obj/tgen_support/tgen_support.gpr";
+
+project Check is
+
+   for Object_Dir use "obj_check";
+   for Source_Dirs use ("check");
+   for Main use ("example_gen.adb");
+
+   package Compiler is
+
+      for Default_Switches ("Ada") use ("-O0", "-g");
+
+   end Compiler;
+
+   package Binder is
+      for Default_Switches ("Ada") use ("-Es");
+   end Binder;
+
+end Check;

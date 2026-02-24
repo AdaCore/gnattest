@@ -19,6 +19,14 @@
       @_GLOBAL_PREFIX_@_V      : TGen.TGen_Std.@_TY_NAME_@)
    is
    begin
+@@--  Write the ancestor components first, then the rest of the components
+@@IF@@ @_ANCESTOR_TY_PREFIX_@ /= ""
+   @_ANCESTOR_TY_PREFIX_@_Write
+     (@_GLOBAL_PREFIX_@_Stream,
+      @_GLOBAL_PREFIX_@_Buffer,
+      @_GLOBAL_PREFIX_@_Offset,
+      TGen.TGen_Std.@_ANCESTOR_TY_NAME_@(@_GLOBAL_PREFIX_@_V));
+@@END_IF@@
 @@IF@@ @_COMPONENT_WRITE_@ /= ""
 @@TABLE@@
 @_COMPONENT_WRITE_@
@@ -38,6 +46,14 @@
       @_GLOBAL_PREFIX_@_V      : out TGen.TGen_Std.@_TY_NAME_@)
    is
    begin
+@@--  Read the ancestor components first, then the rest of the components
+@@IF@@ @_ANCESTOR_TY_PREFIX_@ /= ""
+   @_ANCESTOR_TY_PREFIX_@_Read
+     (@_GLOBAL_PREFIX_@_Stream,
+      @_GLOBAL_PREFIX_@_Buffer,
+      @_GLOBAL_PREFIX_@_Offset,
+      TGen.TGen_Std.@_ANCESTOR_TY_NAME_@(@_GLOBAL_PREFIX_@_V));
+@@END_IF@@
 @@IF@@ @_COMPONENT_READ_@ /= ""
 @@TABLE@@
 @_COMPONENT_READ_@
@@ -49,7 +65,8 @@
 @_VARIANT_READ_@
 @@END_IF@@
 
-      if @_GLOBAL_PREFIX_@_V not in TGen.TGen_Std.@_TY_NAME_@ then
-        raise TGen.Marshalling_Lib.Invalid_Value;
-      end if;
+      --  TODO??? Re-enable this once gnat#1778 is resolved
+      --  if @_GLOBAL_PREFIX_@_V not in TGen.TGen_Std.@_TY_NAME_@ then
+      --    raise TGen.Marshalling_Lib.Invalid_Value;
+      --  end if;
    end @_TY_PREFIX_@_Read;
