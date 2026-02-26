@@ -3,14 +3,19 @@
 @@--  @_GLOBAL_PREFIX_@ Prefix used to prefix all local entities to the unit.
 @@--  @_SUBP_NAME_@ Simple name of the subprogram for which test vectors will
 @@--                be generated.
+@@--  @_SUBP_FQN_@ Fully qualified name of the subprogram, without the standard
+@@--               prefix nor the eventual generic wrapper
 @@--  @_SUBP_UID_@ UID of the subprogram
 @@--  @_FN_TYP_REF_@ Name of the Typ_Access representing this subp in the value
 @@--                 library.
+@@--  @_SUBP_RETURN_TY_@ FQN of the return type of the subprogram. Should be
+@@--                     empty if we are dealing with a procedure.
 @@--  @_PARAM_NAME_@ Simple name of the parameters of the subprogram
 @@--  @_PARAM_TY_@ Fully qualified name of the type of the parameters of the
 @@--               subprogram.
 @@--  @_GLOBAL_NAME_@ Fully qualified names of the global inputs of the
 @@--                  subprogram.
+@@--  @_GLOBAL_TY_@ Fully qualified names of the global inputs types
 @@--  @_GLOBAL_SLUG_@ Slugs (that can be used as identifiers) for the global
 @@--                  inputs of the subprogram.
 @@--  @_INPUT_FN_@ Name of the JSON input function for the parameters of the
@@ -35,7 +40,7 @@
    --  Test case generation for @_SUBP_NAME_@ (dumping to a JSON Value)
 
    procedure Gen_@_SUBP_NAME_@_@_SUBP_UID_@
-     (Unit_JSON : in out TGen.JSON.JSON_Value)
+     (Unit_Tests : in out TGen.JSON.Test_Cases.JSON_Test_Cases)
    is
       use type TGen.JSON.JSON_Value;
       Subp  : TGen.Types.Typ_Access renames @_FN_TYP_REF_@;
@@ -45,39 +50,57 @@
       Strat : TGen.Strategies.Strategy_Type'Class := Subp.all.Default_Strategy;
 @@END_IF@@
 
+      Subp_Entry : TGen.JSON.Test_Cases.Subprogram_Test_Case;
+
       Num_Tests : Natural := 0;
    begin
       TGen.Random.Reset;
+      if not TGen.JSON.Test_Cases.Has_Subprogram (Unit_Tests, "@_SUBP_UID_@") then
+         TGen.JSON.Test_Cases.Add_Subprogram_To_JSON_File
+           (Unit_Tests,
+            "@_SUBP_UID_@",
+            TGen.JSON.Test_Cases.Create_Subprogram_Test_Case
+              ("@_SUBP_FQN_@", "@_SUBP_RETURN_TY_@"));
+      end if;
+      Subp_Entry := TGen.JSON.Test_Cases.Get_Subprogram (Unit_Tests, "@_SUBP_UID_@");
       Strat.Init;
       while Strat.Has_Next
            and then (Num_Tests < @_NUM_TESTS_@ or else @_NUM_TESTS_@ = 0)
       loop
          Generate_One : declare
-            Values : constant TGen.JSON.JSON_Value :=
+            Values      : constant TGen.JSON.JSON_Value :=
               Subp.all.Encode (Strat.Generate (TGen.Strategies.Disc_Value_Maps.Empty_Map));
-@@TABLE'ALIGN_ON(":")@@
-            Ada_@_PARAM_NAME_@ : TGen.TGen_Std.@_PARAM_TY_@ :=
-              @_INPUT_FN_@ (Values.Get ("param_values").Get ("@_PARAM_NAME_@"));
-@@END_TABLE@@
+            Param_Vec   : TGen.JSON.Test_Cases.Subprogram_Parameter_Vector :=
+              TGen.JSON.Test_Cases.Create_Subprogram_Parameters;
+            Globals_Obj : TGen.JSON.JSON_Value :=
+              (if Values.Has_Field ("global_values")
+               then Values.Get ("global_values")
+               else TGen.JSON.JSON_Null);
+            Globals_Vec : TGen.JSON.Test_Cases.Subprogram_Parameter_Vector :=
+              TGen.JSON.Test_Cases.Create_Subprogram_Parameters;
          begin
-           if Values.Has_Field ("global_values")
-              and then Values.Get ("global_values") /= TGen.JSON.JSON_Null
-           then
-              null;
 @@TABLE@@
-              @_GLOBAL_NAME_@ :=
-                @_GLOBAL_INPUT_FN_@ (Values.Get ("global_values").Get ("@_GLOBAL_NAME_@"));
+            TGen.JSON.Test_Cases.Append_Parameter
+              (Param_Vec,
+               TGen.JSON.Test_Cases.Create_Parameter
+                 (Name      => "@_PARAM_NAME_@",
+                  Type_Name => "@_PARAM_TY_@",
+                  Value     => Values.Get("param_values").Get("@_PARAM_NAME_@")));
 @@END_TABLE@@
-            end if;
-            @_SUBP_NAME_@_Dump_TC (
-@@TABLE'ALIGN_ON(":")@@
-               @_GLOBAL_PREFIX_@_@_PARAM_NAME_@ => Ada_@_PARAM_NAME_@,
+@@TABLE@@
+            TGen.JSON.Test_Cases.Append_Parameter
+              (Globals_Vec,
+               TGen.JSON.Test_Cases.Create_Parameter
+                 (Name      => "@_GLOBAL_NAME_@",
+                  Type_Name => "@_GLOBAL_TY_@",
+                  Value     => Values.Get("global_values").Get("@_GLOBAL_NAME_@")));
 @@END_TABLE@@
-@@TABLE'ALIGN_ON(":")@@
-               @_GLOBAL_PREFIX_@_@_GLOBAL_SLUG_@ => @_GLOBAL_NAME_@,
-@@END_TABLE@@
-               TGen_Unit_JSON => Unit_JSON,
-               TGen_Test_Origin => "TGen");
+            TGen.JSON.Test_Cases.Add_Test
+              (Subp_Entry,
+               TGen.JSON.Test_Cases.Create_Subprogram_Test
+                 (Param_Values => Param_Vec,
+                  Origin       => "TGen",
+                  Globals      => Globals_Vec));
             Num_Tests := Num_Tests + 1;
          end Generate_One;
       end loop;

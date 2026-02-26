@@ -50,6 +50,7 @@ with TGen.Types.Array_Types;  use TGen.Types.Array_Types;
 with TGen.Types.Constraints;  use TGen.Types.Constraints;
 with TGen.Types.Record_Types; use TGen.Types.Record_Types;
 with TGen.Types.Translation;  use TGen.Types.Translation;
+with Utils.String_Utilities;
 
 package body TGen.Libgen is
 
@@ -1534,6 +1535,8 @@ package body TGen.Libgen is
          Put_Line (F_Body, "with Ada.Streams.Stream_IO;");
          Put_Line (F_Body, "with Ada.Strings.Fixed;");
          Put_Line (F_Body, "with GNAT.OS_Lib;");
+      else
+         Put_Line (F_Body, "with TGen.JSON.Test_Cases;");
       end if;
 
       Put_Line (F_Body, "with Ada.Environment_Variables;");
@@ -1609,6 +1612,7 @@ package body TGen.Libgen is
 
             Global_Names      : Vector_Tag;
             Global_Slugs      : Vector_Tag;
+            Global_Types      : Vector_Tag;
             Global_Input_FNs  : Vector_Tag;
             Global_Output_FNs : Vector_Tag;
 
@@ -1628,7 +1632,15 @@ package body TGen.Libgen is
             Assocs.Insert (Assoc ("NUM_TESTS", Default_Test_Num));
             Assocs.Insert (Assoc ("ENUM_STRAT", Default_Strat = Stateful));
             Assocs.Insert (Assoc ("SUBP_NAME", Subp_Name));
+            Assocs.Insert
+              (Assoc
+                 ("SUBP_FQN",
+                  Utils.String_Utilities.Escape_String_Literal
+                    (Subp.FQN (No_Std => True))));
             Assocs.Insert (Assoc ("SUBP_UID", Fun_Typ.Subp_UID));
+            if Fun_Typ.Ret_Typ /= null then
+               Assocs.Insert (Assoc ("SUBP_RETURN_TY", Fun_Typ.Ret_Typ.FQN));
+            end if;
             Assocs.Insert
               (Assoc
                  ("FN_TYP_REF",
@@ -1651,7 +1663,7 @@ package body TGen.Libgen is
                else
                   Concrete_Typ := Element (Param_Cur);
                end if;
-               Param_Types.Append (Concrete_Typ.all.FQN (No_Std => True));
+               Param_Types.Append (Concrete_Typ.all.FQN (No_Std => Bin_Tests));
                Input_FNs.Append (Input_Fname_For_Typ (Concrete_Typ.all.Name));
                Output_FNs.Append
                  (Output_Fname_For_Typ (Concrete_Typ.all.Name));
@@ -1663,6 +1675,8 @@ package body TGen.Libgen is
 
             for Global_Cur in Globals.Iterate loop
                Global_Names.Append (Key (Global_Cur));
+               Global_Types.Append
+                 (Element (Global_Cur).FQN (No_Std => Bin_Tests));
                Global_Slugs.Append
                  (To_Symbol
                     (To_Qualified_Name (+Key (Global_Cur)), Sep => '_'));
@@ -1682,6 +1696,7 @@ package body TGen.Libgen is
             end loop;
             Assocs.Insert (Assoc ("GLOBAL_NAME", Global_Names));
             Assocs.Insert (Assoc ("GLOBAL_SLUG", Global_Slugs));
+            Assocs.Insert (Assoc ("GLOBAL_TY", Global_Types));
 
             Assocs.Insert (Assoc ("INPUT_FN", Input_FNs));
             Assocs.Insert (Assoc ("OUTPUT_FN", Output_FNs));
@@ -1750,10 +1765,15 @@ package body TGen.Libgen is
          end if;
          Put_Line
            (F_Body,
-            "      Unit_JSON : TGen.JSON.JSON_Value := Dumper"
-            & ".Get_JSON_Ref;");
+            "      Unit_Tests : TGen.JSON.Test_Cases.JSON_Test_Cases;");
+         Put_Line (F_Body, "   begin");
+         Put_Line
+           (F_Body,
+            "      TGen.JSON.Test_Cases.Bind_JSON"
+            & " (Unit_Tests, Dumper.Get_JSON_Ref);");
+      else
+         Put_Line (F_Body, "   begin");
       end if;
-      Put_Line (F_Body, "   begin");
       for Subp of Subps loop
          declare
             Subp_Name : constant String := As_Function_Typ (Subp).Slug;
@@ -1764,7 +1784,7 @@ package body TGen.Libgen is
                & Subp_Name
                & '_'
                & To_String (As_Function_Typ (Subp).Subp_UID)
-               & (if Bin_Tests then ";" else " (Unit_JSON);"));
+               & (if Bin_Tests then ";" else " (Unit_Tests);"));
          end;
       end loop;
       if Ada.Containers."=" (Subps.Length, 0) then

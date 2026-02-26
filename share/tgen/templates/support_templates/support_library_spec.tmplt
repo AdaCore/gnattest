@@ -9,6 +9,7 @@ with TGen.Types;
 with TGen.Types.Discrete_Types;
 with TGen.Types.Int_Types;
 with TGen.JSON;
+with TGen.JSON.Test_Cases;
 with TGen.Marshalling_Lib.JSON;
 @@END_IF@@
 

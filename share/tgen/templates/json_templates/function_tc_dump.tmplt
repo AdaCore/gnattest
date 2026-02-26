@@ -45,53 +45,47 @@
 @@ELSE@@
       TGen_Test_Origin : String := "")
    is
-      Subp_JSON                : TGen.JSON.JSON_Value;
-      Subp_Vectors             : TGen.JSON.JSON_Array;
-      New_Test_Vec             : constant TGen.JSON.JSON_Value :=
-         TGen.JSON.Create_Object;
-      New_Test_Vec_Vals        : TGen.JSON.JSON_Array;
-      New_Test_Vec_Global_Vals : TGen.JSON.JSON_Array;
+      package TJTC renames TGen.JSON.Test_Cases;
+      Unit_TC                  : TJTC.JSON_Test_Cases;
+      Subp_Entry               : TJTC.Subprogram_Test_Case;
+      New_Test_Vec_Param_Vals  : TJTC.Subprogram_Parameter_Vector :=
+        TJTC.Create_Subprogram_Parameters;
+      New_Test_Vec_Global_Vals : TJTC.Subprogram_Parameter_Vector :=
+        TJTC.Create_Subprogram_Parameters;
    begin
-      if TGen_Unit_JSON.Has_Field ("@_PROC_UID_@") then
-         Subp_JSON := TGen_Unit_JSON.Get ("@_PROC_UID_@");
-         Subp_Vectors := Subp_JSON.Get ("test_vectors");
+      TJTC.Bind_JSON (Unit_TC, TGen_Unit_JSON);
+      if TJTC.Has_Subprogram (Unit_TC, "@_PROC_UID_@") then
+         Subp_Entry := TJTC.Get_Subprogram (Unit_TC, "@_PROC_UID_@");
       else
-         Subp_JSON := TGen.JSON.Create_Object;
-         Subp_JSON.Set_Field ("fully_qualified_name", "@_PROC_FQN_@");
-         Subp_JSON.Set_Field ("generation_complete", True);
-@@IF@@ @_PROC_RETURN_TY_@ /= ""
-         Subp_JSON.Set_Field ("return_type", "@_PROC_RETURN_TY_@");
-@@END_IF@@
+         Subp_Entry := TJTC.Create_Subprogram_Test_Case
+           (Qualified_Name   => "@_PROC_FQN_@",
+            Return_Type_Name => "@_PROC_RETURN_TY_@");
+         TJTC.Add_Subprogram_To_JSON_File
+           (Unit_TC,
+            "@_PROC_UID_@",
+            Subp_Entry);
       end if;
-      New_Test_Vec.Set_Field ("origin", TGen_Test_Origin);
 @@TABLE@@
-      declare
-         Param_Obj : constant TGen.JSON.JSON_Value := TGen.JSON.Create_Object;
-      begin
-         Param_Obj.Set_Field ("name", "@_PARAM_NAME_@");
-         Param_Obj.Set_Field ("type_name", "@_LAL_PARAM_TY_@");
-         Param_Obj.Set_Field
-           ("value",
-            @_PARAM_TY_OUTPUT_FN_@ (@_GLOBAL_PREFIX_@_@_PARAM_NAME_@));
-         TGen.JSON.Append (New_Test_Vec_Vals, Param_Obj);
-      end;
+      TJTC.Append_Parameter
+        (New_Test_Vec_Param_Vals,
+         TJTC.Create_Parameter
+           (Name      => "@_PARAM_NAME_@",
+            Type_Name => "@_LAL_PARAM_TY_@",
+            Value     => @_PARAM_TY_OUTPUT_FN_@ (@_GLOBAL_PREFIX_@_@_PARAM_NAME_@)));
 @@END_TABLE@@
-      New_Test_Vec.Set_Field ("param_values", New_Test_Vec_Vals);
 @@TABLE@@
-      declare
-         Global_Obj : constant TGen.JSON.JSON_Value := TGen.JSON.Create_Object;
-      begin
-         Global_Obj.Set_Field ("name", "@_GLOBAL_NAME_@");
-         Global_Obj.Set_Field ("type_name", "@_LAL_GLOBAL_TY_@");
-         Global_Obj.Set_Field
-           ("value",
-            @_GLOBAL_TY_OUTPUT_FN_@ (@_GLOBAL_PREFIX_@_@_GLOBAL_SLUG_@));
-         TGen.JSON.Append (New_Test_Vec_Global_Vals, Global_Obj);
-      end;
+      TJTC.Append_Parameter
+        (New_Test_Vec_Global_Vals,
+         TJTC.Create_Parameter
+           (Name      => "@_GLOBAL_NAME_@",
+            Type_Name => "@_LAL_GLOBAL_TY_@",
+            Value     => @_GLOBAL_TY_OUTPUT_FN_@ (@_GLOBAL_PREFIX_@_@_GLOBAL_SLUG_@)));
 @@END_TABLE@@
-      New_Test_Vec.Set_Field ("global_values", New_Test_Vec_Global_Vals);
-      TGen.JSON.Append (Subp_Vectors, New_Test_Vec);
-      Subp_JSON.Set_Field ("test_vectors", Subp_Vectors);
-      TGen_Unit_JSON.Set_Field ("@_PROC_UID_@", Subp_JSON);
+      TJTC.Add_Test
+        (Subp_Entry,
+         TJTC.Create_Subprogram_Test
+           (Param_Values => New_Test_Vec_Param_Vals,
+            Origin       => TGen_Test_Origin,
+            Globals      => New_Test_Vec_Global_Vals));
     end @_PROC_NAME_@_Dump_TC;
 @@END_IF@@
