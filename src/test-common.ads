@@ -231,6 +231,9 @@ package Test.Common is
    procedure Store_Excluded_Stub (Source : String; Excluded : String);
    --  Store data on units that should not be stubbed for given UUT
 
+   function Excluded_Stubs (Spec_Name : String) return String_Set.Set;
+   --  Return the excluded stubs for the given spec
+
    ------------------------
    --  String constants  --
    ------------------------
