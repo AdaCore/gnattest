@@ -81,10 +81,13 @@ with Utils_Debug;
 
 package body Test.Actions is
 
-   procedure Process_Exclusion_List
-     (Value : String; From_Project : Boolean := False);
-   --  Processes value of --exclude-from-stubbing switch. If values come from
-   --  project attributes they do not override already stored ones.
+   procedure Process_Stub_List
+     (Value        : String;
+      Status       : Test.Common.Stub_Status_Type;
+      From_Project : Boolean := False);
+   --  Processes value of --exclude-from-stubbing or --include-for-stubbing
+   --  switch according to Status. If values come from project attributes
+   --  they do not override already stored ones.
 
    procedure Check_Direct;
    --  Checks if there are no intersections between target and source dirs.
@@ -1261,25 +1264,55 @@ package body Test.Actions is
 
       if Test.Common.Stub_Mode_ON then
          Check_Stub;
+
+         --  Deal with files explicitly included for stubbing
+
+         declare
+            Includes : constant String_Ref_Array :=
+              Arg (Cmd, Include_For_Stubbing);
+         begin
+            for Include of Includes loop
+               Process_Stub_List (Include.all, Test.Common.Included);
+            end loop;
+         end;
+
+         if Root_Prj.Has_Attribute (+Default_Stub_Inclusion_List_Attr) then
+            Process_Stub_List
+              (Attr_Value (Root_Prj, +Default_Stub_Inclusion_List_Attr),
+               Test.Common.Included,
+               From_Project => True);
+         end if;
+         for Attr of Root_Prj.Attributes (+Stub_Inclusion_List_Attr) loop
+            Process_Stub_List
+              (String (Attr.Index.Text) & ":" & String (Attr.Value.Text),
+               Test.Common.Included,
+               From_Project => True);
+         end loop;
+
+         --  Deal with files excluded from stubbing
+
          declare
             Excludes : constant String_Ref_Array :=
               Arg (Cmd, Exclude_From_Stubbing);
          begin
             for Exclude of Excludes loop
-               Process_Exclusion_List (Exclude.all);
+               Process_Stub_List (Exclude.all, Test.Common.Excluded);
             end loop;
          end;
 
          if Root_Prj.Has_Attribute (+Default_Stub_Exclusion_List_Attr) then
-            Process_Exclusion_List
+            Process_Stub_List
               (Attr_Value (Root_Prj, +Default_Stub_Exclusion_List_Attr),
+               Test.Common.Excluded,
                From_Project => True);
          end if;
          for Attr of Root_Prj.Attributes (+Stub_Exclusion_List_Attr) loop
-            Process_Exclusion_List
+            Process_Stub_List
               (String (Attr.Index.Text) & ":" & String (Attr.Value.Text),
+               Test.Common.Excluded,
                From_Project => True);
          end loop;
+
       end if;
 
       --  Process additional tests
@@ -1510,6 +1543,15 @@ package body Test.Actions is
         ("                                        be stubbed when testing unit whose\n");
       Put
         ("                                        specification is located in file spec\n");
+      Put
+        (" --include-for-stubbing=file         - List of sources whose bodies should\n");
+      Put ("                                      be stubbed\n");
+      Put
+        (" --include-for-stubbing=spec:file    - List of sources whose bodies should\n");
+      Put
+        ("                                        be stubbed when testing unit whose\n");
+      Put
+        ("                                        specification is located in file spec\n");
       Put ("\n");
 
       Put (" --harness-dir=dirname  - Output dir for test harness\n");
@@ -1721,12 +1763,14 @@ package body Test.Actions is
          end;
    end Process_Additional_Tests;
 
-   ----------------------------
-   -- Process_Exclusion_List --
-   ----------------------------
+   ------------------------
+   -- Process_Stub_List --
+   ------------------------
 
-   procedure Process_Exclusion_List
-     (Value : String; From_Project : Boolean := False)
+   procedure Process_Stub_List
+     (Value        : String;
+      Status       : Test.Common.Stub_Status_Type;
+      From_Project : Boolean := False)
    is
       use Ada.Text_IO;
       use Ada.Strings.Fixed;
@@ -1735,7 +1779,7 @@ package body Test.Actions is
 
       F : File_Type;
 
-      Exclude_For_One_UUT : constant Boolean :=
+      UUT_Specific : constant Boolean :=
         Value'Length > 3 and then Colon_Idx > First + 1;
       --  For the new interface (=spec:file instead of :spec=file), the equal
       --  sign is eaten by the argument processing.
@@ -1747,7 +1791,7 @@ package body Test.Actions is
 
       use Test.Common;
    begin
-      if Exclude_For_One_UUT then
+      if UUT_Specific then
          declare
             Unit   : constant String := Value (First .. Colon_Idx - 1);
             F_Path : constant String :=
@@ -1760,9 +1804,7 @@ package body Test.Actions is
                Cmd_Error_No_Help ("cannot find " & F_Path);
             end if;
 
-            if From_Project
-              and then Test.Common.Stub_Exclusion_Lists.Contains (Unit)
-            then
+            if From_Project and then Has_Unit_Stub_Config (Unit) then
                return;
             end if;
 
@@ -1770,7 +1812,7 @@ package body Test.Actions is
             while not End_Of_File (F) loop
                S := new String'(Get_Line (F));
                if not Is_Comment (S.all) then
-                  Test.Common.Store_Excluded_Stub (Unit, S.all);
+                  Test.Common.Store_Stub (Unit, S.all, Status);
                end if;
                Free (S);
             end loop;
@@ -1779,9 +1821,7 @@ package body Test.Actions is
          return;
       end if;
 
-      if From_Project
-        and then not Test.Common.Default_Stub_Exclusion_List.Is_Empty
-      then
+      if From_Project and then Has_Stub_Config then
          return;
       end if;
 
@@ -1797,14 +1837,13 @@ package body Test.Actions is
          while not End_Of_File (F) loop
             S := new String'(Get_Line (F));
             if not Is_Comment (S.all) then
-               Test.Common.Store_Default_Excluded_Stub (S.all);
+               Test.Common.Store_Default_Stub (S.all, Status);
             end if;
             Free (S);
          end loop;
          Close (F);
       end;
-
-   end Process_Exclusion_List;
+   end Process_Stub_List;
 
    ---------------------------
    -- Non_Null_Intersection --

@@ -177,9 +177,8 @@ package body Test.Common is
       begin
          for Pr of Prelude loop
             if Pr.Kind = Ada_Pragma_Node
-              and then
-                To_Lower (Node_Image (Pr.As_Pragma_Node.F_Id))
-                = "extend_system"
+              and then To_Lower (Node_Image (Pr.As_Pragma_Node.F_Id))
+                       = "extend_system"
             then
                declare
                   Assocs : constant Base_Assoc_List :=
@@ -844,8 +843,8 @@ package body Test.Common is
       for J in T.all'First .. T.all'Last loop
          if T.all (J) = '.' then
             if J = T.all'First + 1
-              and then
-                T.all (J - 1) in 'a' | 's' | 'i' | 'g' | 'A' | 'S' | 'I' | 'G'
+              and then T.all (J - 1)
+                       in 'a' | 's' | 'i' | 'g' | 'A' | 'S' | 'I' | 'G'
             then
                T.all (J) := '~';
             else
@@ -1034,46 +1033,116 @@ package body Test.Common is
       return (for some P of P_List => P.Kind = Ada_Private_Part);
    end Is_Private;
 
-   ---------------------------------
-   -- Store_Default_Excluded_Stub --
-   ---------------------------------
+   ------------------------
+   -- Store_Default_Stub --
+   ------------------------
 
-   procedure Store_Default_Excluded_Stub (Excluded : String) is
+   procedure Store_Default_Stub
+     (Unit : String; Status : Stub_Status_Type; Error_Out : Boolean := True) is
    begin
-      Trace (Me_Stub, "do not ever stub " & Excluded);
-      Default_Stub_Exclusion_List.Include (Excluded);
-   end Store_Default_Excluded_Stub;
+      if Error_Out then
+         if not Default_Stub_List (not Status).Is_Empty then
+            Cmd_Error
+              ("Simultaneous use of --excluded-from-stubbing and"
+               & " --included-for-stubbing");
+         end if;
+      end if;
+      Trace (Me_Stub, Image (Status) & " " & Unit);
+      Default_Stub_List (Status).Include (Unit);
+   end Store_Default_Stub;
 
-   -------------------------
-   -- Store_Excluded_Stub --
-   -------------------------
+   ----------------
+   -- Store_Stub --
+   ----------------
 
-   procedure Store_Excluded_Stub (Source : String; Excluded : String) is
+   procedure Store_Stub
+     (UUT : String; Unit : String; Status : Stub_Status_Type)
+   is
       Local_Set : String_Set.Set := String_Set.Empty_Set;
    begin
-      Trace (Me_Stub, "do not stub " & Excluded & " when testing " & Source);
-      if Stub_Exclusion_Lists.Contains (Source) then
-         Local_Set := Copy (Stub_Exclusion_Lists.Element (Source));
-         Local_Set.Include (Excluded);
-         Stub_Exclusion_Lists.Replace (Source, Local_Set);
+      --  Error out if the user uses default --excluded-from-stubbing and
+      --  --included-for-stubbing.
+
+      if Stub_Lists (not Status).Contains (UUT) then
+         Cmd_Error
+           ("Simultaneous use of --excluded-from-stubbing "
+            & " and --included-for-stubbing for unit "
+            & UUT);
+      end if;
+
+      Trace (Me_Stub, " " & Image (Status) & Unit & " when testing " & UUT);
+      if Stub_Lists (Status).Contains (UUT) then
+         Local_Set := Copy (Stub_Lists (Status).Element (UUT));
+         Local_Set.Include (Unit);
+         Stub_Lists (Status).Replace (UUT, Local_Set);
       else
-         Local_Set.Include (Excluded);
-         Stub_Exclusion_Lists.Include (Source, Local_Set);
+         Local_Set.Include (Unit);
+         Stub_Lists (Status).Include (UUT, Local_Set);
       end if;
-   end Store_Excluded_Stub;
+   end Store_Stub;
 
-   --------------------
-   -- Excluded_Stubs --
-   --------------------
+   ---------------------
+   -- Has_Stub_Config --
+   ---------------------
 
-   function Excluded_Stubs (Spec_Name : String) return String_Set.Set is
-      Result : String_Set.Set := Default_Stub_Exclusion_List;
+   function Has_Stub_Config return Boolean is
    begin
-      if Stub_Exclusion_Lists.Contains (Spec_Name) then
-         Result.Union (Stub_Exclusion_Lists.Element (Spec_Name));
+      return
+        not Default_Stub_List (Excluded).Is_Empty
+        or else not Default_Stub_List (Included).Is_Empty;
+   end Has_Stub_Config;
+
+   --------------------------
+   -- Has_Unit_Stub_Config --
+   --------------------------
+
+   function Has_Unit_Stub_Config (UUT : String) return Boolean is
+   begin
+      return
+        Stub_Lists (Excluded).Contains (UUT)
+        or else Stub_Lists (Included).Contains (UUT);
+   end Has_Unit_Stub_Config;
+
+   --------------
+   -- Has_Stub --
+   --------------
+
+   function Has_Stub (Unit : String) return Boolean is
+      function Is_Included return Boolean
+      is (Default_Stub_List (Included).Is_Empty
+          or else Default_Stub_List (Included).Contains (Unit));
+
+      function Is_Excluded return Boolean
+      is (Default_Stub_List (Excluded).Contains (Unit));
+   begin
+      return not Is_Excluded and then Is_Included;
+   end Has_Stub;
+
+   --------------
+   -- Has_Stub --
+   --------------
+
+   function Has_Stub (UUT : String; Unit : String) return Boolean is
+      function Is_Locally_Included return Boolean
+      is (Stub_Lists (Included).Contains (UUT)
+          and then Stub_Lists (Included).Element (UUT).Contains (Unit));
+
+      function Is_Locally_Excluded return Boolean
+      is (Stub_Lists (Excluded).Contains (UUT)
+          and then Stub_Lists (Excluded).Element (UUT).Contains (Unit));
+   begin
+      --  Local configuration overrides the global one
+
+      if Is_Locally_Excluded then
+         return False;
       end if;
-      return Result;
-   end Excluded_Stubs;
+
+      if Is_Locally_Included then
+         return True;
+      end if;
+
+      return Has_Stub (Unit);
+   end Has_Stub;
 
    -------------------
    -- Abstract_Type --
@@ -1271,8 +1340,8 @@ package body Test.Common is
 
       if Body_N /= No_Body_Node
         and then Body_N.Unit.Root.Kind = Ada_Compilation_Unit
-        and then
-          Body_N.Unit.Root.As_Compilation_Unit.F_Body.Kind /= Ada_Subunit
+        and then Body_N.Unit.Root.As_Compilation_Unit.F_Body.Kind
+                 /= Ada_Subunit
       then
          Process_CU (Body_N.Unit.Root.As_Compilation_Unit);
       end if;

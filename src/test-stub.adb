@@ -388,7 +388,8 @@ package body Test.Stub is
          --  If it failed once it will fail again most likely, no point
          --  in duplicating the errors. Adding the unit to default stub
          --  exclusion list to avoid further attempts to process it.
-         Store_Default_Excluded_Stub (Base_Name (Pack.Unit.Get_Filename));
+         Store_Default_Stub
+           (Base_Name (Pack.Unit.Get_Filename), Excluded, Error_Out => False);
       end Report_And_Exclude;
 
    begin

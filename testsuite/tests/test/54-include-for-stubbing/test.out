@@ -1,0 +1,21 @@
+Units remaining: 8     Units remaining: 7     Units remaining: 6     Units remaining: 5     Units remaining: 4     Units remaining: 3     Units remaining: 2     Units remaining: 1     
+warning: (gnattest) unexpected output from test driver /gnattest_stub/harness/a.Test_Data.Tests/a~test_data-tests-suite-test_runner
+warning: (gnattest) unexpected output from test driver /gnattest_stub/harness/d.Test_Data.Tests/d-test_data-tests-suite-test_runner
+a.show_b=stub b
+a.show_c=stub c
+d.show_b=stub b
+d.show_c=original c
+6 tests run: 6 passed; 0 failed; 0 crashed.
+gnattest: Simultaneous use of --excluded-from-stubbing and --included-for-stubbing
+try "gnattest --help" for more information.
+Units remaining: 8     Units remaining: 7     Units remaining: 6     Units remaining: 5     Units remaining: 4     Units remaining: 3     Units remaining: 2     Units remaining: 1     
+warning: (gnattest) unexpected output from test driver /gnattest_stub/harness/a.Test_Data.Tests/a~test_data-tests-suite-test_runner
+warning: (gnattest) unexpected output from test driver /gnattest_stub/harness/d.Test_Data.Tests/d-test_data-tests-suite-test_runner
+a.show_b=original b
+a.show_c=original c
+d.show_b=stub b
+d.show_c=original c
+6 tests run: 6 passed; 0 failed; 0 crashed.
+gnattest: Simultaneous use of --excluded-from-stubbing  and --included-for-stubbing for unit a.ads
+try "gnattest --help" for more information.
+>>>program returned status code 1

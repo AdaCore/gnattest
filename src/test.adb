@@ -110,6 +110,16 @@ package body Test is
          "Default behavior of test skeletons (pass or fail).");
 
       GPR2_RA.Add
+        (Name                 => +Stub_Inclusion_List_Attr,
+         Index_Type           => GPR2_RA.String_Index,
+         Value                => GPR2_RA.Single,
+         Value_Case_Sensitive => True,
+         Is_Allowed_In        => GPR2_RA.Everywhere);
+      GPR2_RA.Description.Set_Attribute_Description
+        (+Stub_Exclusion_List_Attr,
+         "List of spec:filename that should be stubbed.");
+
+      GPR2_RA.Add
         (Name                 => +Stub_Exclusion_List_Attr,
          Index_Type           => GPR2_RA.String_Index,
          Value                => GPR2_RA.Single,
@@ -118,6 +128,16 @@ package body Test is
       GPR2_RA.Description.Set_Attribute_Description
         (+Stub_Exclusion_List_Attr,
          "List of spec:filename that should not be stubbed.");
+
+      GPR2_RA.Add
+        (Name                 => +Default_Stub_Inclusion_List_Attr,
+         Index_Type           => GPR2_RA.No_Index,
+         Value                => GPR2_RA.Single,
+         Value_Case_Sensitive => True,
+         Is_Allowed_In        => GPR2_RA.Everywhere);
+      GPR2_RA.Description.Set_Attribute_Description
+        (+Default_Stub_Inclusion_List_Attr,
+         "Response file to specify a stub inclusion list.");
 
       GPR2_RA.Add
         (Name                 => +Default_Stub_Exclusion_List_Attr,
