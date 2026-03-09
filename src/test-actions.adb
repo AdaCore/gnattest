@@ -719,14 +719,21 @@ package body Test.Actions is
          Test.Common.No_Command_Line := True;
       else
          declare
-            A_Comlin_Found : Boolean := False;
+            Target_Cmd_Line_Support : Boolean := False;
          begin
-            if Has_Runtime_Source ("a-comlin.ads") then
-               A_Comlin_Found := True;
-            end if;
-            Test.Common.No_Command_Line := not A_Comlin_Found;
 
-            if A_Comlin_Found then
+            --  We depend on GNAT.Command_Line to parse the command line
+            --  switches. There are some runtimes that have a-comlin but not
+            --  g-comlin, so explicitly check for both.
+
+            if Has_Runtime_Source ("a-comlin.ads")
+              and then Has_Runtime_Source ("g-comlin.ads")
+            then
+               Target_Cmd_Line_Support := True;
+            end if;
+            Test.Common.No_Command_Line := not Target_Cmd_Line_Support;
+
+            if Target_Cmd_Line_Support then
                if Arg (Cmd, Test_Filtering_File_IO)
                  and then Has_Runtime_Source ("s-ficobl.ads")
                then
