@@ -37,7 +37,9 @@ with GNATCOLL.JSON; use GNATCOLL.JSON;
 with GNATCOLL.VFS;  use GNATCOLL.VFS;
 
 with Langkit_Support.Diagnostics;
+with Langkit_Support.Errors;
 with Langkit_Support.File_Readers;
+with Langkit_Support.Text;
 
 with GPR2; use GPR2;
 pragma Warnings (Off);
@@ -122,6 +124,29 @@ package body Test.Actions is
 
    use Test_Boolean_Switches, Test_String_Switches, Test_String_Seq_Switches;
    pragma Warnings (On);
+
+   type Additional_Tests_Event_Handler is new Event_Handler_Interface
+   with null record;
+
+   procedure Unit_Requested_Callback
+     (Self               : in out Additional_Tests_Event_Handler;
+      Context            : Analysis_Context'Class;
+      Name               : Langkit_Support.Text.Text_Type;
+      From               : Analysis_Unit'Class;
+      Found              : Boolean;
+      Is_Not_Found_Error : Boolean);
+   --  Report when a unit is not found while processing additional tests.
+   --  This is usually an indication that the project passed to
+   --  --additional-tests has errors, such as a missing dependency on Aunit
+   --  or on the tested project.
+
+   procedure Release (Self : in out Additional_Tests_Event_Handler) is null;
+   --  Nothing to release as Additional_Tests_Event_Handler is only used to
+   --  provide a callback.
+
+   ATEH_Instance : constant Additional_Tests_Event_Handler :=
+     Additional_Tests_Event_Handler'(null record);
+   --  Instance from which we'll create the event handler.
 
    ------------------
    -- Process_File --
@@ -1578,6 +1603,54 @@ package body Test.Actions is
       pragma Style_Checks ("M79");
    end Tool_Help;
 
+   -----------------------------
+   -- Unit_Requested_Callback --
+   -----------------------------
+
+   procedure Unit_Requested_Callback
+     (Self               : in out Additional_Tests_Event_Handler;
+      Context            : Analysis_Context'Class;
+      Name               : Langkit_Support.Text.Text_Type;
+      From               : Analysis_Unit'Class;
+      Found              : Boolean;
+      Is_Not_Found_Error : Boolean)
+   is
+      pragma Unreferenced (Context);
+      use Test.Common;
+      use Langkit_Support.Text;
+   begin
+      --  We only care about missing units which can cause a LAL crash
+      if Found or else not Is_Not_Found_Error then
+         return;
+      end if;
+
+      declare
+         Lower_Name              : constant String := Image (To_Lower (Name));
+         Missing_Unit_From_Aunit : constant Boolean :=
+           Ada.Strings.Fixed.Index (Lower_Name, "aunit", From => 1) = 1;
+      begin
+         Report_Err
+           ("Could not find unit "
+            & Ada.Directories.Simple_Name (Image (Name))
+            & " while processing "
+            & Ada.Directories.Simple_Name (From.Get_Filename)
+            & " to find additional tests.");
+         if Missing_Unit_From_Aunit then
+            Cmd_Error_No_Tool_Name
+              ("Ensure "
+               & Ada.Directories.Simple_Name (Additional_Tests_Prj.all)
+               & " passed to --additional-tests depends on ""aunit.gpr"" and"
+               & " can be compiled.");
+         else
+            Cmd_Error_No_Tool_Name
+              ("Ensure "
+               & Ada.Directories.Simple_Name (Additional_Tests_Prj.all)
+               & " passed to --additional-tests depends on the tested project"
+               & " and can be compiled.");
+         end if;
+      end;
+   end Unit_Requested_Callback;
+
    ------------------------------
    -- Process_Additional_Tests --
    ------------------------------
@@ -1605,7 +1678,8 @@ package body Test.Actions is
       Context :=
         Create_Context
           (Charset       => Wide_Character_Encoding (Cmd),
-           Unit_Provider => Provider);
+           Unit_Provider => Provider,
+           Event_Handler => Create_Event_Handler_Reference (ATEH_Instance));
 
       Current_Source :=
         new String'(Test.Harness.Source_Table.Next_Non_Processed_Source);
@@ -1616,6 +1690,23 @@ package body Test.Actions is
               Test.Harness.Source_Table.Get_Source_Full_Name
                 (Current_Source.all));
 
+         if Unit.Has_Diagnostics then
+
+            Test.Common.Report_Err
+              ("gnattest: Error loading "
+               & Current_Source.all
+               & " to search"
+               & " for additional tests. Make sure the project passed to"
+               & " --additional-tests depends on ""aunit.gpr"" and that it can"
+               & " be compiled. The errors are:");
+            for Diag of Unit.Diagnostics loop
+               Test.Common.Report_Err (Unit.Format_GNU_Diagnostic (Diag));
+            end loop;
+            Free (Current_Source);
+            Cmd_Error_No_Tool_Name ("");  -- aka abort
+
+         end if;
+
          Test.Harness.Process_Source (Unit);
 
          Free (Current_Source);
@@ -1623,6 +1714,24 @@ package body Test.Actions is
            new String'(Test.Harness.Source_Table.Next_Non_Processed_Source);
       end loop;
       Free (Current_Source);
+   exception
+      when
+        Exc :
+          Langkit_Support.Errors.Property_Error
+          | Langkit_Support.Errors.Precondition_Failure
+      =>
+         declare
+            Src_Name : constant String := Current_Source.all;
+         begin
+            Free (Current_Source);
+            Test.Common.Report_Err
+              ("Error processing additional tests in "
+               & Src_Name
+               & ". Ensure the project passed to --additional-tests depends on"
+               & " ""aunit.gpr"" and that it can be compiled.");
+            Test.Common.Report_Ex (Exc);
+            Cmd_Error_No_Help ("");  --  aka abort
+         end;
    end Process_Additional_Tests;
 
    ----------------------------

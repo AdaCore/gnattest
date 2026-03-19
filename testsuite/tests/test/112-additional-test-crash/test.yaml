@@ -1,0 +1,4 @@
+description: Check that gnattest does not crash when the project passed
+  to --additional-tests is incomplete, and instead emits a helpful message
+
+driver: shell_script
