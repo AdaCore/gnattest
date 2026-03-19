@@ -72,14 +72,6 @@ package body Utils.Projects is
    My_Project_Tree : aliased GPR2.Project.Tree.Object;
    --  Project tree for the user project
 
-   function Main_Unit_Names (Cmd : Command_Line) return String_Ref_Array
-   is (if Arg (Cmd) = Update_All and then Num_File_Names (Cmd) /= 0
-       then File_Names (Cmd)
-       else []);
-   --  If "-U main_unit_1 main_unit_2 ..." was specified, this returns the list
-   --  of main units. Otherwise (-U was not specified, or was specified without
-   --  main unit names), returns empty array.
-
    function Has_Ada_Mains_Only (Prj : GPR2.Project.Tree.Object) return Boolean;
    --  Checks that root project has mains specified and all of them
    --  are Ada mains, no C/C++ or other languages.
@@ -969,7 +961,13 @@ package body Utils.Projects is
       --  (Update_All) was specified, then the "file name" (if any) is taken
       --  to be the main unit name, not a file name.
 
-      CLI_Main_Unit_Names : constant String_Ref_Array := Main_Unit_Names (Cmd);
+      CLI_Main_Unit_Names : constant String_Ref_Array :=
+        (if All_Update and then Num_File_Names (Cmd) /= 0
+         then File_Names (Cmd)
+         else []);
+      --  If "-U main_unit_1 main_unit_2 ..." was specified, this returns the
+      --  list of main units. Otherwise (-U was not specified, or was specified
+      --  without main unit names), returns empty array.
 
    begin
       --  We get file names from the project file if no file names were
