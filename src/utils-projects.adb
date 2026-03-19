@@ -954,9 +954,8 @@ package body Utils.Projects is
       --  Number of "-files=..." switches on the command line
 
       Argument_File_Specified : constant Boolean :=
-        (if All_Update
-         then Num_Files_Switches > 0
-         else Num_Names > 0 or else Num_Files_Switches > 0);
+        (Num_Files_Switches > 0
+         or else (not All_Update and then Num_Names > 0));
       --  True if we have source files specified on the command line. If -U
       --  (Update_All) was specified, then the "file name" (if any) is taken
       --  to be the main unit name, not a file name.
