@@ -1,34 +1,30 @@
 Driver per unit:
-<?xml version='1.0' encoding='utf-8' ?>
-<TestRun>
-  <Statistics>
-    <Tests>2</Tests>
-    <FailuresTotal>2</FailuresTotal>
-    <Failures>2</Failures>
-    <Errors>0</Errors>
-  </Statistics>
-  <SuccessfulTests>
-  </SuccessfulTests>
-  <FailedTests>
-    <Test>
-      <Name>p.ads:6:4:</Name>
-      <FailureType>Assertion</FailureType>
-      <Message>Test not implemented.</Message>
-      <Location>
-        <File>p-t_test_data-t_tests.adb</File>
-        <Line>44</Line>
-      </Location>
-    </Test>
-    <Test>
-      <Name>p.ads:7:4:</Name>
-      <FailureType>Assertion</FailureType>
-      <Message>Test not implemented.</Message>
-      <Location>
-        <File>p-t_test_data-t_tests.adb</File>
-        <Line>65</Line>
-      </Location>
-    </Test>
-  </FailedTests>
+<\?xml version='1.0' encoding='utf-8' \?>
+<TestRun elapsed=".*">
+    <Statistics>
+        <Tests>2</Tests>
+        <FailuresTotal>2</FailuresTotal>
+        <Failures>2</Failures>
+        <Errors>0</Errors>
+    </Statistics>
+    <FailedTests>
+        <Test name="Test_X1" tested_function="P.X1" elapsed=".*">
+            <FailureType>Assertion</FailureType>
+            <Message>Test not implemented.</Message>
+            <Location>
+                <File>p-t_test_data-t_tests.adb</File>
+                <Line>44</Line>
+            </Location>
+        </Test>
+        <Test name="Test_X2" tested_function="P.X2" elapsed=".*">
+            <FailureType>Assertion</FailureType>
+            <Message>Test not implemented.</Message>
+            <Location>
+                <File>p-t_test_data-t_tests.adb</File>
+                <Line>65</Line>
+            </Location>
+        </Test>
+    </FailedTests>
 </TestRun>
 Driver per test:
 
@@ -40,7 +36,8 @@ Total Tests Run:   1
 Successful Tests:  0
 Failed Assertions: 1
 Unexpected Errors: 0
-Driver per test (substitution check):
+Cumulative Time: .*sec.
+Driver per test \(substitution check\):
 
 FAIL p.ads:7:4: overridden at q.ads:5:4:
     Test not implemented.
@@ -50,39 +47,36 @@ Total Tests Run:   1
 Successful Tests:  0
 Failed Assertions: 1
 Unexpected Errors: 0
-Driver per unit (stubbing):
-<?xml version='1.0' encoding='utf-8' ?>
-<TestRun>
-  <Statistics>
-    <Tests>2</Tests>
-    <FailuresTotal>2</FailuresTotal>
-    <Failures>2</Failures>
-    <Errors>0</Errors>
-  </Statistics>
-  <SuccessfulTests>
-  </SuccessfulTests>
-  <FailedTests>
-    <Test>
-      <Name>p.ads:6:4:</Name>
-      <FailureType>Assertion</FailureType>
-      <Message>Test not implemented.</Message>
-      <Location>
-        <File>p-t_test_data-t_tests.adb</File>
-        <Line>44</Line>
-      </Location>
-    </Test>
-    <Test>
-      <Name>p.ads:7:4:</Name>
-      <FailureType>Assertion</FailureType>
-      <Message>Test not implemented.</Message>
-      <Location>
-        <File>p-t_test_data-t_tests.adb</File>
-        <Line>65</Line>
-      </Location>
-    </Test>
-  </FailedTests>
+Cumulative Time: .*sec.
+Driver per unit \(stubbing\):
+<\?xml version='1.0' encoding='utf-8' \?>
+<TestRun elapsed=".*">
+    <Statistics>
+        <Tests>2</Tests>
+        <FailuresTotal>2</FailuresTotal>
+        <Failures>2</Failures>
+        <Errors>0</Errors>
+    </Statistics>
+    <FailedTests>
+        <Test name="Test_X1" tested_function="P.X1" elapsed=".*">
+            <FailureType>Assertion</FailureType>
+            <Message>Test not implemented.</Message>
+            <Location>
+                <File>p-t_test_data-t_tests.adb</File>
+                <Line>44</Line>
+            </Location>
+        </Test>
+        <Test name="Test_X2" tested_function="P.X2" elapsed=".*">
+            <FailureType>Assertion</FailureType>
+            <Message>Test not implemented.</Message>
+            <Location>
+                <File>p-t_test_data-t_tests.adb</File>
+                <Line>65</Line>
+            </Location>
+        </Test>
+    </FailedTests>
 </TestRun>
-Driver per test (stubbing):
+Driver per test \(stubbing\):
 
 FAIL p.ads:6:4:
     Test not implemented.
@@ -92,3 +86,4 @@ Total Tests Run:   1
 Successful Tests:  0
 Failed Assertions: 1
 Unexpected Errors: 0
+Cumulative Time: .*sec.

@@ -25,7 +25,8 @@ with GNAT.OS_Lib; use GNAT.OS_Lib;
 
 with Ada.Containers.Indefinite_Vectors;
 
-with Libadalang.Analysis; use Libadalang.Analysis;
+with Langkit_Support.Slocs; use Langkit_Support.Slocs;
+with Libadalang.Analysis;   use Libadalang.Analysis;
 
 with Test.Common; use Test.Common;
 
@@ -60,13 +61,49 @@ package Test.Harness is
      Ada.Containers.Indefinite_Vectors (Positive, Test_Type_Info);
    use TT_Info;
 
+   type Test_Routine_Location;
+   type Test_Routine_Location_Access is access Test_Routine_Location;
+
+   type Test_Routine_Location is tagged record
+      File        : String_Access;
+      --  The file the test is located in
+      Line        : Line_Number;
+      --  The line the test starts
+      Column      : Column_Number;
+      --  The column the test starts
+      Tested_Name : String_Access;
+      --  The name of the function tested
+   end record;
+
+   type Test_Routine_Suffix;
+   type Test_Routine_Suffix_Access is access Test_Routine_Suffix;
+
+   type Test_Routine_Suffix is tagged record
+      Suffix_Text       : String_Access := null;
+      --  The type of relation between the suffix (instance/override/inherite)
+      Suffix_Location   : Test_Routine_Location_Access := null;
+      --  Additional sloc for when the test is an instance/overrides/inherite
+      --  from another symbol.
+      Additional_Suffix : Test_Routine_Suffix_Access := null;
+      --  Additional information in the case there a more than one
+      --  dependence in the chain.
+   end record;
+
    type Test_Routine_Info is tagged record
       TR_Declaration : Ada_Node;
       TR_Text_Name   : String_Access;
       Test_Type_Numb : Positive;
       Nesting        : String_Access;
 
-      Tested_Sloc : String_Access := null;
+      --  The name of the test driver associated with the test.
+      Test_Name : String_Access;
+      --  The name of the test.
+      Location  : Test_Routine_Location;
+      --  The sloc of the test
+      Suffix    : Test_Routine_Suffix_Access := null;
+      --  Additional info for a test like the sloc it was
+      --  inherited from, overriden from or is an
+      --  instance of.
    end record;
 
    package TR_Info is new

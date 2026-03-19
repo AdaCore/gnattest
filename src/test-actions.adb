@@ -58,6 +58,7 @@ with Libadalang.Project_Provider;
 
 with Test.Aggregator;
 with Test.Common;
+use type Test.Common.Reporters;
 with Test.Command_Lines; use Test.Command_Lines;
 with Test.Generation;
 with Test.Harness;
@@ -471,6 +472,8 @@ package body Test.Actions is
         new String'(String (Project_Tree.Runtime (Ada_Language)));
 
       Root_Prj := Project_Tree.Root_Project;
+      Test.Common.Object_Directory :=
+        new String'(Root_Prj.Object_Directory.String_Value);
 
       declare
          procedure Include_One (File_Name : String);
@@ -659,6 +662,19 @@ package body Test.Actions is
          Harness_Dir_Set := True;
       end if;
 
+      --  Checks if the source root argument was passed and point to
+      --  a directory that exists.
+      declare
+         Source_Root_Str : constant GNAT.OS_Lib.String_Access :=
+           Arg (Cmd, Source_Root);
+      begin
+         if Source_Root_Str /= null then
+            Test.Common.Source_Root_Str :=
+              new String'(Ada.Directories.Full_Name (Source_Root_Str.all));
+
+         end if;
+      end;
+
       --  Checking if argument project has IDE package specified.
       Test.Common.IDE_Package_Present := Root_Prj.Has_Package (+"ide");
 
@@ -818,14 +834,33 @@ package body Test.Actions is
 
       --  Reporter
       if Arg (Cmd, Reporter) /= null then
-         Free (Test.Common.Reporter_Name);
-         Test.Common.Reporter_Name := new String'(Arg (Cmd, Reporter).all);
          if Test.Common.Stub_Mode_ON
            or else Arg (Cmd, Separate_Drivers) /= null
          then
             Test.Common.Report_Std
               ("warning: (gnattest) --reporter has no effect");
          end if;
+         begin
+            Test.Common.Reporter_Name :=
+              Test.Common.Reporters'Value (Arg (Cmd, Reporter).all);
+            --  Check if the reporter name can be converted to its enum value.
+            --  If not this function will raise a Constraint_Error that will
+            --  be caught and then display an error message.
+            if Test.Common.Reporter_Name in Test.Common.Xml_Reporters then
+               Test.Common.Include_Subp_Name := True;
+            end if;
+            if Test.Common.Reporter_Name = Test.Common.Xml_Deprecated then
+               Test.Common.Report_Std
+                 ("warning: (gnattest) --reporter=XML_Deprecated is "
+                  & "deprecated, consider using --reporter=XML instead");
+            end if;
+         --  The subprogram names are needed to properly display all the
+         --  information in the XML.
+         exception
+            when Constraint_Error =>
+               Cmd_Error_No_Help
+                 ("switch --reporter must pass a valid reporter");
+         end;
       end if;
 
       if Test.Common.Stub_Mode_ON then
@@ -1470,6 +1505,8 @@ package body Test.Actions is
       Put (" --harness-dir=dirname  - Output dir for test harness\n");
       Put (" --tests-dir=dirname    - Test files are put in dirname\n");
       Put
+        (" --source-root=dirname  - The root from which the test file path will be starting\n");
+      Put
         (" --subdirs=dirname      - Test files are put in subdirs dirname of source dirs\n");
       Put
         (" --tests-root=dirname   - Test files are put in the same directory hierarchy\n");
@@ -1479,51 +1516,53 @@ package body Test.Actions is
       Put ("\n");
 
       Put
-        (" --validate-type-extensions         - Run all tests from all parents to check LSP\n");
+        (" --validate-type-extensions                           - Run all tests from all parents to check LSP\n");
       Put
-        (" --inheritance-check                - Run inherited tests for descendants\n");
+        (" --inheritance-check                                  - Run inherited tests for descendants\n");
       Put
-        (" --no-inheritance-check             - Do not run inherited tests for descendants\n");
+        (" --no-inheritance-check                               - Do not run inherited tests for descendants\n");
       Put
-        (" --test-case-only                   - Create tests only when Test_Case is specified\n");
+        (" --test-case-only                                     - Create tests only when Test_Case is specified\n");
       Put
-        (" --skeleton-default=(pass|fail)     - Default behavior of unimplemented tests\n");
+        (" --skeleton-default=(pass|fail)                       - Default behavior of unimplemented tests\n");
       Put
-        (" --passed-tests=(show|hide)         - Default output of passed tests\n");
+        (" --passed-tests=(show|hide)                           - Default output of passed tests\n");
       Put
-        (" --exit-status=(on|off)             - Default usage of the exit status\n");
+        (" --exit-status=(on|off)                               - Default usage of the exit status\n");
       Put
-        (" --omit-sloc                        - Don't record subprogram sloc in test package\n");
+        (" --omit-sloc                                          - Don't record subprogram sloc in test package\n");
       Put
-        (" --no-command-line                  - Don't add command line support to test driver\n");
+        (" --no-command-line                                    - Don't add command line support to test driver\n");
       Put
-        (" --include-subp-name                - Include the tested subprogram's name in the output\n");
+        (" --include-subp-name                                  - Include the tested subprogram's name in the output\n");
       Put
-        (" --test-duration                    - Show timing for each test\n");
+        (" --test-duration                                      - Show timing for each test\n");
       Put
-        (" --test-filtering                   - Add test filtering option to generated driver\n");
+        (" --test-filtering                                     - Add test filtering option to generated driver\n");
       Put
-        (" --no-test-filtering                - Suppress test filtering in generated driver\n");
+        (" --no-test-filtering                                  - Suppress test filtering in generated driver\n");
       Put
-        (" --gen-test-vectors                 - Generate test inputs for supported subprograms (experimental)\n");
+        (" --gen-test-vectors                                   - Generate test inputs for supported subprograms (experimental)\n");
       Put
-        (" --gen-test-binary                  - Generate test inputs in binary format (experimental, requires --gen-test-vectors)\n");
+        (" --gen-test-binary                                    - Generate test inputs in binary format (experimental, requires --gen-test-vectors)\n");
       Put
-        (" --gen-test-num=n                   - Specify the number of test inputs to be generated (experimental, defaults to 5)\n");
+        (" --gen-test-num=n                                     - Specify the number of test inputs to be generated (experimental, defaults to 5)\n");
       Put
-        (" --gen-test-subprograms=file:line   - Specify a comma separated list of subprograms declared at file:line to generate test cases for\n");
+        (" --gen-test-subprograms=file:line                     - Specify a comma separated list of subprograms declared at file:line to generate test cases for\n");
       Put
-        (" --dump-subp-hash=file:line         - Print the hash of the subprogram at file:line in the standard output and bypass all other swicthes.\n");
+        (" --dump-subp-hash=file:line                           - Print the hash of the subprogram at file:line in the standard output and bypass all other swicthes.\n");
       Put
-        (" --serialized-test-dir=dir          - Specify in which directory test inputs should be generated (experimental)\n");
+        (" --serialized-test-dir=dir                            - Specify in which directory test inputs should be generated (experimental)\n");
       Put
-        (" --dump-test-inputs                 - Dump input values of the subprogram under test as blobs during harness execution (experimental)\n");
+        (" --dump-test-inputs                                   - Dump input values of the subprogram under test as blobs during harness execution (experimental)\n");
       Put
-        (" --minimize                         - Minimize the generated testsuite based on structural coverage analysis (experimental)\n");
+        (" --minimize                                           - Minimize the generated testsuite based on structural coverage analysis (experimental)\n");
       Put
-        (" --minimization-filter=file:line    - Only minimize tests for the subprogram declared at file:line (file must be a simple name)\n");
+        (" --minimization-filter=file:line                      - Only minimize tests for the subprogram declared at file:line (file must be a simple name)\n");
       Put
-        (" --cov-level=level                  - Use level as the coverage level to guide test minimization (see gnatcov help for available choices)\n");
+        (" --cov-level=level                                    - Use level as the coverage level to guide test minimization (see gnatcov help for available choices)\n");
+      Put
+        (" --reporter=(gnattest|xml|junit|text|xml_deprecated)  - Specify which reporter to use when outputing test results (defaults to 'gnattest')\n");
       Put ("\n");
 
       Put ("Tests execution mode options:\n");

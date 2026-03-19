@@ -107,6 +107,7 @@ package Test.Command_Lines is
       Harness_Dir,
       Tests_Dir,
       Tests_Root,
+      Source_Root,
       Stubs_Dir,
       Additional_Tests,
       Skeleton_Default,

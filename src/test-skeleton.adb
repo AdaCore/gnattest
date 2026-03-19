@@ -55,7 +55,7 @@ with GNAT.Strings;
 
 with Test.Common;                use Test.Common;
 with Test.Instrument;
-with Test.Harness;
+with Test.Harness;               use Test.Harness;
 with Test.Skeleton.Source_Table; use Test.Skeleton.Source_Table;
 with Test.Mapping;               use Test.Mapping;
 with Test.Stub;
@@ -432,12 +432,12 @@ package body Test.Skeleton is
    --  Marks unappropriate sources in the source table.
 
    procedure Gather_Test_Cases
-     (Subp            : Subp_Info;
-      TR_Info         : Test_Routine_Info_Wrapper;
-      Data            : in out Data_Holder;
-      Suite_Data_List : in out Suites_Data_Type;
-      TC_Found        : out Boolean;
-      Instance_Sloc   : String := "");
+     (Subp              : Subp_Info;
+      TR_Info           : Test_Routine_Info_Wrapper;
+      Data              : in out Data_Holder;
+      Suite_Data_List   : in out Suites_Data_Type;
+      TC_Found          : out Boolean;
+      Instance_Location : Test_Routine_Location_Access := null);
    --  Adds one subprogram-to-test per each test case.
    --  Sets TC_Found if at least one Test_Case aspect or pragma has been found
    --  for given subprogram.
@@ -497,6 +497,10 @@ package body Test.Skeleton is
    --  of whitespace characters are replaced with an underscore, all other
    --  illegal characters are omitted.
 
+   function Get_Test_Name (Subp : Subp_Info) return GNAT.OS_Lib.String_Access;
+   --  Get the name of the test that will be created from the subprogram passed
+   --  as argument.
+
    procedure Put_Wrapper_Rename (Span : Natural; Current_Subp : Subp_Info);
    --  Puts subprogram renaming declaration, which renames generated wrapper
    --  into original tested subprogram's name.
@@ -529,10 +533,11 @@ package body Test.Skeleton is
    --  Returns the list of possible setters for all subprograms called from
    --  the body of given subprogram.
 
-   function Get_TR_Name_Suffix (Subp : Basic_Decl'Class) return String
-   is (if Include_Subp_Name then " (" & Get_Subp_FQN (Subp) & ")" else "");
+   function Get_TR_Name_Suffix
+     (Subp : Basic_Decl'Class) return GNAT.OS_Lib.String_Access
+   is (if Include_Subp_Name then new String'(Get_Subp_FQN (Subp)) else null);
    --  Return the string that either contains the name of the tested subprogram
-   --  in Subp in parenthesis, or the empty string, based on whether
+   --  in Subp , or null, based on whether
    --  --include-subp-name was passed on the command line.
 
    ---------
@@ -901,7 +906,7 @@ package body Test.Skeleton is
       Instance_Nesting : String_Access;
       --  Stores the nesting of instantiation and its name
 
-      Instance_Sloc : String_Access;
+      Instance_Location : Test_Routine_Location_Access;
       --  Stores sloc of instance that is used for test routine output
 
       procedure Gather_Inherited_Subprograms
@@ -1219,22 +1224,20 @@ package body Test.Skeleton is
                    (Encode
                       (Node.As_Basic_Decl.P_Fully_Qualified_Name,
                        Node.Unit.Get_Charset));
-               Instance_Sloc :=
-                 new String'
-                   (Base_Name (Data.Unit_File_Name.all)
-                    & ":"
-                    & Trim (First_Line_Number (Node)'Img, Both)
-                    & ":"
-                    & Trim (First_Column_Number (Node)'Img, Both)
-                    & ":");
 
+               Instance_Location :=
+                 new Test_Routine_Location'
+                   (File        =>
+                      new String'(Base_Name (Data.Unit_File_Name.all)),
+                    Line        => First_Line_Number (Node),
+                    Column      => First_Column_Number (Node),
+                    Tested_Name => null);
                Increase_Indent (Me, "traversing instantiation " & Node.Image);
                Traverse (Gen_Decl, Get_Records'Access);
                Decrease_Indent (Me);
 
                Inside_Inst := False;
                Free (Instance_Nesting);
-               Free (Instance_Sloc);
                return Over;
             end;
          end if;
@@ -1414,15 +1417,14 @@ package body Test.Skeleton is
                       .P_Generic_Instantiations (1)
                       .P_Fully_Qualified_Name,
                     Node.Unit.Get_Charset));
-            Instance_Sloc :=
-              new String'
-                (Base_Name (Data.Unit_File_Name.all)
-                 & ":"
-                 & Trim (First_Line_Number (Node)'Img, Both)
-                 & ":"
-                 & Trim (First_Column_Number (Node)'Img, Both)
-                 & ":");
 
+            Instance_Location :=
+              new Test_Routine_Location'
+                (File        =>
+                   new String'(Base_Name (Data.Unit_File_Name.all)),
+                 Line        => First_Line_Number (Node),
+                 Column      => First_Column_Number (Node),
+                 Tested_Name => null);
             Increase_Indent
               (Me, "traversing top level instantiation " & Node.Image);
             Traverse
@@ -1432,7 +1434,6 @@ package body Test.Skeleton is
             Inside_Top_Level_Inst := False;
             Inside_Inst := False;
             Free (Instance_Nesting);
-            Free (Instance_Sloc);
             return Over;
          end if;
 
@@ -1490,22 +1491,20 @@ package body Test.Skeleton is
                    (Encode
                       (Node.As_Basic_Decl.P_Fully_Qualified_Name,
                        Node.Unit.Get_Charset));
-               Instance_Sloc :=
-                 new String'
-                   (Base_Name (Data.Unit_File_Name.all)
-                    & ":"
-                    & Trim (First_Line_Number (Node)'Img, Both)
-                    & ":"
-                    & Trim (First_Column_Number (Node)'Img, Both)
-                    & ":");
 
+               Instance_Location :=
+                 new Test_Routine_Location'
+                   (File        =>
+                      new String'(Base_Name (Data.Unit_File_Name.all)),
+                    Line        => First_Line_Number (Node),
+                    Column      => First_Column_Number (Node),
+                    Tested_Name => null);
                Increase_Indent (Me, "traversing instantiation " & Node.Image);
                Traverse (Gen_Decl, Get_Subprograms'Access);
                Decrease_Indent (Me);
 
                Inside_Inst := False;
                Free (Instance_Nesting);
-               Free (Instance_Sloc);
                return Over;
             end;
          end if;
@@ -1550,28 +1549,30 @@ package body Test.Skeleton is
               Subp.Subp_Declaration.Sloc_Range;
          begin
             if Inside_Inst then
-               Test_Routine.Tested_Sloc :=
-                 new String'
-                   (Base_Name (Subp.Subp_Declaration.Unit.Get_Filename)
-                    & ":"
-                    & Trim (Subp_Span.Start_Line'Img, Both)
-                    & ":"
-                    & Trim (Subp_Span.Start_Column'Img, Both)
-                    & ":"
-                    & Get_TR_Name_Suffix (Subp.Subp_Declaration.As_Basic_Decl)
-                    & " instance at "
-                    & Instance_Sloc.all);
+               Test_Routine.Location :=
+                 (File        =>
+                    new String'
+                      (Base_Name (Subp.Subp_Declaration.Unit.Get_Filename)),
+                  Line        => Subp_Span.Start_Line,
+                  Column      => Subp_Span.Start_Column,
+                  Tested_Name =>
+                    Get_TR_Name_Suffix (Subp.Subp_Declaration.As_Basic_Decl));
+
+               Test_Routine.Suffix :=
+                 new Test_Routine_Suffix'
+                   (Suffix_Text       => new String'("instance at"),
+                    Suffix_Location   => Instance_Location,
+                    Additional_Suffix => null);
             else
-               Test_Routine.Tested_Sloc :=
-                 new String'
-                   (Base_Name (Data.Unit_File_Name.all)
-                    & ":"
-                    & Trim (Subp_Span.Start_Line'Img, Both)
-                    & ":"
-                    & Trim (Subp_Span.Start_Column'Img, Both)
-                    & ":"
-                    & Get_TR_Name_Suffix
-                        (Subp.Subp_Declaration.As_Basic_Decl));
+               Test_Routine.Suffix := null;
+
+               Test_Routine.Location :=
+                 (File        =>
+                    new String'(Base_Name (Data.Unit_File_Name.all)),
+                  Line        => Subp.Subp_Declaration.Sloc_Range.Start_Line,
+                  Column      => Subp.Subp_Declaration.Sloc_Range.Start_Column,
+                  Tested_Name =>
+                    Get_TR_Name_Suffix (Subp.Subp_Declaration.As_Basic_Decl));
             end if;
          end;
 
@@ -1627,8 +1628,8 @@ package body Test.Skeleton is
               new String'(Subp.Subp_Mangle_Name.all);
             --  Not setting test type number since it will be reset
             --  during suite_data generation.
+            Test_Routine.Test_Name := Get_Test_Name (Subp);
             Original_Type := Owner_Decl;
-
             if Nesting_Difference (Data.Unit_Full_Name.all, Subp.Nesting.all)
               = ""
             then
@@ -1709,6 +1710,7 @@ package body Test.Skeleton is
             Test_Routine.TR_Declaration := No_Ada_Node;
             Test_Routine.TR_Text_Name :=
               new String'(Subp.Subp_Mangle_Name.all);
+            Test_Routine.Test_Name := Get_Test_Name (Subp);
             Test_Routine.Test_Type_Numb := 1;
 
             if Nesting_Difference (Data.Unit_Full_Name.all, Subp.Nesting.all)
@@ -1770,7 +1772,7 @@ package body Test.Skeleton is
                Data,
                Suite_Data_List,
                Has_TC,
-               (if Instance_Sloc = null then "" else Instance_Sloc.all));
+               Instance_Location);
 
             if Has_TC or else not Test_Case_Only then
                Update_Name_Frequency (Subp.Subp_Text_Name.all);
@@ -2002,71 +2004,86 @@ package body Test.Skeleton is
                         Test_Routine_Wrapper.Original_Type :=
                           Type_Dec.As_Ada_Node;
 
-                        if Tmp_Has_TC then
+                        declare
+                           Tmp_Suffix : Test_Routine_Suffix_Access :=
+                             new Test_Routine_Suffix'
+                               (Suffix_Text       =>
+                                  new String'("inherited at"),
 
-                           --  There were Test_Cases
-                           for I in
-                             Tmp_Suites_Data.TR_List.First_Index
-                             .. Tmp_Suites_Data.TR_List.Last_Index
-                           loop
-                              Tmp_TR :=
-                                Tmp_Suites_Data.TR_List.Element (I).TR_Info;
+                                Suffix_Location   =>
+                                  new Test_Routine_Location'
+                                    (File        =>
+                                       new String'
+                                         (Base_Name
+                                            (Type_Dec.Unit.Get_Filename)),
+                                     Line        =>
+                                       First_Line_Number (Type_Dec),
+                                     Column      =>
+                                       First_Column_Number (Type_Dec),
+                                     Tested_Name => null),
+
+                                Additional_Suffix => null
+
+                               );
+
+                        begin
+                           if Tmp_Has_TC then
+
+                              --  There were Test_Cases
+                              for I in
+                                Tmp_Suites_Data.TR_List.First_Index
+                                .. Tmp_Suites_Data.TR_List.Last_Index
+                              loop
+                                 Tmp_TR :=
+                                   Tmp_Suites_Data.TR_List.Element (I).TR_Info;
+
+                                 Test_Routine.TR_Text_Name :=
+                                   new String'(Tmp_TR.TR_Text_Name.all);
+
+                                 Test_Routine.Test_Name := Tmp_TR.Test_Name;
+                                 Test_Routine.Location := Tmp_TR.Location;
+
+                                 Test_Routine.Suffix := Tmp_TR.Suffix;
+                                 if Test_Routine.Suffix /= null then
+                                    Test_Routine.Suffix.Additional_Suffix :=
+                                      Tmp_Suffix;
+                                 else
+                                    Test_Routine.Suffix := Tmp_Suffix;
+                                 end if;
+                                 Test_Routine_Wrapper.TR_Info := Test_Routine;
+
+                                 Suite_Data_List.ITR_List.Append
+                                   (Test_Routine_Wrapper);
+                              end loop;
+
+                           elsif not Test_Case_Only then
+                              --  There were no test_Cases, we just need
+                              --  to add the single inherited test.
 
                               Test_Routine.TR_Text_Name :=
-                                new String'(Tmp_TR.TR_Text_Name.all);
+                                new String'(Mangle_Hash (ISub));
 
-                              --  adding sloc info
-                              Test_Routine.Tested_Sloc :=
+                              Test_Routine.Test_Name :=
                                 new String'
-                                  (Tmp_TR.Tested_Sloc.all
-                                   & " inherited at "
-                                   & Base_Name (Type_Dec.Unit.Get_Filename)
-                                   & ":"
-                                   & Trim
-                                       (First_Line_Number (Type_Dec)'Img, Both)
-                                   & ":"
-                                   & Trim
-                                       (First_Column_Number (Type_Dec)'Img,
-                                        Both)
-                                   & ":");
+                                  (Test_Routine_Prefix
+                                   & Test.Common.Get_Subp_Name
+                                       (ISub.As_Ada_Node));
+                              Test_Routine.Location :=
+                                (File        =>
+                                   new String'
+                                     (Base_Name (ISub.Unit.Get_Filename)),
+                                 Line        => First_Line_Number (ISub),
+                                 Column      => First_Column_Number (ISub),
+                                 Tested_Name => Get_TR_Name_Suffix (ISub));
+
+                              Test_Routine.Suffix := Tmp_Suffix;
 
                               Test_Routine_Wrapper.TR_Info := Test_Routine;
 
                               Suite_Data_List.ITR_List.Append
                                 (Test_Routine_Wrapper);
-                           end loop;
-
-                        elsif not Test_Case_Only then
-                           --  There were no test_Cases, we just need
-                           --  to add the single inherited test.
-
-                           Test_Routine.TR_Text_Name :=
-                             new String'(Mangle_Hash (ISub));
-
-                           --  Adding sloc info
-                           Test_Routine.Tested_Sloc :=
-                             new String'
-                               (Base_Name (ISub.Unit.Get_Filename)
-                                & ":"
-                                & Trim (First_Line_Number (ISub)'Img, Both)
-                                & ":"
-                                & Trim (First_Column_Number (ISub)'Img, Both)
-                                & ":"
-                                & Get_TR_Name_Suffix (ISub)
-                                & " inherited at "
-                                & Base_Name (Type_Dec.Unit.Get_Filename)
-                                & ":"
-                                & Trim (First_Line_Number (Type_Dec)'Img, Both)
-                                & ":"
-                                & Trim
-                                    (First_Column_Number (Type_Dec)'Img, Both)
-                                & ":");
-
-                           Test_Routine_Wrapper.TR_Info := Test_Routine;
-
-                           Suite_Data_List.ITR_List.Append
-                             (Test_Routine_Wrapper);
-                        end if;
+                           end if;
+                        end;
                      end if;
                   end if;
 
@@ -2189,31 +2206,36 @@ package body Test.Skeleton is
                   --  ATM Test_Cases are not taken into account.
                   TR := TR_W.TR_Info;
                   LTR.TR_Text_Name := new String'(TR.TR_Text_Name.all);
+                  LTR.Test_Name := new String'(TR.Test_Name.all);
                   LTR.Inheritance_Depth := Depth;
                   LTR_W.TR_Info := LTR;
                   LTR_W.Original_Type := TR_W.Original_Type;
                   LTR_W.Test_Package := new String'(TR_W.Test_Package.all);
 
-                  --  Adding sloc info
-                  LTR_W.TR_Info.Tested_Sloc :=
-                    new String'
-                      (Base_Name (OSub.Unit.Get_Filename)
-                       & ":"
-                       & Trim (First_Line_Number (OSub)'Img, Both)
-                       & ":"
-                       & Trim (First_Column_Number (OSub)'Img, Both)
-                       & ":"
-                       & Get_TR_Name_Suffix (OSub)
-                       & " overridden at "
-                       & Base_Name (TR_W.Original_Type.Unit.Get_Filename)
-                       & ":"
-                       & Trim
-                           (First_Line_Number (TR_W.Original_Subp)'Img, Both)
-                       & ":"
-                       & Trim
-                           (First_Column_Number (TR_W.Original_Subp)'Img, Both)
-                       & ":");
+                  LTR_W.TR_Info.Location :=
+                    (File        =>
+                       new String'(Base_Name (OSub.Unit.Get_Filename)),
+                     Line        => First_Line_Number (OSub),
+                     Column      => First_Column_Number (OSub),
+                     Tested_Name => Get_TR_Name_Suffix (OSub));
 
+                  LTR_W.TR_Info.Suffix :=
+                    new Test_Routine_Suffix'
+                      (Suffix_Text       => new String'("overridden at"),
+
+                       Suffix_Location   =>
+                         new Test_Routine_Location'
+                           (File        =>
+                              new String'
+                                (Base_Name
+                                   (TR_W.Original_Type.Unit.Get_Filename)),
+                            Line        =>
+                              First_Line_Number (TR_W.Original_Subp),
+                            Column      =>
+                              First_Column_Number (TR_W.Original_Subp),
+                            Tested_Name => null),
+
+                       Additional_Suffix => null);
                   Suite_Data_List.LTR_List.Append (LTR_W);
                end if;
             end if;
@@ -2659,12 +2681,12 @@ package body Test.Skeleton is
    -----------------------
 
    procedure Gather_Test_Cases
-     (Subp            : Subp_Info;
-      TR_Info         : Test_Routine_Info_Wrapper;
-      Data            : in out Data_Holder;
-      Suite_Data_List : in out Suites_Data_Type;
-      TC_Found        : out Boolean;
-      Instance_Sloc   : String := "")
+     (Subp              : Subp_Info;
+      TR_Info           : Test_Routine_Info_Wrapper;
+      Data              : in out Data_Holder;
+      Suite_Data_List   : in out Suites_Data_Type;
+      TC_Found          : out Boolean;
+      Instance_Location : Test_Routine_Location_Access := null)
    is
 
       Me_TC : constant Trace_Handle :=
@@ -3629,31 +3651,28 @@ package body Test.Skeleton is
          --  Changing tested sloc so it corresponds to test case instead
          --  of tested subprogram
 
-         if Instance_Sloc = "" then
-            TR_Info_Add.TR_Info.Tested_Sloc :=
-              new String'
-                (Base_Name (Data.Unit_File_Name.all)
-                 & ":"
-                 & Trim (First_Line_Number (TC.Elem)'Img, Both)
-                 & ":"
-                 & Trim (First_Column_Number (TC.Elem)'Img, Both)
-                 & ":"
-                 & (if Include_Subp_Name
-                    then "(" & TC.Name.all & ")"
-                    else ""));
+         TR_Info_Add.TR_Info.Test_Name := Get_Test_Name (Subp_Add);
+
+         if Instance_Location = null then
+            TR_Info_Add.TR_Info.Location.File :=
+              new String'(Base_Name (Data.Unit_File_Name.all));
+            TR_Info_Add.TR_Info.Suffix := null;
          else
-            TR_Info_Add.TR_Info.Tested_Sloc :=
-              new String'
-                (Base_Name (Subp.Subp_Declaration.Unit.Get_Filename)
-                 & ":"
-                 & Trim (First_Line_Number (TC.Elem)'Img, Both)
-                 & ":"
-                 & Trim (First_Column_Number (TC.Elem)'Img, Both)
-                 & ":"
-                 & (if Include_Subp_Name then "(" & TC.Name.all & ")" else "")
-                 & " instance at "
-                 & Instance_Sloc);
+            TR_Info_Add.TR_Info.Location.File :=
+              new String'(Base_Name (Subp.Subp_Declaration.Unit.Get_Filename));
+
+            TR_Info_Add.TR_Info.Suffix :=
+              new Test_Routine_Suffix'
+                (Suffix_Text       => new String'("instance at"),
+                 Suffix_Location   => Instance_Location,
+                 Additional_Suffix => null);
+
          end if;
+
+         TR_Info_Add.TR_Info.Location.Line := First_Line_Number (TC.Elem);
+         TR_Info_Add.TR_Info.Location.Column := First_Column_Number (TC.Elem);
+         TR_Info_Add.TR_Info.Location.Tested_Name :=
+           (if Include_Subp_Name then new String'(TC.Name.all) else null);
 
          Suite_Data_List.TR_List.Append (TR_Info_Add);
       end loop;
@@ -7671,16 +7690,21 @@ package body Test.Skeleton is
                                & Trim (Test_Count'Image, Both)),
                           Test_Type_Numb => 1,
                           Nesting        => new String'(Test_Unit_Name),
-                          Tested_Sloc    =>
-                            new String'
-                              (Base_Name (Data.Unit_File_Name.all)
-                               & ":"
-                               & Image
-                                   (Start_Sloc
-                                      (Subp.Subp_Declaration.Sloc_Range))
-                               & ":"
-                               & Get_TR_Name_Suffix
-                                   (Subp.Subp_Declaration.As_Basic_Decl))),
+                          Test_Name      => Get_Test_Name (Subp),
+                          Location       =>
+                            (File        =>
+                               new String'
+                                 (Base_Name (Data.Unit_File_Name.all)),
+                             Line        =>
+                               Start_Sloc (Subp.Subp_Declaration.Sloc_Range)
+                                 .Line,
+                             Column      =>
+                               Start_Sloc (Subp.Subp_Declaration.Sloc_Range)
+                                 .Column,
+                             Tested_Name =>
+                               Get_TR_Name_Suffix
+                                 (Subp.Subp_Declaration.As_Basic_Decl)),
+                          Suffix         => null),
                      Test_Package  => new String'(Test_Unit_Name),
                      Original_Type => No_Ada_Node,
                      Original_Subp => Subp.Subp_Declaration,
@@ -8586,6 +8610,22 @@ package body Test.Skeleton is
 
       return To_Lower (Tmp.all);
    end Sanitize_TC_Name;
+
+   -------------------
+   -- Get_Test_Name --
+   -------------------
+
+   function Get_Test_Name (Subp : Subp_Info) return GNAT.OS_Lib.String_Access
+   is
+   begin
+      return
+        new String'
+          (Test_Routine_Prefix
+           & Subp.Subp_Text_Name.all
+           & (if Subp.Has_TC_Info
+              then "_" & Sanitize_TC_Name (Subp.TC_Info.Name.all)
+              else ""));
+   end Get_Test_Name;
 
    --------------------------
    -- Find_Same_Short_Name --
