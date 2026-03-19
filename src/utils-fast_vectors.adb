@@ -765,6 +765,15 @@ package body Utils.Fast_Vectors is
       return Elems (Container) (1 .. Container.Last);
    end To_Array;
 
+   function To_Vector (Arr : Elements_Array) return Vector is
+      Container : Vector;
+   begin
+      for Item of Arr loop
+         Append (Container, Item);
+      end loop;
+      return Container;
+   end To_Vector;
+
    procedure Append (Container : in out Vector; New_Items : Elements_Array) is
       --  Straightforward code would be:
       --     for X of A loop

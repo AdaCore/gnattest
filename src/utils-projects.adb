@@ -90,9 +90,21 @@ package body Utils.Projects is
    --  argument files.
 
    procedure Get_Sources_From_Project
-     (Prj : GPR2.Project.Tree.Object; Cmd : in out Command_Line);
+     (Prj                 : GPR2.Project.Tree.Object;
+      CLI_Filenames       : in out String_Ref_Vector;
+      Update_All          : Boolean;
+      No_Subprjs          : Boolean;
+      Files_Switch_Passed : Boolean);
    --  Extracts and stores the list of sources of the project to process as
    --  tool arguments.
+   --
+   --  Parameters:
+   --  - Prj: The project we are sourcing from.
+   --  - CLI_Filenames: Filenames passed on the command line.
+   --  - Update_All: True if -U was passed on the CLI.
+   --  - No_Subprjs: True if --no-subprojects was passed on the CLI.
+   --  - Files_Switch_Passed: True if at least one -files parameter was passed
+   --                         on the CLI.
    --
    --  More documentation is needed:
    --
@@ -415,7 +427,23 @@ package body Utils.Projects is
          Parse
            (Cmd_Args, Cmd, Phase => Cmd_Line_2, Collect_File_Names => False);
 
-         Get_Sources_From_Project (My_Project_Tree, Cmd);
+         --  ??? Code detangling: in order to keep 'Cmd' from
+         --  Get_Sources_From_Project, copy the File_Names field of Cmd for
+         --  now. Eventually, the filenames will come from somewhere else.
+
+         declare
+            File_List : String_Ref_Vector :=
+              Utils.Command_Lines.String_Ref_Vectors.To_Vector
+                (Cmd.File_Names);
+         begin
+            Get_Sources_From_Project
+              (My_Project_Tree,
+               File_List,
+               Arg (Cmd) = Update_All,
+               Arg (Cmd) = No_Subprojects,
+               Arg_Length (Cmd, Files) > 0);
+            Cmd.Set_File_Names (File_List);
+         end;
          Set_Global_Result_Dirs;
       end if;
    end Process_Project;
@@ -942,27 +970,26 @@ package body Utils.Projects is
    ------------------------------
 
    procedure Get_Sources_From_Project
-     (Prj : GPR2.Project.Tree.Object; Cmd : in out Command_Line)
+     (Prj                 : GPR2.Project.Tree.Object;
+      CLI_Filenames       : in out String_Ref_Vector;
+      Update_All          : Boolean;
+      No_Subprjs          : Boolean;
+      Files_Switch_Passed : Boolean)
    is
-      All_Update : constant Boolean := Arg (Cmd) = Update_All;
-      No_Subprjs : constant Boolean := Arg (Cmd) = No_Subprojects;
+      All_Update : constant Boolean := Update_All;
 
-      Num_Names : constant Natural := Num_File_Names (Cmd);
+      Num_Names : constant Natural := CLI_Filenames.Last_Index;
       --  Number of File_Names on the command line
 
-      Num_Files_Switches : constant Natural := Arg_Length (Cmd, Files);
-      --  Number of "-files=..." switches on the command line
-
       Argument_File_Specified : constant Boolean :=
-        (Num_Files_Switches > 0
-         or else (not All_Update and then Num_Names > 0));
+        (Files_Switch_Passed or else (not All_Update and then Num_Names > 0));
       --  True if we have source files specified on the command line. If -U
       --  (Update_All) was specified, then the "file name" (if any) is taken
       --  to be the main unit name, not a file name.
 
       CLI_Main_Unit_Names : constant String_Ref_Array :=
-        (if All_Update and then Num_File_Names (Cmd) /= 0
-         then File_Names (Cmd)
+        (if All_Update and then CLI_Filenames.Length /= 0
+         then Utils.Command_Lines.String_Ref_Vectors.To_Array (CLI_Filenames)
          else []);
       --  If "-U main_unit_1 main_unit_2 ..." was specified, this returns the
       --  list of main units. Otherwise (-U was not specified, or was specified
@@ -996,14 +1023,16 @@ package body Utils.Projects is
                if not S.Owning_View.Is_Externally_Built
                  and then S.Language = Ada_Language
                then
-                  Append_File_Name (Cmd, S.Path_Name.String_Value);
+                  Utils.Command_Lines.String_Ref_Vectors.Append
+                    (CLI_Filenames, new String'(S.Path_Name.String_Value));
                end if;
             end loop;
          end;
 
-         if All_Update and then Num_File_Names (Cmd) = 0 then
+         if All_Update and then CLI_Filenames.Length = 0 then
             Cmd_Error
-              (Arg (Cmd, Project_File).all & " does not contain source files");
+              (Prj.Root_Project.Path_Name.String_Value
+               & " does not contain source files");
          end if;
 
       else
@@ -1019,10 +1048,12 @@ package body Utils.Projects is
 
             --  We first need to erase the main unit names from the
             --  command line to avoid duplicates.
-            Clear_File_Names (Cmd);
+            CLI_Filenames :=
+              Utils.Command_Lines.String_Ref_Vectors.Empty_Vector;
 
             for Src of Get_Files_From_Closure (Prj, Mains) loop
-               Append_File_Name (Cmd, Src);
+               Utils.Command_Lines.String_Ref_Vectors.Append
+                 (CLI_Filenames, new String'(Src));
             end loop;
          end;
       end if;

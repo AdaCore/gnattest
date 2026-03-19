@@ -620,6 +620,9 @@ package Utils.Command_Lines is
    --  Returns the sequence of non-switch arguments. They're not necessarily
    --  file names, but they are in most cases, so we call it that.
 
+   procedure Set_File_Names
+     (Cmd : in out Command_Line; Files : String_Ref_Vector);
+
    function Num_File_Names (Cmd : Command_Line) return Natural;
 
    procedure Iter_File_Names

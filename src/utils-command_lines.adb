@@ -1312,6 +1312,12 @@ package body Utils.Command_Lines is
       return To_Array (Cmd.File_Names);
    end File_Names;
 
+   procedure Set_File_Names
+     (Cmd : in out Command_Line; Files : String_Ref_Vector) is
+   begin
+      Cmd.File_Names := Files;
+   end Set_File_Names;
+
    function Num_File_Names (Cmd : Command_Line) return Natural is
    begin
       return Last_Index (Cmd.File_Names);
