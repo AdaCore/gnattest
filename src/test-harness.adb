@@ -4513,7 +4513,7 @@ package body Test.Harness is
             return Over;
          end if;
 
-         if not Is_AUnit_Part (Root_Type_Declaration (Cur_Node).Unit) then
+         if not Is_AUnit_Part (Cur_Node.P_Root_Type.Unit) then
             return Over;
          end if;
 
@@ -4832,7 +4832,7 @@ package body Test.Harness is
       Param_Type_Decl :=
         P_Canonical_Type (Param_Type_Name.P_Referenced_Decl.As_Base_Type_Decl);
 
-      Param_Type_Decl := Root_Type_Declaration (Param_Type_Decl);
+      Param_Type_Decl := Param_Type_Decl.P_Root_Type;
 
       if Param_Type_Decl.Is_Null then
          return False;

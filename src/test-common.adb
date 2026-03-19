@@ -429,8 +429,7 @@ package body Test.Common is
          while not Tagged_Rec.P_Next_Part_For_Decl.Is_Null loop
             Tagged_Rec := Tagged_Rec.P_Next_Part_For_Decl;
          end loop;
-         Root_Ignore :=
-           Root_Type_Declaration (Tagged_Rec.As_Base_Type_Decl).As_Basic_Decl;
+         Root_Ignore := Tagged_Rec.As_Base_Type_Decl.P_Root_Type.As_Basic_Decl;
       end if;
 
       case Kind (F_Subp_Kind (As_Subp_Spec (L_Subp))) is
@@ -790,27 +789,6 @@ package body Test.Common is
 
       return T_Dec;
    end Parent_Type_Declaration;
-
-   ---------------------------
-   -- Root_Type_Declaration --
-   ---------------------------
-
-   function Root_Type_Declaration
-     (Type_Dec : Base_Type_Decl) return Base_Type_Decl
-   is
-      Decl : Base_Type_Decl := Type_Dec;
-   begin
-      while Decl /= No_Base_Type_Decl loop
-
-         if Parent_Type_Declaration (Decl) = No_Base_Type_Decl then
-            return Decl;
-         else
-            Decl := Parent_Type_Declaration (Decl);
-         end if;
-      end loop;
-
-      return No_Base_Type_Decl;
-   end Root_Type_Declaration;
 
    ----------------
    -- Report_Err --

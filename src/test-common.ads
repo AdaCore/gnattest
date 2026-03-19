@@ -142,10 +142,6 @@ package Test.Common is
       Inheritance_Final_Type : Base_Type_Decl) return Natural;
    --  Returns the number of derivations that lead from root type to final type
 
-   function Root_Type_Declaration
-     (Type_Dec : Base_Type_Decl) return Base_Type_Decl;
-   --  Returns root type of the hierarchy
-
    function Is_Private (Node : Ada_Node'Class) return Boolean;
    --  Checks if Node is located in the private part of a package,
    --  a generic package, a task or protected  type or object declaration.
