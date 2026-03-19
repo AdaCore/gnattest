@@ -121,7 +121,7 @@ package Test.Common is
    --  places where it is not desirable (e.g. hashes, marker IDs, etc).
 
    function Get_Subp_Name (Node : Ada_Node'Class) return String;
-   --  if Subp is a subprigram declaration it will return subprogram's name;
+   --  if Subp is a subprogram declaration it will return subprogram's name;
    --  if Subp is an overloaded operator - it's text name
 
    function Get_Subp_FQN (Node : Basic_Decl'Class) return String
@@ -328,6 +328,8 @@ package Test.Common is
    Harness_Dir_Str : GNAT.OS_Lib.String_Access :=
      new String'("gnattest" & GNAT.OS_Lib.Directory_Separator & "harness");
 
+   Source_Root_Str : GNAT.OS_Lib.String_Access := null;
+
    Skeletons_Fail : Boolean := True;
 
    IDE_Package_Present  : Boolean := False;
@@ -335,7 +337,11 @@ package Test.Common is
 
    Tmp_Test_Prj : GNAT.OS_Lib.String_Access := null;
 
-   Reporter_Name : GNAT.OS_Lib.String_Access := new String'("gnattest");
+   type Reporters is (Gnattest, Xml, Junit, Text, Xml_Deprecated);
+
+   subtype Xml_Reporters is Reporters range Xml .. Junit;
+
+   Reporter_Name : Reporters := Gnattest;
 
    Include_Subp_Name : Boolean := False;
    --  Whether the AUnit testcases' names should include the name of the
@@ -359,6 +365,9 @@ package Test.Common is
 
    RTS_Path          : GNAT.OS_Lib.String_Access := new String'("");
    RTS_Attribute_Val : GNAT.OS_Lib.String_Access;
+
+   Object_Directory : GNAT.OS_Lib.String_Access;
+   --  Object directory of the gpr project.
 
    Target_Val : GNAT.OS_Lib.String_Access;
 

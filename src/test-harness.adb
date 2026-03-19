@@ -40,8 +40,7 @@ with GPR2.Path_Name;
 with GPR2.Project.Attribute;
 with GPR2.Project.View;
 
-with Langkit_Support.Slocs; use Langkit_Support.Slocs;
-with Libadalang.Common;     use Libadalang.Common;
+with Libadalang.Common; use Libadalang.Common;
 
 with Test.Skeleton.Source_Table;
 with Test.Mapping;              use Test.Mapping;
@@ -55,6 +54,7 @@ package body Test.Harness is
    Me : constant Trace_Handle := Create ("Harness", Default => Off);
 
    Harness_Dir : String_Access renames Harness_Dir_Str;
+   Test_Dir    : String_Access renames Test_Dir_Name;
 
    use List_Of_Strings;
    Suit_List : List_Of_Strings.List;
@@ -193,8 +193,200 @@ package body Test.Harness is
    -- File_Exists --
    -----------------
 
+   function Reporter_Full_Name return String;
+   --  Returns a String holding the full name of the reporter to be printed.
+
+   function Reporter_Full_Name return String is
+   begin
+      return
+        "AUnit.Reporter."
+        & Reporter_Name'Image
+        & "."
+        & Reporter_Name'Image
+        & "_Reporter";
+   end Reporter_Full_Name;
+
    function File_Exists (Filename : String) return Boolean
    is (Create (+Filename).Is_Readable);
+
+   function Get_Test_File (Test_Unit_Full_Name : String) return String;
+   --  Return the path to the file containing the tests.
+   --  If Source_Root_Str is set and is a prefix of the absolute path
+   --  of the test file, truncate the path by Source_Root_Str to get
+   --  a relative path, else return the absolute path.
+
+   procedure Print_Test_Case_Timer;
+   --  Helper function to print the options activating
+   --  the timer for individual tests.
+
+   procedure Print_Location
+     (Loc            : Test_Routine_Location;
+      Indent         : Natural;
+      Trailing_Comma : Boolean := True);
+   --  Helper function to print the indented location.
+
+   procedure Print_Suffix
+     (Suffix         : Test_Routine_Suffix_Access;
+      Indent         : Natural;
+      Trailing_Comma : Boolean := True);
+   --  Helper function to print the indented suffix.
+
+   procedure Print_Create_Function
+     (Indent              : Natural;
+      Create_Package_Name : String;
+      Test_Package_Name   : String;
+      Test_File           : String;
+      Name                : String;
+      Test_Info           : Test_Routine_Info;
+      Test_Method         : String);
+   --  Helper function to print the arguments of the
+   --  AUnit.Test_Caller.Create function.
+
+   --------------------
+   -- Print_Location --
+   --------------------
+
+   procedure Print_Location
+     (Loc            : Test_Routine_Location;
+      Indent         : Natural;
+      Trailing_Comma : Boolean := True) is
+   begin
+      S_Put (Indent, "(Tested_File => new String'(""" & Loc.File.all & """),");
+      Put_New_Line;
+      S_Put (Indent + 2, "Tested_Line => " & Loc.Line'Image & ",");
+      Put_New_Line;
+      S_Put (Indent + 2, "Tested_Column => " & Loc.Column'Image & ",");
+      Put_New_Line;
+      S_Put
+        (Indent + 2,
+         "Tested_Name => "
+         & (if Loc.Tested_Name = null
+            then "null"
+            else "new String'(""" & Loc.Tested_Name.all & """)"));
+      Put_New_Line;
+      S_Put (Indent, ")" & (if Trailing_Comma then "," else ""));
+      Put_New_Line;
+   end Print_Location;
+
+   ------------------
+   -- Print_Suffix --
+   ------------------
+
+   procedure Print_Suffix
+     (Suffix         : Test_Routine_Suffix_Access;
+      Indent         : Natural;
+      Trailing_Comma : Boolean := True) is
+   begin
+      if Suffix = null then
+         S_Put (Indent, "null,");
+      else
+         S_Put (Indent, "new Test_Suffix'(");
+         Put_New_Line;
+         S_Put (Indent + 2, "Suffix_Text => ");
+         if Suffix.Suffix_Text /= null then
+            S_Put (0, "new String'(""" & Suffix.Suffix_Text.all & """),");
+         else
+            S_Put (0, "null,");
+         end if;
+         Put_New_Line;
+         S_Put (Indent + 2, "Suffix_Location => ");
+         if Suffix.Suffix_Location /= null then
+            S_Put (0, "new Tested_Location'(");
+            Put_New_Line;
+            Print_Location (Suffix.Suffix_Location.all, Indent + 4, False);
+            S_Put (Indent + 2, "),");
+         else
+            S_Put (0, "null,");
+         end if;
+         Put_New_Line;
+         S_Put (Indent + 1, "Additional_Suffix => ");
+         if Suffix.Additional_Suffix /= null then
+            Put_New_Line;
+            Print_Suffix (Suffix.Additional_Suffix, Indent + 2, False);
+         else
+            S_Put (0, "null");
+            Put_New_Line;
+         end if;
+         S_Put (Indent, ")" & (if Trailing_Comma then "," else ""));
+      end if;
+      Put_New_Line;
+   end Print_Suffix;
+
+   ---------------------------
+   -- Print_Create_Function --
+   ---------------------------
+
+   procedure Print_Create_Function
+     (Indent              : Natural;
+      Create_Package_Name : String;
+      Test_Package_Name   : String;
+      Test_File           : String;
+      Name                : String;
+      Test_Info           : Test_Routine_Info;
+      Test_Method         : String) is
+   begin
+      S_Put (Indent, Create_Package_Name & ".Create");
+      Put_New_Line;
+      S_Put (Indent + 2, "(" & Name & ",");
+      Put_New_Line;
+      S_Put (Indent + 2, """" & Test_Info.Test_Name.all & """,");
+      Put_New_Line;
+      S_Put (Indent + 2, """" & Test_Package_Name & """,");
+      Put_New_Line;
+      S_Put (Indent + 2, """" & Test_File & """,");
+      Put_New_Line;
+      Print_Location (Test_Info.Location, Indent + 2);
+      Print_Suffix (Test_Info.Suffix, Indent + 2);
+      S_Put (Indent + 2, Test_Method & ");");
+      Put_New_Line;
+   end Print_Create_Function;
+
+   ---------------------------
+   -- Print_Test_Case_Timer --
+   ---------------------------
+
+   procedure Print_Test_Case_Timer is
+   begin
+      if Show_Test_Duration or Reporter_Name in Xml_Reporters then
+         S_Put (3, "GT_Options.Test_Case_Timer := True;");
+         Put_New_Line;
+      end if;
+   end Print_Test_Case_Timer;
+
+   -------------------
+   -- Get_Test_File --
+   -------------------
+
+   function Get_Test_File (Test_Unit_Full_Name : String) return String is
+      Test_Absolute_Path : constant String :=
+        Object_Directory.all
+        & GNAT.OS_Lib.Directory_Separator
+        & Test_Dir.all
+        & GNAT.OS_Lib.Directory_Separator
+        & Unit_To_File_Name (Test_Unit_Full_Name)
+        & ".ads";
+      Idx                : Natural;
+   begin
+      if Source_Root_Str = null
+        or else Ada.Directories.Exists (Source_Root_Str.all) = False
+      then
+         return Test_Absolute_Path;
+      end if;
+      Idx := Index (Test_Absolute_Path, Source_Root_Str.all);
+      if Idx = 1
+        and then Test_Absolute_Path (Source_Root_Str.all'Length + 1)
+                 = GNAT.OS_Lib.Directory_Separator
+        --  Check that removing the source root from test absolute path
+        --  doesnt cut a directory name in half.
+        --  For example if source root is gnat, the directory gnattest should
+        --  not be cut to test.
+      then
+         return
+           Test_Absolute_Path
+             (Source_Root_Str.all'Length + 2 .. Test_Absolute_Path'Last);
+      end if;
+      return Test_Absolute_Path;
+   end Get_Test_File;
 
    -----------------------------------------
    -- Generate_Global_Config_Pragmas_File --
@@ -489,6 +681,13 @@ package body Test.Harness is
       Put_New_Line;
       S_Put (0, "with AUnit; use AUnit;");
       Put_New_Line;
+      S_Put (0, "with AUnit.Test_Info;");
+      Put_New_Line;
+      S_Put (0, "with Ada.Strings; use Ada.Strings;");
+      Put_New_Line;
+      S_Put (0, "with Ada.Strings.Fixed; use Ada.Strings.Fixed;");
+
+      Put_New_Line;
       Put_New_Line;
 
       S_Put (0, "package body " & Filter_Package_Name & " is");
@@ -568,7 +767,8 @@ package body Test.Harness is
       Put_New_Line;
       S_Put
         (8,
-         "or else Name (AUnit.Simple_Test_Cases.Test_Case'Class (T)) = null");
+         "or else Location (AUnit.Simple_Test_Cases.Test_Case'Class (T))."
+         & "Tested_File = null");
       Put_New_Line;
       S_Put (6, "then");
       Put_New_Line;
@@ -580,9 +780,17 @@ package body Test.Harness is
 
       S_Put (6, "declare");
       Put_New_Line;
+      S_Put (9, "Loc : constant AUnit.Test_Info.Tested_Location :=");
+      Put_New_Line;
+      S_Put (11, "Location (AUnit.Simple_Test_Cases.Test_Case'Class (T));");
+      Put_New_Line;
       S_Put (9, "SLOC : constant String :=");
       Put_New_Line;
-      S_Put (11, "Name (AUnit.Simple_Test_Cases.Test_Case'Class (T)).all;");
+      S_Put
+        (11,
+         "Loc.Tested_File.all & "":"" & "
+         & "Trim(Integer'image(Loc.Tested_Line), Left)"
+         & " & "":"";");
       Put_New_Line;
       S_Put (6, "begin");
       Put_New_Line;
@@ -717,7 +925,7 @@ package body Test.Harness is
 
       S_Put (0, "pragma Ada_2005;");
       Put_New_Line;
-      S_Put (0, "with AUnit.Reporter." & Reporter_Name.all & ";");
+      S_Put (0, "with AUnit.Reporter." & Reporter_Name'Image & ";");
       Put_New_Line;
       S_Put (0, "with AUnit.Run;");
       Put_New_Line;
@@ -781,13 +989,7 @@ package body Test.Harness is
          end if;
       end if;
       Put_New_Line;
-      S_Put
-        (3,
-         "Reporter : AUnit.Reporter."
-         & Reporter_Name.all
-         & "."
-         & Reporter_Name.all
-         & "_Reporter;");
+      S_Put (3, "Reporter : " & Reporter_Full_Name & ";");
       Put_New_Line;
       S_Put (3, "GT_Options : AUnit_Options := Default_Options;");
       Put_New_Line;
@@ -895,16 +1097,23 @@ package body Test.Harness is
       S_Put (0, "begin");
       Put_New_Line;
       Put_New_Line;
+
+      if Reporter_Name in Xml_Reporters then
+         S_Put (3, "GT_Options.Global_Timer := True;");
+      end if;
+      if Reporter_Name = Junit then
+         S_Put (3, "GT_Options.Capture_Standard:= True;");
+      end if;
+      --  Redirect stdout and stderr to include them in the junit xml report.
+      Put_New_Line;
       if Show_Passed_Tests then
          S_Put (3, "GT_Options.Report_Successes := True;");
       else
          S_Put (3, "GT_Options.Report_Successes := False;");
       end if;
       Put_New_Line;
-      if Show_Test_Duration then
-         S_Put (3, "GT_Options.Test_Case_Timer := True;");
-      end if;
-      Put_New_Line;
+      Print_Test_Case_Timer;
+
       if not No_Command_Line then
          S_Put (3, "begin");
          Put_New_Line;
@@ -1255,10 +1464,12 @@ package body Test.Harness is
 
       File_Destination : constant String :=
         (if Path = "" then Harness_Dir.all else Path);
+
+      Test_File : constant String :=
+        Get_Test_File (Data.Test_Unit_Full_Name.all);
    begin
 
       if Data.Generic_Kind then
-
          New_Unit_Name :=
            new String'
              (Data.Test_Unit_Full_Name.all & "." & Generic_Suite_Name);
@@ -1373,6 +1584,8 @@ package body Test.Harness is
       end if;
       Put_New_Line;
       S_Put (0, "with Gnattest_Generated;");
+      Put_New_Line;
+      S_Put (0, "with AUnit.Test_Info; use AUnit.Test_Info;");
       Put_New_Line;
       Put_New_Line;
       S_Put (0, "package body " & New_Unit_Name.all & " is");
@@ -1525,64 +1738,56 @@ package body Test.Harness is
                & Data.TR_List.Element (K).TR_Text_Name.all
                & " :=");
             Put_New_Line;
-            S_Put
-              (8,
-               "Runner_"
-               & Positive_Image (Data.TR_List.Element (K).Test_Type_Numb)
-               & ".Create");
-            Put_New_Line;
-            S_Put (10, " (Instance_Name &");
-            Put_New_Line;
-            S_Put
-              (11,
-               " "" : " & Data.TR_List.Element (K).TR_Text_Name.all & """,");
-            Put_New_Line;
-            S_Put
-              (11,
-               Data.TR_List.Element (K).TR_Text_Name.all
-               & "_"
-               & Positive_Image (Data.TR_List.Element (K).Test_Type_Numb)
-               & "_Access);");
+            Print_Create_Function
+              (Indent              => 8,
+               Create_Package_Name =>
+                 "Runner_"
+                 & Positive_Image (Data.TR_List.Element (K).Test_Type_Numb),
+               Test_Package_Name   => Data.Test_Unit_Full_Name.all,
+               Test_File           => Test_File,
+               Name                =>
+                 " (Instance_Name &"
+                 & ASCII.LF -- Line Feed
+                 & "             "" : " -- Manually add indentation
+                 & Data.TR_List.Element (K).TR_Text_Name.all
+                 & """",
+               Test_Info           => Data.TR_List.Element (K),
+               Test_Method         =>
+                 Data.TR_List.Element (K).TR_Text_Name.all
+                 & "_"
+                 & Positive_Image (Data.TR_List.Element (K).Test_Type_Numb)
+                 & "_Access");
 
          else
 
-            S_Put
-              (6,
-               "Runner_"
-               & Positive_Image (Data.TR_List.Element (K).Test_Type_Numb)
-               & ".Create");
-            Put_New_Line;
-            S_Put
-              (8,
-               "("
-               & Test_Case_Prefix
-               & Positive_Image (K)
-               & "_"
-               & Positive_Image (Data.TR_List.Element (K).Test_Type_Numb)
-               & "_"
-               & Data.TR_List.Element (K).TR_Text_Name.all
-               & ",");
-            Put_New_Line;
-            S_Put (9, """" & Data.TR_List.Element (K).Tested_Sloc.all & """,");
-            Put_New_Line;
-            if Nesting_Difference
-                 (Data.TR_List.Element (K).Nesting.all,
-                  Data.Test_Unit_Full_Name.all)
-              /= ""
-            then
-               S_Put
-                 (9,
-                  Nesting_Difference
-                    (Data.TR_List.Element (K).Nesting.all,
-                     Data.Test_Unit_Full_Name.all)
-                  & "."
-                  & Data.TR_List.Element (K).TR_Text_Name.all
-                  & "'Access);");
-            else
-               S_Put
-                 (9, Data.TR_List.Element (K).TR_Text_Name.all & "'Access);");
-            end if;
-
+            Print_Create_Function
+              (Indent              => 6,
+               Create_Package_Name =>
+                 "Runner_"
+                 & Positive_Image (Data.TR_List.Element (K).Test_Type_Numb),
+               Test_Package_Name   => Data.Test_Unit_Full_Name.all,
+               Test_File           => Test_File,
+               Name                =>
+                 Test_Case_Prefix
+                 & Positive_Image (K)
+                 & "_"
+                 & Positive_Image (Data.TR_List.Element (K).Test_Type_Numb)
+                 & "_"
+                 & Data.TR_List.Element (K).TR_Text_Name.all,
+               Test_Info           => Data.TR_List.Element (K),
+               Test_Method         =>
+                 (if Nesting_Difference
+                       (Data.TR_List.Element (K).Nesting.all,
+                        Data.Test_Unit_Full_Name.all)
+                    /= ""
+                  then
+                    Nesting_Difference
+                      (Data.TR_List.Element (K).Nesting.all,
+                       Data.Test_Unit_Full_Name.all)
+                    & "."
+                    & Data.TR_List.Element (K).TR_Text_Name.all
+                    & "'Access"
+                  else Data.TR_List.Element (K).TR_Text_Name.all & "'Access"));
          end if;
 
          Put_New_Line;
@@ -1607,66 +1812,58 @@ package body Test.Harness is
                & Data.ITR_List.Element (K).TR_Text_Name.all
                & " :=");
             Put_New_Line;
-            S_Put
-              (8,
-               "Runner_"
-               & Positive_Image (Data.ITR_List.Element (K).Test_Type_Numb)
-               & ".Create");
-            Put_New_Line;
-            S_Put (10, "(Instance_Name &");
-            Put_New_Line;
-            S_Put
-              (11,
-               """ (inherited from "
-               & Data.ITR_List.Element (K).TR_Rarent_Unit_Name.all
-               & ") : "
-               & Data.ITR_List.Element (K).TR_Text_Name.all
-               & """,");
-            Put_New_Line;
-            S_Put
-              (11,
-               Data.ITR_List.Element (K).TR_Text_Name.all
-               & "_"
-               & Positive_Image (Data.ITR_List.Element (K).Test_Type_Numb)
-               & "_Access);");
+
+            Print_Create_Function
+              (Indent              => 8,
+               Create_Package_Name =>
+                 "Runner_"
+                 & Positive_Image (Data.ITR_List.Element (K).Test_Type_Numb),
+               Test_Package_Name   => Data.Test_Unit_Full_Name.all,
+               Test_File           => Test_File,
+               Name                =>
+                 "Instance_Name &"
+                 & ASCII.LF -- Line Feed
+                 & "           "" (inherited from "
+                 -- Manually add spaces to indent
+                 & Data.ITR_List.Element (K).TR_Rarent_Unit_Name.all
+                 & ") : "
+                 & Data.ITR_List.Element (K).TR_Text_Name.all
+                 & """",
+               Test_Info           =>
+                 Test_Routine_Info (Data.ITR_List.Element (K)),
+               Test_Method         =>
+                 Data.ITR_List.Element (K).TR_Text_Name.all
+                 & "_"
+                 & Positive_Image (Data.ITR_List.Element (K).Test_Type_Numb)
+                 & "_Access");
          else
-
-            S_Put
-              (6,
-               "Runner_"
-               & Positive_Image (Data.ITR_List.Element (K).Test_Type_Numb)
-               & ".Create");
-            Put_New_Line;
-            S_Put
-              (8,
-               "("
-               & Test_Case_Prefix
-               & Positive_Image (K)
-               & "i_"
-               & Positive_Image (Data.ITR_List.Element (K).Test_Type_Numb)
-               & "_"
-               & Data.ITR_List.Element (K).TR_Text_Name.all
-               & ",");
-            Put_New_Line;
-
-            S_Put
-              (9, """" & Data.ITR_List.Element (K).Tested_Sloc.all & """,");
-            Put_New_Line;
-            if Nesting_Difference
-                 (Current_Type.Nesting.all, Data.Test_Unit_Full_Name.all)
-              = ""
-            then
-               S_Put
-                 (9, Data.ITR_List.Element (K).TR_Text_Name.all & "'Access);");
-            else
-               S_Put
-                 (9,
-                  Nesting_Difference
-                    (Current_Type.Nesting.all, Data.Test_Unit_Full_Name.all)
-                  & "."
-                  & Data.ITR_List.Element (K).TR_Text_Name.all
-                  & "'Access);");
-            end if;
+            Print_Create_Function
+              (Indent              => 6,
+               Create_Package_Name =>
+                 "Runner_"
+                 & Positive_Image (Data.ITR_List.Element (K).Test_Type_Numb),
+               Test_Package_Name   => Data.Test_Unit_Full_Name.all,
+               Test_File           => Test_File,
+               Name                =>
+                 Test_Case_Prefix
+                 & Positive_Image (K)
+                 & "i_"
+                 & Positive_Image (Data.ITR_List.Element (K).Test_Type_Numb)
+                 & "_"
+                 & Data.ITR_List.Element (K).TR_Text_Name.all,
+               Test_Info           =>
+                 Test_Routine_Info (Data.ITR_List.Element (K)),
+               Test_Method         =>
+                 (if Nesting_Difference
+                       (Current_Type.Nesting.all, Data.Test_Unit_Full_Name.all)
+                    = ""
+                  then Data.ITR_List.Element (K).TR_Text_Name.all & "'Access"
+                  else
+                    Nesting_Difference
+                      (Current_Type.Nesting.all, Data.Test_Unit_Full_Name.all)
+                    & "."
+                    & Data.ITR_List.Element (K).TR_Text_Name.all
+                    & "'Access"));
 
          end if;
 
@@ -1972,7 +2169,7 @@ package body Test.Harness is
          Put_New_Line;
          S_Put (0, "with Gnattest_Generated.Persistent;");
          Put_New_Line;
-         S_Put (0, "with AUnit.Reporter." & Reporter_Name.all & ";");
+         S_Put (0, "with AUnit.Reporter." & Reporter_Name'Image & ";");
          Put_New_Line;
          S_Put (0, "with AUnit.Run;");
          Put_New_Line;
@@ -2056,14 +2253,7 @@ package body Test.Harness is
               (3, "procedure Runner is new AUnit.Run.Test_Runner (Suite);");
          end if;
          Put_New_Line;
-
-         S_Put
-           (3,
-            "Reporter : AUnit.Reporter."
-            & Reporter_Name.all
-            & "."
-            & Reporter_Name.all
-            & "_Reporter;");
+         S_Put (3, "Reporter : " & Reporter_Full_Name & ";");
          Put_New_Line;
          S_Put (3, "GT_Options : AUnit_Options := Default_Options;");
          Put_New_Line;
@@ -2075,17 +2265,16 @@ package body Test.Harness is
 
          S_Put (0, "begin");
          Put_New_Line;
+         S_Put (3, "GT_Options.Global_Timer := True;");
+         Put_New_Line;
          if Show_Passed_Tests then
             S_Put (3, "GT_Options.Report_Successes := True;");
          else
             S_Put (3, "GT_Options.Report_Successes := False;");
          end if;
          Put_New_Line;
-         if Show_Test_Duration then
-            S_Put (3, "GT_Options.Test_Case_Timer := True;");
-            Put_New_Line;
-         end if;
-         Put_New_Line;
+         Print_Test_Case_Timer;
+
          S_Put (3, "Gnattest_Generated.Persistent.Global_Set_Up;");
          Put_New_Line;
 
@@ -2122,6 +2311,9 @@ package body Test.Harness is
       procedure Process_Test_Routine (Current_TR : Test_Routine_Info'Class) is
          Current_Type : constant Test_Type_Info :=
            Data.Test_Types.Element (Current_TR.Test_Type_Numb);
+
+         Test_File : constant String :=
+           Get_Test_File (Data.Test_Unit_Full_Name.all);
 
          New_Unit_Name : String_Access;
          New_Unit_Dir  : String_Access;
@@ -2173,9 +2365,11 @@ package body Test.Harness is
          end if;
          S_Put (0, "with Gnattest_Generated;");
          Put_New_Line;
+         S_Put (0, "with AUnit.Test_Info; use AUnit.Test_Info;");
+         Put_New_Line;
          S_Put (0, "with Gnattest_Generated.Persistent;");
          Put_New_Line;
-         S_Put (0, "with AUnit.Reporter." & Reporter_Name.all & ";");
+         S_Put (0, "with AUnit.Reporter." & Reporter_Name'Image & ";");
          Put_New_Line;
          S_Put (0, "with AUnit.Run;");
          Put_New_Line;
@@ -2222,13 +2416,14 @@ package body Test.Harness is
          Put_New_Line;
          S_Put (3, "begin");
          Put_New_Line;
-         S_Put (6, "Caller.Create");
-         Put_New_Line;
-         S_Put (8, "(Local_Test_Case,");
-         Put_New_Line;
-         S_Put (9, """" & Current_TR.Tested_Sloc.all & """,");
-         Put_New_Line;
-         S_Put (9, Current_TR.TR_Text_Name.all & "'Access);");
+         Print_Create_Function
+           (Indent              => 6,
+            Create_Package_Name => "Caller",
+            Test_Package_Name   => Data.Test_Unit_Full_Name.all,
+            Test_File           => Test_File,
+            Name                => "Local_Test_Case",
+            Test_Info           => Test_Routine_Info (Current_TR),
+            Test_Method         => Current_TR.TR_Text_Name.all & "'Access");
          Put_New_Line;
          Put_New_Line;
          S_Put (6, "Add_Test (Result'Access, Local_Test_Case'Access);");
@@ -2251,15 +2446,10 @@ package body Test.Harness is
          end if;
          Put_New_Line;
 
-         S_Put
-           (3,
-            "Reporter : AUnit.Reporter."
-            & Reporter_Name.all
-            & "."
-            & Reporter_Name.all
-            & "_Reporter;");
+         S_Put (3, "Reporter : " & Reporter_Full_Name & ";");
          Put_New_Line;
          S_Put (3, "GT_Options : AUnit_Options := Default_Options;");
+
          Put_New_Line;
          if Add_Exit_Status and then not No_Command_Line then
             Put_New_Line;
@@ -2269,17 +2459,16 @@ package body Test.Harness is
 
          S_Put (0, "begin");
          Put_New_Line;
+         S_Put (3, "GT_Options.Global_Timer := True;");
+         Put_New_Line;
          if Show_Passed_Tests then
             S_Put (3, "GT_Options.Report_Successes := True;");
          else
             S_Put (3, "GT_Options.Report_Successes := False;");
          end if;
          Put_New_Line;
-         if Show_Test_Duration then
-            S_Put (3, "GT_Options.Test_Case_Timer := True;");
-            Put_New_Line;
-         end if;
-         Put_New_Line;
+         Print_Test_Case_Timer;
+
          S_Put (3, "Gnattest_Generated.Persistent.Global_Set_Up;");
          Put_New_Line;
          if Add_Exit_Status and then not No_Command_Line then
@@ -2436,6 +2625,9 @@ package body Test.Harness is
       New_Unit_Name : String_Access;
       New_Unit_Dir  : String_Access;
 
+      Test_File : constant String :=
+        Get_Test_File (Data.Test_Unit_Full_Name.all);
+
       function Get_SPI
         (Current_TR    : Test_Routine_Info'Class;
          New_Unit_Dir  : String_Access;
@@ -2512,9 +2704,11 @@ package body Test.Harness is
          Put_New_Line;
          S_Put (0, "with Gnattest_Generated;");
          Put_New_Line;
+         S_Put (0, "with AUnit.Test_Info; use AUnit.Test_Info;");
+         Put_New_Line;
          S_Put (0, "with Gnattest_Generated.Persistent;");
          Put_New_Line;
-         S_Put (0, "with AUnit.Reporter." & Reporter_Name.all & ";");
+         S_Put (0, "with AUnit.Reporter." & Reporter_Name'Image & ";");
          Put_New_Line;
          S_Put (0, "with AUnit.Run;");
          Put_New_Line;
@@ -2622,20 +2816,20 @@ package body Test.Harness is
          for I in 1 .. Current_Type.Max_Inheritance_Depth loop
             Type_Ancestor := Parent_Type_Declaration (Type_Ancestor);
 
-            S_Put (6, "Caller.Create");
-            Put_New_Line;
-            S_Put
-              (8, "(Local_Test_Case_" & Trim (Integer'Image (I), Both) & ",");
-            Put_New_Line;
-            S_Put (9, """" & Current_TR.Tested_Sloc.all & """,");
-            Put_New_Line;
-            S_Put
-              (9,
-               "Convert ("
-               & Type_Test_Package (Type_Ancestor)
-               & "."
-               & Current_TR.TR_Text_Name.all
-               & "'Access));");
+            Print_Create_Function
+              (Indent              => 6,
+               Create_Package_Name => "Caller",
+               Test_Package_Name   => Data.Test_Unit_Full_Name.all,
+               Test_File           => Test_File,
+               Name                =>
+                 "Local_Test_Case_" & Trim (Integer'Image (I), Both),
+               Test_Info           => Test_Routine_Info (Current_TR),
+               Test_Method         =>
+                 "Convert ("
+                 & Type_Test_Package (Type_Ancestor)
+                 & "."
+                 & Current_TR.TR_Text_Name.all
+                 & "'Access)");
             Put_New_Line;
          end loop;
 
@@ -2667,13 +2861,7 @@ package body Test.Harness is
          end if;
          Put_New_Line;
 
-         S_Put
-           (3,
-            "Reporter : AUnit.Reporter."
-            & Reporter_Name.all
-            & "."
-            & Reporter_Name.all
-            & "_Reporter;");
+         S_Put (3, "Reporter : " & Reporter_Full_Name & ";");
          Put_New_Line;
          S_Put (3, "GT_Options : AUnit_Options := Default_Options;");
          Put_New_Line;
@@ -2685,17 +2873,16 @@ package body Test.Harness is
 
          S_Put (0, "begin");
          Put_New_Line;
+         S_Put (3, "GT_Options.Global_Timer := True;");
+         Put_New_Line;
          if Show_Passed_Tests then
             S_Put (3, "GT_Options.Report_Successes := True;");
          else
             S_Put (3, "GT_Options.Report_Successes := False;");
          end if;
          Put_New_Line;
-         if Show_Test_Duration then
-            S_Put (3, "GT_Options.Test_Case_Timer := True;");
-            Put_New_Line;
-         end if;
-         Put_New_Line;
+         Print_Test_Case_Timer;
+
          S_Put (3, "Gnattest_Generated.Persistent.Global_Set_Up;");
          Put_New_Line;
          if Add_Exit_Status and then not No_Command_Line then
@@ -4432,20 +4619,28 @@ package body Test.Harness is
          Test_Routine.TR_Declaration := Node.As_Ada_Node;
          Test_Routine.TR_Text_Name := new String'(Node_Image (Name));
          Test_Routine.Nesting := new String'(Get_Nesting (Node));
+         Test_Routine.Test_Name :=
+           new String'(Test_Routine_Prefix & Test.Common.Get_Subp_Name (Node));
 
          declare
             Subp_Span : constant Source_Location_Range := Node.Sloc_Range;
          begin
-            Test_Routine.Tested_Sloc :=
-              new String'
-                (Base_Name (Data.Test_Unit_File_Name.all)
-                 & ":"
-                 & Trim (Subp_Span.Start_Line'Img, Both)
-                 & ":"
-                 & Trim (Subp_Span.Start_Column'Img, Both)
-                 & ": "
-                 & Test_Routine.TR_Text_Name.all
-                 & ":");
+
+            Test_Routine.Location :=
+              (File        =>
+                 new String'(Base_Name (Data.Test_Unit_File_Name.all)),
+               Line        => Subp_Span.Start_Line,
+               Column      => Subp_Span.Start_Column,
+               Tested_Name => null);
+
+            Test_Routine.Suffix :=
+              (if Test_Routine.TR_Text_Name = null
+               then null
+               else
+                 new Test_Routine_Suffix'
+                   (Suffix_Text       => Test_Routine.TR_Text_Name,
+                    Suffix_Location   => null,
+                    Additional_Suffix => null));
          end;
 
          Owner_Decl :=
@@ -4701,6 +4896,9 @@ package body Test.Harness is
       New_Unit_Name : constant String :=
         Data.Test_Unit_Full_Name.all & "." & Substitution_Suite_Name;
 
+      Test_File : constant String :=
+        Get_Test_File (Data.Test_Unit_Full_Name.all);
+
       Type_Ancestor : Base_Type_Decl;
 
       package Include_Sets renames String_Set;
@@ -4834,6 +5032,8 @@ package body Test.Harness is
       S_Put (0, "with Ada.Unchecked_Conversion;");
       Put_New_Line;
       S_Put (0, "with Gnattest_Generated;");
+      Put_New_Line;
+      S_Put (0, "with AUnit.Test_Info; use AUnit.Test_Info;");
       Put_New_Line;
       Put_New_Line;
 
@@ -4978,30 +5178,28 @@ package body Test.Harness is
             Type_Ancestor := Parent_Type_Declaration (Type_Ancestor);
             PUnit_Im := new String'(Type_Test_Package (Type_Ancestor));
 
-            S_Put
-              (6, "Runner_" & Positive_Image (Current_TT_Number) & ".Create");
-            Put_New_Line;
-            S_Put
-              (8,
-               "("
-               & Test_Case_Prefix
-               & Positive_Image (Current_TT_Number)
-               & "_"
-               & Data.LTR_List.Element (K).TR_Text_Name.all
-               & "_"
-               & Trim (Integer'Image (Depth), Both)
-               & ",");
-            Put_New_Line;
-            S_Put
-              (9, """" & Data.LTR_List.Element (K).Tested_Sloc.all & """,");
-            Put_New_Line;
-            S_Put
-              (9,
-               "Convert ("
-               & PUnit_Im.all
-               & "."
-               & Data.LTR_List.Element (K).TR_Text_Name.all
-               & "'Access));");
+            Print_Create_Function
+              (Indent              => 6,
+               Create_Package_Name =>
+                 "Runner_" & Positive_Image (Current_TT_Number),
+               Test_Package_Name   => Data.Test_Unit_Full_Name.all,
+               Test_File           => Test_File,
+               Name                =>
+                 Test_Case_Prefix
+                 & Positive_Image (Current_TT_Number)
+                 & "_"
+                 & Data.LTR_List.Element (K).TR_Text_Name.all
+                 & "_"
+                 & Trim (Integer'Image (Depth), Both),
+               Test_Info           =>
+                 Test_Routine_Info (Data.LTR_List.Element (K)),
+               Test_Method         =>
+                 "Convert ("
+                 & PUnit_Im.all
+                 & "."
+                 & Data.LTR_List.Element (K).TR_Text_Name.all
+                 & "'Access)");
+
             Put_New_Line;
 
             Free (PUnit_Im);
