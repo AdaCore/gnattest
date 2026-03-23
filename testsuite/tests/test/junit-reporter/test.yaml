@@ -2,5 +2,6 @@ description:
     Test --reporter switch in non-monolyth modes.
 
 driver: shell_script
+canonicalize_backslashes: True
 baseline_regexp: True
 
