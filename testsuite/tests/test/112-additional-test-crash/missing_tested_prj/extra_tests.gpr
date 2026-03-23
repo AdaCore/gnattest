@@ -1,0 +1,7 @@
+with "aunit.gpr";
+--  missing with "../root.gpr";
+
+project Extra_Tests is
+   for Source_Dirs use (".");
+   for Object_Dir use "extra_obj";
+end Extra_Tests;
