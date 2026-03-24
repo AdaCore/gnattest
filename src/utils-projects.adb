@@ -115,8 +115,8 @@ package body Utils.Projects is
    --
    --  ??? Extended projects???
 
-   procedure Extract_Gnattest_Options
-     (Prj : GPR2.Project.Tree.Object; Cmd : in out Command_Line);
+   function Extract_Gnattest_Options
+     (Prj : GPR2.Project.Tree.Object; Cmd : Command_Line) return String_Vector;
    --  Extract gnattest options from the Test.Switches/Default_Switches/
    --  Gnattest_Switches project attributes.
 
@@ -417,7 +417,18 @@ package body Utils.Projects is
       --  project itself.
 
       else
-         Extract_Gnattest_Options (My_Project_Tree, Cmd);
+         declare
+            In_Prj_Switches : constant String_Vector :=
+              Extract_Gnattest_Options (My_Project_Tree, Cmd);
+         begin
+            if not In_Prj_Switches.Is_Empty then
+               Parse
+                 (In_Prj_Switches,
+                  Cmd,
+                  Phase              => Project_File,
+                  Collect_File_Names => False);
+            end if;
+         end;
 
          --  Now we need to Parse again, so command-line args override project
          --  file args. This needs to be done before getting sources from the
@@ -1063,8 +1074,8 @@ package body Utils.Projects is
    -- Extract_Gnattest_Options --
    ------------------------------
 
-   procedure Extract_Gnattest_Options
-     (Prj : GPR2.Project.Tree.Object; Cmd : in out Command_Line)
+   function Extract_Gnattest_Options
+     (Prj : GPR2.Project.Tree.Object; Cmd : Command_Line) return String_Vector
    is
       function Process_Attr
         (Id    : Q_Attribute_Id;
@@ -1112,13 +1123,8 @@ package body Utils.Projects is
             end if;
          end;
       end if;
-      if not Project_Switches.Is_Empty then
-         Parse
-           (Project_Switches,
-            Cmd,
-            Phase              => Project_File,
-            Collect_File_Names => False);
-      end if;
+
+      return Project_Switches;
    end Extract_Gnattest_Options;
 
 end Utils.Projects;
