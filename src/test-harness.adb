@@ -251,7 +251,7 @@ package body Test.Harness is
       Indent         : Natural;
       Trailing_Comma : Boolean := True) is
    begin
-      S_Put (Indent, "(Tested_File => new String'(""" & Loc.File.all & """),");
+      S_Put (Indent, "(Tested_File => Format (""" & Loc.File.all & """),");
       Put_New_Line;
       S_Put (Indent + 2, "Tested_Line => " & Loc.Line'Image & ",");
       Put_New_Line;
@@ -262,7 +262,7 @@ package body Test.Harness is
          "Tested_Name => "
          & (if Loc.Tested_Name = null
             then "null"
-            else "new String'(""" & Loc.Tested_Name.all & """)"));
+            else "Format (""" & Loc.Tested_Name.all & """)"));
       Put_New_Line;
       S_Put (Indent, ")" & (if Trailing_Comma then "," else ""));
       Put_New_Line;
@@ -284,7 +284,7 @@ package body Test.Harness is
          Put_New_Line;
          S_Put (Indent + 2, "Suffix_Text => ");
          if Suffix.Suffix_Text /= null then
-            S_Put (0, "new String'(""" & Suffix.Suffix_Text.all & """),");
+            S_Put (0, "Format (""" & Suffix.Suffix_Text.all & """),");
          else
             S_Put (0, "null,");
          end if;
@@ -1583,6 +1583,8 @@ package body Test.Harness is
          S_Put (0, "with AUnit.Test_Caller;");
       end if;
       Put_New_Line;
+      S_Put (0, "with AUnit; use AUnit;");
+      Put_New_Line;
       S_Put (0, "with Gnattest_Generated;");
       Put_New_Line;
       S_Put (0, "with AUnit.Test_Info; use AUnit.Test_Info;");
@@ -2363,6 +2365,8 @@ package body Test.Harness is
             S_Put (0, "with AUnit.Test_Caller;");
             Put_New_Line;
          end if;
+         S_Put (0, "with AUnit; use AUnit;");
+         Put_New_Line;
          S_Put (0, "with Gnattest_Generated;");
          Put_New_Line;
          S_Put (0, "with AUnit.Test_Info; use AUnit.Test_Info;");
@@ -2376,8 +2380,6 @@ package body Test.Harness is
          S_Put (0, "with AUnit.Options; use AUnit.Options;");
          Put_New_Line;
          if Add_Exit_Status and then not No_Command_Line then
-            S_Put (0, "with AUnit; use AUnit;");
-            Put_New_Line;
             S_Put (0, "with Ada.Command_Line;");
             Put_New_Line;
          end if;
@@ -2702,6 +2704,10 @@ package body Test.Harness is
          Put_New_Line;
          S_Put (0, "with AUnit.Test_Caller;");
          Put_New_Line;
+         S_Put (0, "with AUnit; use AUnit;");
+         Put_New_Line;
+         S_Put (0, "with AUnit.Test_Caller;");
+         Put_New_Line;
          S_Put (0, "with Gnattest_Generated;");
          Put_New_Line;
          S_Put (0, "with AUnit.Test_Info; use AUnit.Test_Info;");
@@ -2717,7 +2723,6 @@ package body Test.Harness is
          S_Put (0, "with Ada.Unchecked_Conversion;");
          Put_New_Line;
          if Add_Exit_Status and then not No_Command_Line then
-            S_Put (0, "with AUnit; use AUnit;");
             Put_New_Line;
             S_Put (0, "with Ada.Command_Line;");
             Put_New_Line;
@@ -5027,6 +5032,8 @@ package body Test.Harness is
       S_Put (0, GT_Marker_Begin);
       Put_New_Line;
 
+      S_Put (0, "with AUnit; use AUnit;");
+      Put_New_Line;
       S_Put (0, "with AUnit.Test_Caller;");
       Put_New_Line;
       S_Put (0, "with Ada.Unchecked_Conversion;");
