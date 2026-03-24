@@ -28,40 +28,42 @@ generic
 package TGen.Templates is
 
    package Binary_Marshalling is
-      Array_Read_Write_Template        : constant String :=
+      Array_Read_Write_Template     : constant String :=
         Template_Folder & "array_read_write.tmplt";
-      Component_Read_Write_Template    : constant String :=
+      Component_Read_Write_Template : constant String :=
         Template_Folder & "component_read_write.tmplt";
-      Composite_Base_Spec_Template     : constant String :=
+      Composite_Base_Spec_Template  : constant String :=
         Template_Folder & "composite_base_spec.tmplt";
-      Header_Body_Template             : constant String :=
+      Header_Body_Template          : constant String :=
         Template_Folder & "header_body.tmplt";
-      Header_Private_Template          : constant String :=
+      Header_Private_Template       : constant String :=
         Template_Folder & "header_private.tmplt";
-      Default_Header_Spec_Template     : constant String :=
+      Default_Header_Spec_Template  : constant String :=
         Template_Folder & "default_header_spec.tmplt";
-      Header_Spec_Template             : constant String :=
+      Header_Spec_Template          : constant String :=
         Template_Folder & "header_spec.tmplt";
-      Header_Wrappers_Body_Template    : constant String :=
+      Header_Wrappers_Body_Template : constant String :=
         Template_Folder & "header_wrappers_body.tmplt";
-      Header_Wrappers_Spec_Template    : constant String :=
+      Header_Wrappers_Spec_Template : constant String :=
         Template_Folder & "header_wrappers_spec.tmplt";
-      In_Out_Body_Template             : constant String :=
+      In_Out_Body_Template          : constant String :=
         Template_Folder & "in_out_body.tmplt";
-      In_Out_Spec_Template             : constant String :=
+      In_Out_Spec_Template          : constant String :=
         Template_Folder & "in_out_spec.tmplt";
-      Record_Read_Write_Template       : constant String :=
+      Record_Read_Write_Template    : constant String :=
         Template_Folder & "record_read_write.tmplt";
-      Scalar_Base_Spec_Template        : constant String :=
+      Scalar_Base_Spec_Template     : constant String :=
         Template_Folder & "scalar_base_spec.tmplt";
-      Scalar_Base_Private_Template     : constant String :=
+      Scalar_Base_Private_Template  : constant String :=
         Template_Folder & "scalar_base_private.tmplt";
-      Scalar_Read_Write_Template       : constant String :=
+      Scalar_Read_Write_Template    : constant String :=
         Template_Folder & "scalar_read_write.tmplt";
-      Variant_Read_Write_Template      : constant String :=
+      Variant_Read_Write_Template   : constant String :=
         Template_Folder & "variant_read_write.tmplt";
-      Derived_Private_Subtype_Template : constant String :=
-        Template_Folder & "derived_private_subtype.tmplt";
+      Der_Priv_Sub_Spec_Template    : constant String :=
+        Template_Folder & "derived_private_subtype_spec.tmplt";
+      Der_Priv_Sub_Body_Template    : constant String :=
+        Template_Folder & "derived_private_subtype_body.tmplt";
    end Binary_Marshalling;
 
    package JSON_Marshalling is
@@ -99,8 +101,10 @@ package TGen.Templates is
         Template_Folder & "variant_read_write.tmplt";
       Function_TC_Dump_Template         : constant String :=
         Template_Folder & "function_tc_dump.tmplt";
-      Derived_Private_Subtype_Template  : constant String :=
-        Template_Folder & "derived_private_subtype.tmplt";
+      Der_Priv_Sub_Spec_Template        : constant String :=
+        Template_Folder & "derived_private_subtype_spec.tmplt";
+      Der_Priv_Sub_Body_Template        : constant String :=
+        Template_Folder & "derived_private_subtype_body.tmplt";
    end JSON_Marshalling;
 
    package Type_Representation is

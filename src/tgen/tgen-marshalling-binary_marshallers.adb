@@ -186,9 +186,10 @@ package body TGen.Marshalling.Binary_Marshallers is
 
       procedure Print_Derived_Private_Subtype (Assocs : Translate_Table) is
       begin
+         Put_Line (Spec_Part, Parse (Der_Priv_Sub_Spec_Template, Assocs));
+         New_Line (Spec_Part);
+         Put_Line (Body_Part, Parse (Der_Priv_Sub_Body_Template, Assocs));
          New_Line (Body_Part);
-         Put_Line
-           (Body_Part, Parse (Derived_Private_Subtype_Template, Assocs));
       end Print_Derived_Private_Subtype;
 
       ------------------
