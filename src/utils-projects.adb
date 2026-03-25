@@ -72,8 +72,9 @@ package body Utils.Projects is
    My_Project_Tree : aliased GPR2.Project.Tree.Object;
    --  Project tree for the user project
 
-   function Has_Ada_Mains_Only (Prj : GPR2.Project.Tree.Object) return Boolean;
-   --  Checks that root project has mains specified and all of them
+   function Has_Mains_And_Ada_Only
+     (Prj : GPR2.Project.Tree.Object) return Boolean;
+   --  Checks that root project has at least one main specified and all of them
    --  are Ada mains, no C/C++ or other languages.
 
    function Get_Main_Files
@@ -784,7 +785,8 @@ package body Utils.Projects is
    -- Has_Ada_Mains_Only --
    ------------------------
 
-   function Has_Ada_Mains_Only (Prj : GPR2.Project.Tree.Object) return Boolean
+   function Has_Mains_And_Ada_Only
+     (Prj : GPR2.Project.Tree.Object) return Boolean
    is
       Mains : constant GPR2.Build.Compilation_Unit.Unit_Location_Vector :=
         Prj.Root_Project.Mains;
@@ -796,7 +798,7 @@ package body Utils.Projects is
         and then (for all Main of Mains =>
                     Prj.Root_Project.Visible_Source (Main.Source).Language
                     = Ada_Language);
-   end Has_Ada_Mains_Only;
+   end Has_Mains_And_Ada_Only;
 
    --------------------
    -- Get_Main_Files --
@@ -1017,7 +1019,8 @@ package body Utils.Projects is
 
       if No_Subprjs
         or else (CLI_Main_Unit_Names'Length = 0
-                 and then (All_Update or else not Has_Ada_Mains_Only (Prj)))
+                 and then (All_Update
+                           or else not Has_Mains_And_Ada_Only (Prj)))
       then
 
          --  IF --no-subprojects is passed, or there is no Main provided from
