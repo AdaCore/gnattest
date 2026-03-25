@@ -1,0 +1,13 @@
+@@--  Template for input and output marshalling functions for types deriving
+@@--  from a private parent type.
+@@--  @_GLOBAL_PREFIX_@ Prefix for all public TGen entities of the unit.
+@@--  @_TY_PREFIX_@ Prefix for all entities of the current type.
+@@--  @_TY_NAME_@ Name of the current type.
+
+   procedure @_TY_PREFIX_@_Read
+      (@_GLOBAL_PREFIX_@_JSON : TGen.JSON.JSON_Value;
+       @_GLOBAL_PREFIX_@_V    : out TGen.TGen_Std.@_TY_NAME_@);
+
+   procedure @_TY_PREFIX_@_Write
+      (@_GLOBAL_PREFIX_@_JSON : in out TGen.JSON.JSON_Value;
+       @_GLOBAL_PREFIX_@_V    : TGen.TGen_Std.@_TY_NAME_@);
