@@ -122,8 +122,8 @@ package body Utils.Projects is
    --  Gnattest_Switches project attributes.
 
    function Load_CLI_Project
-     (Cmd : in out Command_Line; Global_Report_Dir : out String_Ref)
-      return GPR2.Project.Tree.Object;
+     (Cmd : Command_Line) return GPR2.Project.Tree.Object;
+   --  Load and return the project file passed as -P. Assumes -P was given.
 
    -----------------
    -- Attr_String --
@@ -309,8 +309,7 @@ package body Utils.Projects is
    ----------------------
 
    function Load_CLI_Project
-     (Cmd : in out Command_Line; Global_Report_Dir : out String_Ref)
-      return GPR2.Project.Tree.Object
+     (Cmd : Command_Line) return GPR2.Project.Tree.Object
    is
 
       Prj_Tree : GPR2.Project.Tree.Object;
@@ -322,9 +321,6 @@ package body Utils.Projects is
       --  as a parameter of '--aggregated_project_file option' (which is
       --  supposed to be a (non-aggregate) project aggregated by
       --  My_Project_Tree.
-
-      procedure Set_Global_Result_Dirs;
-      --  Sets the directory to place the global tool results into.
 
       -----------------------
       -- Load_Tool_Project --
@@ -359,29 +355,6 @@ package body Utils.Projects is
          pragma Assert (Prj_Tree.Root_Project.Kind /= GPR2.K_Aggregate);
       end Load_Aggregated_Project;
 
-      ----------------------------
-      -- Set_Global_Result_Dirs --
-      ----------------------------
-
-      procedure Set_Global_Result_Dirs is
-         Global_Report_Dir : Virtual_File;
-         Root_Prj          : constant GPR2.Project.View.Object :=
-           Prj_Tree.Root_Project;
-      begin
-         --  TODO??? simplify this code and assume we always have an object
-         --  directory.
-
-         Global_Report_Dir := Root_Prj.Object_Directory.Virtual_File;
-
-         if Global_Report_Dir = No_File then
-            Global_Report_Dir :=
-              GNATCOLL.VFS.Create
-                (GNATCOLL.VFS."+" (String (Root_Prj.Path_Name.Dir_Name)));
-         end if;
-         Load_CLI_Project.Global_Report_Dir :=
-           new String'(GNATCOLL.VFS."+" (Global_Report_Dir.Full_Name));
-      end Set_Global_Result_Dirs;
-
       --  Start of processing for Load_CLI_Project
 
    begin
@@ -411,12 +384,6 @@ package body Utils.Projects is
          if Arg (Cmd) = Update_All then
             Cmd_Error ("'-U' cannot be specified for aggregate project");
          end if;
-
-      --  Information in 'else' below is not extracted from the aggregate
-      --  project itself.
-
-      else
-         Set_Global_Result_Dirs;
       end if;
 
       return Prj_Tree;
@@ -683,7 +650,7 @@ package body Utils.Projects is
       begin
          if Arg (Cmd, Project_File) /= null then
 
-            My_Project_Tree := Load_CLI_Project (Cmd, Global_Report_Dir);
+            My_Project_Tree := Load_CLI_Project (Cmd);
 
             if My_Project_Tree.Root_Project.Kind not in Aggregate_Kind then
 
@@ -730,6 +697,28 @@ package body Utils.Projects is
                      Arg (Cmd) = No_Subprojects,
                      Arg_Length (Cmd, Files) > 0);
                   Cmd.Set_File_Names (File_List);
+               end;
+
+               --  Set the directory to place the global tool results into.
+
+               declare
+                  Root_Prj               : constant GPR2.Project.View.Object :=
+                    My_Project_Tree.Root_Project;
+                  Global_Report_Dir_File : Virtual_File :=
+                    Root_Prj.Object_Directory.Virtual_File;
+               begin
+                  --  TODO??? simplify this code and assume we always have an
+                  --  object directory.
+
+                  if Global_Report_Dir_File = No_File then
+                     Global_Report_Dir_File :=
+                       GNATCOLL.VFS.Create
+                         (GNATCOLL.VFS."+"
+                            (String (Root_Prj.Path_Name.Dir_Name)));
+                  end if;
+                  Global_Report_Dir :=
+                    new String'
+                      (GNATCOLL.VFS."+" (Global_Report_Dir_File.Full_Name));
                end;
 
                --  Create a temporary directory when processing a non-aggregate
