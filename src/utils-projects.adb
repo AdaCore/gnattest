@@ -418,6 +418,8 @@ package body Utils.Projects is
       --  project itself.
 
       else
+         Set_Global_Result_Dirs;
+
          declare
             In_Prj_Switches : constant String_Vector :=
               Extract_Gnattest_Options (My_Project_Tree, Cmd);
@@ -438,25 +440,6 @@ package body Utils.Projects is
 
          Parse
            (Cmd_Args, Cmd, Phase => Cmd_Line_2, Collect_File_Names => False);
-
-         --  ??? Code detangling: in order to keep 'Cmd' from
-         --  Get_Sources_From_Project, copy the File_Names field of Cmd for
-         --  now. Eventually, the filenames will come from somewhere else.
-
-         declare
-            File_List : String_Ref_Vector :=
-              Utils.Command_Lines.String_Ref_Vectors.To_Vector
-                (Cmd.File_Names);
-         begin
-            Get_Sources_From_Project
-              (My_Project_Tree,
-               File_List,
-               Arg (Cmd) = Update_All,
-               Arg (Cmd) = No_Subprojects,
-               Arg_Length (Cmd, Files) > 0);
-            Cmd.Set_File_Names (File_List);
-         end;
-         Set_Global_Result_Dirs;
       end if;
    end Process_Project;
 
@@ -720,13 +703,34 @@ package body Utils.Projects is
 
       begin
          if Arg (Cmd, Project_File) /= null then
+
             Process_Project
               (Cmd, Cmd_Args, Global_Report_Dir, My_Project_Tree);
 
-            --  Do not create a temporary directory when processing an
-            --  aggregate project.
-
             if My_Project_Tree.Root_Project.Kind not in Aggregate_Kind then
+
+               --  ??? Code detangling: in order to keep 'Cmd' from
+               --  Get_Sources_From_Project, copy the File_Names field of Cmd
+               --  for now. Eventually, the filenames will come from somewhere
+               --  else.
+
+               declare
+                  File_List : String_Ref_Vector :=
+                    Utils.Command_Lines.String_Ref_Vectors.To_Vector
+                      (Cmd.File_Names);
+               begin
+                  Get_Sources_From_Project
+                    (My_Project_Tree,
+                     File_List,
+                     Arg (Cmd) = Update_All,
+                     Arg (Cmd) = No_Subprojects,
+                     Arg_Length (Cmd, Files) > 0);
+                  Cmd.Set_File_Names (File_List);
+               end;
+
+               --  Create a temporary directory when processing a non-aggregate
+               --  project.
+
                Environment.Create_Temp_Dir
                  (My_Project_Tree.Root_Project.Object_Directory.String_Value);
             end if;
