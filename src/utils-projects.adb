@@ -231,11 +231,11 @@ package body Utils.Projects is
       return Result;
    end To_File_Array;
 
-   ------------------
-   -- Load_Project --
-   ------------------
+   -----------------------
+   -- Load_Project_File --
+   -----------------------
 
-   function Load_Project
+   function Load_Project_File
      (Cmd : Command_Line; Project_File : String)
       return GPR2.Project.Tree.Object
    is
@@ -302,7 +302,7 @@ package body Utils.Projects is
          Cmd_Error ("Could not load the project file, aborting.");
       end if;
       return Tree;
-   end Load_Project;
+   end Load_Project_File;
 
    ---------------------
    -- Process_Project --
@@ -332,7 +332,7 @@ package body Utils.Projects is
 
       procedure Load_Tool_Project is
       begin
-         Prj_Tree := Load_Project (Cmd, Arg (Cmd, Project_File).all);
+         Prj_Tree := Load_Project_File (Cmd, Arg (Cmd, Project_File).all);
          if Prj_Tree.Root_Project.Kind = K_Aggregate then
             Aggregate.Collect_Aggregated_Projects (Prj_Tree);
          end if;
@@ -351,11 +351,11 @@ package body Utils.Projects is
          --  Start by checking that the original project is an aggregate
          --  project.
 
-         Prj_Tree := Load_Project (Cmd, Arg (Cmd, Project_File).all);
+         Prj_Tree := Load_Project_File (Cmd, Arg (Cmd, Project_File).all);
          pragma Assert (Prj_Tree.Root_Project.Kind = GPR2.K_Aggregate);
          Prj_Tree.Unload;
 
-         Prj_Tree := Load_Project (Cmd, Aggregated_Name);
+         Prj_Tree := Load_Project_File (Cmd, Aggregated_Name);
          pragma Assert (Prj_Tree.Root_Project.Kind /= GPR2.K_Aggregate);
       end Load_Aggregated_Project;
 
