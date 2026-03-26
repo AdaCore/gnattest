@@ -217,6 +217,8 @@ is
    function To_Array (Container : Vector) return Elements_Array
    with Post => To_Array'Result'First = Index_Type'First;
 
+   function To_Vector (Arr : Elements_Array) return Vector;
+
    procedure Append (Container : in out Vector; New_Items : Elements_Array);
 
    procedure Put

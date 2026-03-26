@@ -23,6 +23,7 @@
 
 with Ada.Characters.Handling; use Ada.Characters.Handling;
 with Ada.Containers.Indefinite_Ordered_Sets;
+with Ada.Containers.Vectors;
 with Ada.Directories;
 with Ada.Environment_Variables;
 with Ada.Exceptions;
@@ -61,16 +62,64 @@ package body Utils.Projects is
        Test_String_Switches,
        Test_String_Seq_Switches;
 
+   package Source_Vectors is new
+     Ada.Containers.Vectors
+       (Element_Type => GPR2.Build.Source.Object,
+        Index_Type   => Positive,
+        "="          => GPR2.Build.Source."=");
+   subtype Source_Vector is Source_Vectors.Vector;
+
    My_Project_Tree : aliased GPR2.Project.Tree.Object;
    --  Project tree for the user project
 
-   function Main_Unit_Names (Cmd : Command_Line) return String_Ref_Array
-   is (if Arg (Cmd) = Update_All
-       then (if Num_File_Names (Cmd) = 0 then [] else File_Names (Cmd))
-       else []);
-   --  If "-U main_unit_1 main_unit_2 ..." was specified, this returns the list
-   --  of main units. Otherwise (-U was not specified, or was specified without
-   --  main unit names), returns empty array.
+   function Has_Mains_And_Ada_Only
+     (Prj : GPR2.Project.Tree.Object) return Boolean;
+   --  Checks that root project has at least one main specified and all of them
+   --  are Ada mains, no C/C++ or other languages.
+
+   function Get_Main_Files
+     (Prj : GPR2.Project.Tree.Object; CLI_Mains : String_Ref_Array)
+      return Source_Vector;
+   --  Return a list of main files, either from the CLI if provided, or from
+   --  the GPR file.
+
+   function Get_Files_From_Closure
+     (Prj : GPR2.Project.Tree.Object; Mains : Source_Vector)
+      return String_Vector;
+   --  Provided that the tool arguments contain '-U main_unit' parameter,
+   --  tries to get the full closure of main_unit and to store it as tool
+   --  argument files.
+
+   procedure Get_Sources_From_Project
+     (Prj                 : GPR2.Project.Tree.Object;
+      CLI_Filenames       : in out String_Ref_Vector;
+      Update_All          : Boolean;
+      No_Subprjs          : Boolean;
+      Files_Switch_Passed : Boolean);
+   --  Extracts and stores the list of sources of the project to process as
+   --  tool arguments.
+   --
+   --  Parameters:
+   --  - Prj: The project we are sourcing from.
+   --  - CLI_Filenames: Filenames passed on the command line.
+   --  - Update_All: True if -U was passed on the CLI.
+   --  - No_Subprjs: True if --no-subprojects was passed on the CLI.
+   --  - Files_Switch_Passed: True if at least one -files parameter was passed
+   --                         on the CLI.
+   --
+   --  More documentation is needed:
+   --
+   --  * when we extract the sources from the project * what happens when
+   --    o there is no -U option
+   --    o -U option is specified, but without the main unit
+   --    o -U option is specified with the main unit name
+   --
+   --  ??? Extended projects???
+
+   function Extract_Gnattest_Options
+     (Prj : GPR2.Project.Tree.Object; Cmd : Command_Line) return String_Vector;
+   --  Extract gnattest options from the Test.Switches/Default_Switches/
+   --  Gnattest_Switches project attributes.
 
    procedure Process_Project
      (Cmd               : in out Command_Line;
@@ -269,24 +318,6 @@ package body Utils.Projects is
    is
       procedure Load_Tool_Project;
 
-      procedure Get_Files_From_Closure;
-      --  Provided that the tool arguments contain '-U main_unit' parameter,
-      --  tries to get the full closure of main_unit and to store it as tool
-      --  argument files.
-
-      procedure Get_Sources_From_Project;
-      --  Extracts and stores the list of sources of the project to process as
-      --  tool arguments.
-      --
-      --  More documentation is needed:
-      --
-      --  * when we extract the sources from the project * what happens when
-      --    o there is no -U option
-      --    o -U option is specified, but without the main unit
-      --    o -U option is specified with the main unit name
-      --
-      --  ??? Extended projects???
-
       procedure Load_Aggregated_Project;
       --  Loads My_Project_Tree (that is supposed to be an aggregate project),
       --  then unloads it and loads in the same environment the project passed
@@ -296,10 +327,6 @@ package body Utils.Projects is
 
       procedure Set_Global_Result_Dirs;
       --  Sets the directory to place the global tool results into.
-
-      procedure Extract_Gnattest_Options;
-      --  Extract gnattest options from the Test.Switches/Default_Switches/
-      --  Gnattest_Switches project attributes.
 
       -----------------------
       -- Load_Tool_Project --
@@ -333,319 +360,6 @@ package body Utils.Projects is
          My_Project_Tree := Load_Project (Cmd, Aggregated_Name);
          pragma Assert (My_Project_Tree.Root_Project.Kind /= GPR2.K_Aggregate);
       end Load_Aggregated_Project;
-
-      ----------------------------
-      -- Get_Files_From_Closure --
-      ----------------------------
-
-      procedure Get_Files_From_Closure is
-         Provider : constant Unit_Provider_Reference :=
-           Create_Project_Unit_Provider (Tree => My_Project_Tree);
-
-         Ctx : constant Analysis_Context :=
-           Create_Context (Unit_Provider => Provider);
-
-         Mains          : constant String_Ref_Array := Main_Unit_Names (Cmd);
-         Mains_From_Prj :
-           constant GPR2.Build.Compilation_Unit.Unit_Location_Vector :=
-             My_Project_Tree.Root_Project.Mains;
-
-         package Path_Sets is new
-           Ada.Containers.Indefinite_Ordered_Sets
-             (Element_Type => GPR2.Path_Name.Object,
-              "<"          => GPR2.Path_Name."<",
-              "="          => GPR2.Path_Name."=");
-         subtype Path_Set is Path_Sets.Set;
-
-         Closure_Incomplete : Boolean := False;
-
-         Closure : Path_Set;
-         --  Cumulative closure of given main(s)
-
-         procedure Update_Closure
-           (New_Source : GPR2.Path_Name.Object;
-            View       : GPR2.Project.View.Object);
-         --  Calculate unit dependencies with LAL and update the source closure
-         --  accordingly.
-
-         procedure Process_CU
-           (Kind     : Unit_Kind;
-            View     : GPR2.Project.View.Object;
-            Path     : Path_Name.Object;
-            Index    : Unit_Index;
-            Sep_Name : Optional_Name_Type);
-         --  Callback for GPR2.Build.Compilation_Unit.For_All_Part calling
-         --  Update_Closure on the given CU.
-
-         procedure Process_Source (Src : GPR2.Build.Source.Object);
-         --  Process the given source and update the source closure
-         --  accordingly.
-
-         --------------------
-         -- Update_Closure --
-         --------------------
-
-         procedure Update_Closure
-           (New_Source : GPR2.Path_Name.Object;
-            View       : GPR2.Project.View.Object)
-         is
-            Unit : Analysis_Unit;
-            CU   : Compilation_Unit;
-         begin
-            if Closure.Contains (New_Source) or else View.Is_Externally_Built
-            then
-               return;
-            end if;
-            Closure.Insert (New_Source);
-
-            Unit := Ctx.Get_From_File (String (New_Source.Name));
-            CU := Unit.Root.As_Compilation_Unit;
-
-            for Dep of CU.P_Unit_Dependencies loop
-               declare
-                  Src : constant GPR2.Build.Source.Object :=
-                    My_Project_Tree.Root_Project.Visible_Source
-                      (GPR2.Path_Name.Create (+Dep.Unit.Get_Filename));
-               begin
-                  --  LAL always return a dependency to the Standard unit,
-                  --  which does not have a corresponding source.
-
-                  if Src.Is_Defined then
-                     Process_Source (Src);
-                  end if;
-               end;
-
-            end loop;
-
-         exception
-            when Ex : others =>
-               Closure_Incomplete := True;
-               Formatted_Output.Put
-                 ("\1\n",
-                  "could not get dependencies of "
-                  & String (New_Source.Base_Name));
-               if Debug_Flag_U then
-                  Formatted_Output.Put
-                    ("\1\n",
-                     Ada.Exceptions.Exception_Name (Ex)
-                     & " : "
-                     & Ada.Exceptions.Exception_Message (Ex)
-                     & ASCII.LF
-                     & GNAT.Traceback.Symbolic.Symbolic_Traceback (Ex));
-               end if;
-         end Update_Closure;
-
-         ----------------
-         -- Process_CU --
-         ----------------
-
-         procedure Process_CU
-           (Kind     : Unit_Kind;
-            View     : GPR2.Project.View.Object;
-            Path     : Path_Name.Object;
-            Index    : Unit_Index;
-            Sep_Name : Optional_Name_Type)
-         is
-            pragma Unreferenced (Kind, Index, Sep_Name);
-         begin
-            Update_Closure (Path, View);
-         end Process_CU;
-
-         --------------------
-         -- Process_Source --
-         --------------------
-
-         procedure Process_Source (Src : GPR2.Build.Source.Object) is
-            CU : constant GPR2.Build.Compilation_Unit.Object :=
-              Unit_Name_To_Unit (String (Src.Unit.Name));
-         begin
-            CU.For_All_Part (Process_CU'Access);
-         end Process_Source;
-
-      begin
-         --  Mains on the command line take precedence over the ones specified
-         --  in the project file.
-
-         if Mains'Length > 0 then
-            for Main of Mains loop
-               Process_Source
-                 (My_Project_Tree.Root_Project.Visible_Source
-                    (Simple_Name (Main.all)));
-            end loop;
-         else
-            for Main of Mains_From_Prj loop
-               Process_Source
-                 (My_Project_Tree.Root_Project.Visible_Source (Main.Source));
-            end loop;
-         end if;
-
-         if Closure_Incomplete then
-            Formatted_Output.Put ("could not get complete closure\n");
-         end if;
-
-         --  We first need to erase the main unit names from the command
-         --  line to avoid duplicates.
-         Clear_File_Names (Cmd);
-
-         if Debug_Flag_U then
-            Formatted_Output.Put ("Closure:\n");
-         end if;
-         for Src of Closure loop
-            Append_File_Name (Cmd, Src.String_Value);
-            if Debug_Flag_U then
-               Formatted_Output.Put ("\1\n", String (Src.Base_Name));
-            end if;
-         end loop;
-
-      exception
-         when others =>
-            Cmd_Error_No_Tool_Name
-              ("could not get closure of specified sources");
-      end Get_Files_From_Closure;
-
-      ------------------------------
-      -- Get_Sources_From_Project --
-      ------------------------------
-
-      procedure Get_Sources_From_Project is
-         Sources : GPR2.Build.Source.Sets.Object;
-
-         Num_Names : constant Natural := Num_File_Names (Cmd);
-         --  Number of File_Names on the command line
-
-         Num_Files_Switches : constant Natural := Arg_Length (Cmd, Files);
-         --  Number of "-files=..." switches on the command line
-
-         Argument_File_Specified : constant Boolean :=
-           (if Arg (Cmd) = Update_All
-            then Num_Files_Switches > 0
-            else Num_Names > 0 or else Num_Files_Switches > 0);
-         --  True if we have source files specified on the command line. If -U
-         --  (Update_All) was specified, then the "file name" (if any) is taken
-         --  to be the main unit name, not a file name.
-
-         function Has_Ada_Mains_Only return Boolean;
-         --  Checks that root project has mains specified and all of them
-         --  are Ada mains, no C/C++ or other languages.
-
-         ------------------------
-         -- Has_Ada_Mains_Only --
-         ------------------------
-
-         function Has_Ada_Mains_Only return Boolean is
-            Mains :
-              constant GPR2.Build.Compilation_Unit.Unit_Location_Vector :=
-                My_Project_Tree.Root_Project.Mains;
-         begin
-            return
-              Mains.Length /= 0
-              --  Empty Mains assumed to be non Ada-only
-
-              and then (for all Main of Mains =>
-                          My_Project_Tree.Root_Project.Visible_Source
-                            (Main.Source)
-                            .Language
-                          = Ada_Language);
-         end Has_Ada_Mains_Only;
-
-      begin
-         --  We get file names from the project file if no file names were
-         --  given on the command line, either directly, or via one or more
-         --  "-files=par_file_name" switches.
-
-         if not Argument_File_Specified then
-            if Arg (Cmd) = No_Subprojects
-              or else (Main_Unit_Names (Cmd)'Length = 0
-                       and then (Arg (Cmd) = Update_All
-                                 or else not Has_Ada_Mains_Only))
-            then
-               if Arg (Cmd) = No_Subprojects then
-                  Sources := My_Project_Tree.Root_Project.Sources;
-               else
-                  Sources := My_Project_Tree.Root_Project.Visible_Sources;
-               end if;
-
-               for S of Sources loop
-                  if not S.Owning_View.Is_Externally_Built
-                    and then S.Language = Ada_Language
-                  then
-                     Append_File_Name (Cmd, S.Path_Name.String_Value);
-                  end if;
-               end loop;
-
-               if Arg (Cmd) = Update_All then
-                  if Num_File_Names (Cmd) = 0 then
-                     Cmd_Error
-                       (Arg (Cmd, Project_File).all
-                        & " does not contain source files");
-                  end if;
-               end if;
-
-            else
-               Get_Files_From_Closure;
-            end if;
-         end if;
-      end Get_Sources_From_Project;
-
-      ------------------------------
-      -- Extract_Gnattest_Options --
-      ------------------------------
-
-      procedure Extract_Gnattest_Options is
-         function Process_Attr
-           (Id    : Q_Attribute_Id;
-            Index : GPR2.Project.Attribute_Index.Object :=
-              GPR2.Project.Attribute_Index.Undefined) return String_Vector;
-         --  Return the list values for the given attribute Id with the given
-         --  index. If the attribute is not defined for the loaded project,
-         --  return an empty vector.
-
-         ------------------
-         -- Process_Attr --
-         ------------------
-
-         function Process_Attr
-           (Id    : Q_Attribute_Id;
-            Index : GPR2.Project.Attribute_Index.Object :=
-              GPR2.Project.Attribute_Index.Undefined) return String_Vector
-         is
-            Attr_Value : GPR2.Project.Attribute.Object;
-            Result     : String_Vector;
-         begin
-            if My_Project_Tree.Root_Project.Check_Attribute
-                 (Id, Index => Index, Result => Attr_Value)
-            then
-               for Val of Attr_Value.Values loop
-                  Result.Append (String (Val.Text));
-               end loop;
-            end if;
-            return Result;
-         end Process_Attr;
-
-         Project_Switches : String_Vector :=
-           Process_Attr (+Default_Switches_Attr);
-      begin
-         if Num_File_Names (Cmd) = 1 then
-            declare
-               File_Switches : constant String_Vector :=
-                 Process_Attr
-                   (+Switches_Attr,
-                    GPR2.Project.Attribute_Index.Create
-                      (File_Names (Cmd) (1).all));
-            begin
-               if not File_Switches.Is_Empty then
-                  Project_Switches := File_Switches;
-               end if;
-            end;
-         end if;
-         if not Project_Switches.Is_Empty then
-            Parse
-              (Project_Switches,
-               Cmd,
-               Phase              => Project_File,
-               Collect_File_Names => False);
-         end if;
-      end Extract_Gnattest_Options;
 
       ----------------------------
       -- Set_Global_Result_Dirs --
@@ -704,7 +418,18 @@ package body Utils.Projects is
       --  project itself.
 
       else
-         Extract_Gnattest_Options;
+         declare
+            In_Prj_Switches : constant String_Vector :=
+              Extract_Gnattest_Options (My_Project_Tree, Cmd);
+         begin
+            if not In_Prj_Switches.Is_Empty then
+               Parse
+                 (In_Prj_Switches,
+                  Cmd,
+                  Phase              => Project_File,
+                  Collect_File_Names => False);
+            end if;
+         end;
 
          --  Now we need to Parse again, so command-line args override project
          --  file args. This needs to be done before getting sources from the
@@ -714,7 +439,23 @@ package body Utils.Projects is
          Parse
            (Cmd_Args, Cmd, Phase => Cmd_Line_2, Collect_File_Names => False);
 
-         Get_Sources_From_Project;
+         --  ??? Code detangling: in order to keep 'Cmd' from
+         --  Get_Sources_From_Project, copy the File_Names field of Cmd for
+         --  now. Eventually, the filenames will come from somewhere else.
+
+         declare
+            File_List : String_Ref_Vector :=
+              Utils.Command_Lines.String_Ref_Vectors.To_Vector
+                (Cmd.File_Names);
+         begin
+            Get_Sources_From_Project
+              (My_Project_Tree,
+               File_List,
+               Arg (Cmd) = Update_All,
+               Arg (Cmd) = No_Subprojects,
+               Arg_Length (Cmd, Files) > 0);
+            Cmd.Set_File_Names (File_List);
+         end;
          Set_Global_Result_Dirs;
       end if;
    end Process_Project;
@@ -1039,5 +780,354 @@ package body Utils.Projects is
           (Pack => GPR2."+" (GPR2.Name_Type'("emulator")),
            Attr => GPR2."+" (GPR2.Optional_Name_Type'("board")));
    end Emulator_Board;
+
+   ------------------------
+   -- Has_Ada_Mains_Only --
+   ------------------------
+
+   function Has_Mains_And_Ada_Only
+     (Prj : GPR2.Project.Tree.Object) return Boolean
+   is
+      Mains : constant GPR2.Build.Compilation_Unit.Unit_Location_Vector :=
+        Prj.Root_Project.Mains;
+   begin
+      return
+        Mains.Length /= 0
+        --  Empty Mains assumed to be non Ada-only
+
+        and then (for all Main of Mains =>
+                    Prj.Root_Project.Visible_Source (Main.Source).Language
+                    = Ada_Language);
+   end Has_Mains_And_Ada_Only;
+
+   --------------------
+   -- Get_Main_Files --
+   --------------------
+
+   function Get_Main_Files
+     (Prj : GPR2.Project.Tree.Object; CLI_Mains : String_Ref_Array)
+      return Source_Vector
+   is
+      Result : Source_Vector;
+   begin
+      --  If we have main files given as CLI arguments, use them
+      if CLI_Mains'Length > 0 then
+         for F of CLI_Mains loop
+            Result.Append
+              (My_Project_Tree.Root_Project.Visible_Source
+                 (Simple_Name (F.all)));
+         end loop;
+      else
+         for Main of Prj.Root_Project.Mains loop
+            Result.Append (Prj.Root_Project.Visible_Source (Main.Source));
+         end loop;
+      end if;
+
+      return Result;
+   end Get_Main_Files;
+
+   ----------------------------
+   -- Get_Files_From_Closure --
+   ----------------------------
+
+   function Get_Files_From_Closure
+     (Prj : GPR2.Project.Tree.Object; Mains : Source_Vector)
+      return String_Vector
+   is
+      Result   : String_Vector;
+      Provider : constant Unit_Provider_Reference :=
+        Create_Project_Unit_Provider (Tree => Prj);
+
+      Ctx : constant Analysis_Context :=
+        Create_Context (Unit_Provider => Provider);
+
+      package Path_Sets is new
+        Ada.Containers.Indefinite_Ordered_Sets
+          (Element_Type => GPR2.Path_Name.Object,
+           "<"          => GPR2.Path_Name."<",
+           "="          => GPR2.Path_Name."=");
+      subtype Path_Set is Path_Sets.Set;
+
+      Closure_Incomplete : Boolean := False;
+
+      Closure : Path_Set;
+      --  Cumulative closure of given main(s)
+
+      procedure Update_Closure
+        (New_Source : GPR2.Path_Name.Object; View : GPR2.Project.View.Object);
+      --  Calculate unit dependencies with LAL and update the source closure
+      --  accordingly.
+
+      procedure Process_CU
+        (Kind     : Unit_Kind;
+         View     : GPR2.Project.View.Object;
+         Path     : Path_Name.Object;
+         Index    : Unit_Index;
+         Sep_Name : Optional_Name_Type);
+      --  Callback for GPR2.Build.Compilation_Unit.For_All_Part calling
+      --  Update_Closure on the given CU.
+
+      procedure Process_Source (Src : GPR2.Build.Source.Object);
+      --  Process the given source and update the source closure
+      --  accordingly.
+
+      --------------------
+      -- Update_Closure --
+      --------------------
+
+      procedure Update_Closure
+        (New_Source : GPR2.Path_Name.Object; View : GPR2.Project.View.Object)
+      is
+         Unit : Analysis_Unit;
+         CU   : Compilation_Unit;
+      begin
+         if Closure.Contains (New_Source) or else View.Is_Externally_Built then
+            return;
+         end if;
+         Closure.Insert (New_Source);
+
+         Unit := Ctx.Get_From_File (String (New_Source.Name));
+         CU := Unit.Root.As_Compilation_Unit;
+
+         for Dep of CU.P_Unit_Dependencies loop
+            declare
+               Src : constant GPR2.Build.Source.Object :=
+                 Prj.Root_Project.Visible_Source
+                   (GPR2.Path_Name.Create (+Dep.Unit.Get_Filename));
+            begin
+               --  LAL always return a dependency to the Standard unit,
+               --  which does not have a corresponding source.
+
+               if Src.Is_Defined then
+                  Process_Source (Src);
+               end if;
+            end;
+
+         end loop;
+
+      exception
+         when Ex : others =>
+            Closure_Incomplete := True;
+            Formatted_Output.Put
+              ("\1\n",
+               "could not get dependencies of "
+               & String (New_Source.Base_Name));
+            if Debug_Flag_U then
+               Formatted_Output.Put
+                 ("\1\n",
+                  Ada.Exceptions.Exception_Name (Ex)
+                  & " : "
+                  & Ada.Exceptions.Exception_Message (Ex)
+                  & ASCII.LF
+                  & GNAT.Traceback.Symbolic.Symbolic_Traceback (Ex));
+            end if;
+      end Update_Closure;
+
+      ----------------
+      -- Process_CU --
+      ----------------
+
+      procedure Process_CU
+        (Kind     : Unit_Kind;
+         View     : GPR2.Project.View.Object;
+         Path     : Path_Name.Object;
+         Index    : Unit_Index;
+         Sep_Name : Optional_Name_Type)
+      is
+         pragma Unreferenced (Kind, Index, Sep_Name);
+      begin
+         Update_Closure (Path, View);
+      end Process_CU;
+
+      --------------------
+      -- Process_Source --
+      --------------------
+
+      procedure Process_Source (Src : GPR2.Build.Source.Object) is
+         CU : constant GPR2.Build.Compilation_Unit.Object :=
+           Unit_Name_To_Unit (String (Src.Unit.Name));
+      begin
+         CU.For_All_Part (Process_CU'Access);
+      end Process_Source;
+
+   begin
+      --  Mains on the command line take precedence over the ones specified
+      --  in the project file.
+
+      for Main of Mains loop
+         Process_Source (Main);
+      end loop;
+
+      if Closure_Incomplete then
+         Formatted_Output.Put ("could not get complete closure\n");
+      end if;
+
+      if Debug_Flag_U then
+         Formatted_Output.Put ("Closure:\n");
+      end if;
+      for Src of Closure loop
+         Result.Append (Src.String_Value);
+         if Debug_Flag_U then
+            Formatted_Output.Put ("\1\n", String (Src.Base_Name));
+         end if;
+      end loop;
+
+      return Result;
+   exception
+      when others =>
+         Cmd_Error_No_Tool_Name ("could not get closure of specified sources");
+   end Get_Files_From_Closure;
+
+   ------------------------------
+   -- Get_Sources_From_Project --
+   ------------------------------
+
+   procedure Get_Sources_From_Project
+     (Prj                 : GPR2.Project.Tree.Object;
+      CLI_Filenames       : in out String_Ref_Vector;
+      Update_All          : Boolean;
+      No_Subprjs          : Boolean;
+      Files_Switch_Passed : Boolean)
+   is
+      All_Update : constant Boolean := Update_All;
+
+      Num_Names : constant Natural := CLI_Filenames.Last_Index;
+      --  Number of File_Names on the command line
+
+      Argument_File_Specified : constant Boolean :=
+        (Files_Switch_Passed or else (not All_Update and then Num_Names > 0));
+      --  True if we have source files specified on the command line. If -U
+      --  (Update_All) was specified, then the "file name" (if any) is taken
+      --  to be the main unit name, not a file name.
+
+      CLI_Main_Unit_Names : constant String_Ref_Array :=
+        (if All_Update and then CLI_Filenames.Length /= 0
+         then Utils.Command_Lines.String_Ref_Vectors.To_Array (CLI_Filenames)
+         else []);
+      --  If "-U main_unit_1 main_unit_2 ..." was specified, this returns the
+      --  list of main units. Otherwise (-U was not specified, or was specified
+      --  without main unit names), returns empty array.
+
+   begin
+      --  We get file names from the project file if no file names were
+      --  given on the command line, either directly, or via one or more
+      --  "-files=par_file_name" switches.
+
+      if Argument_File_Specified then
+         return;
+      end if;
+
+      if No_Subprjs
+        or else (CLI_Main_Unit_Names'Length = 0
+                 and then (All_Update
+                           or else not Has_Mains_And_Ada_Only (Prj)))
+      then
+
+         --  IF --no-subprojects is passed, or there is no Main provided from
+         --  CLI and none is usable from the project file, THEN select all
+         --  sources of the project.
+
+         declare
+            Sources : constant GPR2.Build.Source.Sets.Object :=
+              (if No_Subprjs
+               then Prj.Root_Project.Sources
+               else Prj.Root_Project.Visible_Sources);
+         begin
+            for S of Sources loop
+               if not S.Owning_View.Is_Externally_Built
+                 and then S.Language = Ada_Language
+               then
+                  Utils.Command_Lines.String_Ref_Vectors.Append
+                    (CLI_Filenames, new String'(S.Path_Name.String_Value));
+               end if;
+            end loop;
+         end;
+
+         if All_Update and then CLI_Filenames.Length = 0 then
+            Cmd_Error
+              (Prj.Root_Project.Path_Name.String_Value
+               & " does not contain source files");
+         end if;
+
+      else
+
+         --  ELSE, Compute the source file list from the closure of the Mains.
+         --  If any, use Mains from the CLI. Otherwise use those found in the
+         --  project file.
+
+         declare
+            Mains : constant Source_Vector :=
+              Get_Main_Files (Prj, CLI_Main_Unit_Names);
+         begin
+
+            --  We first need to erase the main unit names from the
+            --  command line to avoid duplicates.
+            CLI_Filenames :=
+              Utils.Command_Lines.String_Ref_Vectors.Empty_Vector;
+
+            for Src of Get_Files_From_Closure (Prj, Mains) loop
+               Utils.Command_Lines.String_Ref_Vectors.Append
+                 (CLI_Filenames, new String'(Src));
+            end loop;
+         end;
+      end if;
+   end Get_Sources_From_Project;
+
+   ------------------------------
+   -- Extract_Gnattest_Options --
+   ------------------------------
+
+   function Extract_Gnattest_Options
+     (Prj : GPR2.Project.Tree.Object; Cmd : Command_Line) return String_Vector
+   is
+      function Process_Attr
+        (Id    : Q_Attribute_Id;
+         Index : GPR2.Project.Attribute_Index.Object :=
+           GPR2.Project.Attribute_Index.Undefined) return String_Vector;
+      --  Return the list values for the given attribute Id with the given
+      --  index. If the attribute is not defined for the loaded project,
+      --  return an empty vector.
+
+      ------------------
+      -- Process_Attr --
+      ------------------
+
+      function Process_Attr
+        (Id    : Q_Attribute_Id;
+         Index : GPR2.Project.Attribute_Index.Object :=
+           GPR2.Project.Attribute_Index.Undefined) return String_Vector
+      is
+         Attr_Value : GPR2.Project.Attribute.Object;
+         Result     : String_Vector;
+      begin
+         if Prj.Root_Project.Check_Attribute
+              (Id, Index => Index, Result => Attr_Value)
+         then
+            for Val of Attr_Value.Values loop
+               Result.Append (String (Val.Text));
+            end loop;
+         end if;
+         return Result;
+      end Process_Attr;
+
+      Project_Switches : String_Vector :=
+        Process_Attr (+Default_Switches_Attr);
+   begin
+      if Num_File_Names (Cmd) = 1 then
+         declare
+            File_Switches : constant String_Vector :=
+              Process_Attr
+                (+Switches_Attr,
+                 GPR2.Project.Attribute_Index.Create
+                   (File_Names (Cmd) (1).all));
+         begin
+            if not File_Switches.Is_Empty then
+               Project_Switches := File_Switches;
+            end if;
+         end;
+      end if;
+
+      return Project_Switches;
+   end Extract_Gnattest_Options;
 
 end Utils.Projects;
