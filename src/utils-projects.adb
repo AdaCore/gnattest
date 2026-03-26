@@ -121,7 +121,7 @@ package body Utils.Projects is
    --  Extract gnattest options from the Test.Switches/Default_Switches/
    --  Gnattest_Switches project attributes.
 
-   function Process_Project
+   function Load_CLI_Project
      (Cmd : in out Command_Line; Global_Report_Dir : out String_Ref)
       return GPR2.Project.Tree.Object;
 
@@ -304,11 +304,11 @@ package body Utils.Projects is
       return Tree;
    end Load_Project_File;
 
-   ---------------------
-   -- Process_Project --
-   ---------------------
+   ----------------------
+   -- Load_CLI_Project --
+   ----------------------
 
-   function Process_Project
+   function Load_CLI_Project
      (Cmd : in out Command_Line; Global_Report_Dir : out String_Ref)
       return GPR2.Project.Tree.Object
    is
@@ -378,11 +378,11 @@ package body Utils.Projects is
               GNATCOLL.VFS.Create
                 (GNATCOLL.VFS."+" (String (Root_Prj.Path_Name.Dir_Name)));
          end if;
-         Process_Project.Global_Report_Dir :=
+         Load_CLI_Project.Global_Report_Dir :=
            new String'(GNATCOLL.VFS."+" (Global_Report_Dir.Full_Name));
       end Set_Global_Result_Dirs;
 
-      --  Start of processing for Process_Project
+      --  Start of processing for Load_CLI_Project
 
    begin
       GNATCOLL.Traces.Parse_Config_File;
@@ -420,7 +420,7 @@ package body Utils.Projects is
       end if;
 
       return Prj_Tree;
-   end Process_Project;
+   end Load_CLI_Project;
 
    -------------------------------
    -- Read_File_Names_From_File --
@@ -683,7 +683,7 @@ package body Utils.Projects is
       begin
          if Arg (Cmd, Project_File) /= null then
 
-            My_Project_Tree := Process_Project (Cmd, Global_Report_Dir);
+            My_Project_Tree := Load_CLI_Project (Cmd, Global_Report_Dir);
 
             if My_Project_Tree.Root_Project.Kind not in Aggregate_Kind then
 
