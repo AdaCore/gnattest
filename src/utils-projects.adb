@@ -121,11 +121,9 @@ package body Utils.Projects is
    --  Extract gnattest options from the Test.Switches/Default_Switches/
    --  Gnattest_Switches project attributes.
 
-   procedure Process_Project
-     (Cmd               : in out Command_Line;
-      Cmd_Args          : String_Vector;
-      Global_Report_Dir : out String_Ref;
-      My_Project_Tree   : out GPR2.Project.Tree.Object);
+   function Process_Project
+     (Cmd : in out Command_Line; Global_Report_Dir : out String_Ref)
+      return GPR2.Project.Tree.Object;
 
    -----------------
    -- Attr_String --
@@ -310,12 +308,12 @@ package body Utils.Projects is
    -- Process_Project --
    ---------------------
 
-   procedure Process_Project
-     (Cmd               : in out Command_Line;
-      Cmd_Args          : String_Vector;
-      Global_Report_Dir : out String_Ref;
-      My_Project_Tree   : out GPR2.Project.Tree.Object)
+   function Process_Project
+     (Cmd : in out Command_Line; Global_Report_Dir : out String_Ref)
+      return GPR2.Project.Tree.Object
    is
+
+      Prj_Tree : GPR2.Project.Tree.Object;
       procedure Load_Tool_Project;
 
       procedure Load_Aggregated_Project;
@@ -334,9 +332,9 @@ package body Utils.Projects is
 
       procedure Load_Tool_Project is
       begin
-         My_Project_Tree := Load_Project (Cmd, Arg (Cmd, Project_File).all);
-         if My_Project_Tree.Root_Project.Kind = K_Aggregate then
-            Aggregate.Collect_Aggregated_Projects (My_Project_Tree);
+         Prj_Tree := Load_Project (Cmd, Arg (Cmd, Project_File).all);
+         if Prj_Tree.Root_Project.Kind = K_Aggregate then
+            Aggregate.Collect_Aggregated_Projects (Prj_Tree);
          end if;
       end Load_Tool_Project;
 
@@ -353,12 +351,12 @@ package body Utils.Projects is
          --  Start by checking that the original project is an aggregate
          --  project.
 
-         My_Project_Tree := Load_Project (Cmd, Arg (Cmd, Project_File).all);
-         pragma Assert (My_Project_Tree.Root_Project.Kind = GPR2.K_Aggregate);
-         My_Project_Tree.Unload;
+         Prj_Tree := Load_Project (Cmd, Arg (Cmd, Project_File).all);
+         pragma Assert (Prj_Tree.Root_Project.Kind = GPR2.K_Aggregate);
+         Prj_Tree.Unload;
 
-         My_Project_Tree := Load_Project (Cmd, Aggregated_Name);
-         pragma Assert (My_Project_Tree.Root_Project.Kind /= GPR2.K_Aggregate);
+         Prj_Tree := Load_Project (Cmd, Aggregated_Name);
+         pragma Assert (Prj_Tree.Root_Project.Kind /= GPR2.K_Aggregate);
       end Load_Aggregated_Project;
 
       ----------------------------
@@ -368,7 +366,7 @@ package body Utils.Projects is
       procedure Set_Global_Result_Dirs is
          Global_Report_Dir : Virtual_File;
          Root_Prj          : constant GPR2.Project.View.Object :=
-           My_Project_Tree.Root_Project;
+           Prj_Tree.Root_Project;
       begin
          --  TODO??? simplify this code and assume we always have an object
          --  directory.
@@ -398,12 +396,12 @@ package body Utils.Projects is
       --  Error out if this is the root project is an abstract (i.e. without
       --  sources) project.
 
-      if My_Project_Tree.Root_Project.Kind = K_Abstract then
+      if Prj_Tree.Root_Project.Kind = K_Abstract then
          Cmd_Error
            ("gnattest does not support abstract projects (without sources)");
       end if;
 
-      if My_Project_Tree.Root_Project.Kind in Aggregate_Kind then
+      if Prj_Tree.Root_Project.Kind in Aggregate_Kind then
 
          if Num_File_Names (Cmd) /= 0 then
             Cmd_Error
@@ -419,28 +417,9 @@ package body Utils.Projects is
 
       else
          Set_Global_Result_Dirs;
-
-         declare
-            In_Prj_Switches : constant String_Vector :=
-              Extract_Gnattest_Options (My_Project_Tree, Cmd);
-         begin
-            if not In_Prj_Switches.Is_Empty then
-               Parse
-                 (In_Prj_Switches,
-                  Cmd,
-                  Phase              => Project_File,
-                  Collect_File_Names => False);
-            end if;
-         end;
-
-         --  Now we need to Parse again, so command-line args override project
-         --  file args. This needs to be done before getting sources from the
-         --  project, as -U/--no-subprojects affect source selection and may
-         --  override each other.
-
-         Parse
-           (Cmd_Args, Cmd, Phase => Cmd_Line_2, Collect_File_Names => False);
       end if;
+
+      return Prj_Tree;
    end Process_Project;
 
    -------------------------------
@@ -704,10 +683,35 @@ package body Utils.Projects is
       begin
          if Arg (Cmd, Project_File) /= null then
 
-            Process_Project
-              (Cmd, Cmd_Args, Global_Report_Dir, My_Project_Tree);
+            My_Project_Tree := Process_Project (Cmd, Global_Report_Dir);
 
             if My_Project_Tree.Root_Project.Kind not in Aggregate_Kind then
+
+               --  Extract gnattest arguments from project file
+
+               declare
+                  In_Prj_Switches : constant String_Vector :=
+                    Extract_Gnattest_Options (My_Project_Tree, Cmd);
+               begin
+                  if not In_Prj_Switches.Is_Empty then
+                     Parse
+                       (In_Prj_Switches,
+                        Cmd,
+                        Phase              => Project_File,
+                        Collect_File_Names => False);
+                  end if;
+               end;
+
+               --  Now we need to Parse again, so command-line args override
+               --  project file args. This needs to be done before getting
+               --  sources from the project, as -U/--no-subprojects affect
+               --  source selection and may override each other.
+
+               Parse
+                 (Cmd_Args,
+                  Cmd,
+                  Phase              => Cmd_Line_2,
+                  Collect_File_Names => False);
 
                --  ??? Code detangling: in order to keep 'Cmd' from
                --  Get_Sources_From_Project, copy the File_Names field of Cmd
