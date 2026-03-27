@@ -69,7 +69,7 @@ package body Utils.Projects is
         "="          => GPR2.Build.Source."=");
    subtype Source_Vector is Source_Vectors.Vector;
 
-   My_Project_Tree : aliased GPR2.Project.Tree.Object;
+   Global_Project_Tree : aliased GPR2.Project.Tree.Object;
    --  Project tree for the user project
 
    function Has_Mains_And_Ada_Only
@@ -171,7 +171,7 @@ package body Utils.Projects is
    function Recursive_Source_Dirs return GPR2.Path_Name.Set.Object is
       Result : GPR2.Path_Name.Set.Object;
    begin
-      for View of My_Project_Tree.Ordered_Views loop
+      for View of Global_Project_Tree.Ordered_Views loop
          for Dir of View.Source_Directories loop
             Result.Append (Dir);
          end loop;
@@ -196,7 +196,7 @@ package body Utils.Projects is
    function Src (Filename : String) return GPR2.Build.Source.Object is
    begin
       return
-        My_Project_Tree.Root_Project.Visible_Source
+        Global_Project_Tree.Root_Project.Visible_Source
           (GPR2.Path_Name.Create (Create (+Filename)));
    end Src;
 
@@ -523,7 +523,7 @@ package body Utils.Projects is
    ------------------
 
    function Project_Tree return GPR2.Project.Tree.Object
-   is (My_Project_Tree);
+   is (Global_Project_Tree);
 
    ------------
    -- Unload --
@@ -531,7 +531,7 @@ package body Utils.Projects is
 
    procedure Unload is
    begin
-      My_Project_Tree.Unload;
+      Global_Project_Tree.Unload;
    end Unload;
 
    --------------------------
@@ -618,7 +618,7 @@ package body Utils.Projects is
             if Arg (Cmd, Project_File) /= null then
                declare
                   Res : constant GPR2.Build.Source.Object :=
-                    My_Project_Tree.Root_Project.Visible_Source
+                    Global_Project_Tree.Root_Project.Visible_Source
                       (Simple_Name
                          (Ada.Directories.Simple_Name (File_Name.all)));
                begin
@@ -650,15 +650,15 @@ package body Utils.Projects is
       begin
          if Arg (Cmd, Project_File) /= null then
 
-            My_Project_Tree := Load_CLI_Project (Cmd);
+            Global_Project_Tree := Load_CLI_Project (Cmd);
 
-            if My_Project_Tree.Root_Project.Kind not in Aggregate_Kind then
+            if Global_Project_Tree.Root_Project.Kind not in Aggregate_Kind then
 
                --  Extract gnattest arguments from project file
 
                declare
                   In_Prj_Switches : constant String_Vector :=
-                    Extract_Gnattest_Options (My_Project_Tree, Cmd);
+                    Extract_Gnattest_Options (Global_Project_Tree, Cmd);
                begin
                   if not In_Prj_Switches.Is_Empty then
                      Parse
@@ -691,7 +691,7 @@ package body Utils.Projects is
                       (Cmd.File_Names);
                begin
                   Get_Sources_From_Project
-                    (My_Project_Tree,
+                    (Global_Project_Tree,
                      File_List,
                      Arg (Cmd) = Update_All,
                      Arg (Cmd) = No_Subprojects,
@@ -703,7 +703,7 @@ package body Utils.Projects is
 
                declare
                   Root_Prj               : constant GPR2.Project.View.Object :=
-                    My_Project_Tree.Root_Project;
+                    Global_Project_Tree.Root_Project;
                   Global_Report_Dir_File : Virtual_File :=
                     Root_Prj.Object_Directory.Virtual_File;
                begin
@@ -725,7 +725,10 @@ package body Utils.Projects is
                --  project.
 
                Environment.Create_Temp_Dir
-                 (My_Project_Tree.Root_Project.Object_Directory.String_Value);
+                 (Global_Project_Tree
+                    .Root_Project
+                    .Object_Directory
+                    .String_Value);
             end if;
          else
             Environment.Create_Temp_Dir;
@@ -811,7 +814,7 @@ package body Utils.Projects is
       if CLI_Mains'Length > 0 then
          for F of CLI_Mains loop
             Result.Append
-              (My_Project_Tree.Root_Project.Visible_Source
+              (Global_Project_Tree.Root_Project.Visible_Source
                  (Simple_Name (F.all)));
          end loop;
       else
