@@ -72,7 +72,12 @@ package Test.Actions is
    --  reason this is needed is documented in Stub.Actions (search for the call
    --  to Process_File).
 
-   procedure Final (Cmd : Command_Line);
+   procedure Generate_Tests (Cmd : Command_Line);
+   --  Run GNATtest in generation mode.
+
+   procedure Run_Tests;
+   --  Run GNATtest in aggregate mode.
+
    procedure Tool_Help;
 
 end Test.Actions;

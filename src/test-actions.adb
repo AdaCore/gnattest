@@ -22,7 +22,6 @@
 ------------------------------------------------------------------------------
 
 with Ada.Characters.Handling; use Ada.Characters.Handling;
-with Ada.Command_Line;
 with Ada.Directories;         use Ada.Directories;
 with Ada.Environment_Variables;
 with Ada.IO_Exceptions;
@@ -1305,106 +1304,67 @@ package body Test.Actions is
    begin
       --  We always need the lib support when running the generation harness
 
-      TGen.Libgen.Generate
-        (Test.Common.TGen_Libgen_Ctx,
-         [TGen.Libgen.Marshalling_Part     => True,
-          TGen.Libgen.Test_Generation_Part => True,
-          TGen.Libgen.Wrappers_Part        => False]);
-      Test.Common.Mark_Lib_Support_Generated;
+      Test.Common.Generate_TGen_Lib_Support;
       Test.Generation.Generate_Build_And_Run (Cmd);
    end First_Pass_Post_Process;
 
-   -----------
-   -- Final --
-   -----------
+   --------------------
+   -- Generate_Tests --
+   --------------------
 
-   procedure Final (Cmd : Command_Line) is
-      use Ada.Strings.Unbounded;
+   procedure Generate_Tests (Cmd : Command_Line) is
+      Src_Prj : constant String :=
+        Project_Tree.Root_Project.Path_Name.String_Value;
    begin
-      --  Abort here if we the switch --dump-subp-hash is on. This return
-      --  should not be moved further down.
-
-      if Test.Common.Subp_File_Name /= null then
-         return;
-      end if;
-
-      --  If the project is an aggregate one, exit early and do nothing. The
-      --  aggregated projects will be processed in sequence in subprocess calls
-      --  made by the driver.
-
-      if Project_Tree.Is_Defined
-        and then Project_Tree.Root_Project.Kind in Aggregate_Kind
-      then
-         return;
-      end if;
-
-      --  In any case, generate the support library if needed
-
-      if Test.Common.Get_Lib_Support_Status in Test.Common.Needed then
-         TGen.Libgen.Generate
-           (Test.Common.TGen_Libgen_Ctx,
-            [TGen.Libgen.Marshalling_Part     => True,
-             TGen.Libgen.Test_Generation_Part => True,
-             TGen.Libgen.Wrappers_Part        => False]);
-         Test.Common.Mark_Lib_Support_Generated;
-      end if;
-
-      if not Project_Tree.Is_Defined then
-         Test.Aggregator.Process_Drivers_List;
+      if Test.Common.Stub_Mode_ON then
+         Test.Harness.Generate_Stub_Test_Driver_Projects (Src_Prj);
+      elsif Arg (Cmd, Separate_Drivers) /= null then
+         Test.Skeleton.Generate_Project_File (Src_Prj);
+         Test.Harness.Generate_Test_Driver_Projects (Src_Prj);
       else
-         declare
-            Src_Prj : constant String :=
-              Project_Tree.Root_Project.Path_Name.String_Value;
-         begin
-            if Test.Common.Stub_Mode_ON then
-               Test.Harness.Generate_Stub_Test_Driver_Projects (Src_Prj);
-            elsif Arg (Cmd, Separate_Drivers) /= null then
-               Test.Skeleton.Generate_Project_File (Src_Prj);
-               Test.Harness.Generate_Test_Driver_Projects (Src_Prj);
-            else
-               if not Arg (Cmd, Harness_Only) then
-                  if Test.Common.Additional_Tests_Prj /= null then
-                     Process_Additional_Tests (Cmd);
-                  end if;
-                  Test.Skeleton.Report_Unused_Generic_Tests;
-                  Test.Skeleton.Generate_Project_File (Src_Prj);
-                  if Test.Common.Verbose then
-                     Test.Skeleton.Report_Tests_Total;
-                  end if;
-               end if;
-               Test.Harness.Test_Runner_Generator (Src_Prj);
-               Test.Harness.Project_Creator (Src_Prj);
+         if not Arg (Cmd, Harness_Only) then
+            if Test.Common.Additional_Tests_Prj /= null then
+               Process_Additional_Tests (Cmd);
             end if;
-            Test.Harness.Generate_Makefile (Src_Prj);
-            Test.Harness.Generate_Config;
-            Test.Common.Generate_Common_File;
-         end;
-
-         --  Only generate the mapping file if we are not minimizing.
-         --  Otherwise, the gnattest subprocess will take care of generating it
-         --  once all the redundant tests are removed.
-
-         if Test.Common.Minimize then
-            if Test.Common.Harness_Has_Gen_Tests then
-               Test.Suite_Min.Minimize_Suite (Cmd);
-            else
-               Test.Common.Report_Err
-                 ("No generated tests found in the harness,"
-                  & " nothing to do in the minimization phase.");
-               Test.Mapping.Generate_Mapping_File;
+            Test.Skeleton.Report_Unused_Generic_Tests;
+            Test.Skeleton.Generate_Project_File (Src_Prj);
+            if Test.Common.Verbose then
+               Test.Skeleton.Report_Tests_Total;
             end if;
+         end if;
+         Test.Harness.Test_Runner_Generator (Src_Prj);
+         Test.Harness.Project_Creator (Src_Prj);
+      end if;
+      Test.Harness.Generate_Makefile (Src_Prj);
+      Test.Harness.Generate_Config;
+      Test.Common.Generate_Common_File;
+
+      --  Only generate the mapping file if we are not minimizing.
+      --  Otherwise, the gnattest subprocess will take care of generating it
+      --  once all the redundant tests are removed.
+
+      if Test.Common.Minimize then
+         if Test.Common.Harness_Has_Gen_Tests then
+            Test.Suite_Min.Minimize_Suite (Cmd);
          else
+            Test.Common.Report_Err
+              ("No generated tests found in the harness,"
+               & " nothing to do in the minimization phase.");
             Test.Mapping.Generate_Mapping_File;
          end if;
-
+      else
+         Test.Mapping.Generate_Mapping_File;
       end if;
+   end Generate_Tests;
 
-      if Test.Common.Strict_Execution
-        and then Test.Common.Source_Processing_Failed
-      then
-         Ada.Command_Line.Set_Exit_Status (Ada.Command_Line.Failure);
-      end if;
-   end Final;
+   ---------------
+   -- Run_Tests --
+   ---------------
+
+   procedure Run_Tests is
+   begin
+      Test.Aggregator.Process_Drivers_List;
+   end Run_Tests;
 
    ----------------------------
    -- Second_Per_File_Action --

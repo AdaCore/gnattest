@@ -1287,10 +1287,15 @@ package body Test.Common is
    -- Mark_Lib_Support_Generated --
    --------------------------------
 
-   procedure Mark_Lib_Support_Generated is
+   procedure Generate_TGen_Lib_Support is
    begin
+      TGen.Libgen.Generate
+        (Test.Common.TGen_Libgen_Ctx,
+         [TGen.Libgen.Marshalling_Part     => True,
+          TGen.Libgen.Test_Generation_Part => True,
+          TGen.Libgen.Wrappers_Part        => False]);
       Need_Lib_Support := Generated;
-   end Mark_Lib_Support_Generated;
+   end Generate_TGen_Lib_Support;
 
    ---------------------------
    -- Harness_Has_Gen_Tests --

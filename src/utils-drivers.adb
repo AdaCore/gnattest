@@ -21,8 +21,10 @@
 -- <http://www.gnu.org/licenses/>.                                          --
 ------------------------------------------------------------------------------
 
+with Ada.Command_Line;
 with Ada.Directories;
 with Ada.Exceptions;
+with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 
 with GNAT.Command_Line;
 with GNAT.OS_Lib;
@@ -30,6 +32,7 @@ with GNAT.OS_Lib;
 with GPR2;
 
 with Test.Command_Lines; use Test.Command_Lines;
+with Test.Common;
 
 with Utils.Environment;
 with Utils.Err_Out;
@@ -186,7 +189,43 @@ package body Utils.Drivers is
          Process_Files;
       end if;
 
-      Final (Tool, Cmd);
+      --  Abort here if we the switch --dump-subp-hash is on. This return
+      --  should not be moved further down.
+
+      if Test.Common.Subp_File_Name /= null then
+         return;
+      end if;
+
+      --  If the project is an aggregate one, exit early and do nothing. The
+      --  aggregated projects will be processed in sequence in subprocess calls
+      --  made by the driver.
+
+      if Project_Tree.Is_Defined
+        and then Project_Tree.Root_Project.Kind in GPR2.Aggregate_Kind
+      then
+         return;
+      end if;
+
+      --  In any case, generate the support library if needed
+
+      if Test.Common.Get_Lib_Support_Status in Test.Common.Needed then
+         Test.Common.Generate_TGen_Lib_Support;
+      end if;
+
+      --  Run GNATtest, either in generation or in execution mode.
+
+      if Project_Tree.Is_Defined then
+         Generate_Tests (Cmd);
+      else
+         Run_Tests;
+      end if;
+
+      if Test.Common.Strict_Execution
+        and then Test.Common.Source_Processing_Failed
+      then
+         Ada.Command_Line.Set_Exit_Status (Ada.Command_Line.Failure);
+      end if;
+
       Environment.Clean_Up;
       Unload;
 
