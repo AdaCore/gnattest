@@ -43,17 +43,24 @@ package TGen.Types.Translation is
       end case;
    end record;
 
-   function Translate
-     (N : LAL.Type_Expr; Verbose : Boolean := False) return Translation_Result;
-   --  Translate N to TGen's internal type representation
+   type Translation_Ctx is private;
+
+   function Make_Translation_Context
+     (Verbose : Boolean := False) return Translation_Ctx;
+   --  Create a Translation_Context object with adequate default values
 
    function Translate
-     (N : LAL.Base_Type_Decl; Verbose : Boolean := False)
+     (N : LAL.Type_Expr; Ctx : in out Translation_Ctx)
       return Translation_Result;
    --  Translate N to TGen's internal type representation
 
    function Translate
-     (N : LAL.Basic_Decl; Verbose : Boolean := False)
+     (N : LAL.Base_Type_Decl; Ctx : in out Translation_Ctx)
+      return Translation_Result;
+   --  Translate N to TGen's internal type representation
+
+   function Translate
+     (N : LAL.Basic_Decl; Ctx : in out Translation_Ctx)
       return Translation_Result;
 
    package Translation_Maps is new
@@ -89,6 +96,18 @@ package TGen.Types.Translation is
    --  Clear the translation cache
 
 private
+
+   type Translation_Ctx is record
+      Verbose : Boolean := False;
+   end record;
+   --  Context for translating type declarations from LAL to TGen's internal
+   --  representation. It should be passed down at least to all subprograms
+   --  which may call a `Translate*` variant.
+
+   function Make_Translation_Context
+     (Verbose : Boolean := False) return Translation_Ctx
+   is ((Verbose => Verbose));
+
    Anonymous_Typ_Index : Positive := 1;
    --  Index incremented each time we create an anonymous type, to uniquely
    --  identify every anonymous type created.

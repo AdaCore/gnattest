@@ -948,8 +948,9 @@ package body TGen.Libgen is
      (Subp : LAL.Basic_Decl'Class) return Typ_Access
    is
       Diags     : String_Vectors.Vector;
+      Ctx       : Translation_Ctx := Make_Translation_Context;
       Trans_Res : constant Translation_Result :=
-        Translate (Subp.As_Basic_Decl);
+        Translate (Subp.As_Basic_Decl, Ctx);
    begin
       Array_Limit_Frozen := True;
       if Trans_Res.Success then

@@ -62,7 +62,6 @@ package body TGen.Types.Translation is
    --  something that should be static turns out not to be due to a LAL
    --  limitation.
 
-   Verbose_Diag : Boolean := False;
    package Text renames Langkit_Support.Text;
 
    function Get_From_Cache
@@ -79,7 +78,7 @@ package body TGen.Types.Translation is
 
    function Translate_Internal
      (N                 : LAL.Base_Type_Decl;
-      Verbose           : Boolean := False;
+      Ctx               : in out Translation_Ctx;
       Assume_Non_Static : Boolean := False) return Translation_Result;
    --  Actually translates the Base_Type_Decl. Translate is simply a
    --  memorization wrapper.
@@ -87,23 +86,29 @@ package body TGen.Types.Translation is
    --  flaged as non static.
 
    function Translate_Int_Decl
-     (Decl : Base_Type_Decl) return Translation_Result;
-
-   function Translate_Enum_Decl
-     (Decl : Base_Type_Decl; Root_Enum_Decl : Base_Type_Decl)
+     (Decl : Base_Type_Decl; Ctx : in out Translation_Ctx)
       return Translation_Result;
 
+   function Translate_Enum_Decl
+     (Decl           : Base_Type_Decl;
+      Root_Enum_Decl : Base_Type_Decl;
+      Ctx            : in out Translation_Ctx) return Translation_Result;
+
    function Translate_Char_Decl
-     (Decl : Base_Type_Decl) return Translation_Result;
+     (Decl : Base_Type_Decl; Ctx : in out Translation_Ctx)
+      return Translation_Result;
 
    function Translate_Float_Decl
-     (Decl : Base_Type_Decl) return Translation_Result;
+     (Decl : Base_Type_Decl; Ctx : in out Translation_Ctx)
+      return Translation_Result;
 
    function Translate_Ordinary_Fixed_Decl
-     (Decl : Base_Type_Decl) return Translation_Result;
+     (Decl : Base_Type_Decl; Ctx : in out Translation_Ctx)
+      return Translation_Result;
 
    function Translate_Decimal_Fixed_Decl
-     (Decl : Base_Type_Decl) return Translation_Result;
+     (Decl : Base_Type_Decl; Ctx : in out Translation_Ctx)
+      return Translation_Result;
 
    procedure Translate_Float_Range
      (Decl      : Base_Type_Decl;
@@ -123,12 +128,14 @@ package body TGen.Types.Translation is
    --  Long_Float'First .. Long_Float'Last
 
    function Translate_Array_Decl
-     (Decl : Base_Type_Decl) return Translation_Result
+     (Decl : Base_Type_Decl; Ctx : in out Translation_Ctx)
+      return Translation_Result
    with Pre => Decl.P_Root_Type.P_Full_View.P_Is_Array_Type;
 
    function Translate_Component_Decl_List
-     (Decl_List : Ada_Node_List; Res : in out Component_Maps.Map)
-      return Unbounded_String;
+     (Decl_List : Ada_Node_List;
+      Res       : in out Component_Maps.Map;
+      Ctx       : in out Translation_Ctx) return Unbounded_String;
    --  Translate the list of components of Decl into Res.
    --  If the returned string is empty then the results are valid, otherwise
    --  and error occured during translation and the contents of Res should
@@ -136,8 +143,9 @@ package body TGen.Types.Translation is
    --  translation
 
    function Translate_Variant_Part
-     (Node : LAL.Variant_Part; Discriminants : Component_Maps.Map)
-      return Record_Types.Variant_Part
+     (Node          : LAL.Variant_Part;
+      Discriminants : Component_Maps.Map;
+      Ctx           : in out Translation_Ctx) return Record_Types.Variant_Part
    with Pre => (not Node.Is_Null);
 
    procedure Subtract_Choice_From_Other
@@ -157,7 +165,8 @@ package body TGen.Types.Translation is
    --  in Decl_Or_Constraint.
 
    function Translate_Record_Decl
-     (Decl : Base_Type_Decl) return Translation_Result
+     (Decl : Base_Type_Decl; Ctx : in out Translation_Ctx)
+      return Translation_Result
    with
      Pre =>
        (Decl.P_Root_Type.P_Full_View.P_Is_Record_Type
@@ -368,8 +377,10 @@ package body TGen.Types.Translation is
    ------------------------
 
    function Translate_Int_Decl
-     (Decl : Base_Type_Decl) return Translation_Result
+     (Decl : Base_Type_Decl; Ctx : in out Translation_Ctx)
+      return Translation_Result
    is
+      pragma Unreferenced (Ctx);
       Rang : constant Discrete_Range := Decl.P_Discrete_Range;
 
       Max, Min : Big_Integer;
@@ -464,8 +475,10 @@ package body TGen.Types.Translation is
    -------------------------
 
    function Translate_Char_Decl
-     (Decl : Base_Type_Decl) return Translation_Result
+     (Decl : Base_Type_Decl; Ctx : in out Translation_Ctx)
+      return Translation_Result
    is
+      pragma Unreferenced (Ctx);
       Rang : constant Discrete_Range := Decl.P_Discrete_Range;
    begin
 
@@ -527,9 +540,11 @@ package body TGen.Types.Translation is
    -------------------------
 
    function Translate_Enum_Decl
-     (Decl : Base_Type_Decl; Root_Enum_Decl : Base_Type_Decl)
-      return Translation_Result
+     (Decl           : Base_Type_Decl;
+      Root_Enum_Decl : Base_Type_Decl;
+      Ctx            : in out Translation_Ctx) return Translation_Result
    is
+      pragma Unreferenced (Ctx);
       package Long_Long_Conversion is new
         Big_Int.Signed_Conversions (Int => Long_Long_Integer);
 
@@ -579,8 +594,10 @@ package body TGen.Types.Translation is
    --------------------------
 
    function Translate_Float_Decl
-     (Decl : Base_Type_Decl) return Translation_Result
+     (Decl : Base_Type_Decl; Ctx : in out Translation_Ctx)
+      return Translation_Result
    is
+      pragma Unreferenced (Ctx);
 
       procedure Find_Digits
         (Decl : Base_Type_Decl; Digits_Value : out Natural);
@@ -695,7 +712,8 @@ package body TGen.Types.Translation is
    -----------------------------------
 
    function Translate_Ordinary_Fixed_Decl
-     (Decl : Base_Type_Decl) return Translation_Result
+     (Decl : Base_Type_Decl; Ctx : in out Translation_Ctx)
+      return Translation_Result
    is
       Min, Max    : Big_Real;
       Delta_Value : Big_Real;
@@ -818,7 +836,7 @@ package body TGen.Types.Translation is
 
          --  In case of translation error, return a non-static type,
          --  but print the information if verbose diagnostics are required.
-         if Verbose_Diag then
+         if Ctx.Verbose then
             Put_Line
               ("Warning: could not determine static properties of"
                & " type"
@@ -837,8 +855,10 @@ package body TGen.Types.Translation is
    ----------------------------------
 
    function Translate_Decimal_Fixed_Decl
-     (Decl : Base_Type_Decl) return Translation_Result
+     (Decl : Base_Type_Decl; Ctx : in out Translation_Ctx)
+      return Translation_Result
    is
+      pragma Unreferenced (Ctx);
       Delta_Val  : Big_Real;
       Digits_Val : Natural;
       Has_Range  : Boolean;
@@ -1314,7 +1334,8 @@ package body TGen.Types.Translation is
    --------------------------
 
    function Translate_Array_Decl
-     (Decl : Base_Type_Decl) return Translation_Result
+     (Decl : Base_Type_Decl; Ctx : in out Translation_Ctx)
+      return Translation_Result
    is
       function Translate_Constrained
         (Decl : Base_Type_Decl) return Translation_Result;
@@ -1358,7 +1379,7 @@ package body TGen.Types.Translation is
                  others            => <>);
 
             Component_Typ : constant Translation_Result :=
-              Translate (Cmp_Typ_Def.F_Type_Expr, Verbose_Diag);
+              Translate (Cmp_Typ_Def.F_Type_Expr, Ctx);
             --  This ignores any constraints on the element type that may
             --  appear in the component definition.
 
@@ -1424,7 +1445,7 @@ package body TGen.Types.Translation is
 
                declare
                   Index_Trans : constant Translation_Result :=
-                    Translate (Index_Typ, Verbose_Diag);
+                    Translate (Index_Typ, Ctx);
                begin
                   if not Index_Trans.Success then
                      Failure_Reason :=
@@ -1555,12 +1576,14 @@ package body TGen.Types.Translation is
                              Translate
                                (Constraint
                                   .As_Identifier
-                                  .P_Name_Designated_Type)
+                                  .P_Name_Designated_Type,
+                                Ctx)
                            else
                              Translate
                                (Constraint
                                   .As_Subtype_Indication
-                                  .P_Designated_Type_Decl));
+                                  .P_Designated_Type_Decl,
+                                Ctx));
                      begin
                         --  Create non-static constraints by default...
 
@@ -1702,7 +1725,7 @@ package body TGen.Types.Translation is
          Failure_Reason : Unbounded_String;
 
          Element_Type : constant Translation_Result :=
-           Translate (Def.F_Component_Type.F_Type_Expr, Verbose_Diag);
+           Translate (Def.F_Component_Type.F_Type_Expr, Ctx);
          --  This ignores any constraints on the element type that may appear
          --  in the component definition.
 
@@ -1724,8 +1747,7 @@ package body TGen.Types.Translation is
             declare
                Index_Type : constant Translation_Result :=
                  Translate
-                   (Index.F_Subtype_Name.As_Name.P_Name_Designated_Type,
-                    Verbose_Diag);
+                   (Index.F_Subtype_Name.As_Name.P_Name_Designated_Type, Ctx);
             begin
                if Index_Type.Success then
                   Res_Typ.Index_Types (Current_Index_Type) := Index_Type.Res;
@@ -1765,7 +1787,8 @@ package body TGen.Types.Translation is
             if Is_Null (Decl.As_Subtype_Decl.F_Subtype.F_Constraint) then
                return
                  Translate_Array_Decl
-                   (Decl.As_Subtype_Decl.F_Subtype.P_Designated_Type_Decl);
+                   (Decl.As_Subtype_Decl.F_Subtype.P_Designated_Type_Decl,
+                    Ctx);
             else
                return Translate_Constrained (Decl);
             end if;
@@ -1790,7 +1813,8 @@ package body TGen.Types.Translation is
                          .F_Type_Def
                          .As_Derived_Type_Def
                          .F_Subtype_Indication
-                         .P_Designated_Type_Decl);
+                         .P_Designated_Type_Decl,
+                       Ctx);
                else
                   return Translate_Constrained (Decl);
                end if;
@@ -2378,8 +2402,9 @@ package body TGen.Types.Translation is
    -----------------------------------
 
    function Translate_Component_Decl_List
-     (Decl_List : Ada_Node_List; Res : in out Component_Maps.Map)
-      return Unbounded_String
+     (Decl_List : Ada_Node_List;
+      Res       : in out Component_Maps.Map;
+      Ctx       : in out Translation_Ctx) return Unbounded_String
    is
       Current_Typ : Translation_Result;
       Comp_Decl   : Component_Decl;
@@ -2389,8 +2414,7 @@ package body TGen.Types.Translation is
             return Null_Unbounded_String;
          end if;
          Comp_Decl := Decl.As_Component_Decl;
-         Current_Typ :=
-           Translate (Comp_Decl.F_Component_Def.F_Type_Expr, Verbose_Diag);
+         Current_Typ := Translate (Comp_Decl.F_Component_Def.F_Type_Expr, Ctx);
          if not Current_Typ.Success then
             return
               "Failed to translate type of component"
@@ -2406,9 +2430,14 @@ package body TGen.Types.Translation is
       return Null_Unbounded_String;
    end Translate_Component_Decl_List;
 
+   ----------------------------
+   -- Translate_Variant_Part --
+   ----------------------------
+
    function Translate_Variant_Part
-     (Node : LAL.Variant_Part; Discriminants : Component_Maps.Map)
-      return Record_Types.Variant_Part
+     (Node          : LAL.Variant_Part;
+      Discriminants : Component_Maps.Map;
+      Ctx           : in out Translation_Ctx) return Record_Types.Variant_Part
    is
       use Variant_Choice_Lists;
       Res        : Record_Types.Variant_Part;
@@ -2428,7 +2457,8 @@ package body TGen.Types.Translation is
             Diagnostics : constant Unbounded_String :=
               Translate_Component_Decl_List
                 (Var_Choice.As_Variant.F_Components.F_Components,
-                 Choice_Trans.Components);
+                 Choice_Trans.Components,
+                 Ctx);
          begin
             if Diagnostics /= Null_Unbounded_String then
                raise Translation_Error
@@ -2526,7 +2556,8 @@ package body TGen.Types.Translation is
                  new Record_Types.Variant_Part'
                    (Translate_Variant_Part
                       (Var_Choice.As_Variant.F_Components.F_Variant_Part,
-                       Discriminants));
+                       Discriminants,
+                       Ctx));
             end if;
             Res.Variant_Choices.Append (Choice_Trans);
          end;
@@ -2550,7 +2581,8 @@ package body TGen.Types.Translation is
    ---------------------------
 
    function Translate_Record_Decl
-     (Decl : Base_Type_Decl) return Translation_Result
+     (Decl : Base_Type_Decl; Ctx : in out Translation_Ctx)
+      return Translation_Result
    is
       function Is_Non_Discriminated_Full_View
         (D : Type_Decl'Class) return Boolean
@@ -2688,7 +2720,7 @@ package body TGen.Types.Translation is
 
             Failure_Reason :=
               Translate_Component_Decl_List
-                (Comp_List, Trans_Res.Component_Types);
+                (Comp_List, Trans_Res.Component_Types, Ctx);
 
             if Failure_Reason = Null_Unbounded_String then
                Trans_Res.Static_Gen :=
@@ -2708,8 +2740,7 @@ package body TGen.Types.Translation is
                          .P_Designated_Type_Decl;
                   begin
                      Trans_Res.Ancestor :=
-                       Record_Typ_Access
-                         (Translate_Internal (Ancestor_Decl).Res);
+                       Record_Typ_Access (Translate (Ancestor_Decl, Ctx).Res);
                   end;
                end if;
 
@@ -2760,7 +2791,7 @@ package body TGen.Types.Translation is
                      Trans_Res.Mutable := True;
                   end if;
 
-                  Current_Type := Translate (Spec.F_Type_Expr, Verbose_Diag);
+                  Current_Type := Translate (Spec.F_Type_Expr, Ctx);
 
                   if not Current_Type.Success then
                      Failure_Reason :=
@@ -2783,7 +2814,7 @@ package body TGen.Types.Translation is
 
             Failure_Reason :=
               Translate_Component_Decl_List
-                (Comp_List.F_Components, Trans_Res.Component_Types);
+                (Comp_List.F_Components, Trans_Res.Component_Types, Ctx);
 
             --  Now, if this record is tagged then we must also translate
             --  all the derivation chain.
@@ -2798,7 +2829,7 @@ package body TGen.Types.Translation is
                       .P_Designated_Type_Decl;
                begin
                   Trans_Res.Ancestor :=
-                    Record_Typ_Access (Translate_Internal (Ancestor_Decl).Res);
+                    Record_Typ_Access (Translate (Ancestor_Decl, Ctx).Res);
                end;
             end if;
 
@@ -2813,7 +2844,8 @@ package body TGen.Types.Translation is
                  new Record_Types.Variant_Part'
                    (Translate_Variant_Part
                       (Comp_List.F_Variant_Part,
-                       Trans_Res.all.Discriminant_Types));
+                       Trans_Res.all.Discriminant_Types,
+                       Ctx));
             end if;
 
             --  If the record is actually a constrained type, record the
@@ -3042,6 +3074,10 @@ package body TGen.Types.Translation is
 
    end Translate_Discrete_Range_Constraint;
 
+   -------------------------------
+   -- Translate_Real_Constraint --
+   -------------------------------
+
    function Translate_Real_Constraints
      (Node : LAL.Constraint) return TGen.Types.Constraints.Constraint'Class
    is
@@ -3122,6 +3158,10 @@ package body TGen.Types.Translation is
                 & Kind_Name (Node);
       end case;
    end Translate_Real_Constraints;
+
+   ---------------------------------
+   -- Translate_Index_Constraints --
+   ---------------------------------
 
    function Translate_Index_Constraints
      (Node : LAL.Constraint; Num_Dims : Positive)
@@ -3209,6 +3249,10 @@ package body TGen.Types.Translation is
       end return;
    end Translate_Index_Constraints;
 
+   ----------------------------------------
+   -- Translate_Discriminant_Constraints --
+   ----------------------------------------
+
    function Translate_Discriminant_Constraints
      (Node : LAL.Composite_Constraint)
       return TGen.Types.Constraints.Discriminant_Constraints
@@ -3262,7 +3306,8 @@ package body TGen.Types.Translation is
    ---------------
 
    function Translate
-     (N : LAL.Type_Expr; Verbose : Boolean := False) return Translation_Result
+     (N : LAL.Type_Expr; Ctx : in out Translation_Ctx)
+      return Translation_Result
    is
       Type_Decl_Node      : Base_Type_Decl;
       Intermediate_Result : Translation_Result;
@@ -3277,7 +3322,7 @@ package body TGen.Types.Translation is
          Type_Decl_Node := N.As_Subtype_Indication.P_Designated_Type_Decl;
       end if;
 
-      Intermediate_Result := Translate (Type_Decl_Node, Verbose);
+      Intermediate_Result := Translate (Type_Decl_Node, Ctx);
 
       if not Intermediate_Result.Success
         or else Kind (N) in Ada_Anonymous_Type
@@ -3438,7 +3483,7 @@ package body TGen.Types.Translation is
    ---------------
 
    function Translate
-     (N : LAL.Base_Type_Decl; Verbose : Boolean := False)
+     (N : LAL.Base_Type_Decl; Ctx : in out Translation_Ctx)
       return Translation_Result
    is
       use Translation_Maps;
@@ -3449,7 +3494,7 @@ package body TGen.Types.Translation is
       --  Do not memoize anonymous types
 
       if Is_Null (Full_Decl.F_Name) then
-         return Translate_Internal (Full_Decl, Verbose);
+         return Translate_Internal (Full_Decl, Ctx);
       end if;
 
       declare
@@ -3469,7 +3514,7 @@ package body TGen.Types.Translation is
 
          declare
             Trans_Res : constant Translation_Result :=
-              Translate_Internal (Full_Decl, Verbose);
+              Translate_Internal (Full_Decl, Ctx);
          begin
             if Trans_Res.Success then
                Translation_Cache.Insert (FQN, Trans_Res.Res);
@@ -3487,7 +3532,7 @@ package body TGen.Types.Translation is
 
    function Translate_Internal
      (N                 : LAL.Base_Type_Decl;
-      Verbose           : Boolean := False;
+      Ctx               : in out Translation_Ctx;
       Assume_Non_Static : Boolean := False) return Translation_Result
    is
       Root_Type : constant Base_Type_Decl := N.P_Root_Type.P_Full_View;
@@ -3528,7 +3573,6 @@ package body TGen.Types.Translation is
       --  True if N is the definition of an opaque type, False otherwise
 
    begin
-      Verbose_Diag := Verbose;
       Is_Static :=
         Is_Static
         and then N.P_Is_Static_Decl
@@ -3602,10 +3646,11 @@ package body TGen.Types.Translation is
                       .F_Type_Def
                       .As_Derived_Type_Def
                       .F_Subtype_Indication
-                      .P_Designated_Type_Decl)
+                      .P_Designated_Type_Decl,
+                    Ctx)
                else
                  Translate
-                   (N.As_Subtype_Decl.F_Subtype.P_Designated_Type_Decl));
+                   (N.As_Subtype_Decl.F_Subtype.P_Designated_Type_Decl, Ctx));
          begin
             if Parent_Type.Success then
                if TGen.Marshalling.Needs_Header (Parent_Type.Res.all) then
@@ -3650,7 +3695,7 @@ package body TGen.Types.Translation is
                 To_Unbounded_String ("Generic formal types are unsupported"),
               others => <>);
       elsif Root_Type.P_Is_Int_Type then
-         Specialized_Res := Translate_Int_Decl (N);
+         Specialized_Res := Translate_Int_Decl (N, Ctx);
 
       elsif P_Is_Derived_Type
               (Node => N, Other_Type => N.P_Bool_Type.As_Base_Type_Decl)
@@ -3672,15 +3717,15 @@ package body TGen.Types.Translation is
               or else Root_Type_Name = "standard.wide_character"
               or else Root_Type_Name = "standard.wide_wide_character"
             then
-               Specialized_Res := Translate_Char_Decl (N);
+               Specialized_Res := Translate_Char_Decl (N, Ctx);
             else
-               Specialized_Res := Translate_Enum_Decl (N, Root_Type);
+               Specialized_Res := Translate_Enum_Decl (N, Root_Type, Ctx);
             end if;
          end;
 
       elsif Root_Type.P_Is_Float_Type then
          if Is_Static then
-            Specialized_Res := Translate_Float_Decl (N);
+            Specialized_Res := Translate_Float_Decl (N, Ctx);
          else
             Specialized_Res := (Success => True, others => <>);
             Specialized_Res.Res :=
@@ -3693,7 +3738,7 @@ package body TGen.Types.Translation is
             in Ada_Ordinary_Fixed_Point_Def_Range
          then
             if Is_Static then
-               Specialized_Res := Translate_Ordinary_Fixed_Decl (N);
+               Specialized_Res := Translate_Ordinary_Fixed_Decl (N, Ctx);
             else
                Specialized_Res := (Success => True, others => <>);
                Specialized_Res.Res :=
@@ -3701,7 +3746,7 @@ package body TGen.Types.Translation is
             end if;
          else
             if Is_Static then
-               Specialized_Res := Translate_Decimal_Fixed_Decl (N);
+               Specialized_Res := Translate_Decimal_Fixed_Decl (N, Ctx);
             else
                Specialized_Res := (Success => True, others => <>);
                Specialized_Res.Res :=
@@ -3711,7 +3756,7 @@ package body TGen.Types.Translation is
          end if;
 
       elsif Root_Type.P_Is_Array_Type then
-         Specialized_Res := Translate_Array_Decl (N);
+         Specialized_Res := Translate_Array_Decl (N, Ctx);
 
       elsif Root_Type.P_Is_Record_Type then
 
@@ -3730,7 +3775,7 @@ package body TGen.Types.Translation is
                    To_Unbounded_String ("Abstract types are not supported"),
                  others => <>);
          else
-            Specialized_Res := Translate_Record_Decl (N);
+            Specialized_Res := Translate_Record_Decl (N, Ctx);
          end if;
 
       elsif Root_Type.P_Is_Access_Type then
@@ -3776,12 +3821,12 @@ package body TGen.Types.Translation is
               & " : "
               & Ada.Exceptions.Exception_Information (Exc));
       when Exc : Non_Static_Error =>
-         if Verbose_Diag then
+         if Ctx.Verbose then
             Put_Line
               ("Lal limitation during static evaluation: "
                & Ada.Exceptions.Exception_Message (Exc));
          end if;
-         return Translate_Internal (N, Verbose_Diag, True);
+         return Translate_Internal (N, Ctx, True);
       when Exc : Translation_Error =>
          return
            (Success     => False,
@@ -3792,7 +3837,7 @@ package body TGen.Types.Translation is
    end Translate_Internal;
 
    function Translate_Globals
-     (N : Expr; Verbose : Boolean) return Translation_Result;
+     (N : Expr; Ctx : in out Translation_Ctx) return Translation_Result;
    --  Return the list of globals specified in the global aspect, which are
    --  returned encapsulated in a Record_Typ (for conveniency purposes) if the
    --  translation of the globals type is successful. If one of the globals
@@ -3806,7 +3851,7 @@ package body TGen.Types.Translation is
    ---------------------
 
    function Translate_Globals
-     (N : Expr; Verbose : Boolean) return Translation_Result
+     (N : Expr; Ctx : in out Translation_Ctx) return Translation_Result
    is
       Rec : constant Record_Typ_Access :=
         new Record_Typ'(Constrained => False, others => <>);
@@ -3843,7 +3888,7 @@ package body TGen.Types.Translation is
                if not Obj_Decl.F_Has_Constant then
                   declare
                      Global_Typ_Translation : constant Translation_Result :=
-                       Translate (Global.As_Object_Decl.F_Type_Expr, Verbose);
+                       Translate (Global.As_Object_Decl.F_Type_Expr, Ctx);
                   begin
                      if Global_Typ_Translation.Success then
                         Rec.Component_Types.Insert
@@ -3928,7 +3973,7 @@ package body TGen.Types.Translation is
                                  Global_Comps : constant Component_Map :=
                                    As_Record_Typ
                                      (Translate_Globals
-                                        (Aggr_Assoc.F_R_Expr, Verbose)
+                                        (Aggr_Assoc.F_R_Expr, Ctx)
                                         .Res)
                                      .Component_Types;
                               begin
@@ -3962,7 +4007,8 @@ package body TGen.Types.Translation is
    ---------------
 
    function Translate
-     (N : LAL.Basic_Decl; Verbose : Boolean := False) return Translation_Result
+     (N : LAL.Basic_Decl; Ctx : in out Translation_Ctx)
+      return Translation_Result
    is
       F_Typ         : constant Function_Typ_Access := new Function_Typ;
       Result        : Translation_Result (Success => True);
@@ -4011,7 +4057,7 @@ package body TGen.Types.Translation is
          for Param of Subp_Spec.P_Params loop
             declare
                Current_Typ : constant Translation_Result :=
-                 Translate (Param.F_Type_Expr.P_Designated_Type_Decl, Verbose);
+                 Translate (Param.F_Type_Expr.P_Designated_Type_Decl, Ctx);
             begin
                if Current_Typ.Success then
 
@@ -4038,7 +4084,7 @@ package body TGen.Types.Translation is
          if not Subp_Spec.P_Returns.Is_Null then
             declare
                Ret : constant Translation_Result :=
-                 Translate (Subp_Spec.P_Returns, Verbose);
+                 Translate (Subp_Spec.P_Returns, Ctx);
             begin
                if not Ret.Success then
                   return (False, Ret.Diagnostics);
@@ -4072,7 +4118,7 @@ package body TGen.Types.Translation is
             F_Typ.Globals :=
               As_Record_Typ
                 (Translate_Globals
-                   (N.P_Get_Aspect_Spec_Expr (Global_Aspect), Verbose)
+                   (N.P_Get_Aspect_Spec_Expr (Global_Aspect), Ctx)
                    .Res)
                 .Component_Types;
          end if;
