@@ -60,8 +60,30 @@ package body Utils.Drivers is
       procedure Include_One (File_Name : String);
       --  Include File_Name in the Ignored set below
 
+      procedure Make_Dir (Dir : String);
+      --  Create directory Dir if it doesn't already exist.
+
       Ignored : String_Set;
       --  Set of file names mentioned in the --ignore=... switch
+
+      procedure Make_Dir (Dir : String) is
+         Cannot_Create : constant String :=
+           "cannot create directory '" & Dir & "'";
+         use Ada.Directories;
+      begin
+         if Exists (Dir) then
+            if Kind (Dir) /= Directory then
+               Cmd_Error (Cannot_Create & "; file already exists");
+            end if;
+         else
+            begin
+               Create_Path (Dir);
+            exception
+               when Name_Error | Use_Error =>
+                  Cmd_Error (Cannot_Create);
+            end;
+         end if;
+      end Make_Dir;
 
       procedure Include_One (File_Name : String) is
       begin
@@ -158,25 +180,7 @@ package body Utils.Drivers is
       --  Create output directory if necessary
 
       if Present (Arg (Cmd, Output_Directory)) then
-         declare
-            Dir           : constant String := Arg (Cmd, Output_Directory).all;
-            Cannot_Create : constant String :=
-              "cannot create directory '" & Dir & "'";
-            use Ada.Directories;
-         begin
-            if Exists (Dir) then
-               if Kind (Dir) /= Directory then
-                  Cmd_Error (Cannot_Create & "; file already exists");
-               end if;
-            else
-               begin
-                  Create_Path (Dir);
-               exception
-                  when Name_Error | Use_Error =>
-                     Cmd_Error (Cannot_Create);
-               end;
-            end if;
-         end;
+         Make_Dir (Arg (Cmd, Output_Directory).all);
       end if;
 
       Init (Tool, Cmd);

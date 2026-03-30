@@ -354,6 +354,8 @@ package body Test.Actions is
    begin
       Test.Common.Verbose := Arg (Cmd, Verbose);
       Test.Common.Quiet := Arg (Cmd, Quiet);
+      Test.Common.Instrument := Arg (Cmd, Dump_Test_Inputs);
+      Test.Common.Lang_Version := Arg (Cmd);
 
       --  If the tool project is an aggregate one, exit early and do nothing.
       --  The aggregated projects will be processed in sequence in subprocess
@@ -374,10 +376,6 @@ package body Test.Actions is
                  Test.Common.Subp_Line_Nbr));
          Test.Command_Lines.Test_Boolean_Switches.Set_Arg (Cmd, Quiet, True);
       end if;
-
-      Test.Common.Instrument := Arg (Cmd, Dump_Test_Inputs);
-
-      Test.Common.Lang_Version := Arg (Cmd);
 
       --  Passed_Tests
       declare
