@@ -486,8 +486,6 @@ package body Test.Actions is
          --  them as ada sources.
          Clear_File_Names (Cmd);
 
-         Test.Common.Queues_Number := Arg (Cmd, Jobs);
-
          --  Aggregation mode does not require any further processing
          return;
       end if;
