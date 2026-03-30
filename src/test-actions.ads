@@ -40,13 +40,12 @@ package Test.Actions is
 
    procedure Init (Tool : in out Tool_State; Cmd : in out Command_Line);
 
-   procedure First_Pass_Post_Process
-     (Tool : in out Tool_State; Cmd : in out Command_Line);
+   procedure First_Pass_Post_Process (Cmd : Command_Line);
    --  Called in between First_Per_File_Action and Second_Per_File_Action
 
    procedure Process_File
      (Tool         : in out Tool_State;
-      Cmd          : in out Command_Line;
+      Cmd          : Command_Line;
       File_Name    : String;
       Counter      : Natural;
       Syntax_Error : out Boolean;
@@ -73,7 +72,7 @@ package Test.Actions is
    --  reason this is needed is documented in Stub.Actions (search for the call
    --  to Process_File).
 
-   procedure Final (Tool : in out Tool_State; Cmd : Command_Line);
+   procedure Final (Cmd : Command_Line);
    procedure Tool_Help;
 
 end Test.Actions;

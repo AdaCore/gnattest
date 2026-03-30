@@ -107,7 +107,7 @@ package body Utils.Drivers is
             end loop;
 
             pragma Assert (Counter = 0);
-            Tool.First_Pass_Post_Process (Cmd);
+            First_Pass_Post_Process (Cmd);
             Counter := N_File_Names;
             if Arg (Cmd, Verbose) then
                Err_Out.Put ("Second pass:\n");

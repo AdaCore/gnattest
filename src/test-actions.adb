@@ -154,7 +154,7 @@ package body Test.Actions is
 
    procedure Process_File
      (Tool         : in out Tool_State;
-      Cmd          : in out Command_Line;
+      Cmd          : Command_Line;
       File_Name    : String;
       Counter      : Natural;
       Syntax_Error : out Boolean;
@@ -1301,10 +1301,7 @@ package body Test.Actions is
    -- First_Pass_Post_Process --
    -----------------------------
 
-   procedure First_Pass_Post_Process
-     (Tool : in out Tool_State; Cmd : in out Command_Line)
-   is
-      pragma Unreferenced (Tool);
+   procedure First_Pass_Post_Process (Cmd : Command_Line) is
    begin
       --  We always need the lib support when running the generation harness
 
@@ -1321,7 +1318,7 @@ package body Test.Actions is
    -- Final --
    -----------
 
-   procedure Final (Tool : in out Tool_State; Cmd : Command_Line) is
+   procedure Final (Cmd : Command_Line) is
       use Ada.Strings.Unbounded;
    begin
       --  Abort here if we the switch --dump-subp-hash is on. This return
