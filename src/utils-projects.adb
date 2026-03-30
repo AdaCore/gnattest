@@ -596,6 +596,11 @@ package body Utils.Projects is
       end if;
 
       declare
+
+         File_List : String_Ref_Vector :=
+           String_Ref_Vectors.To_Vector (Cmd.File_Names);
+         --  Make a copy of Cmd's File_Names.
+
          procedure Update_File_Name (File_Name : in out String_Ref);
          --  Set File_Name to the full name if -P specified. If the file
          --  doesn't exist, or is not a regular file, give an error.
@@ -644,7 +649,7 @@ package body Utils.Projects is
 
          procedure Append_One (File_Name : String) is
          begin
-            Append_File_Name (Cmd, File_Name);
+            File_List.Append (new String'(File_Name));
          end Append_One;
 
       begin
@@ -685,19 +690,12 @@ package body Utils.Projects is
                --  for now. Eventually, the filenames will come from somewhere
                --  else.
 
-               declare
-                  File_List : String_Ref_Vector :=
-                    Utils.Command_Lines.String_Ref_Vectors.To_Vector
-                      (Cmd.File_Names);
-               begin
-                  Get_Sources_From_Project
-                    (Global_Project_Tree,
-                     File_List,
-                     Arg (Cmd) = Update_All,
-                     Arg (Cmd) = No_Subprojects,
-                     Arg_Length (Cmd, Files) > 0);
-                  Cmd.Set_File_Names (File_List);
-               end;
+               Get_Sources_From_Project
+                 (Global_Project_Tree,
+                  File_List,
+                  Arg (Cmd) = Update_All,
+                  Arg (Cmd) = No_Subprojects,
+                  Arg_Length (Cmd, Files) > 0);
 
                --  Set the directory to place the global tool results into.
 
@@ -752,8 +750,13 @@ package body Utils.Projects is
             Read_File_Names_From_File (Par_File_Name.all, Append_One'Access);
          end loop;
 
-         Sort_File_Names (Cmd);
-         Iter_File_Names (Cmd, Update_File_Name'Access);
+         Sorting.Sort (File_List);
+
+         for File_Name of File_List loop
+            Update_File_Name (File_Name);
+         end loop;
+
+         Cmd.Set_File_Names (File_List);
       end;
    end Process_Command_Line;
 

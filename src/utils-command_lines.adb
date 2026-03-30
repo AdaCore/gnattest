@@ -1240,20 +1240,6 @@ package body Utils.Command_Lines is
       Parse_Helper (Text_Args, Cmd, Phase, Collect_File_Names, Ignore_Errors);
    end Parse;
 
-   function File_Name_Is_Less_Than (Left, Right : String_Ref) return Boolean;
-   --  Assuming that L and R are file names compares them as follows:
-   --
-   --  * if L and/or R contains a directory separator, compares
-   --    lexicographicaly parts that follow the rightmost directory separator.
-   --    If these parts are equal, compares L and R lexicographicaly
-   --
-   --  * otherwise compares L and R lexicographicaly
-   --
-   --  Comparisons are case-sensitive.
-
-   package Sorting is new
-     String_Ref_Vectors.Generic_Sorting (File_Name_Is_Less_Than);
-
    ----------------------------
    -- File_Name_Is_Less_Than --
    ----------------------------
@@ -1291,11 +1277,6 @@ package body Utils.Command_Lines is
       end if;
    end File_Name_Is_Less_Than;
 
-   procedure Sort_File_Names (Cmd : in out Command_Line) is
-   begin
-      Sorting.Sort (Cmd.File_Names);
-   end Sort_File_Names;
-
    procedure Clear_File_Names (Cmd : in out Command_Line) is
    begin
       Clear (Cmd.File_Names);
@@ -1322,15 +1303,6 @@ package body Utils.Command_Lines is
    begin
       return Last_Index (Cmd.File_Names);
    end Num_File_Names;
-
-   procedure Iter_File_Names
-     (Cmd    : in out Command_Line;
-      Action : not null access procedure (File_Name : in out String_Ref)) is
-   begin
-      for File_Name of Cmd.File_Names loop
-         Action (File_Name);
-      end loop;
-   end Iter_File_Names;
 
    procedure Dump_Cmd (Cmd : Command_Line; Verbose : Boolean := False) is
       Descriptor : Command_Line_Descriptor renames Cmd.Descriptor.all;
