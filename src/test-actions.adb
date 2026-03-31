@@ -1294,18 +1294,6 @@ package body Test.Actions is
 
    end Init;
 
-   -----------------------------
-   -- First_Pass_Post_Process --
-   -----------------------------
-
-   procedure First_Pass_Post_Process (Cmd : Command_Line) is
-   begin
-      --  We always need the lib support when running the generation harness
-
-      Test.Common.Generate_TGen_Lib_Support;
-      Test.Generation.Generate_Build_And_Run (Cmd);
-   end First_Pass_Post_Process;
-
    --------------------
    -- Generate_Tests --
    --------------------

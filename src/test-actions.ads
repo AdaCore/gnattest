@@ -40,9 +40,6 @@ package Test.Actions is
 
    procedure Init (Tool : in out Tool_State; Cmd : in out Command_Line);
 
-   procedure First_Pass_Post_Process (Cmd : Command_Line);
-   --  Called in between First_Per_File_Action and Second_Per_File_Action
-
    procedure Process_File
      (Tool         : in out Tool_State;
       Cmd          : Command_Line;

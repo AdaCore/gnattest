@@ -33,6 +33,7 @@ with GPR2;
 
 with Test.Command_Lines; use Test.Command_Lines;
 with Test.Common;
+with Test.Generation;
 
 with Utils.Environment;
 with Utils.Err_Out;
@@ -132,7 +133,13 @@ package body Utils.Drivers is
             end loop;
 
             pragma Assert (Counter = 0);
-            First_Pass_Post_Process (Cmd);
+
+            --  We always need the lib support when running the generation
+            --  harness.
+
+            Test.Common.Generate_TGen_Lib_Support;
+            Test.Generation.Generate_Build_And_Run (Cmd);
+
             Counter := N_File_Names;
             if Arg (Cmd, Verbose) then
                Err_Out.Put ("Second pass:\n");
