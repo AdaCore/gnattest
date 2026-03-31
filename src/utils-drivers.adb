@@ -117,6 +117,11 @@ package body Utils.Drivers is
                   end if;
 
                   Has_Syntax_Err := False;
+
+                  --  Call Create_Context if we don't have one, or after an
+                  --  arbitrary number of files.
+                  Tool.Maybe_Recreate_Context (Wide_Character_Encoding (Cmd));
+
                   Process_File
                     (Tool,
                      Cmd,
@@ -157,6 +162,11 @@ package body Utils.Drivers is
                end if;
 
                Has_Syntax_Err := False;
+
+               --  Call Create_Context if we don't have one, or after an
+               --  arbitrary number of files.
+               Tool.Maybe_Recreate_Context (Wide_Character_Encoding (Cmd));
+
                Process_File
                  (Tool,
                   Cmd,

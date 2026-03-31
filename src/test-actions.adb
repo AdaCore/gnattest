@@ -147,24 +147,16 @@ package body Test.Actions is
      Additional_Tests_Event_Handler'(null record);
    --  Instance from which we'll create the event handler.
 
-   ------------------
-   -- Process_File --
-   ------------------
+   ----------------------------
+   -- Maybe_Recreate_Context --
+   ----------------------------
 
-   procedure Process_File
-     (Tool         : in out Tool_State;
-      Cmd          : Command_Line;
-      File_Name    : String;
-      Counter      : Natural;
-      Syntax_Error : out Boolean;
-      Reparse      : Boolean := False;
-      Pass         : Pass_Kind := Second_Pass) is
+   procedure Maybe_Recreate_Context
+     (Tool : in out Tool_State; Char_Encoding : String) is
    begin
-
-      --  Call Create_Context if we don't have one, or after an arbitrary
-      --  number of files.
-
-      if Tool.Context = No_Analysis_Context or else Counter mod 100 = 0 then
+      if Tool.Context = No_Analysis_Context
+        or else Tool.Ctx_Counter = Max_Files_Per_Context
+      then
          declare
             Default_Config : Libadalang.Preprocessing.File_Config;
             File_Configs   : Libadalang.Preprocessing.File_Config_Maps.Map;
@@ -193,12 +185,29 @@ package body Test.Actions is
 
             Tool.Context :=
               Create_Context
-                (Charset       => Wide_Character_Encoding (Cmd),
+                (Charset       => Char_Encoding,
                  File_Reader   => File_Reader,
                  Unit_Provider => Provider);
+            Tool.Ctx_Counter := 0;
          end;
+      else
+         Tool.Ctx_Counter := Tool.Ctx_Counter + 1;
       end if;
+   end Maybe_Recreate_Context;
 
+   ------------------
+   -- Process_File --
+   ------------------
+
+   procedure Process_File
+     (Tool         : Tool_State;
+      Cmd          : Command_Line;
+      File_Name    : String;
+      Counter      : Natural;
+      Syntax_Error : out Boolean;
+      Reparse      : Boolean := False;
+      Pass         : Pass_Kind := Second_Pass) is
+   begin
       declare
          Unit : constant Analysis_Unit :=
            Get_From_File (Tool.Context, File_Name, Reparse => Reparse);
