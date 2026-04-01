@@ -103,22 +103,20 @@ package body TGen.Types is
         (if Top_Level_Generic
          then Generic_Package_Instance_Name (Self.Name)
          else Self.Name);
-
-      function Append_Class_Wide_If_Needed (Type_Name : String) return String
-      is ((if Self.Is_Class_Wide then Type_Name & "'Class" else Type_Name));
    begin
-      if not No_Std
-        or else not Ada.Strings.Equal_Case_Insensitive
-                      (+Unbounded_String (Name.First_Element), "standard")
+      if No_Std
+        and then Ada.Strings.Equal_Case_Insensitive
+                   (To_String (Name.First_Element), "standard")
       then
-         return Append_Class_Wide_If_Needed (To_Ada (Name));
+         declare
+            Stripped : Ada_Qualified_Name := Name;
+         begin
+            Stripped.Delete_First;
+            return To_Ada (Stripped);
+         end;
+      else
+         return To_Ada (Self.Name);
       end if;
-      declare
-         Stripped : Ada_Qualified_Name := Name;
-      begin
-         Stripped.Delete_First;
-         return Append_Class_Wide_If_Needed (To_Ada (Stripped));
-      end;
    end FQN;
 
    ------------------
@@ -206,8 +204,14 @@ package body TGen.Types is
         (if Top_Level_Generic
          then Generic_Package_Instance_Name (Self.Name)
          else Self.Name);
+      Idx  : Natural;
    begin
-      return To_Symbol (Name, '_');
+      return Res : String := To_Symbol (Name, '_') do
+         Idx := Index (Res, ''', Direction => Ada.Strings.Backward);
+         if Idx /= 0 then
+            Res (Idx) := '_';
+         end if;
+      end return;
    end Slug;
 
    ------------------

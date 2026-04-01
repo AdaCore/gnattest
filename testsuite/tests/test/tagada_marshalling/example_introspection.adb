@@ -589,8 +589,8 @@ procedure Example_Introspection is
    begin
       Assert (Arr_Typ.Num_Dims = 1);
       Assert (Index_Typ.Is_Static);
-      Assert (Index_Typ.Range_Value.Min = From_Universal_Image (T2'(T2'First)'Image));
-      Assert (Index_Typ.Range_Value.Max = From_Universal_Image (T2'(T2'Last)'Image));
+      Assert (Index_Typ.Range_Value.Min = From_Universal_Image (T2'Base'(T2'Base'First)'Image));
+      Assert (Index_Typ.Range_Value.Max = From_Universal_Image (T2'Base'(T2'Base'Last)'Image));
       Assert (Arr_Typ.Component_Type = my_file_shape_typ_ref);
    end Test_Shape_Array;
 

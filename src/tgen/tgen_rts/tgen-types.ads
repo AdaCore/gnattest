@@ -42,7 +42,9 @@ package TGen.Types is
 
    type Typ is tagged record
       Name : Ada_Qualified_Name;
-      --  Fully qualified name of the type
+      --  Fully qualified name of the type. This may contain a 'Base or 'Class
+      --  attribute in the last element if the type is a base or classwide
+      --  type.
 
       Last_Comp_Unit_Idx : Positive := 1;
       --  Index, in Name, of the last identifier of the compilation unit in
@@ -63,9 +65,6 @@ package TGen.Types is
 
       Is_Generic : Boolean := False;
       --  If the type is the result of a generic package instantiation
-
-      Is_Class_Wide : Boolean := False;
-      --  Whether the type is class wide (has `'Class` attribute)
 
       Has_Static_Predicate : Boolean := False;
       --  Whether the type has a static predicate (`with Static_Predicate`)

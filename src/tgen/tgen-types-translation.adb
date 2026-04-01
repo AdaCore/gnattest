@@ -3649,8 +3649,6 @@ package body TGen.Types.Translation is
                               .As_Subtype_Indication
                               .F_Constraint
                               .As_Composite_Constraint)),
-                    Is_Class_Wide       =>
-                      not Type_Decl_Node.P_Classwide_Type.Is_Null,
                     others              => <>);
             end return;
 
@@ -3737,10 +3735,8 @@ package body TGen.Types.Translation is
       --  Relevant only for Scalar types / array bounds
       --  / discriminant constraints.
 
-      Type_Name : constant Defining_Name :=
-        (if not (Kind (N) in Ada_Anonymous_Type_Decl_Range)
-         then N.P_Defining_Name
-         else No_Defining_Name);
+      Is_Anonymous : constant Boolean :=
+        N.Kind in Ada_Anonymous_Type_Decl_Range;
 
       Comp_Unit_Decl : constant Basic_Decl :=
         Ultimate_Enclosing_Compilation_Unit (N.As_Basic_Decl);
@@ -3749,8 +3745,8 @@ package body TGen.Types.Translation is
         Comp_Unit_Decl.P_Fully_Qualified_Name_Array'Last;
 
       FQN : constant Ada_Qualified_Name :=
-        (if not Type_Name.Is_Null
-         then Convert_Qualified_Name (Type_Name.P_Fully_Qualified_Name_Array)
+        (if not Is_Anonymous
+         then Convert_Qualified_Name (N.P_Fully_Qualified_Name_Array)
          else Ada_Identifier_Vectors.Empty);
 
       First_Part : constant Basic_Decl'Class := N.P_All_Parts (1);
@@ -3816,7 +3812,7 @@ package body TGen.Types.Translation is
          Specialized_Res :=
            Translate_Proxy (N, FQN, Proxy_Aspect.Value.As_Name, Ctx);
 
-      elsif Is_Null (Type_Name) then
+      elsif Is_Anonymous then
 
          --  Anonymous types at this level are either anonymous array
          --  declarations or anonymous access types, both of which we don't
@@ -3870,7 +3866,7 @@ package body TGen.Types.Translation is
             Declaration_Type_Name : constant Ada_Qualified_Name :=
               TGen.Strings.To_Qualified_Name
                 (Langkit_Support.Text.Encode
-                   (N.As_Base_Type_Decl.P_Fully_Qualified_Name, "utf-8"));
+                   (N.P_Fully_Qualified_Name, "utf-8"));
             --  Translate the parent type
             Parent_Type           : constant Translation_Result :=
               (if N.Kind = Ada_Concrete_Type_Decl
@@ -4035,8 +4031,6 @@ package body TGen.Types.Translation is
          Specialized_Res.Res.all.Fully_Private := Decl_Is_Fully_Private (N);
          Specialized_Res.Res.all.Private_Extension :=
            Basic_Decl'(N.P_All_Parts (1)).As_Base_Type_Decl.P_Is_Private;
-         Specialized_Res.Res.all.Is_Class_Wide :=
-           N.Kind in Ada_Classwide_Type_Decl_Range;
 
          --  Checks if the type has a static predicate aspect.
          Specialized_Res.Res.all.Has_Static_Predicate :=
@@ -4066,9 +4060,7 @@ package body TGen.Types.Translation is
          return
            (Success     => False,
             Diagnostics =>
-              +(Image (Type_Name.Text)
-                & ": "
-                & Ada.Exceptions.Exception_Message (Exc)));
+              +(N.Image & ": " & Ada.Exceptions.Exception_Message (Exc)));
    end Translate_Internal;
 
    function Translate_Globals
