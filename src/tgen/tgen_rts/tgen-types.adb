@@ -270,36 +270,11 @@ package body TGen.Types is
      (Self : Derived_Private_Subtype_Typ; Val : JSON_Value) return JSON_Value
    is (Self.Parent_Type.Encode (Val));
 
-   ---------------------
-   -- Get_Diagnostics --
-   ---------------------
-
-   function Get_Diagnostics
-     (Self : Proxy_Typ; Prefix : String := "") return String_Vector
-   is
-      use TGen.Types.Record_Types;
-      Proxy : Function_Typ renames Function_Typ (Self.Proxy_Subprogram.all);
-      Res   : String_Vector := Proxy.Get_Diagnostics;
-   begin
-      --  A type with proxy only has diagnostics if there are any attached to
-      --  the parameter types of the proxy subprogram, or if any of its
-      --  parameters are of "out" mode.
-
-      if (for some Param_Mode of Proxy.Param_Modes => Param_Mode = Out_Mode)
-      then
-         Res.Append
-           (+"proxy subprogram "
-            & Proxy.FQN
-            & " has at least an out mode parameter");
-      end if;
-      return Res;
-   end Get_Diagnostics;
-
    --  The generation strategies for proxy types "simply" leverage the
    --  strategies of the proxy subprogram, and alter the representation to add
    --  a header containing the hash of the proxy subprogram, to avoid
    --  catastrophic decoding errors, should the proxy subprogram change between
-   --  two TGen invocation. The hash may also be useful in the future to
+   --  two TGen invocations. The hash may also be useful in the future to
    --  provision for potential support for more than 1 proxy program supported
    --  at a time.
 

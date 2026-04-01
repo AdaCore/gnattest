@@ -1,0 +1,37 @@
+implicit.ads:6:4: info: corresponding test PASSED
+implicit.ads:6:4: info: corresponding test PASSED
+implicit.ads:6:4: info: corresponding test PASSED
+implicit.ads:6:4: info: corresponding test PASSED
+implicit.ads:6:4: info: corresponding test PASSED
+implicit.ads:4:4: info: corresponding test PASSED
+implicit.ads:4:4: info: corresponding test PASSED
+implicit.ads:4:4: info: corresponding test PASSED
+implicit.ads:4:4: info: corresponding test PASSED
+implicit.ads:4:4: info: corresponding test PASSED
+implicit.ads:5:4: info: corresponding test PASSED
+implicit.ads:5:4: info: corresponding test PASSED
+implicit.ads:5:4: info: corresponding test PASSED
+implicit.ads:5:4: info: corresponding test PASSED
+implicit.ads:5:4: info: corresponding test PASSED
+pkg.ads:6:4: info: corresponding test PASSED
+pkg.ads:6:4: info: corresponding test PASSED
+pkg.ads:6:4: info: corresponding test PASSED
+pkg.ads:6:4: info: corresponding test PASSED
+pkg.ads:6:4: info: corresponding test PASSED
+pkg.ads:4:4: info: corresponding test PASSED
+pkg.ads:4:4: info: corresponding test PASSED
+pkg.ads:4:4: info: corresponding test PASSED
+pkg.ads:4:4: info: corresponding test PASSED
+pkg.ads:4:4: info: corresponding test PASSED
+pkg.ads:5:4: info: corresponding test PASSED
+pkg.ads:5:4: info: corresponding test PASSED
+pkg.ads:5:4: info: corresponding test PASSED
+pkg.ads:5:4: info: corresponding test PASSED
+pkg.ads:5:4: info: corresponding test PASSED
+implicit.ads:4:4: error: corresponding test FAILED: Test not implemented. (implicit-test_data-tests.adb:45)
+implicit.ads:5:4: error: corresponding test FAILED: Test not implemented. (implicit-test_data-tests.adb:66)
+implicit.ads:6:4: error: corresponding test FAILED: Test not implemented. (implicit-test_data-tests.adb:87)
+pkg.ads:4:4: error: corresponding test FAILED: Test not implemented. (pkg-test_data-tests.adb:45)
+pkg.ads:5:4: error: corresponding test FAILED: Test not implemented. (pkg-test_data-tests.adb:66)
+pkg.ads:6:4: error: corresponding test FAILED: Test not implemented. (pkg-test_data-tests.adb:87)
+36 tests run: 30 passed; 6 failed; 0 crashed.

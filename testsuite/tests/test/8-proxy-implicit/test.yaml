@@ -1,0 +1,8 @@
+description: Test that TGen and gnattest properly support simple proxy
+  marshallers. THe proxy marshallers should support generation of new values,
+  to JSON and binary format, and unmarshalling of those formats to Ada values,
+  but not marshalling Ada values to the proxy format.
+  This test checks that the proxy is properly identified even with no direct
+  annotations
+
+driver: shell_script

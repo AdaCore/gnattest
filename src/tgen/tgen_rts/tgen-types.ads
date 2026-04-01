@@ -348,9 +348,10 @@ package TGen.Types is
    is (Proxy_Kind);
 
    function Get_Diagnostics
-     (Self : Proxy_Typ; Prefix : String := "") return String_Vector;
+     (Self : Proxy_Typ; Prefix : String := "") return String_Vector
+   is (Self.Proxy_Subprogram.Get_Diagnostics (Prefix));
    --  A proxy has diagnostics if the proxy subprogram's representation typ has
-   --  diagnostics, or if any of its parameters are of out mode.
+   --  diagnostics.
 
    function Default_Strategy
      (Self : Proxy_Typ) return TGen.Strategies.Strategy_Type'Class;

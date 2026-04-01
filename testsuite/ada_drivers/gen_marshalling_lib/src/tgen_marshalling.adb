@@ -93,6 +93,12 @@ procedure TGen_Marshalling is
       Help     =>
          "Skip unsupported programs instead of aborting with an exception");
 
+   package No_Implicit_Proxy is new Parse_Flag
+     (Parser  => App.Args.Parser,
+      Long    => "--no-implicit-proxy",
+      Help    =>
+        "Do not automatically search for proxies for unsupported types");
+
    ---------------
    -- App_Setup --
    ---------------
@@ -123,7 +129,9 @@ procedure TGen_Marshalling is
       Gen_Ctx := Create
         (Output_Dir         => To_String (Output_Dir),
          User_Project_Path  => To_String (User_Project_Path),
-         Root_Templates_Dir => To_String (Templates_Dir));
+         Root_Templates_Dir => To_String (Templates_Dir),
+         Proxy_Detection    =>
+           (if No_Implicit_Proxy.Get then None else Unit));
          TGen.Libgen.Set_Preprocessing_Definitions
             (Gen_Ctx, Preprocessor_Data);
    end App_Setup;

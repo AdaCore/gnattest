@@ -121,6 +121,7 @@ package Test.Command_Lines is
       Cov_Level,
       Minimization_Filter,
       Dump_Subp_Hash,
+      Detect_TGen_Proxies,
 
       --  Moved from the late Utils.Command_Lines.Common
 

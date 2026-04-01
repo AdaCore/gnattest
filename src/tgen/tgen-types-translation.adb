@@ -21,7 +21,6 @@
 -- <http://www.gnu.org/licenses/>.                                          --
 ------------------------------------------------------------------------------
 
-with Ada.Containers.Vectors;
 with Ada.Exceptions;
 with Ada.Strings.Wide_Wide_Unbounded;
 with Ada.Text_IO; use Ada.Text_IO;
@@ -77,8 +76,9 @@ package body TGen.Types.Translation is
    Cache_Miss : Natural := 0;
    --  Stats for the cache
 
-   type Local_Ada_Node_Arr is array (Positive range <>) of Ada_Node;
-   --  Like Ada_Node_List, but that we can build ourselves
+   function "+" (L : Ada_Node_List) return Ada_Node_Array;
+   --  Convert L to a Ada_Node_Array. This downcasts all the nodes to an
+   --  Ada_Node.
 
    function Translate_Internal
      (N                 : LAL.Base_Type_Decl;
@@ -162,7 +162,7 @@ package body TGen.Types.Translation is
 
    function Gather_Index_Constraint_Nodes
      (Decl_Or_Constraint : Ada_Node'Class; Num_Dims : Positive)
-      return Local_Ada_Node_Arr;
+      return Ada_Node_Array;
    --  Collect all the constraints on the indexes that are present in
    --  Decl_Or_Constraint, for which the kind should be one of Base_Type_Decl
    --  or Constraint. Num_Dims should match the number of constraints defined
@@ -267,6 +267,48 @@ package body TGen.Types.Translation is
    --  If no valid proxy is found, the return value will contain a diagnostic
    --  for why the closest candidate did not match. Otherwise it will contain
    --  the reference to the translated subp representation.
+
+   type Proxy_Failure_Reason is
+     (No_Subp, Mismatched_Ret_Type, Cannot_Generate, Has_Out_Params);
+   --  Reason why we couldn't find a proxy subprogram:
+   --
+   --  - No subprogram in the candidate list;
+   --  - No functions returning the expected type;
+   --  - No functions for which TGen could generate inputs;
+   --  - No functions with only in and in out parameters
+
+   function Extract_Proxy_From_Node_List
+     (N              : Base_Type_Decl'Class;
+      List           : Ada_Node_Array;
+      Ctx            : in out Translation_Ctx;
+      Failure_Reason : out Proxy_Failure_Reason) return Typ_Access;
+   --  Search for a suitable proxy subprogram for N in List, returning its
+   --  translation if found. Otherwise null is returned. Failure_Reason details
+   --  what was the issue if the return value is null.
+
+   function Find_Proxy_By_Xref
+     (N : Base_Type_Decl; Ctx : in out Translation_Ctx) return Typ_Access;
+   --  Try to find a proxy by XRef for N, using the units returned by
+   --  Ctx.Unit_List_CB.
+
+   ---------
+   -- "+" --
+   ---------
+
+   function "+" (L : Ada_Node_List) return Ada_Node_Array is
+      It : Positive := L.Ada_Node_List_First;
+   begin
+      while L.Ada_Node_List_Has_Element (It) loop
+         It := L.Ada_Node_List_Next (It);
+      end loop;
+      return Res : Ada_Node_Array (1 .. It - 1) do
+         It := Res'First;
+         for Node of L loop
+            Res (It) := Node.As_Ada_Node;
+            It := It + 1;
+         end loop;
+      end return;
+   end "+";
 
    --------------
    -- PP_Cache --
@@ -1281,9 +1323,9 @@ package body TGen.Types.Translation is
 
    function Gather_Index_Constraint_Nodes
      (Decl_Or_Constraint : Ada_Node'Class; Num_Dims : Positive)
-      return Local_Ada_Node_Arr
+      return Ada_Node_Array
    is
-      Res           : Local_Ada_Node_Arr (1 .. Num_Dims);
+      Res           : Ada_Node_Array (1 .. Num_Dims);
       Current_Index : Positive := 1;
       Constraints   : LAL.Constraint;
    begin
@@ -1393,7 +1435,7 @@ package body TGen.Types.Translation is
          end loop;
 
          declare
-            Constraint_Nodes : constant Local_Ada_Node_Arr :=
+            Constraint_Nodes : constant Ada_Node_Array :=
               Gather_Index_Constraint_Nodes (Decl.As_Ada_Node, Num_Indices);
 
             Res_Typ : constant Constrained_Array_Typ_Access :=
@@ -3191,7 +3233,7 @@ package body TGen.Types.Translation is
      (Node : LAL.Constraint; Num_Dims : Positive)
       return TGen.Types.Constraints.Index_Constraints
    is
-      Constraint_List : constant Local_Ada_Node_Arr :=
+      Constraint_List : constant Ada_Node_Array :=
         Gather_Index_Constraint_Nodes (Node, Num_Dims);
       Current_Index   : Positive := 1;
 
@@ -3334,93 +3376,31 @@ package body TGen.Types.Translation is
       Proxy_Name : LAL.Name'Class;
       Ctx        : in out Translation_Ctx) return Translation_Result
    is
-      package Candidate_Vectors is new
-        Ada.Containers.Vectors
-          (Index_Type   => Positive,
-           Element_Type => Typ_Access);
-      subtype Candidate_Vec is Candidate_Vectors.Vector;
-
-      Candidates          : constant Ada_Node_Array :=
+      Candidates     : constant Ada_Node_Array :=
         Proxy_Name.P_All_Env_Elements (Seq => False);
-      Filtered_Candidates : Candidate_Vec := Candidate_Vectors.Empty_Vector;
-
-      Found_A_Function : Boolean := False;
-      Ret_Type_Matches : Boolean := False;
+      Failure_Reason : Proxy_Failure_Reason;
+      Proxy_Res      : Typ_Access;
    begin
-      Me.Trace ("Searching proxy subprogram for " & Decl.Image);
-      Me.Trace
-        ("Lexical search found"
-         & Integer'(Candidates'Length)'Image
-         & " candidates");
-      for Candidate of Candidates loop
-         Me.Trace ("Processing " & Candidate.Image);
+      Proxy_Res :=
+        Extract_Proxy_From_Node_List (Decl, Candidates, Ctx, Failure_Reason);
 
-         --  Check that the candidate is a subp decl..
-
-         if Candidate.Kind not in Ada_Subp_Decl then
-            Me.Trace ("   Not a subp");
-            goto Skip_Candidate;
-         end if;
-
-         --  .. That is a function
-
-         if Candidate.As_Subp_Decl.F_Subp_Spec.P_Returns.Is_Null then
-            Me.Trace ("   Not a function");
-            goto Skip_Candidate;
-         end if;
-         Found_A_Function := True;
-
-         --  .. For which the return type matches N
-
-         if not Candidate
-                  .As_Subp_Decl
-                  .F_Subp_Spec
-                  .P_Return_Type
-                  .P_Matching_Type (Decl)
-         then
-            Me.Trace ("   Does not return the expected type");
-            goto Skip_Candidate;
-         end if;
-         Ret_Type_Matches := True;
-
-         --  And for which we actually can generate values
-
-         declare
-            Candidate_Res : constant Translation_Result :=
-              Translate (Candidate.As_Basic_Decl, Ctx);
-         begin
-            if not Candidate_Res.Success
-              or else not Candidate_Res.Res.Get_Diagnostics.Is_Empty
-            then
-               Me.Trace ("   Candidate does not allow generation");
-               goto Skip_Candidate;
-            end if;
-
-            --  If we reach here we have found a good proxy subprogram
-            --  candidate! Add it to the list, we need to check if there
-            --  are multiple of them.
-
-            Filtered_Candidates.Append (Candidate_Res.Res);
-         end;
-         <<Skip_Candidate>>
-      end loop;
-      Me.Trace
-        ("After filtering there are"
-         & Filtered_Candidates.Length'Image
-         & " suitable proxies");
-      if not Filtered_Candidates.Is_Empty then
-
-         --  TODO??? how to warn about ambiguities / multiple possible choices?
-
-         return (Success => True, Res => Filtered_Candidates.First_Element);
-      elsif Ret_Type_Matches then
+      if Proxy_Res /= null then
+         return (Success => True, Res => Proxy_Res);
+      elsif Failure_Reason = Has_Out_Params then
+         return
+           (Success     => False,
+            Diagnostics =>
+              To_Unbounded_String ("There are no functions named ")
+              & Image (Proxy_Name.Text)
+              & " with only ""in"" or ""in out"" parameters");
+      elsif Failure_Reason = Cannot_Generate then
          return
            (Success     => False,
             Diagnostics =>
               To_Unbounded_String ("There are no functions named ")
               & Image (Proxy_Name.Text)
               & " for which TGen can generate input values");
-      elsif Found_A_Function then
+      elsif Failure_Reason = Mismatched_Ret_Type then
          return
            (Success     => False,
             Diagnostics =>
@@ -3472,31 +3452,174 @@ package body TGen.Types.Translation is
          Proxy_Subp_Res : constant Translation_Result :=
            Locate_Proxy_For_Decl (Decl, Proxy_Name, Ctx);
       begin
-
-         if not Proxy_Subp_Res.Success then
-            return
-              (Success     => False,
-               Diagnostics =>
-                 "Failed to find a proxy subprogram for "
-                 & To_Ada (FQN)
-                 & ": "
-                 & Proxy_Subp_Res.Diagnostics);
-         end if;
-
          --  Remove the non-proxy type from the cache, the proxy one is the
          --  only one that really needs to be referenced.
 
          Translation_Cache.Delete (FQN);
 
-         return
-           (Success => True,
-            Res     =>
-              new Proxy_Typ'
-                (Orig_Typ         => Bare_Type_Trans.Res,
-                 Proxy_Subprogram => Proxy_Subp_Res.Res,
-                 others           => <>));
+         if not Proxy_Subp_Res.Success then
+            return
+              (Success => True,
+               Res     =>
+                 new Unsupported_Typ'
+                   (Reason =>
+                      "No valid proxy subprogram for annotated type "
+                      & To_Ada (FQN)
+                      & ": "
+                      & Proxy_Subp_Res.Diagnostics,
+                    others => <>));
+         else
+            return
+              (Success => True,
+               Res     =>
+                 new Proxy_Typ'
+                   (Orig_Typ         => Bare_Type_Trans.Res,
+                    Proxy_Subprogram => Proxy_Subp_Res.Res,
+                    others           => <>));
+         end if;
+
       end;
    end Translate_Proxy;
+
+   ----------------------------------
+   -- Extract_Proxy_From_Node_List --
+   ----------------------------------
+
+   function Extract_Proxy_From_Node_List
+     (N              : Base_Type_Decl'Class;
+      List           : Ada_Node_Array;
+      Ctx            : in out Translation_Ctx;
+      Failure_Reason : out Proxy_Failure_Reason) return Typ_Access
+   is
+      Cur         : Positive := List'First;
+      Cur_Element : Basic_Decl := No_Basic_Decl;
+   begin
+      Me.Trace ("Searching proxy subprogram for " & N.Image);
+      Me.Trace
+        ("Initial search found" & Integer'(List'Length)'Image & " candidates");
+      Failure_Reason := No_Subp;
+      loop
+         exit when Cur > List'Last;
+
+         if List (Cur).Is_Null then
+            goto Next_Candidate;
+         end if;
+
+         Me.Trace ("Processing " & List (Cur).Image);
+
+         --  Look for a subprogram declaration
+
+         if List (Cur).Kind
+            not in Ada_Basic_Subp_Decl
+                 | Ada_Expr_Function
+                 | Ada_Null_Subp_Decl
+                 | Ada_Subp_Renaming_Decl
+         then
+            Me.Trace ("   Not a subp");
+            goto Next_Candidate;
+         end if;
+         Cur_Element := List (Cur).As_Basic_Decl;
+
+         --  Which is a function
+
+         if Cur_Element.P_Subp_Spec_Or_Null.P_Return_Type.Is_Null then
+            Me.Trace ("   Not a function");
+            goto Next_Candidate;
+         end if;
+
+         if Failure_Reason = No_Subp then
+            Failure_Reason := Mismatched_Ret_Type;
+         end if;
+
+         --  Returning the right type
+
+         if not Cur_Element.P_Subp_Spec_Or_Null.P_Return_Type.P_Matching_Type
+                  (N)
+         then
+            Me.Trace ("   Does not return the expected type");
+            goto Next_Candidate;
+         end if;
+
+         if Failure_Reason in No_Subp .. Mismatched_Ret_Type then
+            Failure_Reason := Cannot_Generate;
+         end if;
+
+         --  For which we can generate stuff
+
+         declare
+            Subp_Translation : constant Translation_Result :=
+              Translate (Cur_Element, Ctx);
+         begin
+            if Subp_Translation.Success then
+               if not Subp_Translation.Res.Get_Diagnostics.Is_Empty then
+                  Me.Trace ("   Candidate does not allow generation");
+
+                  --  Delete this candidate from the translation set, it might
+                  --  get revisited later
+
+                  Translation_Cache.Delete (Subp_Translation.Res.Name);
+               elsif (for some Param_Mode of
+                        Function_Typ (Subp_Translation.Res.all).Param_Modes =>
+                        Param_Mode = Out_Mode)
+               then
+                  Failure_Reason := Has_Out_Params;
+
+                  --  Delete this candidate from the translation set, it might
+                  --  get revisited later
+
+                  Translation_Cache.Delete (Subp_Translation.Res.Name);
+               else
+                  return Subp_Translation.Res;
+               end if;
+            else
+               Me.Trace ("   Unsuccessful candidate translation");
+            end if;
+         end;
+
+         <<Next_Candidate>>
+         Cur := Cur + 1;
+      end loop;
+      return null;
+   end Extract_Proxy_From_Node_List;
+
+   ------------------------
+   -- Find_Proxy_By_Xref --
+   ------------------------
+
+   function Find_Proxy_By_Xref
+     (N : Base_Type_Decl; Ctx : in out Translation_Ctx) return Typ_Access
+   is
+      Units      : constant Analysis_Unit_Array :=
+        (if Ctx.Unit_List_CB not in null
+         then Ctx.Unit_List_CB (N)
+         else (2 .. 1 => <>));
+      Refs       : constant Ref_Result_Array :=
+        N.P_Defining_Name.P_Find_All_References (Units);
+      Candidates : Ada_Node_Array (1 .. Refs'Last);
+
+      Dummy_Failure_Reason : Proxy_Failure_Reason;
+      --  Ignored here, the gnatcoll trace is enough to diagnose issues for
+      --  types not explicitly requested.
+   begin
+      if Units'Length = 0 then
+         return null;
+      end if;
+      for Idx in Refs'Range loop
+         if Refs (Idx).Kind = Error then
+            Candidates (Idx) := No_Ada_Node;
+         else
+            --  We only really care about subprograms that have the name of N
+            --  in their return type, so only checking the enclosing basic
+            --  decls should be good enough :tm:
+
+            Candidates (Idx) := Refs (Idx).Ref.P_Parent_Basic_Decl.As_Ada_Node;
+         end if;
+      end loop;
+
+      return
+        Extract_Proxy_From_Node_List
+          (N, Candidates, Ctx, Dummy_Failure_Reason);
+   end Find_Proxy_By_Xref;
 
    ---------------
    -- Translate --
@@ -3753,6 +3876,11 @@ package body TGen.Types.Translation is
       --  First part of the declaration. Used to determine whether the type we
       --  are translating is private or not.
 
+      Structurally_Unsupported : Boolean := False;
+      --  To be set for types which we don't support not because of the type
+      --  itself, but because the context in which it is declared prevents us
+      --  from generating valid helper subprograms.
+
       Proxy_Aspect : constant Aspect :=
         N.P_Get_Aspect (Name => To_Unbounded_Text ("TGen_Proxy"));
 
@@ -3827,6 +3955,11 @@ package body TGen.Types.Translation is
                   ("Anonymous array or access type unsupported"),
               others => <>);
 
+         --  It isn't possible to declare a helper subprogram for this that
+         --  would be type compatible with any usage.
+
+         Structurally_Unsupported := True;
+
       --  Types that are declared in a library level generic instantiation
       --  are not supported at the moment, as the support packages would
       --  need to be generic instances themselves (with other rules to
@@ -3844,6 +3977,7 @@ package body TGen.Types.Translation is
                   ("types declared a generic package instantiation that is a"
                    & " library item are unsupported"),
               others => <>);
+         Structurally_Unsupported := True;
 
       elsif Text.Image (N.P_Root_Type.P_Fully_Qualified_Name)
         = "System.Address"
@@ -3918,6 +4052,7 @@ package body TGen.Types.Translation is
                   ("Private types declared in nested package are not"
                    & " supported"),
               others => <>);
+         Structurally_Unsupported := True;
       elsif Root_Type.P_Is_Formal then
          Specialized_Res := (Success => True, others => <>);
          Specialized_Res.Res :=
@@ -3925,6 +4060,7 @@ package body TGen.Types.Translation is
              (Reason =>
                 To_Unbounded_String ("Generic formal types are unsupported"),
               others => <>);
+         Structurally_Unsupported := True;
       elsif Root_Type.P_Is_Int_Type then
          Specialized_Res := Translate_Int_Decl (N, Ctx);
 
@@ -4023,6 +4159,72 @@ package body TGen.Types.Translation is
               others => <>);
       end if;
 
+      --  If the resulting type is an unsupported one, search for a proxy
+      --  subprogram depending on the policy. Use the first matching candidate,
+      --  searching first the unit in which N is declared, and only then all
+      --  references if needed.
+
+      if Specialized_Res.Success
+        and then Specialized_Res.Res.Kind = Unsupported
+        and then not Structurally_Unsupported
+        and then Ctx.Proxy_Detection /= TGen.Libgen.None
+        and then not Ctx.Skip_Proxy_Set.Contains (FQN)
+      then
+         --  Disable proxy translation for N while we search for a proxy
+         --  subprogram. Also prevent recursive translations of the type from
+         --  being recorded in the cache, they's be shadowed by the current
+         --  one.
+
+         Ctx.Skip_Proxy_Set.Insert (FQN);
+
+         declare
+            Decl_Scope : constant Declarative_Part := N.P_Declarative_Scope;
+            Decl_List  : constant Ada_Node_Array :=
+              (+Decl_Scope.F_Decls)
+              & (if Decl_Scope.Kind = Ada_Private_Part
+                 then +Decl_Scope.Previous_Sibling.As_Public_Part.F_Decls
+                 else (2 .. 1 => No_Ada_Node));
+
+            Dummy_Failure_Reason : Proxy_Failure_Reason;
+            --  Ignore the diagnostic for not-explicitly-requested proxies, we
+            --  can get information through the gnatcoll trace if needed.
+            Proxy_Subp           : Typ_Access :=
+              Extract_Proxy_From_Node_List
+                (N, Decl_List, Ctx, Dummy_Failure_Reason);
+         begin
+            --  If the search within the unit didn't yield a good proxy, search
+            --  elsewhere if we're allowed.
+
+            if Proxy_Subp = null
+              and then Ctx.Proxy_Detection = TGen.Libgen.All_Refs
+            then
+               Proxy_Subp := Find_Proxy_By_Xref (N, Ctx);
+            end if;
+
+            if Proxy_Subp /= null then
+               Specialized_Res :=
+                 (Success => True,
+                  Res     =>
+                    new Proxy_Typ'
+                      (Orig_Typ         => Specialized_Res.Res,
+                       Proxy_Subprogram => Proxy_Subp,
+                       others           => <>));
+            end if;
+         end;
+         Ctx.Skip_Proxy_Set.Delete (FQN);
+
+         --  The translation of some of the proxy candidates may have
+         --  introduced nested translations of this type (e.g. if we have an
+         --  identity function), so delete them from the cache as
+         --
+         --  - The subprogram translation has been removed as well
+         --  - This translation is potentially more precise.
+
+         if Translation_Cache.Contains (FQN) then
+            Translation_Cache.Delete (FQN);
+         end if;
+      end if;
+
       --  Fill the common bits if we got a successful translation
 
       if Specialized_Res.Success then
@@ -4064,7 +4266,7 @@ package body TGen.Types.Translation is
    end Translate_Internal;
 
    function Translate_Globals
-     (N : Expr; Ctx : in out Translation_Ctx) return Translation_Result;
+     (N : Expr'Class; Ctx : in out Translation_Ctx) return Translation_Result;
    --  Return the list of globals specified in the global aspect, which are
    --  returned encapsulated in a Record_Typ (for conveniency purposes) if the
    --  translation of the globals type is successful. If one of the globals
@@ -4078,7 +4280,7 @@ package body TGen.Types.Translation is
    ---------------------
 
    function Translate_Globals
-     (N : Expr; Ctx : in out Translation_Ctx) return Translation_Result
+     (N : Expr'Class; Ctx : in out Translation_Ctx) return Translation_Result
    is
       Rec : constant Record_Typ_Access :=
         new Record_Typ'(Constrained => False, others => <>);
@@ -4358,15 +4560,12 @@ package body TGen.Types.Translation is
       --  Check the globals through the Globals aspect
 
       declare
-         Global_Aspect : constant Unbounded_Text_Type :=
-           To_Unbounded_Text (To_Text ("Global"));
+         Global_Aspect : constant Aspect :=
+           N.P_Get_Aspect (To_Unbounded_Text ("Global"));
       begin
-         if N.P_Has_Aspect (Global_Aspect) then
+         if Global_Aspect.Exists then
             F_Typ.Globals :=
-              As_Record_Typ
-                (Translate_Globals
-                   (N.P_Get_Aspect_Spec_Expr (Global_Aspect), Ctx)
-                   .Res)
+              As_Record_Typ (Translate_Globals (Global_Aspect.Value, Ctx).Res)
                 .Component_Types;
          end if;
       end;

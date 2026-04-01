@@ -1,0 +1,4 @@
+description: Check that TGen correctly identifies proxies for types that are a
+  component of some other type.
+
+driver: shell_script

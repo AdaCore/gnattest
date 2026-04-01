@@ -911,7 +911,9 @@ package body TGen.Libgen is
    function Create
      (Output_Dir         : String;
       User_Project_Path  : String;
-      Root_Templates_Dir : String := "") return Libgen_Context
+      Root_Templates_Dir : String := "";
+      Proxy_Detection    : Proxy_Autodetect_Policy := Unit;
+      Relevant_Units     : Get_Relevant_Units_CB := null) return Libgen_Context
    is
       Actual_Templates_Dir : constant String :=
         (if Root_Templates_Dir = ""
@@ -931,13 +933,17 @@ package body TGen.Libgen is
          User_Project_Path       => To_Unbounded_String (User_Project_Path),
          Lib_Support_Generated   => False,
          Has_Preprocessor_Config => False,
+         Proxy_Detection         => Proxy_Detection,
+         Unit_List_CB            => Relevant_Units,
          others                  => <>);
    end Create;
 
    function Create
      (Output_Dir         : GNATCOLL.VFS.Virtual_File;
       User_Project_Path  : GNATCOLL.VFS.Virtual_File;
-      Root_Templates_Dir : GNATCOLL.VFS.Virtual_File) return Libgen_Context
+      Root_Templates_Dir : GNATCOLL.VFS.Virtual_File;
+      Proxy_Detection    : Proxy_Autodetect_Policy := Unit;
+      Relevant_Units     : Get_Relevant_Units_CB := null) return Libgen_Context
    is
       use GNATCOLL.VFS;
    begin
@@ -945,7 +951,9 @@ package body TGen.Libgen is
         Create
           (Output_Dir         => +Output_Dir.Full_Name,
            Root_Templates_Dir => +Root_Templates_Dir.Full_Name,
-           User_Project_Path  => +User_Project_Path.Full_Name);
+           User_Project_Path  => +User_Project_Path.Full_Name,
+           Proxy_Detection    => Proxy_Detection,
+           Relevant_Units     => Relevant_Units);
    end Create;
 
    --------------------------
@@ -953,10 +961,15 @@ package body TGen.Libgen is
    --------------------------
 
    function Supported_Subprogram
-     (Subp : LAL.Basic_Decl'Class) return Typ_Access
+     (Subp            : LAL.Basic_Decl'Class;
+      Proxy_Detection : Proxy_Autodetect_Policy := Unit;
+      Relevant_Units  : Get_Relevant_Units_CB := null) return Typ_Access
    is
       Diags     : String_Vectors.Vector;
-      Ctx       : Translation_Ctx := Make_Translation_Context;
+      Ctx       : Translation_Ctx :=
+        Make_Translation_Context
+          (Proxy_Detection => Proxy_Detection,
+           Relevant_Units  => Relevant_Units);
       Trans_Res : constant Translation_Result :=
         Translate (Subp.As_Basic_Decl, Ctx);
    begin
@@ -1042,7 +1055,8 @@ package body TGen.Libgen is
 
       Dummy_Inserted : Boolean;
 
-      Trans_Res : constant Typ_Access := Supported_Subprogram (Subp);
+      Trans_Res : constant Typ_Access :=
+        Supported_Subprogram (Subp, Ctx.Proxy_Detection, Ctx.Unit_List_CB);
 
       Subp_IO_Support : constant IO_Support := Get_IO_Support (Trans_Res.all);
       --  Level of IO we have for this subprogram
@@ -1658,8 +1672,8 @@ package body TGen.Libgen is
 
             Fun_Typ : Function_Typ renames Function_Typ (Subp.all);
 
-            Subp_Name : constant String := Fun_Typ.Slug;
-            Global_J2B_FNs    : Vector_Tag;
+            Subp_Name      : constant String := Fun_Typ.Slug;
+            Global_J2B_FNs : Vector_Tag;
 
             Concrete_Typ : Typ_Access;
             --  Shortcut to hold the concrete type of a parameter

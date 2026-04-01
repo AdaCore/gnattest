@@ -1,0 +1,4 @@
+description: Test that TGen and gnattest can detect proxy subprograms that are not
+  within the scope of the unsupported type when instructed to do so.
+
+driver: shell_script

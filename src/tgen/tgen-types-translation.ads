@@ -28,7 +28,11 @@ with Ada.Containers.Hashed_Maps;
 
 with Libadalang.Analysis;
 
+with TGen.Libgen;
+
 package TGen.Types.Translation is
+   subtype Proxy_Policy is TGen.Libgen.Proxy_Autodetect_Policy;
+   use type Proxy_Policy;
 
    package LAL renames Libadalang.Analysis;
 
@@ -46,7 +50,10 @@ package TGen.Types.Translation is
    type Translation_Ctx is private;
 
    function Make_Translation_Context
-     (Verbose : Boolean := False) return Translation_Ctx;
+     (Verbose         : Boolean := False;
+      Proxy_Detection : Proxy_Policy := TGen.Libgen.Unit;
+      Relevant_Units  : TGen.Libgen.Get_Relevant_Units_CB := null)
+      return Translation_Ctx;
    --  Create a Translation_Context object with adequate default values
 
    function Translate
@@ -101,18 +108,28 @@ private
       Verbose : Boolean := False;
 
       Skip_Proxy_Set : Ada_Qualified_Name_Set;
-      --  Global set containing the names of types for which we should ignore
-      --  the proxy aspect.
+      --  Names of types for which we should ignore the proxy aspect, and avoid
+      --  searching a proxy if unsupported.
 
+      Proxy_Detection : Proxy_Policy;
+      --  To which extend proxy subprograms should be searched for, for
+      --  unsupported types.
+
+      Unit_List_CB : TGen.Libgen.Get_Relevant_Units_CB := null;
    end record;
    --  Context for translating type declarations from LAL to TGen's internal
    --  representation. It should be passed down at least to all subprograms
    --  which may call a `Translate*` variant.
 
    function Make_Translation_Context
-     (Verbose : Boolean := False) return Translation_Ctx
-   is ((Verbose        => Verbose,
-        Skip_Proxy_Set => Ada_Qualified_Name_Sets.Empty_Set));
+     (Verbose         : Boolean := False;
+      Proxy_Detection : Proxy_Policy := TGen.Libgen.Unit;
+      Relevant_Units  : TGen.Libgen.Get_Relevant_Units_CB := null)
+      return Translation_Ctx
+   is ((Verbose         => Verbose,
+        Skip_Proxy_Set  => Ada_Qualified_Name_Sets.Empty_Set,
+        Proxy_Detection => Proxy_Detection,
+        Unit_List_CB    => Relevant_Units));
 
    Anonymous_Typ_Index : Positive := 1;
    --  Index incremented each time we create an anonymous type, to uniquely

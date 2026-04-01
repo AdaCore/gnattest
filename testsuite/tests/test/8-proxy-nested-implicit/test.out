@@ -1,0 +1,29 @@
+[]
+[ 54, 87]
+[ 69]
+[ 8, 1]
+[ 25]
+{Disc: 10; Index: 10; First_Acc : 71; Other_Stuff 96}
+{Disc: 1; Index: 4; First_Acc : 7; Comp: 71}
+{Disc: 1; Index: 3; First_Acc : 3; Comp: 3}
+{Disc: 1; Index: 10; First_Acc : 80; Comp: 100}
+{Disc: 1; Index: 10; First_Acc : 82; Comp: 52}
+pkg.ads:22:4: info: corresponding test PASSED
+pkg.ads:22:4: info: corresponding test PASSED
+pkg.ads:22:4: info: corresponding test PASSED
+pkg.ads:22:4: info: corresponding test PASSED
+pkg.ads:22:4: info: corresponding test PASSED
+pkg.ads:24:4: info: corresponding test PASSED
+pkg.ads:24:4: info: corresponding test PASSED
+pkg.ads:24:4: info: corresponding test PASSED
+pkg.ads:24:4: info: corresponding test PASSED
+pkg.ads:24:4: info: corresponding test PASSED
+pkg.ads:26:4: info: corresponding test PASSED
+pkg.ads:26:4: info: corresponding test PASSED
+pkg.ads:26:4: info: corresponding test PASSED
+pkg.ads:26:4: info: corresponding test PASSED
+pkg.ads:26:4: info: corresponding test PASSED
+pkg.ads:22:4: error: corresponding test FAILED: Test not implemented. (pkg-test_data-tests.adb:61)
+pkg.ads:24:4: error: corresponding test FAILED: Test not implemented. (pkg-test_data-tests.adb:97)
+pkg.ads:26:4: error: corresponding test FAILED: Test not implemented. (pkg-test_data-tests.adb:133)
+18 tests run: 15 passed; 3 failed; 0 crashed.

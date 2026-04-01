@@ -446,6 +446,9 @@ package Test.Common is
    TGen_Strat_Kind : TGen.Libgen.Default_Strat_Kind := TGen.Libgen.Stateless;
    --  Kind of strategy to use for test value generation
 
+   TGen_Proxy_Search : TGen.Libgen.Proxy_Autodetect_Policy := TGen.Libgen.Unit;
+   --  Where TGen should search for proxy subprograms, for unsupported types.
+
    type Lib_Support_Status is (Not_Needed, Needed, Generated);
 
    procedure Request_Lib_Support;
