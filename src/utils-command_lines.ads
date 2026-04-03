@@ -164,10 +164,24 @@ package Utils.Command_Lines is
    function Present (X : String_Ref) return Boolean
    is (GNAT.OS_Lib."/=" (X, null));
 
+   function File_Name_Is_Less_Than (Left, Right : String_Ref) return Boolean;
+   --  Assuming that L and R are file names compares them as follows:
+   --
+   --  * if L and/or R contains a directory separator, compares
+   --    lexicographicaly parts that follow the rightmost directory separator.
+   --    If these parts are equal, compares L and R lexicographicaly
+   --
+   --  * otherwise compares L and R lexicographicaly
+   --
+   --  Comparisons are case-sensitive.
+
    package String_Ref_Vectors is new
      Utils.Vectors (Positive, String_Ref, String_Ref_Array);
    use String_Ref_Vectors;
    subtype String_Ref_Vector is String_Ref_Vectors.Vector;
+
+   package Sorting is new
+     String_Ref_Vectors.Generic_Sorting (File_Name_Is_Less_Than);
 
    function Copy (String_Refs : String_Ref_Vector) return String_Ref_Vector;
    --  Returns a deep copy of String_Refs
@@ -607,9 +621,6 @@ package Utils.Command_Lines is
    procedure Clear_File_Names (Cmd : in out Command_Line);
    --  Sets the File_Names of Cmd to empty
 
-   procedure Sort_File_Names (Cmd : in out Command_Line);
-   --  The names are sorted to provide a predictable order.
-
    procedure Append_File_Name (Cmd : in out Command_Line; Name : String);
    --  Appends Name onto the File_Names of Cmd. Names on the command line
    --  are appended by Parse. This is used for file names from the project
@@ -624,13 +635,6 @@ package Utils.Command_Lines is
      (Cmd : in out Command_Line; Files : String_Ref_Vector);
 
    function Num_File_Names (Cmd : Command_Line) return Natural;
-
-   procedure Iter_File_Names
-     (Cmd    : in out Command_Line;
-      Action : not null access procedure (File_Name : in out String_Ref));
-   --  Calls Action for each non-switch argument. Note that File_Name is
-   --  'in out'; the caller can modify the file name. This is necessary for
-   --  Process_Project. The names are sorted to provide a predictable order.
 
    procedure Dump_Cmd (Cmd : Command_Line; Verbose : Boolean := False);
    --  Debugging printout. Without Verbose, skips defaulted args.

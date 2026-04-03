@@ -139,7 +139,7 @@ package Utils.Projects is
    function Project_Tree return GPR2.Project.Tree.Object;
    --  Return the loaded project tree.
 
-   function Load_Project
+   function Load_Project_File
      (Cmd : Command_Line; Project_File : String)
       return GPR2.Project.Tree.Object;
    --  Wrapper around GPR2.Project.Tree.Load, passing the right target

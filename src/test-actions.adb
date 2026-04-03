@@ -1663,7 +1663,7 @@ package body Test.Actions is
       Current_Source : String_Access;
 
       Additional_Tests_Project : constant GPR2.Project.Tree.Object :=
-        Load_Project (Cmd, Test.Common.Additional_Tests_Prj.all);
+        Load_Project_File (Cmd, Test.Common.Additional_Tests_Prj.all);
       use Libadalang.Project_Provider;
    begin
       for Src of Additional_Tests_Project.Root_Project.Sources loop

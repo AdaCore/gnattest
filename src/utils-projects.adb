@@ -69,7 +69,7 @@ package body Utils.Projects is
         "="          => GPR2.Build.Source."=");
    subtype Source_Vector is Source_Vectors.Vector;
 
-   My_Project_Tree : aliased GPR2.Project.Tree.Object;
+   Global_Project_Tree : aliased GPR2.Project.Tree.Object;
    --  Project tree for the user project
 
    function Has_Mains_And_Ada_Only
@@ -121,11 +121,9 @@ package body Utils.Projects is
    --  Extract gnattest options from the Test.Switches/Default_Switches/
    --  Gnattest_Switches project attributes.
 
-   procedure Process_Project
-     (Cmd               : in out Command_Line;
-      Cmd_Args          : String_Vector;
-      Global_Report_Dir : out String_Ref;
-      My_Project_Tree   : out GPR2.Project.Tree.Object);
+   function Load_CLI_Project
+     (Cmd : Command_Line) return GPR2.Project.Tree.Object;
+   --  Load and return the project file passed as -P. Assumes -P was given.
 
    -----------------
    -- Attr_String --
@@ -173,7 +171,7 @@ package body Utils.Projects is
    function Recursive_Source_Dirs return GPR2.Path_Name.Set.Object is
       Result : GPR2.Path_Name.Set.Object;
    begin
-      for View of My_Project_Tree.Ordered_Views loop
+      for View of Global_Project_Tree.Ordered_Views loop
          for Dir of View.Source_Directories loop
             Result.Append (Dir);
          end loop;
@@ -198,7 +196,7 @@ package body Utils.Projects is
    function Src (Filename : String) return GPR2.Build.Source.Object is
    begin
       return
-        My_Project_Tree.Root_Project.Visible_Source
+        Global_Project_Tree.Root_Project.Visible_Source
           (GPR2.Path_Name.Create (Create (+Filename)));
    end Src;
 
@@ -233,11 +231,11 @@ package body Utils.Projects is
       return Result;
    end To_File_Array;
 
-   ------------------
-   -- Load_Project --
-   ------------------
+   -----------------------
+   -- Load_Project_File --
+   -----------------------
 
-   function Load_Project
+   function Load_Project_File
      (Cmd : Command_Line; Project_File : String)
       return GPR2.Project.Tree.Object
    is
@@ -304,18 +302,17 @@ package body Utils.Projects is
          Cmd_Error ("Could not load the project file, aborting.");
       end if;
       return Tree;
-   end Load_Project;
+   end Load_Project_File;
 
-   ---------------------
-   -- Process_Project --
-   ---------------------
+   ----------------------
+   -- Load_CLI_Project --
+   ----------------------
 
-   procedure Process_Project
-     (Cmd               : in out Command_Line;
-      Cmd_Args          : String_Vector;
-      Global_Report_Dir : out String_Ref;
-      My_Project_Tree   : out GPR2.Project.Tree.Object)
+   function Load_CLI_Project
+     (Cmd : Command_Line) return GPR2.Project.Tree.Object
    is
+
+      Prj_Tree : GPR2.Project.Tree.Object;
       procedure Load_Tool_Project;
 
       procedure Load_Aggregated_Project;
@@ -325,18 +322,15 @@ package body Utils.Projects is
       --  supposed to be a (non-aggregate) project aggregated by
       --  My_Project_Tree.
 
-      procedure Set_Global_Result_Dirs;
-      --  Sets the directory to place the global tool results into.
-
       -----------------------
       -- Load_Tool_Project --
       -----------------------
 
       procedure Load_Tool_Project is
       begin
-         My_Project_Tree := Load_Project (Cmd, Arg (Cmd, Project_File).all);
-         if My_Project_Tree.Root_Project.Kind = K_Aggregate then
-            Aggregate.Collect_Aggregated_Projects (My_Project_Tree);
+         Prj_Tree := Load_Project_File (Cmd, Arg (Cmd, Project_File).all);
+         if Prj_Tree.Root_Project.Kind = K_Aggregate then
+            Aggregate.Collect_Aggregated_Projects (Prj_Tree);
          end if;
       end Load_Tool_Project;
 
@@ -353,38 +347,15 @@ package body Utils.Projects is
          --  Start by checking that the original project is an aggregate
          --  project.
 
-         My_Project_Tree := Load_Project (Cmd, Arg (Cmd, Project_File).all);
-         pragma Assert (My_Project_Tree.Root_Project.Kind = GPR2.K_Aggregate);
-         My_Project_Tree.Unload;
+         Prj_Tree := Load_Project_File (Cmd, Arg (Cmd, Project_File).all);
+         pragma Assert (Prj_Tree.Root_Project.Kind = GPR2.K_Aggregate);
+         Prj_Tree.Unload;
 
-         My_Project_Tree := Load_Project (Cmd, Aggregated_Name);
-         pragma Assert (My_Project_Tree.Root_Project.Kind /= GPR2.K_Aggregate);
+         Prj_Tree := Load_Project_File (Cmd, Aggregated_Name);
+         pragma Assert (Prj_Tree.Root_Project.Kind /= GPR2.K_Aggregate);
       end Load_Aggregated_Project;
 
-      ----------------------------
-      -- Set_Global_Result_Dirs --
-      ----------------------------
-
-      procedure Set_Global_Result_Dirs is
-         Global_Report_Dir : Virtual_File;
-         Root_Prj          : constant GPR2.Project.View.Object :=
-           My_Project_Tree.Root_Project;
-      begin
-         --  TODO??? simplify this code and assume we always have an object
-         --  directory.
-
-         Global_Report_Dir := Root_Prj.Object_Directory.Virtual_File;
-
-         if Global_Report_Dir = No_File then
-            Global_Report_Dir :=
-              GNATCOLL.VFS.Create
-                (GNATCOLL.VFS."+" (String (Root_Prj.Path_Name.Dir_Name)));
-         end if;
-         Process_Project.Global_Report_Dir :=
-           new String'(GNATCOLL.VFS."+" (Global_Report_Dir.Full_Name));
-      end Set_Global_Result_Dirs;
-
-      --  Start of processing for Process_Project
+      --  Start of processing for Load_CLI_Project
 
    begin
       GNATCOLL.Traces.Parse_Config_File;
@@ -398,12 +369,12 @@ package body Utils.Projects is
       --  Error out if this is the root project is an abstract (i.e. without
       --  sources) project.
 
-      if My_Project_Tree.Root_Project.Kind = K_Abstract then
+      if Prj_Tree.Root_Project.Kind = K_Abstract then
          Cmd_Error
            ("gnattest does not support abstract projects (without sources)");
       end if;
 
-      if My_Project_Tree.Root_Project.Kind in Aggregate_Kind then
+      if Prj_Tree.Root_Project.Kind in Aggregate_Kind then
 
          if Num_File_Names (Cmd) /= 0 then
             Cmd_Error
@@ -413,52 +384,10 @@ package body Utils.Projects is
          if Arg (Cmd) = Update_All then
             Cmd_Error ("'-U' cannot be specified for aggregate project");
          end if;
-
-      --  Information in 'else' below is not extracted from the aggregate
-      --  project itself.
-
-      else
-         declare
-            In_Prj_Switches : constant String_Vector :=
-              Extract_Gnattest_Options (My_Project_Tree, Cmd);
-         begin
-            if not In_Prj_Switches.Is_Empty then
-               Parse
-                 (In_Prj_Switches,
-                  Cmd,
-                  Phase              => Project_File,
-                  Collect_File_Names => False);
-            end if;
-         end;
-
-         --  Now we need to Parse again, so command-line args override project
-         --  file args. This needs to be done before getting sources from the
-         --  project, as -U/--no-subprojects affect source selection and may
-         --  override each other.
-
-         Parse
-           (Cmd_Args, Cmd, Phase => Cmd_Line_2, Collect_File_Names => False);
-
-         --  ??? Code detangling: in order to keep 'Cmd' from
-         --  Get_Sources_From_Project, copy the File_Names field of Cmd for
-         --  now. Eventually, the filenames will come from somewhere else.
-
-         declare
-            File_List : String_Ref_Vector :=
-              Utils.Command_Lines.String_Ref_Vectors.To_Vector
-                (Cmd.File_Names);
-         begin
-            Get_Sources_From_Project
-              (My_Project_Tree,
-               File_List,
-               Arg (Cmd) = Update_All,
-               Arg (Cmd) = No_Subprojects,
-               Arg_Length (Cmd, Files) > 0);
-            Cmd.Set_File_Names (File_List);
-         end;
-         Set_Global_Result_Dirs;
       end if;
-   end Process_Project;
+
+      return Prj_Tree;
+   end Load_CLI_Project;
 
    -------------------------------
    -- Read_File_Names_From_File --
@@ -594,7 +523,7 @@ package body Utils.Projects is
    ------------------
 
    function Project_Tree return GPR2.Project.Tree.Object
-   is (My_Project_Tree);
+   is (Global_Project_Tree);
 
    ------------
    -- Unload --
@@ -602,7 +531,7 @@ package body Utils.Projects is
 
    procedure Unload is
    begin
-      My_Project_Tree.Unload;
+      Global_Project_Tree.Unload;
    end Unload;
 
    --------------------------
@@ -667,6 +596,11 @@ package body Utils.Projects is
       end if;
 
       declare
+
+         File_List : String_Ref_Vector :=
+           String_Ref_Vectors.To_Vector (Cmd.File_Names);
+         --  Make a copy of Cmd's File_Names.
+
          procedure Update_File_Name (File_Name : in out String_Ref);
          --  Set File_Name to the full name if -P specified. If the file
          --  doesn't exist, or is not a regular file, give an error.
@@ -689,7 +623,7 @@ package body Utils.Projects is
             if Arg (Cmd, Project_File) /= null then
                declare
                   Res : constant GPR2.Build.Source.Object :=
-                    My_Project_Tree.Root_Project.Visible_Source
+                    Global_Project_Tree.Root_Project.Visible_Source
                       (Simple_Name
                          (Ada.Directories.Simple_Name (File_Name.all)));
                begin
@@ -715,20 +649,84 @@ package body Utils.Projects is
 
          procedure Append_One (File_Name : String) is
          begin
-            Append_File_Name (Cmd, File_Name);
+            File_List.Append (new String'(File_Name));
          end Append_One;
 
       begin
          if Arg (Cmd, Project_File) /= null then
-            Process_Project
-              (Cmd, Cmd_Args, Global_Report_Dir, My_Project_Tree);
 
-            --  Do not create a temporary directory when processing an
-            --  aggregate project.
+            Global_Project_Tree := Load_CLI_Project (Cmd);
 
-            if My_Project_Tree.Root_Project.Kind not in Aggregate_Kind then
+            if Global_Project_Tree.Root_Project.Kind not in Aggregate_Kind then
+
+               --  Extract gnattest arguments from project file
+
+               declare
+                  In_Prj_Switches : constant String_Vector :=
+                    Extract_Gnattest_Options (Global_Project_Tree, Cmd);
+               begin
+                  if not In_Prj_Switches.Is_Empty then
+                     Parse
+                       (In_Prj_Switches,
+                        Cmd,
+                        Phase              => Project_File,
+                        Collect_File_Names => False);
+                  end if;
+               end;
+
+               --  Now we need to Parse again, so command-line args override
+               --  project file args. This needs to be done before getting
+               --  sources from the project, as -U/--no-subprojects affect
+               --  source selection and may override each other.
+
+               Parse
+                 (Cmd_Args,
+                  Cmd,
+                  Phase              => Cmd_Line_2,
+                  Collect_File_Names => False);
+
+               --  ??? Code detangling: in order to keep 'Cmd' from
+               --  Get_Sources_From_Project, copy the File_Names field of Cmd
+               --  for now. Eventually, the filenames will come from somewhere
+               --  else.
+
+               Get_Sources_From_Project
+                 (Global_Project_Tree,
+                  File_List,
+                  Arg (Cmd) = Update_All,
+                  Arg (Cmd) = No_Subprojects,
+                  Arg_Length (Cmd, Files) > 0);
+
+               --  Set the directory to place the global tool results into.
+
+               declare
+                  Root_Prj               : constant GPR2.Project.View.Object :=
+                    Global_Project_Tree.Root_Project;
+                  Global_Report_Dir_File : Virtual_File :=
+                    Root_Prj.Object_Directory.Virtual_File;
+               begin
+                  --  TODO??? simplify this code and assume we always have an
+                  --  object directory.
+
+                  if Global_Report_Dir_File = No_File then
+                     Global_Report_Dir_File :=
+                       GNATCOLL.VFS.Create
+                         (GNATCOLL.VFS."+"
+                            (String (Root_Prj.Path_Name.Dir_Name)));
+                  end if;
+                  Global_Report_Dir :=
+                    new String'
+                      (GNATCOLL.VFS."+" (Global_Report_Dir_File.Full_Name));
+               end;
+
+               --  Create a temporary directory when processing a non-aggregate
+               --  project.
+
                Environment.Create_Temp_Dir
-                 (My_Project_Tree.Root_Project.Object_Directory.String_Value);
+                 (Global_Project_Tree
+                    .Root_Project
+                    .Object_Directory
+                    .String_Value);
             end if;
          else
             Environment.Create_Temp_Dir;
@@ -752,8 +750,13 @@ package body Utils.Projects is
             Read_File_Names_From_File (Par_File_Name.all, Append_One'Access);
          end loop;
 
-         Sort_File_Names (Cmd);
-         Iter_File_Names (Cmd, Update_File_Name'Access);
+         Sorting.Sort (File_List);
+
+         for File_Name of File_List loop
+            Update_File_Name (File_Name);
+         end loop;
+
+         Cmd.Set_File_Names (File_List);
       end;
    end Process_Command_Line;
 
@@ -814,7 +817,7 @@ package body Utils.Projects is
       if CLI_Mains'Length > 0 then
          for F of CLI_Mains loop
             Result.Append
-              (My_Project_Tree.Root_Project.Visible_Source
+              (Global_Project_Tree.Root_Project.Visible_Source
                  (Simple_Name (F.all)));
          end loop;
       else
