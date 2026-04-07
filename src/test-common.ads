@@ -455,8 +455,9 @@ package Test.Common is
    function Get_Lib_Support_Status return Lib_Support_Status;
    --  Get the current lib support status
 
-   procedure Mark_Lib_Support_Generated;
-   --  Flag that the TGen support library has already been generated
+   procedure Generate_TGen_Lib_Support;
+   --  Generate TGen support library and set a flag to indicate it has already
+   --  been generated.
 
    function Harness_Has_Gen_Tests return Boolean;
    --  Return whether the harness contains any generated tests

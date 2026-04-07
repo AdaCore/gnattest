@@ -21,8 +21,10 @@
 -- <http://www.gnu.org/licenses/>.                                          --
 ------------------------------------------------------------------------------
 
+with Ada.Command_Line;
 with Ada.Directories;
 with Ada.Exceptions;
+with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 
 with GNAT.Command_Line;
 with GNAT.OS_Lib;
@@ -30,6 +32,8 @@ with GNAT.OS_Lib;
 with GPR2;
 
 with Test.Command_Lines; use Test.Command_Lines;
+with Test.Common;
+with Test.Generation;
 
 with Utils.Environment;
 with Utils.Err_Out;
@@ -57,8 +61,30 @@ package body Utils.Drivers is
       procedure Include_One (File_Name : String);
       --  Include File_Name in the Ignored set below
 
+      procedure Make_Dir (Dir : String);
+      --  Create directory Dir if it doesn't already exist.
+
       Ignored : String_Set;
       --  Set of file names mentioned in the --ignore=... switch
+
+      procedure Make_Dir (Dir : String) is
+         Cannot_Create : constant String :=
+           "cannot create directory '" & Dir & "'";
+         use Ada.Directories;
+      begin
+         if Exists (Dir) then
+            if Kind (Dir) /= Directory then
+               Cmd_Error (Cannot_Create & "; file already exists");
+            end if;
+         else
+            begin
+               Create_Path (Dir);
+            exception
+               when Name_Error | Use_Error =>
+                  Cmd_Error (Cannot_Create);
+            end;
+         end if;
+      end Make_Dir;
 
       procedure Include_One (File_Name : String) is
       begin
@@ -91,6 +117,11 @@ package body Utils.Drivers is
                   end if;
 
                   Has_Syntax_Err := False;
+
+                  --  Call Create_Context if we don't have one, or after an
+                  --  arbitrary number of files.
+                  Tool.Maybe_Recreate_Context (Wide_Character_Encoding (Cmd));
+
                   Process_File
                     (Tool,
                      Cmd,
@@ -107,7 +138,13 @@ package body Utils.Drivers is
             end loop;
 
             pragma Assert (Counter = 0);
-            Tool.First_Pass_Post_Process (Cmd);
+
+            --  We always need the lib support when running the generation
+            --  harness.
+
+            Test.Common.Generate_TGen_Lib_Support;
+            Test.Generation.Generate_Build_And_Run (Cmd);
+
             Counter := N_File_Names;
             if Arg (Cmd, Verbose) then
                Err_Out.Put ("Second pass:\n");
@@ -125,6 +162,11 @@ package body Utils.Drivers is
                end if;
 
                Has_Syntax_Err := False;
+
+               --  Call Create_Context if we don't have one, or after an
+               --  arbitrary number of files.
+               Tool.Maybe_Recreate_Context (Wide_Character_Encoding (Cmd));
+
                Process_File
                  (Tool,
                   Cmd,
@@ -155,25 +197,7 @@ package body Utils.Drivers is
       --  Create output directory if necessary
 
       if Present (Arg (Cmd, Output_Directory)) then
-         declare
-            Dir           : constant String := Arg (Cmd, Output_Directory).all;
-            Cannot_Create : constant String :=
-              "cannot create directory '" & Dir & "'";
-            use Ada.Directories;
-         begin
-            if Exists (Dir) then
-               if Kind (Dir) /= Directory then
-                  Cmd_Error (Cannot_Create & "; file already exists");
-               end if;
-            else
-               begin
-                  Create_Path (Dir);
-               exception
-                  when Name_Error | Use_Error =>
-                     Cmd_Error (Cannot_Create);
-               end;
-            end if;
-         end;
+         Make_Dir (Arg (Cmd, Output_Directory).all);
       end if;
 
       Init (Tool, Cmd);
@@ -186,7 +210,43 @@ package body Utils.Drivers is
          Process_Files;
       end if;
 
-      Final (Tool, Cmd);
+      --  Abort here if we the switch --dump-subp-hash is on. This return
+      --  should not be moved further down.
+
+      if Test.Common.Subp_File_Name /= null then
+         return;
+      end if;
+
+      --  If the project is an aggregate one, exit early and do nothing. The
+      --  aggregated projects will be processed in sequence in subprocess calls
+      --  made by the driver.
+
+      if Project_Tree.Is_Defined
+        and then Project_Tree.Root_Project.Kind in GPR2.Aggregate_Kind
+      then
+         return;
+      end if;
+
+      --  In any case, generate the support library if needed
+
+      if Test.Common.Get_Lib_Support_Status in Test.Common.Needed then
+         Test.Common.Generate_TGen_Lib_Support;
+      end if;
+
+      --  Run GNATtest, either in generation or in execution mode.
+
+      if Project_Tree.Is_Defined then
+         Generate_Tests (Cmd);
+      else
+         Run_Tests;
+      end if;
+
+      if Test.Common.Strict_Execution
+        and then Test.Common.Source_Processing_Failed
+      then
+         Ada.Command_Line.Set_Exit_Status (Ada.Command_Line.Failure);
+      end if;
+
       Environment.Clean_Up;
       Unload;
 

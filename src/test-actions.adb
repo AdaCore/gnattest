@@ -22,7 +22,6 @@
 ------------------------------------------------------------------------------
 
 with Ada.Characters.Handling; use Ada.Characters.Handling;
-with Ada.Command_Line;
 with Ada.Directories;         use Ada.Directories;
 with Ada.Environment_Variables;
 with Ada.IO_Exceptions;
@@ -148,24 +147,16 @@ package body Test.Actions is
      Additional_Tests_Event_Handler'(null record);
    --  Instance from which we'll create the event handler.
 
-   ------------------
-   -- Process_File --
-   ------------------
+   ----------------------------
+   -- Maybe_Recreate_Context --
+   ----------------------------
 
-   procedure Process_File
-     (Tool         : in out Tool_State;
-      Cmd          : in out Command_Line;
-      File_Name    : String;
-      Counter      : Natural;
-      Syntax_Error : out Boolean;
-      Reparse      : Boolean := False;
-      Pass         : Pass_Kind := Second_Pass) is
+   procedure Maybe_Recreate_Context
+     (Tool : in out Tool_State; Char_Encoding : String) is
    begin
-
-      --  Call Create_Context if we don't have one, or after an arbitrary
-      --  number of files.
-
-      if Tool.Context = No_Analysis_Context or else Counter mod 100 = 0 then
+      if Tool.Context = No_Analysis_Context
+        or else Tool.Ctx_Counter = Max_Files_Per_Context
+      then
          declare
             Default_Config : Libadalang.Preprocessing.File_Config;
             File_Configs   : Libadalang.Preprocessing.File_Config_Maps.Map;
@@ -194,12 +185,29 @@ package body Test.Actions is
 
             Tool.Context :=
               Create_Context
-                (Charset       => Wide_Character_Encoding (Cmd),
+                (Charset       => Char_Encoding,
                  File_Reader   => File_Reader,
                  Unit_Provider => Provider);
+            Tool.Ctx_Counter := 0;
          end;
+      else
+         Tool.Ctx_Counter := Tool.Ctx_Counter + 1;
       end if;
+   end Maybe_Recreate_Context;
 
+   ------------------
+   -- Process_File --
+   ------------------
+
+   procedure Process_File
+     (Tool         : Tool_State;
+      Cmd          : Command_Line;
+      File_Name    : String;
+      Counter      : Natural;
+      Syntax_Error : out Boolean;
+      Reparse      : Boolean := False;
+      Pass         : Pass_Kind := Second_Pass) is
+   begin
       declare
          Unit : constant Analysis_Unit :=
            Get_From_File (Tool.Context, File_Name, Reparse => Reparse);
@@ -355,6 +363,8 @@ package body Test.Actions is
    begin
       Test.Common.Verbose := Arg (Cmd, Verbose);
       Test.Common.Quiet := Arg (Cmd, Quiet);
+      Test.Common.Instrument := Arg (Cmd, Dump_Test_Inputs);
+      Test.Common.Lang_Version := Arg (Cmd);
 
       --  If the tool project is an aggregate one, exit early and do nothing.
       --  The aggregated projects will be processed in sequence in subprocess
@@ -375,10 +385,6 @@ package body Test.Actions is
                  Test.Common.Subp_Line_Nbr));
          Test.Command_Lines.Test_Boolean_Switches.Set_Arg (Cmd, Quiet, True);
       end if;
-
-      Test.Common.Instrument := Arg (Cmd, Dump_Test_Inputs);
-
-      Test.Common.Lang_Version := Arg (Cmd);
 
       --  Passed_Tests
       declare
@@ -485,8 +491,6 @@ package body Test.Actions is
          --  Clearing argument files so that the driver does not try to process
          --  them as ada sources.
          Clear_File_Names (Cmd);
-
-         Test.Common.Queues_Number := Arg (Cmd, Jobs);
 
          --  Aggregation mode does not require any further processing
          return;
@@ -1299,117 +1303,63 @@ package body Test.Actions is
 
    end Init;
 
-   -----------------------------
-   -- First_Pass_Post_Process --
-   -----------------------------
+   --------------------
+   -- Generate_Tests --
+   --------------------
 
-   procedure First_Pass_Post_Process
-     (Tool : in out Tool_State; Cmd : in out Command_Line)
-   is
-      pragma Unreferenced (Tool);
+   procedure Generate_Tests (Cmd : Command_Line) is
+      Src_Prj : constant String :=
+        Project_Tree.Root_Project.Path_Name.String_Value;
    begin
-      --  We always need the lib support when running the generation harness
-
-      TGen.Libgen.Generate
-        (Test.Common.TGen_Libgen_Ctx,
-         [TGen.Libgen.Marshalling_Part     => True,
-          TGen.Libgen.Test_Generation_Part => True,
-          TGen.Libgen.Wrappers_Part        => False]);
-      Test.Common.Mark_Lib_Support_Generated;
-      Test.Generation.Generate_Build_And_Run (Cmd);
-   end First_Pass_Post_Process;
-
-   -----------
-   -- Final --
-   -----------
-
-   procedure Final (Tool : in out Tool_State; Cmd : Command_Line) is
-      use Ada.Strings.Unbounded;
-   begin
-      --  Abort here if we the switch --dump-subp-hash is on. This return
-      --  should not be moved further down.
-
-      if Test.Common.Subp_File_Name /= null then
-         return;
-      end if;
-
-      --  If the project is an aggregate one, exit early and do nothing. The
-      --  aggregated projects will be processed in sequence in subprocess calls
-      --  made by the driver.
-
-      if Project_Tree.Is_Defined
-        and then Project_Tree.Root_Project.Kind in Aggregate_Kind
-      then
-         return;
-      end if;
-
-      --  In any case, generate the support library if needed
-
-      if Test.Common.Get_Lib_Support_Status in Test.Common.Needed then
-         TGen.Libgen.Generate
-           (Test.Common.TGen_Libgen_Ctx,
-            [TGen.Libgen.Marshalling_Part     => True,
-             TGen.Libgen.Test_Generation_Part => True,
-             TGen.Libgen.Wrappers_Part        => False]);
-         Test.Common.Mark_Lib_Support_Generated;
-      end if;
-
-      if not Project_Tree.Is_Defined then
-         Test.Aggregator.Process_Drivers_List;
+      if Test.Common.Stub_Mode_ON then
+         Test.Harness.Generate_Stub_Test_Driver_Projects (Src_Prj);
+      elsif Arg (Cmd, Separate_Drivers) /= null then
+         Test.Skeleton.Generate_Project_File (Src_Prj);
+         Test.Harness.Generate_Test_Driver_Projects (Src_Prj);
       else
-         declare
-            Src_Prj : constant String :=
-              Project_Tree.Root_Project.Path_Name.String_Value;
-         begin
-            if Test.Common.Stub_Mode_ON then
-               Test.Harness.Generate_Stub_Test_Driver_Projects (Src_Prj);
-            elsif Arg (Cmd, Separate_Drivers) /= null then
-               Test.Skeleton.Generate_Project_File (Src_Prj);
-               Test.Harness.Generate_Test_Driver_Projects (Src_Prj);
-            else
-               if not Arg (Cmd, Harness_Only) then
-                  if Test.Common.Additional_Tests_Prj /= null then
-                     Process_Additional_Tests (Cmd);
-                  end if;
-                  Test.Skeleton.Report_Unused_Generic_Tests;
-                  Test.Skeleton.Generate_Project_File (Src_Prj);
-                  if Test.Common.Verbose then
-                     Test.Skeleton.Report_Tests_Total;
-                  end if;
-               end if;
-               Test.Harness.Test_Runner_Generator (Src_Prj);
-               Test.Harness.Project_Creator (Src_Prj);
+         if not Arg (Cmd, Harness_Only) then
+            if Test.Common.Additional_Tests_Prj /= null then
+               Process_Additional_Tests (Cmd);
             end if;
-            Test.Harness.Generate_Makefile (Src_Prj);
-            Test.Harness.Generate_Config;
-            Test.Common.Generate_Common_File;
-         end;
-
-         --  Only generate the mapping file if we are not minimizing.
-         --  Otherwise, the gnattest subprocess will take care of generating it
-         --  once all the redundant tests are removed.
-
-         if Test.Common.Minimize then
-            if Test.Common.Harness_Has_Gen_Tests then
-               Test.Suite_Min.Minimize_Suite (Cmd);
-            else
-               Test.Common.Report_Err
-                 ("No generated tests found in the harness,"
-                  & " nothing to do in the minimization phase.");
-               Test.Mapping.Generate_Mapping_File;
+            Test.Skeleton.Report_Unused_Generic_Tests;
+            Test.Skeleton.Generate_Project_File (Src_Prj);
+            if Test.Common.Verbose then
+               Test.Skeleton.Report_Tests_Total;
             end if;
+         end if;
+         Test.Harness.Test_Runner_Generator (Src_Prj);
+         Test.Harness.Project_Creator (Src_Prj);
+      end if;
+      Test.Harness.Generate_Makefile (Src_Prj);
+      Test.Harness.Generate_Config;
+      Test.Common.Generate_Common_File;
+
+      --  Only generate the mapping file if we are not minimizing.
+      --  Otherwise, the gnattest subprocess will take care of generating it
+      --  once all the redundant tests are removed.
+
+      if Test.Common.Minimize then
+         if Test.Common.Harness_Has_Gen_Tests then
+            Test.Suite_Min.Minimize_Suite (Cmd);
          else
+            Test.Common.Report_Err
+              ("No generated tests found in the harness,"
+               & " nothing to do in the minimization phase.");
             Test.Mapping.Generate_Mapping_File;
          end if;
-
+      else
+         Test.Mapping.Generate_Mapping_File;
       end if;
+   end Generate_Tests;
 
-      if Test.Common.Strict_Execution
-        and then Test.Common.Source_Processing_Failed
-      then
-         Ada.Command_Line.Set_Exit_Status (Ada.Command_Line.Failure);
-      end if;
-   end Final;
+   ---------------
+   -- Run_Tests --
+   ---------------
+
+   procedure Run_Tests is
+   begin
+      Test.Aggregator.Process_Drivers_List;
+   end Run_Tests;
 
    ----------------------------
    -- Second_Per_File_Action --

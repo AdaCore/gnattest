@@ -29,29 +29,37 @@ package Test.Actions is
 
    type Pass_Kind is (First_Pass, Second_Pass);
 
+   Max_Files_Per_Context : constant Natural := 100;
+   subtype Ctx_Count is Natural range 0 .. Max_Files_Per_Context;
+
    type Tool_State is tagged limited record
       Context : Analysis_Context := No_Analysis_Context;
       --  The only tool that needs access to the Context is gnatstub.
+
+      Ctx_Counter : Ctx_Count := 0;
+      --  Number of files processed with the current Context.
 
       Run_First_Pass : Boolean := False;
       --  Whether the drive should skip the first pass or not. Saves time by
       --  not re-instantiating LAL analysis contexts.
    end record;
 
+   procedure Maybe_Recreate_Context
+     (Tool : in out Tool_State; Char_Encoding : String);
+   --  If Tool.Ctx_Counter reached Max_Files_Per_Context, recreate the context.
+   --  Otherwise, increment Ctx_Counter.
+
    procedure Init (Tool : in out Tool_State; Cmd : in out Command_Line);
 
-   procedure First_Pass_Post_Process
-     (Tool : in out Tool_State; Cmd : in out Command_Line);
-   --  Called in between First_Per_File_Action and Second_Per_File_Action
-
    procedure Process_File
-     (Tool         : in out Tool_State;
-      Cmd          : in out Command_Line;
+     (Tool         : Tool_State;
+      Cmd          : Command_Line;
       File_Name    : String;
       Counter      : Natural;
       Syntax_Error : out Boolean;
       Reparse      : Boolean := False;
-      Pass         : Pass_Kind := Second_Pass);
+      Pass         : Pass_Kind := Second_Pass)
+   with Pre => Tool.Context /= No_Analysis_Context;
    --  This class-wide procedure takes care of some bookkeeping, and then
    --  dispatches to First_Per_File_Action or Second_Per_File_Action depending
    --  on the .
@@ -73,7 +81,12 @@ package Test.Actions is
    --  reason this is needed is documented in Stub.Actions (search for the call
    --  to Process_File).
 
-   procedure Final (Tool : in out Tool_State; Cmd : Command_Line);
+   procedure Generate_Tests (Cmd : Command_Line);
+   --  Run GNATtest in generation mode.
+
+   procedure Run_Tests;
+   --  Run GNATtest in aggregate mode.
+
    procedure Tool_Help;
 
 end Test.Actions;
