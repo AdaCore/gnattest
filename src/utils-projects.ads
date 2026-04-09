@@ -162,15 +162,9 @@ package Utils.Projects is
    --  Clear the project tree
 
    procedure Process_Command_Line
-     (Cmd               : in out Command_Line;
-      Global_Report_Dir : out String_Ref;
-      Print_Help        : not null access procedure);
+     (Cmd : in out Command_Line; Print_Help : not null access procedure);
    --  Processes the command line and (if specified on the command line) the
    --  project file.
-   --
-   --  Global_Report_Dir is set to the directory name in which to place global
-   --  tool results, if this information comes from the project file (see
-   --  Set_Global_Result_Dirs). Otherwise it is null.
    --
    --  Compiler_Options are options that should be passed to gcc, based on the
    --  content of the project file.

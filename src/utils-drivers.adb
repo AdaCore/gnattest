@@ -23,10 +23,8 @@
 
 with Ada.Command_Line;
 with Ada.Directories;
-with Ada.Exceptions;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 
-with GNAT.Command_Line;
 with GNAT.OS_Lib;
 
 with GPR2;
@@ -40,51 +38,26 @@ with Utils.Err_Out;
 with Utils.Projects;         use Utils.Projects;
 with Utils.Projects.Aggregate;
 with Utils.String_Utilities; use Utils.String_Utilities;
-with Utils.Tool_Names;
 
 with Libadalang.Iterators; use Libadalang.Iterators;
 
 package body Utils.Drivers is
 
-   use Test_Boolean_Switches, Test_String_Switches, Test_String_Seq_Switches;
+   use Test_Boolean_Switches, Test_String_Seq_Switches;
 
    use Test.Actions;
    use type GNAT.OS_Lib.String_Access;
 
-   procedure Driver (Cmd : in out Command_Line; Tool : in out Tool_State) is
+   procedure Driver (Cmd : Command_Line; Tool : in out Tool_State) is
       use String_Sets;
 
       procedure Process_Files;
 
-      Global_Report_Dir : String_Ref;
-
       procedure Include_One (File_Name : String);
       --  Include File_Name in the Ignored set below
 
-      procedure Make_Dir (Dir : String);
-      --  Create directory Dir if it doesn't already exist.
-
       Ignored : String_Set;
       --  Set of file names mentioned in the --ignore=... switch
-
-      procedure Make_Dir (Dir : String) is
-         Cannot_Create : constant String :=
-           "cannot create directory '" & Dir & "'";
-         use Ada.Directories;
-      begin
-         if Exists (Dir) then
-            if Kind (Dir) /= Directory then
-               Cmd_Error (Cannot_Create & "; file already exists");
-            end if;
-         else
-            begin
-               Create_Path (Dir);
-            exception
-               when Name_Error | Use_Error =>
-                  Cmd_Error (Cannot_Create);
-            end;
-         end if;
-      end Make_Dir;
 
       procedure Include_One (File_Name : String) is
       begin
@@ -187,21 +160,6 @@ package body Utils.Drivers is
       --  Start of processing for Driver
 
    begin
-      Process_Command_Line
-        (Cmd, Global_Report_Dir, Print_Help => Tool_Help'Access);
-
-      if Debug_Flag_C then
-         Dump_Cmd (Cmd);
-      end if;
-
-      --  Create output directory if necessary
-
-      if Present (Arg (Cmd, Output_Directory)) then
-         Make_Dir (Arg (Cmd, Output_Directory).all);
-      end if;
-
-      Init (Tool, Cmd);
-
       if Project_Tree.Is_Defined
         and then Project_Tree.Root_Project.Kind in GPR2.Aggregate_Kind
       then
@@ -251,31 +209,25 @@ package body Utils.Drivers is
       Unload;
 
       Utils.Main_Done := True;
-
-   exception
-      when X : File_Not_Found =>
-         declare
-            use Ada.Exceptions, Utils.Tool_Names;
-         begin
-            Err_Out.Put ("\1: \2\n", Tool_Name, Exception_Message (X));
-         end;
-         Environment.Clean_Up;
-         GNAT.OS_Lib.OS_Exit (1);
-      when Utils.Command_Lines.Command_Line_Error =>
-
-         --  Error message has already been printed.
-
-         GNAT.Command_Line.Try_Help;
-         Environment.Clean_Up;
-         GNAT.OS_Lib.OS_Exit (1);
-      when
-        Utils.Command_Lines.Command_Line_Error_No_Help
-        | Utils.Command_Lines.Command_Line_Error_No_Tool_Name
-      =>
-         --  Error message has already been printed.
-
-         Environment.Clean_Up;
-         GNAT.OS_Lib.OS_Exit (1);
    end Driver;
+
+   procedure Make_Dir (Dir : String) is
+      Cannot_Create : constant String :=
+        "cannot create directory '" & Dir & "'";
+      use Ada.Directories;
+   begin
+      if Exists (Dir) then
+         if Kind (Dir) /= Directory then
+            Cmd_Error (Cannot_Create & "; file already exists");
+         end if;
+      else
+         begin
+            Create_Path (Dir);
+         exception
+            when Name_Error | Use_Error =>
+               Cmd_Error (Cannot_Create);
+         end;
+      end if;
+   end Make_Dir;
 
 end Utils.Drivers;
