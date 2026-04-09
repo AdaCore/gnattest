@@ -2,13 +2,79 @@
 @@--  @_GLOBAL_PREFIX_@ Prefix used to prefix all entities local to the unit.
 @@--  @_TY_PREFIX_@ Prefix used to prefix all entities for the current type.
 @@--  @_TY_NAME_@ Name of the current type.
+@@--  @_OUTPUT_SUPPORTED_@ True if this type supports output marshallers
 @@--  @_NEEDS_HEADER_@ True if the current type needs a header.
 @@--
    --  Input and Output functions for @_TY_NAME_@
 
-   function @_TY_PREFIX_@_Output
-     (@_GLOBAL_PREFIX_@_V : TGen.TGen_Std.@_TY_NAME_@) return TGen.JSON.JSON_Value;
-
    function @_TY_PREFIX_@_Input
      (@_GLOBAL_PREFIX_@_JSON : TGen.JSON.JSON_Value)
      return TGen.TGen_Std.@_TY_NAME_@;
+
+@@IF@@ @_OUTPUT_SUPPORTED_@
+   function @_TY_PREFIX_@_Output
+     (@_GLOBAL_PREFIX_@_V : TGen.TGen_Std.@_TY_NAME_@) return TGen.JSON.JSON_Value;
+     
+   procedure @_TY_PREFIX_@_To_JSON
+     (@_GLOBAL_PREFIX_@_Stream    : not null access Ada.Streams.Root_Stream_Type'Class;
+      @_GLOBAL_PREFIX_@_Buffer    : in out Interfaces.Unsigned_8;
+      @_GLOBAL_PREFIX_@_Offset    : in out TGen.Marshalling_Lib.Offset_Type;
+      @_GLOBAL_PREFIX_@_JSON      : out TGen.JSON.JSON_Value;
+      @_GLOBAL_PREFIX_@_Header    : access Ada.Streams.Root_Stream_Type'Class := null;
+      @_GLOBAL_PREFIX_@_Flush_Hdr : Boolean := False);
+   --  Read a value of @_TY_NAME_@ from the stream and update @_GLOBAL_PREFIX_@_JSON
+   --  to its corresponding JSON representation.
+   --  if @_GLOBAL_PREFIX_@_Header is not null, the header (if any) will be
+   --  read from this stream instead of the main data stream.
+   --
+   --  @_GLOBAL_PREFIX_@_Flush_Hdr controls how the header is read from stream.
+   --  If True, this procedure behaves like the *_Input functions, where some
+   --  padding bits are inserted to make sure the header data is byte-aligned.
+   --  Otherwise, this procedure behaves like the *_Read_All procedure, where
+   --  the header bits and data bits are concatenated.
+
+   procedure @_TY_PREFIX_@_To_Binary
+     (@_GLOBAL_PREFIX_@_Stream    : not null access Ada.Streams.Root_Stream_Type'Class;
+      @_GLOBAL_PREFIX_@_Buffer    : in out Interfaces.Unsigned_8;
+      @_GLOBAL_PREFIX_@_Offset    : in out TGen.Marshalling_Lib.Offset_Type;
+      @_GLOBAL_PREFIX_@_JSON      : TGen.JSON.JSON_Value;
+      @_GLOBAL_PREFIX_@_Header    : access Ada.Streams.Root_Stream_Type'Class := null;
+      @_GLOBAL_PREFIX_@_Flush_Hdr : Boolean := False);
+   --  Convert the JSON representation of @_TY_NAME_@ to a compact binary form
+   --  and write it to the streams.
+   --  if @_GLOBAL_PREFIX_@_Header is not null, the header (if any) will be
+   --  written to this stream instead of the main data stream.
+   --
+   --  @_GLOBAL_PREFIX_@_Flush_Hdr controls how the header is read from stream.
+   --  If True, this procedure behaves like the *_Input functions, where some
+   --  padding bits are inserted to make sure the header data is byte-aligned.
+   --  Otherwise, this procedure behaves like the *_Read_All procedure, where
+   --  the header bits and data bits are concatenated.
+
+@@END_IF@@
+   --  Convenience wrappers defined for all types
+
+   function @_TY_PREFIX_@_To_JSON
+     (@_GLOBAL_PREFIX_@_Header : not null access Ada.Streams.Root_Stream_Type'Class;
+      @_GLOBAL_PREFIX_@_Stream : not null access Ada.Streams.Root_Stream_Type'Class)
+      return TGen.JSON.JSON_Value;
+   --  Read a value of type @_TY_NAME_@ from the streams and return its
+   --  corresponding JSON representation.
+
+   function @_TY_PREFIX_@_To_JSON
+     (@_GLOBAL_PREFIX_@_Stream : not null access Ada.Streams.Root_Stream_Type'Class)
+      return TGen.JSON.JSON_Value with Inline;
+   --  Read a value of type @_TY_NAME_@ from the stream and return its
+   --  corresponding JSON representation.
+
+   procedure @_TY_PREFIX_@_To_Binary
+     (@_GLOBAL_PREFIX_@_Header : not null access Ada.Streams.Root_Stream_Type'Class;
+      @_GLOBAL_PREFIX_@_Stream : not null access Ada.Streams.Root_Stream_Type'Class;
+      @_GLOBAL_PREFIX_@_JSON  : TGen.JSON.JSON_Value);
+   --  Decode @_GLOBAL_PREFIX_@_Value and write its representation to the streams
+
+   procedure @_TY_PREFIX_@_To_Binary
+     (@_GLOBAL_PREFIX_@_Stream : not null access Ada.Streams.Root_Stream_Type'Class;
+      @_GLOBAL_PREFIX_@_JSON  : TGen.JSON.JSON_Value)
+      with Inline;
+   --  Decode @_GLOBAL_PREFIX_@_Value and write its representation to the stream

@@ -5,13 +5,13 @@
 @@--  @_COMPONENT_@ Name of the selected component on which the call is made.
 @@--  @_ACTION_@ Either Read or Write.
 @@--  @_COMP_SCALAR_@ True iff the component type is a scalar type.
-@@--  @_NEEDS_HEADER_@ True iff the component type needs a header.
+@@--  @_COMP_NEEDS_HEADER_@ True iff the component type needs a header.
 @@--  @_CONSTRAINTS_@ Constraints for anonymous component types. They are only
 @@--       used for scalar types.
 @@--  @_SPACING_@ Sequence of spaces used for indentation.
 @@--
 @@IF@@ @_COMP_PREFIX_@ /= ""
-@@IF@@ @_NEEDS_HEADER_@ and @_CONSTRAINTS_@ = ""
+@@IF@@ @_COMP_NEEDS_HEADER_@ and @_CONSTRAINTS_@ = ""
 @_SPACING_@@_COMP_PREFIX_@_@_ACTION_@_All
 @@ELSE@@
 @_SPACING_@@_COMP_PREFIX_@_@_ACTION_@

@@ -1,0 +1,7 @@
+@@--  Template for the initialization of a record type representation.
+@@--  @_TY_PREFIX_@ Prefix used to prefix all entities for the current type.
+@@--  @_TY_NAME_@ Name of the current type.
+@@--  @_PROXY_TY_PREFIX_@ Prefix of the proxy type.
+
+   @_TY_PREFIX_@_Typ.Proxy_Subprogram := @_PROXY_TY_PREFIX_@_Typ_Ref;
+   @_TY_PREFIX_@_Typ_Ref := (@_TY_PREFIX_@_Typ'Access);

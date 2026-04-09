@@ -21,12 +21,10 @@
 -- <http://www.gnu.org/licenses/>.                                          --
 ------------------------------------------------------------------------------
 
-with Utils.Command_Lines; use Utils.Command_Lines;
 with Utils.Drivers;
 with Utils.Err_Out;
 
 with Test.Actions;
-with Test.Command_Lines;
 
 with GNATCOLL.Traces;
 
@@ -35,7 +33,6 @@ procedure Test.Main is
    --  Main procedure for gnattest
 
    Tool : Test.Actions.Tool_State;
-   Cmd  : Command_Line (Test.Command_Lines.Descriptor'Access);
 
 begin
    GNATCOLL.Traces.Parse_Config_File;
@@ -45,5 +42,5 @@ begin
 
    Test.Register_Specific_Attributes;
 
-   Utils.Drivers.Driver (Cmd, Tool);
+   Utils.Drivers.Driver (Test.Actions.Global_Cmd, Tool);
 end Test.Main;

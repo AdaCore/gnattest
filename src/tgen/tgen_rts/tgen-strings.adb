@@ -25,6 +25,35 @@ with Ada.Characters.Handling;
 
 package body TGen.Strings is
 
+   -----------
+   -- Index --
+   -----------
+
+   function Index
+     (S         : String;
+      C         : Character;
+      Direction : Ada.Strings.Direction := Ada.Strings.Forward) return Natural
+   is
+      Inc     : constant Integer :=
+        (if Direction in Ada.Strings.Forward then 1 else -1);
+      Cur     : Natural :=
+        (if Direction in Ada.Strings.Forward then S'First else S'Last);
+      End_Idx : constant Natural :=
+        (if Direction in Ada.Strings.Forward then S'Last else S'First);
+   begin
+      if S'Length = 0 then
+         return 0;
+      end if;
+      loop
+         if S (Cur) = C then
+            return Cur;
+         end if;
+         exit when Cur = End_Idx;
+         Cur := Cur + Inc;
+      end loop;
+      return 0;
+   end Index;
+
    ----------
    -- Join --
    ----------

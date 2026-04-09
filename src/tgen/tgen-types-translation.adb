@@ -26,6 +26,7 @@ with Ada.Strings.Wide_Wide_Unbounded;
 with Ada.Text_IO; use Ada.Text_IO;
 
 with GNATCOLL.GMP.Integers;
+with GNATCOLL.Traces; use GNATCOLL.Traces;
 
 with Langkit_Support.Text; use Langkit_Support.Text;
 
@@ -47,6 +48,8 @@ with TGen.Strings;
 
 package body TGen.Types.Translation is
 
+   Me : constant Trace_Handle := Create ("TGen_Translation", Default => Off);
+
    Translation_Error : exception;
 
    Non_Static_Error : exception;
@@ -62,7 +65,6 @@ package body TGen.Types.Translation is
    --  something that should be static turns out not to be due to a LAL
    --  limitation.
 
-   Verbose_Diag : Boolean := False;
    package Text renames Langkit_Support.Text;
 
    function Get_From_Cache
@@ -74,12 +76,13 @@ package body TGen.Types.Translation is
    Cache_Miss : Natural := 0;
    --  Stats for the cache
 
-   type Local_Ada_Node_Arr is array (Positive range <>) of Ada_Node;
-   --  Like Ada_Node_List, but that we can build ourselves
+   function "+" (L : Ada_Node_List) return Ada_Node_Array;
+   --  Convert L to a Ada_Node_Array. This downcasts all the nodes to an
+   --  Ada_Node.
 
    function Translate_Internal
      (N                 : LAL.Base_Type_Decl;
-      Verbose           : Boolean := False;
+      Ctx               : in out Translation_Ctx;
       Assume_Non_Static : Boolean := False) return Translation_Result;
    --  Actually translates the Base_Type_Decl. Translate is simply a
    --  memorization wrapper.
@@ -87,23 +90,29 @@ package body TGen.Types.Translation is
    --  flaged as non static.
 
    function Translate_Int_Decl
-     (Decl : Base_Type_Decl) return Translation_Result;
-
-   function Translate_Enum_Decl
-     (Decl : Base_Type_Decl; Root_Enum_Decl : Base_Type_Decl)
+     (Decl : Base_Type_Decl; Ctx : in out Translation_Ctx)
       return Translation_Result;
 
+   function Translate_Enum_Decl
+     (Decl           : Base_Type_Decl;
+      Root_Enum_Decl : Base_Type_Decl;
+      Ctx            : in out Translation_Ctx) return Translation_Result;
+
    function Translate_Char_Decl
-     (Decl : Base_Type_Decl) return Translation_Result;
+     (Decl : Base_Type_Decl; Ctx : in out Translation_Ctx)
+      return Translation_Result;
 
    function Translate_Float_Decl
-     (Decl : Base_Type_Decl) return Translation_Result;
+     (Decl : Base_Type_Decl; Ctx : in out Translation_Ctx)
+      return Translation_Result;
 
    function Translate_Ordinary_Fixed_Decl
-     (Decl : Base_Type_Decl) return Translation_Result;
+     (Decl : Base_Type_Decl; Ctx : in out Translation_Ctx)
+      return Translation_Result;
 
    function Translate_Decimal_Fixed_Decl
-     (Decl : Base_Type_Decl) return Translation_Result;
+     (Decl : Base_Type_Decl; Ctx : in out Translation_Ctx)
+      return Translation_Result;
 
    procedure Translate_Float_Range
      (Decl      : Base_Type_Decl;
@@ -123,12 +132,14 @@ package body TGen.Types.Translation is
    --  Long_Float'First .. Long_Float'Last
 
    function Translate_Array_Decl
-     (Decl : Base_Type_Decl) return Translation_Result
+     (Decl : Base_Type_Decl; Ctx : in out Translation_Ctx)
+      return Translation_Result
    with Pre => Decl.P_Root_Type.P_Full_View.P_Is_Array_Type;
 
    function Translate_Component_Decl_List
-     (Decl_List : Ada_Node_List; Res : in out Component_Maps.Map)
-      return Unbounded_String;
+     (Decl_List : Ada_Node_List;
+      Res       : in out Component_Maps.Map;
+      Ctx       : in out Translation_Ctx) return Unbounded_String;
    --  Translate the list of components of Decl into Res.
    --  If the returned string is empty then the results are valid, otherwise
    --  and error occured during translation and the contents of Res should
@@ -136,8 +147,9 @@ package body TGen.Types.Translation is
    --  translation
 
    function Translate_Variant_Part
-     (Node : LAL.Variant_Part; Discriminants : Component_Maps.Map)
-      return Record_Types.Variant_Part
+     (Node          : LAL.Variant_Part;
+      Discriminants : Component_Maps.Map;
+      Ctx           : in out Translation_Ctx) return Record_Types.Variant_Part
    with Pre => (not Node.Is_Null);
 
    procedure Subtract_Choice_From_Other
@@ -150,14 +162,15 @@ package body TGen.Types.Translation is
 
    function Gather_Index_Constraint_Nodes
      (Decl_Or_Constraint : Ada_Node'Class; Num_Dims : Positive)
-      return Local_Ada_Node_Arr;
+      return Ada_Node_Array;
    --  Collect all the constraints on the indexes that are present in
    --  Decl_Or_Constraint, for which the kind should be one of Base_Type_Decl
    --  or Constraint. Num_Dims should match the number of constraints defined
    --  in Decl_Or_Constraint.
 
    function Translate_Record_Decl
-     (Decl : Base_Type_Decl) return Translation_Result
+     (Decl : Base_Type_Decl; Ctx : in out Translation_Ctx)
+      return Translation_Result
    with
      Pre =>
        (Decl.P_Root_Type.P_Full_View.P_Is_Record_Type
@@ -234,6 +247,68 @@ package body TGen.Types.Translation is
    --  Return whether N is fully private, i.e. whether the first declaration of
    --  N is in a private part, and can't thus be used outside the private parts
    --  of its declaration unit or child units.
+
+   function Translate_Proxy
+     (Decl       : Base_Type_Decl'Class;
+      FQN        : Ada_Qualified_Name;
+      Proxy_Name : LAL.Name'Class;
+      Ctx        : in out Translation_Ctx) return Translation_Result;
+   --  Translate Decl as if it had been annotated with
+   --  `TGen_Proxy => Proxy_Name`.
+
+   function Locate_Proxy_For_Decl
+     (Decl       : Base_Type_Decl'Class;
+      Proxy_Name : LAL.Name'Class;
+      Ctx        : in out Translation_Ctx) return Translation_Result;
+   --  Find the first suitable proxy subprogram for Decl, named Proxy_Name, for
+   --  as if it was annotated on `From`. This last point is important, as this
+   --  function only searches the lexical env visible from From.
+   --
+   --  If no valid proxy is found, the return value will contain a diagnostic
+   --  for why the closest candidate did not match. Otherwise it will contain
+   --  the reference to the translated subp representation.
+
+   type Proxy_Failure_Reason is
+     (No_Subp, Mismatched_Ret_Type, Cannot_Generate, Has_Out_Params);
+   --  Reason why we couldn't find a proxy subprogram:
+   --
+   --  - No subprogram in the candidate list;
+   --  - No functions returning the expected type;
+   --  - No functions for which TGen could generate inputs;
+   --  - No functions with only in and in out parameters
+
+   function Extract_Proxy_From_Node_List
+     (N              : Base_Type_Decl'Class;
+      List           : Ada_Node_Array;
+      Ctx            : in out Translation_Ctx;
+      Failure_Reason : out Proxy_Failure_Reason) return Typ_Access;
+   --  Search for a suitable proxy subprogram for N in List, returning its
+   --  translation if found. Otherwise null is returned. Failure_Reason details
+   --  what was the issue if the return value is null.
+
+   function Find_Proxy_By_Xref
+     (N : Base_Type_Decl; Ctx : in out Translation_Ctx) return Typ_Access;
+   --  Try to find a proxy by XRef for N, using the units returned by
+   --  Ctx.Unit_List_CB.
+
+   ---------
+   -- "+" --
+   ---------
+
+   function "+" (L : Ada_Node_List) return Ada_Node_Array is
+      It : Positive := L.Ada_Node_List_First;
+   begin
+      while L.Ada_Node_List_Has_Element (It) loop
+         It := L.Ada_Node_List_Next (It);
+      end loop;
+      return Res : Ada_Node_Array (1 .. It - 1) do
+         It := Res'First;
+         for Node of L loop
+            Res (It) := Node.As_Ada_Node;
+            It := It + 1;
+         end loop;
+      end return;
+   end "+";
 
    --------------
    -- PP_Cache --
@@ -368,8 +443,10 @@ package body TGen.Types.Translation is
    ------------------------
 
    function Translate_Int_Decl
-     (Decl : Base_Type_Decl) return Translation_Result
+     (Decl : Base_Type_Decl; Ctx : in out Translation_Ctx)
+      return Translation_Result
    is
+      pragma Unreferenced (Ctx);
       Rang : constant Discrete_Range := Decl.P_Discrete_Range;
 
       Max, Min : Big_Integer;
@@ -464,8 +541,10 @@ package body TGen.Types.Translation is
    -------------------------
 
    function Translate_Char_Decl
-     (Decl : Base_Type_Decl) return Translation_Result
+     (Decl : Base_Type_Decl; Ctx : in out Translation_Ctx)
+      return Translation_Result
    is
+      pragma Unreferenced (Ctx);
       Rang : constant Discrete_Range := Decl.P_Discrete_Range;
    begin
 
@@ -527,9 +606,11 @@ package body TGen.Types.Translation is
    -------------------------
 
    function Translate_Enum_Decl
-     (Decl : Base_Type_Decl; Root_Enum_Decl : Base_Type_Decl)
-      return Translation_Result
+     (Decl           : Base_Type_Decl;
+      Root_Enum_Decl : Base_Type_Decl;
+      Ctx            : in out Translation_Ctx) return Translation_Result
    is
+      pragma Unreferenced (Ctx);
       package Long_Long_Conversion is new
         Big_Int.Signed_Conversions (Int => Long_Long_Integer);
 
@@ -579,8 +660,10 @@ package body TGen.Types.Translation is
    --------------------------
 
    function Translate_Float_Decl
-     (Decl : Base_Type_Decl) return Translation_Result
+     (Decl : Base_Type_Decl; Ctx : in out Translation_Ctx)
+      return Translation_Result
    is
+      pragma Unreferenced (Ctx);
 
       procedure Find_Digits
         (Decl : Base_Type_Decl; Digits_Value : out Natural);
@@ -695,7 +778,8 @@ package body TGen.Types.Translation is
    -----------------------------------
 
    function Translate_Ordinary_Fixed_Decl
-     (Decl : Base_Type_Decl) return Translation_Result
+     (Decl : Base_Type_Decl; Ctx : in out Translation_Ctx)
+      return Translation_Result
    is
       Min, Max    : Big_Real;
       Delta_Value : Big_Real;
@@ -818,7 +902,7 @@ package body TGen.Types.Translation is
 
          --  In case of translation error, return a non-static type,
          --  but print the information if verbose diagnostics are required.
-         if Verbose_Diag then
+         if Ctx.Verbose then
             Put_Line
               ("Warning: could not determine static properties of"
                & " type"
@@ -837,8 +921,10 @@ package body TGen.Types.Translation is
    ----------------------------------
 
    function Translate_Decimal_Fixed_Decl
-     (Decl : Base_Type_Decl) return Translation_Result
+     (Decl : Base_Type_Decl; Ctx : in out Translation_Ctx)
+      return Translation_Result
    is
+      pragma Unreferenced (Ctx);
       Delta_Val  : Big_Real;
       Digits_Val : Natural;
       Has_Range  : Boolean;
@@ -1237,9 +1323,9 @@ package body TGen.Types.Translation is
 
    function Gather_Index_Constraint_Nodes
      (Decl_Or_Constraint : Ada_Node'Class; Num_Dims : Positive)
-      return Local_Ada_Node_Arr
+      return Ada_Node_Array
    is
-      Res           : Local_Ada_Node_Arr (1 .. Num_Dims);
+      Res           : Ada_Node_Array (1 .. Num_Dims);
       Current_Index : Positive := 1;
       Constraints   : LAL.Constraint;
    begin
@@ -1314,7 +1400,8 @@ package body TGen.Types.Translation is
    --------------------------
 
    function Translate_Array_Decl
-     (Decl : Base_Type_Decl) return Translation_Result
+     (Decl : Base_Type_Decl; Ctx : in out Translation_Ctx)
+      return Translation_Result
    is
       function Translate_Constrained
         (Decl : Base_Type_Decl) return Translation_Result;
@@ -1348,7 +1435,7 @@ package body TGen.Types.Translation is
          end loop;
 
          declare
-            Constraint_Nodes : constant Local_Ada_Node_Arr :=
+            Constraint_Nodes : constant Ada_Node_Array :=
               Gather_Index_Constraint_Nodes (Decl.As_Ada_Node, Num_Indices);
 
             Res_Typ : constant Constrained_Array_Typ_Access :=
@@ -1358,7 +1445,7 @@ package body TGen.Types.Translation is
                  others            => <>);
 
             Component_Typ : constant Translation_Result :=
-              Translate (Cmp_Typ_Def.F_Type_Expr, Verbose_Diag);
+              Translate (Cmp_Typ_Def.F_Type_Expr, Ctx);
             --  This ignores any constraints on the element type that may
             --  appear in the component definition.
 
@@ -1424,7 +1511,7 @@ package body TGen.Types.Translation is
 
                declare
                   Index_Trans : constant Translation_Result :=
-                    Translate (Index_Typ, Verbose_Diag);
+                    Translate (Index_Typ, Ctx);
                begin
                   if not Index_Trans.Success then
                      Failure_Reason :=
@@ -1555,12 +1642,14 @@ package body TGen.Types.Translation is
                              Translate
                                (Constraint
                                   .As_Identifier
-                                  .P_Name_Designated_Type)
+                                  .P_Name_Designated_Type,
+                                Ctx)
                            else
                              Translate
                                (Constraint
                                   .As_Subtype_Indication
-                                  .P_Designated_Type_Decl));
+                                  .P_Designated_Type_Decl,
+                                Ctx));
                      begin
                         --  Create non-static constraints by default...
 
@@ -1702,7 +1791,7 @@ package body TGen.Types.Translation is
          Failure_Reason : Unbounded_String;
 
          Element_Type : constant Translation_Result :=
-           Translate (Def.F_Component_Type.F_Type_Expr, Verbose_Diag);
+           Translate (Def.F_Component_Type.F_Type_Expr, Ctx);
          --  This ignores any constraints on the element type that may appear
          --  in the component definition.
 
@@ -1724,8 +1813,7 @@ package body TGen.Types.Translation is
             declare
                Index_Type : constant Translation_Result :=
                  Translate
-                   (Index.F_Subtype_Name.As_Name.P_Name_Designated_Type,
-                    Verbose_Diag);
+                   (Index.F_Subtype_Name.As_Name.P_Name_Designated_Type, Ctx);
             begin
                if Index_Type.Success then
                   Res_Typ.Index_Types (Current_Index_Type) := Index_Type.Res;
@@ -1765,7 +1853,8 @@ package body TGen.Types.Translation is
             if Is_Null (Decl.As_Subtype_Decl.F_Subtype.F_Constraint) then
                return
                  Translate_Array_Decl
-                   (Decl.As_Subtype_Decl.F_Subtype.P_Designated_Type_Decl);
+                   (Decl.As_Subtype_Decl.F_Subtype.P_Designated_Type_Decl,
+                    Ctx);
             else
                return Translate_Constrained (Decl);
             end if;
@@ -1790,7 +1879,8 @@ package body TGen.Types.Translation is
                          .F_Type_Def
                          .As_Derived_Type_Def
                          .F_Subtype_Indication
-                         .P_Designated_Type_Decl);
+                         .P_Designated_Type_Decl,
+                       Ctx);
                else
                   return Translate_Constrained (Decl);
                end if;
@@ -2378,8 +2468,9 @@ package body TGen.Types.Translation is
    -----------------------------------
 
    function Translate_Component_Decl_List
-     (Decl_List : Ada_Node_List; Res : in out Component_Maps.Map)
-      return Unbounded_String
+     (Decl_List : Ada_Node_List;
+      Res       : in out Component_Maps.Map;
+      Ctx       : in out Translation_Ctx) return Unbounded_String
    is
       Current_Typ : Translation_Result;
       Comp_Decl   : Component_Decl;
@@ -2389,8 +2480,7 @@ package body TGen.Types.Translation is
             return Null_Unbounded_String;
          end if;
          Comp_Decl := Decl.As_Component_Decl;
-         Current_Typ :=
-           Translate (Comp_Decl.F_Component_Def.F_Type_Expr, Verbose_Diag);
+         Current_Typ := Translate (Comp_Decl.F_Component_Def.F_Type_Expr, Ctx);
          if not Current_Typ.Success then
             return
               "Failed to translate type of component"
@@ -2406,9 +2496,14 @@ package body TGen.Types.Translation is
       return Null_Unbounded_String;
    end Translate_Component_Decl_List;
 
+   ----------------------------
+   -- Translate_Variant_Part --
+   ----------------------------
+
    function Translate_Variant_Part
-     (Node : LAL.Variant_Part; Discriminants : Component_Maps.Map)
-      return Record_Types.Variant_Part
+     (Node          : LAL.Variant_Part;
+      Discriminants : Component_Maps.Map;
+      Ctx           : in out Translation_Ctx) return Record_Types.Variant_Part
    is
       use Variant_Choice_Lists;
       Res        : Record_Types.Variant_Part;
@@ -2428,7 +2523,8 @@ package body TGen.Types.Translation is
             Diagnostics : constant Unbounded_String :=
               Translate_Component_Decl_List
                 (Var_Choice.As_Variant.F_Components.F_Components,
-                 Choice_Trans.Components);
+                 Choice_Trans.Components,
+                 Ctx);
          begin
             if Diagnostics /= Null_Unbounded_String then
                raise Translation_Error
@@ -2526,7 +2622,8 @@ package body TGen.Types.Translation is
                  new Record_Types.Variant_Part'
                    (Translate_Variant_Part
                       (Var_Choice.As_Variant.F_Components.F_Variant_Part,
-                       Discriminants));
+                       Discriminants,
+                       Ctx));
             end if;
             Res.Variant_Choices.Append (Choice_Trans);
          end;
@@ -2550,7 +2647,8 @@ package body TGen.Types.Translation is
    ---------------------------
 
    function Translate_Record_Decl
-     (Decl : Base_Type_Decl) return Translation_Result
+     (Decl : Base_Type_Decl; Ctx : in out Translation_Ctx)
+      return Translation_Result
    is
       function Is_Non_Discriminated_Full_View
         (D : Type_Decl'Class) return Boolean
@@ -2688,7 +2786,7 @@ package body TGen.Types.Translation is
 
             Failure_Reason :=
               Translate_Component_Decl_List
-                (Comp_List, Trans_Res.Component_Types);
+                (Comp_List, Trans_Res.Component_Types, Ctx);
 
             if Failure_Reason = Null_Unbounded_String then
                Trans_Res.Static_Gen :=
@@ -2708,8 +2806,7 @@ package body TGen.Types.Translation is
                          .P_Designated_Type_Decl;
                   begin
                      Trans_Res.Ancestor :=
-                       Record_Typ_Access
-                         (Translate_Internal (Ancestor_Decl).Res);
+                       Record_Typ_Access (Translate (Ancestor_Decl, Ctx).Res);
                   end;
                end if;
 
@@ -2760,7 +2857,7 @@ package body TGen.Types.Translation is
                      Trans_Res.Mutable := True;
                   end if;
 
-                  Current_Type := Translate (Spec.F_Type_Expr, Verbose_Diag);
+                  Current_Type := Translate (Spec.F_Type_Expr, Ctx);
 
                   if not Current_Type.Success then
                      Failure_Reason :=
@@ -2783,7 +2880,7 @@ package body TGen.Types.Translation is
 
             Failure_Reason :=
               Translate_Component_Decl_List
-                (Comp_List.F_Components, Trans_Res.Component_Types);
+                (Comp_List.F_Components, Trans_Res.Component_Types, Ctx);
 
             --  Now, if this record is tagged then we must also translate
             --  all the derivation chain.
@@ -2798,7 +2895,7 @@ package body TGen.Types.Translation is
                       .P_Designated_Type_Decl;
                begin
                   Trans_Res.Ancestor :=
-                    Record_Typ_Access (Translate_Internal (Ancestor_Decl).Res);
+                    Record_Typ_Access (Translate (Ancestor_Decl, Ctx).Res);
                end;
             end if;
 
@@ -2813,7 +2910,8 @@ package body TGen.Types.Translation is
                  new Record_Types.Variant_Part'
                    (Translate_Variant_Part
                       (Comp_List.F_Variant_Part,
-                       Trans_Res.all.Discriminant_Types));
+                       Trans_Res.all.Discriminant_Types,
+                       Ctx));
             end if;
 
             --  If the record is actually a constrained type, record the
@@ -3042,6 +3140,10 @@ package body TGen.Types.Translation is
 
    end Translate_Discrete_Range_Constraint;
 
+   -------------------------------
+   -- Translate_Real_Constraint --
+   -------------------------------
+
    function Translate_Real_Constraints
      (Node : LAL.Constraint) return TGen.Types.Constraints.Constraint'Class
    is
@@ -3123,11 +3225,15 @@ package body TGen.Types.Translation is
       end case;
    end Translate_Real_Constraints;
 
+   ---------------------------------
+   -- Translate_Index_Constraints --
+   ---------------------------------
+
    function Translate_Index_Constraints
      (Node : LAL.Constraint; Num_Dims : Positive)
       return TGen.Types.Constraints.Index_Constraints
    is
-      Constraint_List : constant Local_Ada_Node_Arr :=
+      Constraint_List : constant Ada_Node_Array :=
         Gather_Index_Constraint_Nodes (Node, Num_Dims);
       Current_Index   : Positive := 1;
 
@@ -3209,6 +3315,10 @@ package body TGen.Types.Translation is
       end return;
    end Translate_Index_Constraints;
 
+   ----------------------------------------
+   -- Translate_Discriminant_Constraints --
+   ----------------------------------------
+
    function Translate_Discriminant_Constraints
      (Node : LAL.Composite_Constraint)
       return TGen.Types.Constraints.Discriminant_Constraints
@@ -3257,12 +3367,267 @@ package body TGen.Types.Translation is
       end return;
    end Translate_Discriminant_Constraints;
 
+   ---------------------------
+   -- Locate_Proxy_For_Decl --
+   ---------------------------
+
+   function Locate_Proxy_For_Decl
+     (Decl       : Base_Type_Decl'Class;
+      Proxy_Name : LAL.Name'Class;
+      Ctx        : in out Translation_Ctx) return Translation_Result
+   is
+      Candidates     : constant Ada_Node_Array :=
+        Proxy_Name.P_All_Env_Elements (Seq => False);
+      Failure_Reason : Proxy_Failure_Reason;
+      Proxy_Res      : Typ_Access;
+   begin
+      Proxy_Res :=
+        Extract_Proxy_From_Node_List (Decl, Candidates, Ctx, Failure_Reason);
+
+      if Proxy_Res /= null then
+         return (Success => True, Res => Proxy_Res);
+      elsif Failure_Reason = Has_Out_Params then
+         return
+           (Success     => False,
+            Diagnostics =>
+              To_Unbounded_String ("There are no functions named ")
+              & Image (Proxy_Name.Text)
+              & " with only ""in"" or ""in out"" parameters");
+      elsif Failure_Reason = Cannot_Generate then
+         return
+           (Success     => False,
+            Diagnostics =>
+              To_Unbounded_String ("There are no functions named ")
+              & Image (Proxy_Name.Text)
+              & " for which TGen can generate input values");
+      elsif Failure_Reason = Mismatched_Ret_Type then
+         return
+           (Success     => False,
+            Diagnostics =>
+              To_Unbounded_String ("There are no functions named ")
+              & Image (Proxy_Name.Text)
+              & " for which the return type matches "
+              & Image (Decl.P_Defining_Name.Text));
+      else
+         return
+           (Success     => False,
+            Diagnostics =>
+              To_Unbounded_String ("Could not find a function named ")
+              & Image (Proxy_Name.Text));
+      end if;
+   end Locate_Proxy_For_Decl;
+
+   ---------------------
+   -- Translate_Proxy --
+   ---------------------
+
+   function Translate_Proxy
+     (Decl       : Base_Type_Decl'Class;
+      FQN        : Ada_Qualified_Name;
+      Proxy_Name : LAL.Name'Class;
+      Ctx        : in out Translation_Ctx) return Translation_Result
+   is
+      Bare_Type_Trans : Translation_Result;
+   begin
+      --  Translate the type without proxy first, so that we don't end up in
+      --  a recursive translation cycle when processing the proxy
+      --  subprogram itself.
+
+      Ctx.Skip_Proxy_Set.Insert (FQN);
+      Bare_Type_Trans := Translate (Decl.As_Base_Type_Decl, Ctx);
+      Ctx.Skip_Proxy_Set.Delete (FQN);
+
+      --  If there was a proper translation error when translating the
+      --  original type, abort early.
+
+      if not Bare_Type_Trans.Success then
+         return Bare_Type_Trans;
+      end if;
+
+      --  Attempt to locate the proxy subprogram. We expect the proxy aspect
+      --  to only contain a (optionally qualified) name, denoting a function
+      --  for which the return type matches N.
+
+      declare
+         Proxy_Subp_Res : constant Translation_Result :=
+           Locate_Proxy_For_Decl (Decl, Proxy_Name, Ctx);
+      begin
+         --  Remove the non-proxy type from the cache, the proxy one is the
+         --  only one that really needs to be referenced.
+
+         Translation_Cache.Delete (FQN);
+
+         if not Proxy_Subp_Res.Success then
+            return
+              (Success => True,
+               Res     =>
+                 new Unsupported_Typ'
+                   (Reason =>
+                      "No valid proxy subprogram for annotated type "
+                      & To_Ada (FQN)
+                      & ": "
+                      & Proxy_Subp_Res.Diagnostics,
+                    others => <>));
+         else
+            return
+              (Success => True,
+               Res     =>
+                 new Proxy_Typ'
+                   (Orig_Typ         => Bare_Type_Trans.Res,
+                    Proxy_Subprogram => Proxy_Subp_Res.Res,
+                    others           => <>));
+         end if;
+
+      end;
+   end Translate_Proxy;
+
+   ----------------------------------
+   -- Extract_Proxy_From_Node_List --
+   ----------------------------------
+
+   function Extract_Proxy_From_Node_List
+     (N              : Base_Type_Decl'Class;
+      List           : Ada_Node_Array;
+      Ctx            : in out Translation_Ctx;
+      Failure_Reason : out Proxy_Failure_Reason) return Typ_Access
+   is
+      Cur         : Positive := List'First;
+      Cur_Element : Basic_Decl := No_Basic_Decl;
+   begin
+      Me.Trace ("Searching proxy subprogram for " & N.Image);
+      Me.Trace
+        ("Initial search found" & Integer'(List'Length)'Image & " candidates");
+      Failure_Reason := No_Subp;
+      loop
+         exit when Cur > List'Last;
+
+         if List (Cur).Is_Null then
+            goto Next_Candidate;
+         end if;
+
+         Me.Trace ("Processing " & List (Cur).Image);
+
+         --  Look for a subprogram declaration
+
+         if List (Cur).Kind
+            not in Ada_Basic_Subp_Decl
+                 | Ada_Expr_Function
+                 | Ada_Null_Subp_Decl
+                 | Ada_Subp_Renaming_Decl
+         then
+            Me.Trace ("   Not a subp");
+            goto Next_Candidate;
+         end if;
+         Cur_Element := List (Cur).As_Basic_Decl;
+
+         --  Which is a function
+
+         if Cur_Element.P_Subp_Spec_Or_Null.P_Return_Type.Is_Null then
+            Me.Trace ("   Not a function");
+            goto Next_Candidate;
+         end if;
+
+         if Failure_Reason = No_Subp then
+            Failure_Reason := Mismatched_Ret_Type;
+         end if;
+
+         --  Returning the right type
+
+         if not Cur_Element.P_Subp_Spec_Or_Null.P_Return_Type.P_Matching_Type
+                  (N)
+         then
+            Me.Trace ("   Does not return the expected type");
+            goto Next_Candidate;
+         end if;
+
+         if Failure_Reason in No_Subp .. Mismatched_Ret_Type then
+            Failure_Reason := Cannot_Generate;
+         end if;
+
+         --  For which we can generate stuff
+
+         declare
+            Subp_Translation : constant Translation_Result :=
+              Translate (Cur_Element, Ctx);
+         begin
+            if Subp_Translation.Success then
+               if not Subp_Translation.Res.Get_Diagnostics.Is_Empty then
+                  Me.Trace ("   Candidate does not allow generation");
+
+                  --  Delete this candidate from the translation set, it might
+                  --  get revisited later
+
+                  Translation_Cache.Delete (Subp_Translation.Res.Name);
+               elsif (for some Param_Mode of
+                        Function_Typ (Subp_Translation.Res.all).Param_Modes =>
+                        Param_Mode = Out_Mode)
+               then
+                  Failure_Reason := Has_Out_Params;
+
+                  --  Delete this candidate from the translation set, it might
+                  --  get revisited later
+
+                  Translation_Cache.Delete (Subp_Translation.Res.Name);
+               else
+                  return Subp_Translation.Res;
+               end if;
+            else
+               Me.Trace ("   Unsuccessful candidate translation");
+            end if;
+         end;
+
+         <<Next_Candidate>>
+         Cur := Cur + 1;
+      end loop;
+      return null;
+   end Extract_Proxy_From_Node_List;
+
+   ------------------------
+   -- Find_Proxy_By_Xref --
+   ------------------------
+
+   function Find_Proxy_By_Xref
+     (N : Base_Type_Decl; Ctx : in out Translation_Ctx) return Typ_Access
+   is
+      Units      : constant Analysis_Unit_Array :=
+        (if Ctx.Unit_List_CB not in null
+         then Ctx.Unit_List_CB (N)
+         else (2 .. 1 => <>));
+      Refs       : constant Ref_Result_Array :=
+        N.P_Defining_Name.P_Find_All_References (Units);
+      Candidates : Ada_Node_Array (1 .. Refs'Last);
+
+      Dummy_Failure_Reason : Proxy_Failure_Reason;
+      --  Ignored here, the gnatcoll trace is enough to diagnose issues for
+      --  types not explicitly requested.
+   begin
+      if Units'Length = 0 then
+         return null;
+      end if;
+      for Idx in Refs'Range loop
+         if Refs (Idx).Kind = Error then
+            Candidates (Idx) := No_Ada_Node;
+         else
+            --  We only really care about subprograms that have the name of N
+            --  in their return type, so only checking the enclosing basic
+            --  decls should be good enough :tm:
+
+            Candidates (Idx) := Refs (Idx).Ref.P_Parent_Basic_Decl.As_Ada_Node;
+         end if;
+      end loop;
+
+      return
+        Extract_Proxy_From_Node_List
+          (N, Candidates, Ctx, Dummy_Failure_Reason);
+   end Find_Proxy_By_Xref;
+
    ---------------
    -- Translate --
    ---------------
 
    function Translate
-     (N : LAL.Type_Expr; Verbose : Boolean := False) return Translation_Result
+     (N : LAL.Type_Expr; Ctx : in out Translation_Ctx)
+      return Translation_Result
    is
       Type_Decl_Node      : Base_Type_Decl;
       Intermediate_Result : Translation_Result;
@@ -3277,7 +3642,7 @@ package body TGen.Types.Translation is
          Type_Decl_Node := N.As_Subtype_Indication.P_Designated_Type_Decl;
       end if;
 
-      Intermediate_Result := Translate (Type_Decl_Node, Verbose);
+      Intermediate_Result := Translate (Type_Decl_Node, Ctx);
 
       if not Intermediate_Result.Success
         or else Kind (N) in Ada_Anonymous_Type
@@ -3407,8 +3772,6 @@ package body TGen.Types.Translation is
                               .As_Subtype_Indication
                               .F_Constraint
                               .As_Composite_Constraint)),
-                    Is_Class_Wide       =>
-                      not Type_Decl_Node.P_Classwide_Type.Is_Null,
                     others              => <>);
             end return;
 
@@ -3438,7 +3801,7 @@ package body TGen.Types.Translation is
    ---------------
 
    function Translate
-     (N : LAL.Base_Type_Decl; Verbose : Boolean := False)
+     (N : LAL.Base_Type_Decl; Ctx : in out Translation_Ctx)
       return Translation_Result
    is
       use Translation_Maps;
@@ -3449,7 +3812,7 @@ package body TGen.Types.Translation is
       --  Do not memoize anonymous types
 
       if Is_Null (Full_Decl.F_Name) then
-         return Translate_Internal (Full_Decl, Verbose);
+         return Translate_Internal (Full_Decl, Ctx);
       end if;
 
       declare
@@ -3469,11 +3832,11 @@ package body TGen.Types.Translation is
 
          declare
             Trans_Res : constant Translation_Result :=
-              Translate_Internal (Full_Decl, Verbose);
+              Translate_Internal (Full_Decl, Ctx);
          begin
             if Trans_Res.Success then
                Translation_Cache.Insert (FQN, Trans_Res.Res);
-               Type_Decl_Cache.Insert (FQN, Full_Decl);
+               Type_Decl_Cache.Include (FQN, Full_Decl);
             end if;
             return Trans_Res;
          end;
@@ -3487,7 +3850,7 @@ package body TGen.Types.Translation is
 
    function Translate_Internal
      (N                 : LAL.Base_Type_Decl;
-      Verbose           : Boolean := False;
+      Ctx               : in out Translation_Ctx;
       Assume_Non_Static : Boolean := False) return Translation_Result
    is
       Root_Type : constant Base_Type_Decl := N.P_Root_Type.P_Full_View;
@@ -3495,10 +3858,8 @@ package body TGen.Types.Translation is
       --  Relevant only for Scalar types / array bounds
       --  / discriminant constraints.
 
-      Type_Name : constant Defining_Name :=
-        (if not (Kind (N) in Ada_Anonymous_Type_Decl_Range)
-         then N.P_Defining_Name
-         else No_Defining_Name);
+      Is_Anonymous : constant Boolean :=
+        N.Kind in Ada_Anonymous_Type_Decl_Range;
 
       Comp_Unit_Decl : constant Basic_Decl :=
         Ultimate_Enclosing_Compilation_Unit (N.As_Basic_Decl);
@@ -3507,13 +3868,21 @@ package body TGen.Types.Translation is
         Comp_Unit_Decl.P_Fully_Qualified_Name_Array'Last;
 
       FQN : constant Ada_Qualified_Name :=
-        (if not Type_Name.Is_Null
-         then Convert_Qualified_Name (Type_Name.P_Fully_Qualified_Name_Array)
+        (if not Is_Anonymous
+         then Convert_Qualified_Name (N.P_Fully_Qualified_Name_Array)
          else Ada_Identifier_Vectors.Empty);
 
       First_Part : constant Basic_Decl'Class := N.P_All_Parts (1);
       --  First part of the declaration. Used to determine whether the type we
       --  are translating is private or not.
+
+      Structurally_Unsupported : Boolean := False;
+      --  To be set for types which we don't support not because of the type
+      --  itself, but because the context in which it is declared prevents us
+      --  from generating valid helper subprograms.
+
+      Proxy_Aspect : constant Aspect :=
+        N.P_Get_Aspect (Name => To_Unbounded_Text ("TGen_Proxy"));
 
       Specialized_Res : Translation_Result;
 
@@ -3528,7 +3897,6 @@ package body TGen.Types.Translation is
       --  True if N is the definition of an opaque type, False otherwise
 
    begin
-      Verbose_Diag := Verbose;
       Is_Static :=
         Is_Static
         and then N.P_Is_Static_Decl
@@ -3537,7 +3905,42 @@ package body TGen.Types.Translation is
 
         and then not (Kind (N) in Ada_Discrete_Base_Subtype_Decl);
 
-      if Is_Null (Type_Name) then
+      --  First process types with a TGen_Proxy aspect (or pragma)
+
+      if Proxy_Aspect.Exists and then not Ctx.Skip_Proxy_Set.Contains (FQN)
+      then
+         --  Error out early if the annotation does not have the expected
+         --  structure.
+
+         if Proxy_Aspect.Value.Is_Null then
+            Specialized_Res :=
+              (Success     => False,
+               Diagnostics =>
+                 To_Unbounded_String
+                   ("Missing value for the ""TGen_Proxy"" aspect for type "
+                    & To_Ada (FQN)));
+            return Specialized_Res;
+         end if;
+
+         if Proxy_Aspect.Value.Kind not in Ada_Name then
+            Specialized_Res :=
+              (Success     => False,
+               Diagnostics =>
+                 To_Unbounded_String
+                   ("Incorrect expression kind for the ""TGen_Proxy"" aspect"
+                    & "  value, for type "
+                    & To_Ada (FQN)
+                    & ". Function name"
+                    & " expected."));
+            return Specialized_Res;
+         end if;
+
+         --  Get the translation
+
+         Specialized_Res :=
+           Translate_Proxy (N, FQN, Proxy_Aspect.Value.As_Name, Ctx);
+
+      elsif Is_Anonymous then
 
          --  Anonymous types at this level are either anonymous array
          --  declarations or anonymous access types, both of which we don't
@@ -3551,6 +3954,11 @@ package body TGen.Types.Translation is
                 To_Unbounded_String
                   ("Anonymous array or access type unsupported"),
               others => <>);
+
+         --  It isn't possible to declare a helper subprogram for this that
+         --  would be type compatible with any usage.
+
+         Structurally_Unsupported := True;
 
       --  Types that are declared in a library level generic instantiation
       --  are not supported at the moment, as the support packages would
@@ -3569,6 +3977,7 @@ package body TGen.Types.Translation is
                   ("types declared a generic package instantiation that is a"
                    & " library item are unsupported"),
               others => <>);
+         Structurally_Unsupported := True;
 
       elsif Text.Image (N.P_Root_Type.P_Fully_Qualified_Name)
         = "System.Address"
@@ -3591,7 +4000,7 @@ package body TGen.Types.Translation is
             Declaration_Type_Name : constant Ada_Qualified_Name :=
               TGen.Strings.To_Qualified_Name
                 (Langkit_Support.Text.Encode
-                   (N.As_Base_Type_Decl.P_Fully_Qualified_Name, "utf-8"));
+                   (N.P_Fully_Qualified_Name, "utf-8"));
             --  Translate the parent type
             Parent_Type           : constant Translation_Result :=
               (if N.Kind = Ada_Concrete_Type_Decl
@@ -3602,10 +4011,11 @@ package body TGen.Types.Translation is
                       .F_Type_Def
                       .As_Derived_Type_Def
                       .F_Subtype_Indication
-                      .P_Designated_Type_Decl)
+                      .P_Designated_Type_Decl,
+                    Ctx)
                else
                  Translate
-                   (N.As_Subtype_Decl.F_Subtype.P_Designated_Type_Decl));
+                   (N.As_Subtype_Decl.F_Subtype.P_Designated_Type_Decl, Ctx));
          begin
             if Parent_Type.Success then
                if TGen.Marshalling.Needs_Header (Parent_Type.Res.all) then
@@ -3642,6 +4052,7 @@ package body TGen.Types.Translation is
                   ("Private types declared in nested package are not"
                    & " supported"),
               others => <>);
+         Structurally_Unsupported := True;
       elsif Root_Type.P_Is_Formal then
          Specialized_Res := (Success => True, others => <>);
          Specialized_Res.Res :=
@@ -3649,8 +4060,9 @@ package body TGen.Types.Translation is
              (Reason =>
                 To_Unbounded_String ("Generic formal types are unsupported"),
               others => <>);
+         Structurally_Unsupported := True;
       elsif Root_Type.P_Is_Int_Type then
-         Specialized_Res := Translate_Int_Decl (N);
+         Specialized_Res := Translate_Int_Decl (N, Ctx);
 
       elsif P_Is_Derived_Type
               (Node => N, Other_Type => N.P_Bool_Type.As_Base_Type_Decl)
@@ -3672,15 +4084,15 @@ package body TGen.Types.Translation is
               or else Root_Type_Name = "standard.wide_character"
               or else Root_Type_Name = "standard.wide_wide_character"
             then
-               Specialized_Res := Translate_Char_Decl (N);
+               Specialized_Res := Translate_Char_Decl (N, Ctx);
             else
-               Specialized_Res := Translate_Enum_Decl (N, Root_Type);
+               Specialized_Res := Translate_Enum_Decl (N, Root_Type, Ctx);
             end if;
          end;
 
       elsif Root_Type.P_Is_Float_Type then
          if Is_Static then
-            Specialized_Res := Translate_Float_Decl (N);
+            Specialized_Res := Translate_Float_Decl (N, Ctx);
          else
             Specialized_Res := (Success => True, others => <>);
             Specialized_Res.Res :=
@@ -3693,7 +4105,7 @@ package body TGen.Types.Translation is
             in Ada_Ordinary_Fixed_Point_Def_Range
          then
             if Is_Static then
-               Specialized_Res := Translate_Ordinary_Fixed_Decl (N);
+               Specialized_Res := Translate_Ordinary_Fixed_Decl (N, Ctx);
             else
                Specialized_Res := (Success => True, others => <>);
                Specialized_Res.Res :=
@@ -3701,7 +4113,7 @@ package body TGen.Types.Translation is
             end if;
          else
             if Is_Static then
-               Specialized_Res := Translate_Decimal_Fixed_Decl (N);
+               Specialized_Res := Translate_Decimal_Fixed_Decl (N, Ctx);
             else
                Specialized_Res := (Success => True, others => <>);
                Specialized_Res.Res :=
@@ -3711,7 +4123,7 @@ package body TGen.Types.Translation is
          end if;
 
       elsif Root_Type.P_Is_Array_Type then
-         Specialized_Res := Translate_Array_Decl (N);
+         Specialized_Res := Translate_Array_Decl (N, Ctx);
 
       elsif Root_Type.P_Is_Record_Type then
 
@@ -3730,7 +4142,7 @@ package body TGen.Types.Translation is
                    To_Unbounded_String ("Abstract types are not supported"),
                  others => <>);
          else
-            Specialized_Res := Translate_Record_Decl (N);
+            Specialized_Res := Translate_Record_Decl (N, Ctx);
          end if;
 
       elsif Root_Type.P_Is_Access_Type then
@@ -3747,6 +4159,72 @@ package body TGen.Types.Translation is
               others => <>);
       end if;
 
+      --  If the resulting type is an unsupported one, search for a proxy
+      --  subprogram depending on the policy. Use the first matching candidate,
+      --  searching first the unit in which N is declared, and only then all
+      --  references if needed.
+
+      if Specialized_Res.Success
+        and then Specialized_Res.Res.Kind = Unsupported
+        and then not Structurally_Unsupported
+        and then Ctx.Proxy_Detection /= TGen.Libgen.None
+        and then not Ctx.Skip_Proxy_Set.Contains (FQN)
+      then
+         --  Disable proxy translation for N while we search for a proxy
+         --  subprogram. Also prevent recursive translations of the type from
+         --  being recorded in the cache, they's be shadowed by the current
+         --  one.
+
+         Ctx.Skip_Proxy_Set.Insert (FQN);
+
+         declare
+            Decl_Scope : constant Declarative_Part := N.P_Declarative_Scope;
+            Decl_List  : constant Ada_Node_Array :=
+              (+Decl_Scope.F_Decls)
+              & (if Decl_Scope.Kind = Ada_Private_Part
+                 then +Decl_Scope.Previous_Sibling.As_Public_Part.F_Decls
+                 else (2 .. 1 => No_Ada_Node));
+
+            Dummy_Failure_Reason : Proxy_Failure_Reason;
+            --  Ignore the diagnostic for not-explicitly-requested proxies, we
+            --  can get information through the gnatcoll trace if needed.
+            Proxy_Subp           : Typ_Access :=
+              Extract_Proxy_From_Node_List
+                (N, Decl_List, Ctx, Dummy_Failure_Reason);
+         begin
+            --  If the search within the unit didn't yield a good proxy, search
+            --  elsewhere if we're allowed.
+
+            if Proxy_Subp = null
+              and then Ctx.Proxy_Detection = TGen.Libgen.All_Refs
+            then
+               Proxy_Subp := Find_Proxy_By_Xref (N, Ctx);
+            end if;
+
+            if Proxy_Subp /= null then
+               Specialized_Res :=
+                 (Success => True,
+                  Res     =>
+                    new Proxy_Typ'
+                      (Orig_Typ         => Specialized_Res.Res,
+                       Proxy_Subprogram => Proxy_Subp,
+                       others           => <>));
+            end if;
+         end;
+         Ctx.Skip_Proxy_Set.Delete (FQN);
+
+         --  The translation of some of the proxy candidates may have
+         --  introduced nested translations of this type (e.g. if we have an
+         --  identity function), so delete them from the cache as
+         --
+         --  - The subprogram translation has been removed as well
+         --  - This translation is potentially more precise.
+
+         if Translation_Cache.Contains (FQN) then
+            Translation_Cache.Delete (FQN);
+         end if;
+      end if;
+
       --  Fill the common bits if we got a successful translation
 
       if Specialized_Res.Success then
@@ -3755,8 +4233,6 @@ package body TGen.Types.Translation is
          Specialized_Res.Res.all.Fully_Private := Decl_Is_Fully_Private (N);
          Specialized_Res.Res.all.Private_Extension :=
            Basic_Decl'(N.P_All_Parts (1)).As_Base_Type_Decl.P_Is_Private;
-         Specialized_Res.Res.all.Is_Class_Wide :=
-           N.Kind in Ada_Classwide_Type_Decl_Range;
 
          --  Checks if the type has a static predicate aspect.
          Specialized_Res.Res.all.Has_Static_Predicate :=
@@ -3776,23 +4252,21 @@ package body TGen.Types.Translation is
               & " : "
               & Ada.Exceptions.Exception_Information (Exc));
       when Exc : Non_Static_Error =>
-         if Verbose_Diag then
+         if Ctx.Verbose then
             Put_Line
               ("Lal limitation during static evaluation: "
                & Ada.Exceptions.Exception_Message (Exc));
          end if;
-         return Translate_Internal (N, Verbose_Diag, True);
+         return Translate_Internal (N, Ctx, True);
       when Exc : Translation_Error =>
          return
            (Success     => False,
             Diagnostics =>
-              +(Image (Type_Name.Text)
-                & ": "
-                & Ada.Exceptions.Exception_Message (Exc)));
+              +(N.Image & ": " & Ada.Exceptions.Exception_Message (Exc)));
    end Translate_Internal;
 
    function Translate_Globals
-     (N : Expr; Verbose : Boolean) return Translation_Result;
+     (N : Expr'Class; Ctx : in out Translation_Ctx) return Translation_Result;
    --  Return the list of globals specified in the global aspect, which are
    --  returned encapsulated in a Record_Typ (for conveniency purposes) if the
    --  translation of the globals type is successful. If one of the globals
@@ -3806,7 +4280,7 @@ package body TGen.Types.Translation is
    ---------------------
 
    function Translate_Globals
-     (N : Expr; Verbose : Boolean) return Translation_Result
+     (N : Expr'Class; Ctx : in out Translation_Ctx) return Translation_Result
    is
       Rec : constant Record_Typ_Access :=
         new Record_Typ'(Constrained => False, others => <>);
@@ -3843,7 +4317,7 @@ package body TGen.Types.Translation is
                if not Obj_Decl.F_Has_Constant then
                   declare
                      Global_Typ_Translation : constant Translation_Result :=
-                       Translate (Global.As_Object_Decl.F_Type_Expr, Verbose);
+                       Translate (Global.As_Object_Decl.F_Type_Expr, Ctx);
                   begin
                      if Global_Typ_Translation.Success then
                         Rec.Component_Types.Insert
@@ -3928,7 +4402,7 @@ package body TGen.Types.Translation is
                                  Global_Comps : constant Component_Map :=
                                    As_Record_Typ
                                      (Translate_Globals
-                                        (Aggr_Assoc.F_R_Expr, Verbose)
+                                        (Aggr_Assoc.F_R_Expr, Ctx)
                                         .Res)
                                      .Component_Types;
                               begin
@@ -3962,7 +4436,8 @@ package body TGen.Types.Translation is
    ---------------
 
    function Translate
-     (N : LAL.Basic_Decl; Verbose : Boolean := False) return Translation_Result
+     (N : LAL.Basic_Decl; Ctx : in out Translation_Ctx)
+      return Translation_Result
    is
       F_Typ         : constant Function_Typ_Access := new Function_Typ;
       Result        : Translation_Result (Success => True);
@@ -4008,10 +4483,45 @@ package body TGen.Types.Translation is
          Subp_Spec : constant Base_Subp_Spec :=
            Designated_Decl.P_Subp_Spec_Or_Null;
       begin
+
+         --  Translate the return type first
+
+         if not Subp_Spec.P_Returns.Is_Null then
+            declare
+               Ret : constant Translation_Result :=
+                 Translate (Subp_Spec.P_Returns, Ctx);
+            begin
+               if not Ret.Success then
+                  return (False, Ret.Diagnostics);
+               end if;
+
+               F_Typ.Ret_Typ := Ret.Res;
+            end;
+         else
+            F_Typ.Ret_Typ := null;
+         end if;
+
+         --  If this subprogram can be used as proxy to generate values for its
+         --  return type, the translation for the return type will be a
+         --  Proxy_Typ, and the cache will already contain an entry for this
+         --  subprogram. If so, abort translation and use the type
+         --  representation already in the cache to ensure we only have a
+         --  single representation of this function.
+         --
+         --  TODO??? If in the future we introduce more circular references
+         --  between types it might be worth it to have all the type
+         --  representation be stored in an arena, and use indexes to ensure
+         --  unicity of the type translations.
+
+         if Translation_Cache.Contains (F_Typ.Name) then
+            return
+              (Success => True, Res => Translation_Cache.Element (F_Typ.Name));
+         end if;
+
          for Param of Subp_Spec.P_Params loop
             declare
                Current_Typ : constant Translation_Result :=
-                 Translate (Param.F_Type_Expr.P_Designated_Type_Decl, Verbose);
+                 Translate (Param.F_Type_Expr.P_Designated_Type_Decl, Ctx);
             begin
                if Current_Typ.Success then
 
@@ -4034,21 +4544,6 @@ package body TGen.Types.Translation is
                end if;
             end;
          end loop;
-
-         if not Subp_Spec.P_Returns.Is_Null then
-            declare
-               Ret : constant Translation_Result :=
-                 Translate (Subp_Spec.P_Returns, Verbose);
-            begin
-               if not Ret.Success then
-                  return (False, Ret.Diagnostics);
-               end if;
-
-               F_Typ.Ret_Typ := Ret.Res;
-            end;
-         else
-            F_Typ.Ret_Typ := null;
-         end if;
       end;
 
       --  Function type was successfully translated
@@ -4065,15 +4560,12 @@ package body TGen.Types.Translation is
       --  Check the globals through the Globals aspect
 
       declare
-         Global_Aspect : constant Unbounded_Text_Type :=
-           To_Unbounded_Text (To_Text ("Global"));
+         Global_Aspect : constant Aspect :=
+           N.P_Get_Aspect (To_Unbounded_Text ("Global"));
       begin
-         if N.P_Has_Aspect (Global_Aspect) then
+         if Global_Aspect.Exists then
             F_Typ.Globals :=
-              As_Record_Typ
-                (Translate_Globals
-                   (N.P_Get_Aspect_Spec_Expr (Global_Aspect), Verbose)
-                   .Res)
+              As_Record_Typ (Translate_Globals (Global_Aspect.Value, Ctx).Res)
                 .Component_Types;
          end if;
       end;

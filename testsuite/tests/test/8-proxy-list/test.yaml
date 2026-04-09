@@ -1,0 +1,5 @@
+description: Check that gnattest can generate tests for somewhat complex
+  data-structures, provided that a constructor is given through the TGen_Proxy
+  aspect
+
+driver: shell_script

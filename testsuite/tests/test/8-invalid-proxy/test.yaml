@@ -1,0 +1,4 @@
+description: Check that TGen emits some diagnostics when the subprogram used
+  as proxy is not suitable, as it has out parameters or unsupported parameters.
+
+driver: shell_script

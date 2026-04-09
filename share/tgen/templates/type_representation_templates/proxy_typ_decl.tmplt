@@ -1,0 +1,12 @@
+@@--  Template for the declarations for a proxy type representation.
+@@--  These declarations go in the body of the value package, in order to
+@@--  be part of the private part and avoid any visibility issues.
+@@--
+@@--  @_TY_PREFIX_@ Prefix used to prefix all entities for the current type.
+@@--  @_TY_NAME_@ Name of the current type.
+
+   @_TY_PREFIX_@_Typ : aliased TGen.Types.Proxy_Typ :=
+      (Name       => TGen.Strings.To_Qualified_Name ("@_TY_NAME_@"),
+       Orig_Typ   => null,
+      --  Deliberately set to null, we should not need it just yet
+       others     => <>);

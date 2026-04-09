@@ -6979,13 +6979,14 @@ package body Test.Skeleton is
          end if;
 
          --  Include Subp in the TGen context if we are not unparsing test
-         --  vectors.
+         --  vectors. We only really need input marshallers.
 
          if not Test.Common.Unparse_Test_Vectors then
             if not TGen.Libgen.Include_Subp
                      (Test.Common.TGen_Libgen_Ctx,
                       Subp.Subp_Declaration.As_Basic_Decl,
-                      Diags)
+                      Diags,
+                      TGen.Libgen.IO_Input)
             then
                Report_Std
                  ("Error while loading JSON tests:"

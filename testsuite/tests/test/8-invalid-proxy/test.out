@@ -1,0 +1,12 @@
+gnattest: Error while processing <ExprFunction ["Test_Mismatched_Ret_Typ"] test.ads:5:4-5:87>:
+test.test_mismatched_ret_typ.X: pkg.mismatched_ret_typ is not supported (No valid proxy subprogram for annotated type pkg.mismatched_ret_typ: There are no functions named Mismatched_Ret_Typ_Pxy for which the return type matches Mismatched_Ret_Typ)
+
+gnattest: Error while processing <ExprFunction ["Test_Unsupported_Params"] test.ads:7:4-7:87>:
+test.test_unsupported_params.X: pkg.unsupported_params is not supported (No valid proxy subprogram for annotated type pkg.unsupported_params: There are no functions named Unsupported_Param_Pxy for which TGen can generate input values)
+
+gnattest: Error while processing <ExprFunction ["Test_Out_Param"] test.ads:9:4-9:69>:
+test.test_out_param.X: pkg.out_param is not supported (No valid proxy subprogram for annotated type pkg.out_param: There are no functions named Out_Param_Pxy with only "in" or "in out" parameters)
+
+gnattest: Error while processing <ExprFunction ["Test_Missing_Pxy"] test.ads:11:4-11:73>:
+test.test_missing_pxy.X: pkg.missing_pxy is not supported (No valid proxy subprogram for annotated type pkg.missing_pxy: Could not find a function named Non_Existent_Function)
+

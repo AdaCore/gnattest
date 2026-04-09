@@ -99,6 +99,13 @@ package TGen.Strings is
    function Dot_To_Underscore (C : Character) return Character
    is ((if C = '.' then '_' else C));
 
+   function Index
+     (S         : String;
+      C         : Character;
+      Direction : Ada.Strings.Direction := Ada.Strings.Forward) return Natural;
+   --  Find the first occurrence of C in S, from direction Direction and
+   --  return the corresponding index, or 0 if C is not in S.
+
    procedure New_Line (Str : in out Unbounded_String);
    --  Append a new line to Str
 

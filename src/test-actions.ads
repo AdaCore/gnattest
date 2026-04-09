@@ -24,6 +24,7 @@
 with Libadalang.Analysis; use Libadalang.Analysis;
 
 with Utils.Command_Lines; use Utils.Command_Lines;
+with Test.Command_Lines;
 
 package Test.Actions is
 
@@ -48,6 +49,8 @@ package Test.Actions is
      (Tool : in out Tool_State; Char_Encoding : String);
    --  If Tool.Ctx_Counter reached Max_Files_Per_Context, recreate the context.
    --  Otherwise, increment Ctx_Counter.
+
+   Global_Cmd : Command_Line (Test.Command_Lines.Descriptor'Access);
 
    procedure Init (Tool : in out Tool_State; Cmd : in out Command_Line);
 

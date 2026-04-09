@@ -115,6 +115,10 @@ package body Test.Actions is
    procedure Dump_Subprogram_Hash (File_Name : String; Unit : Analysis_Unit);
    --  Print the hash of the subprogram at file:line in the standard output.
 
+   function Get_All_Units (Decl : Base_Type_Decl) return Analysis_Unit_Array;
+   --  Helper for TGen to search for proxy subprograms in all units of the
+   --  project.
+
    pragma Warnings (Off); -- ????
    --  These use clauses will be necessary later.
    --  At least some of them.
@@ -1129,6 +1133,19 @@ package body Test.Actions is
       --  Alway initialize the Libgen context; we don't know if there will be
       --  JSON tests to load or not.
 
+      if Arg (Cmd, Detect_TGen_Proxies) /= null then
+         begin
+            Test.Common.TGen_Proxy_Search :=
+              TGen.Libgen.Proxy_Autodetect_Policy'Value
+                (Arg (Cmd, Detect_TGen_Proxies).all);
+         exception
+            when Constraint_Error =>
+               Cmd_Error
+                 ("Unexpected value for --detect-tgen-proxies. Should be one"
+                  & " of ""none"", ""unit"" or ""all_refs"".");
+         end;
+      end if;
+
       Test.Common.TGen_Libgen_Ctx :=
         TGen.Libgen.Create
           (Output_Dir         =>
@@ -1143,7 +1160,9 @@ package body Test.Actions is
               & GNAT.OS_Lib.Directory_Separator
               & "tgen"
               & GNAT.OS_Lib.Directory_Separator
-              & "templates"));
+              & "templates"),
+           Proxy_Detection    => Test.Common.TGen_Proxy_Search,
+           Relevant_Units     => Get_All_Units'Access);
 
       Test.Common.Extract_Preprocessor_Config (Project_Tree);
       TGen.Libgen.Set_Preprocessing_Definitions
@@ -1158,6 +1177,8 @@ package body Test.Actions is
       if Arg (Cmd, Gen_Test_Vectors) then
          Test.Common.Generate_Test_Vectors := True;
          Test.Common.Request_Lib_Support;
+
+         Test.Common.Gen_Bin_Tests := Arg (Cmd, Gen_Test_Binary);
 
          if Arg (Cmd, Gen_Test_Subprograms) /= null then
             declare
@@ -1411,6 +1432,19 @@ package body Test.Actions is
       return;
    end Dump_Subprogram_Hash;
 
+   -------------------
+   -- Get_All_Units --
+   -------------------
+
+   function Get_All_Units (Decl : Base_Type_Decl) return Analysis_Unit_Array is
+      All_Files : constant String_Ref_Array := File_Names (Global_Cmd);
+   begin
+      return
+        Analysis_Unit_Array'
+          (for File of All_Files =>
+             Decl.Unit.Context.Get_From_File (File.all));
+   end Get_All_Units;
+
    ---------------
    -- Tool_Help --
    ---------------
@@ -1524,6 +1558,8 @@ package body Test.Actions is
         (" --gen-test-num=n                                     - Specify the number of test inputs to be generated (experimental, defaults to 5)\n");
       Put
         (" --gen-test-subprograms=file:line                     - Specify a comma separated list of subprograms declared at file:line to generate test cases for\n");
+      Put
+        (" --detect-tgen-proxies=(none|unit|all_refs)           - Specify where gnattest should search for proxy subprograms for unsupported types. Default to ""unit"" if unspecified.");
       Put
         (" --dump-subp-hash=file:line                           - Print the hash of the subprogram at file:line in the standard output and bypass all other swicthes.\n");
       Put

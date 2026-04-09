@@ -2,6 +2,7 @@
 @@--  @_GLOBAL_PREFIX_@ Prefix used to prefix all entities local to the unit.
 @@--  @_TY_PREFIX_@ Prefix used to prefix all entities for the current type.
 @@--  @_TY_NAME_@ Name of the current type.
+@@--  @_OUTPUT_SUPPORTED_@ True if this type supports output marshallers
 @@--  @_NEEDS_HEADER_@ True if the current type needs a header.
 @@--  @_IS_SCALAR_@ True if the current type is a scalar type.
 @@--  @_MARSHALLING_LIB_@ Name of the libary file for the marshalling
@@ -24,6 +25,7 @@
         @_GLOBAL_PREFIX_@_Offset, @_GLOBAL_PREFIX_@_V);
    end @_TY_PREFIX_@_Read_No_Param;
 
+@@IF@@ @_OUTPUT_SUPPORTED_@
    procedure @_TY_PREFIX_@_Write_No_Param
      (@_GLOBAL_PREFIX_@_Stream : not null access Ada.Streams.Root_Stream_Type'Class;
       @_GLOBAL_PREFIX_@_Buffer : in out Interfaces.Unsigned_8;
@@ -35,12 +37,15 @@
        (@_GLOBAL_PREFIX_@_Stream, @_GLOBAL_PREFIX_@_Buffer,
         @_GLOBAL_PREFIX_@_Offset, @_GLOBAL_PREFIX_@_V);
    end @_TY_PREFIX_@_Write_No_Param;
+@@END_IF@@
 
    package @_TY_PREFIX_@_In_Out is
      new @_MARSHALLING_LIB_@.@_GENERIC_NAME_@
        (T     => TGen.TGen_Std.@_TY_NAME_@,
-        Read  => @_TY_PREFIX_@_Read_No_Param,
-        Write => @_TY_PREFIX_@_Write_No_Param);
+@@IF@@ @_OUTPUT_SUPPORTED_@
+        Write => @_TY_PREFIX_@_Write_No_Param,
+@@END_IF@@
+        Read  => @_TY_PREFIX_@_Read_No_Param);
 @@ELSE@@
    package @_TY_PREFIX_@_In_Out is
      new @_MARSHALLING_LIB_@.@_GENERIC_NAME_@
@@ -49,27 +54,33 @@
         Header_Type   => @_TY_PREFIX_@_Header_Type,
         Init          => @_TY_PREFIX_@_Init_From_Header,
         Input_Header  => @_TY_PREFIX_@_Input_Header,
+@@IF@@ @_OUTPUT_SUPPORTED_@
         Output_Header => @_TY_PREFIX_@_Output_Header,
 @@END_IF@@
-        Read          => @_TY_PREFIX_@_Read,
-        Write         => @_TY_PREFIX_@_Write);
+@@END_IF@@
+@@IF@@ @_OUTPUT_SUPPORTED_@
+        Write         => @_TY_PREFIX_@_Write,
+@@END_IF@@
+        Read          => @_TY_PREFIX_@_Read);
 @@END_IF@@
 
+@@IF@@ @_OUTPUT_SUPPORTED_@
    procedure @_TY_PREFIX_@_Output
      (@_GLOBAL_PREFIX_@_Stream : not null access Ada.Streams.Root_Stream_Type'Class;
       @_GLOBAL_PREFIX_@_V      : TGen.TGen_Std.@_TY_NAME_@)
      renames @_TY_PREFIX_@_In_Out.Output;
-
-   function @_TY_PREFIX_@_Input
-     (@_GLOBAL_PREFIX_@_Stream : not null access Ada.Streams.Root_Stream_Type'Class)
-      return TGen.TGen_Std.@_TY_NAME_@
-     renames @_TY_PREFIX_@_In_Out.Input;
 
    procedure @_TY_PREFIX_@_Output
      (@_GLOBAL_PREFIX_@_Header : not null access Ada.Streams.Root_Stream_Type'Class;
       @_GLOBAL_PREFIX_@_Stream : not null access Ada.Streams.Root_Stream_Type'Class;
       @_GLOBAL_PREFIX_@_V      : TGen.TGen_Std.@_TY_NAME_@)
      renames @_TY_PREFIX_@_In_Out.Output;
+@@END_IF@@
+
+   function @_TY_PREFIX_@_Input
+     (@_GLOBAL_PREFIX_@_Stream : not null access Ada.Streams.Root_Stream_Type'Class)
+      return TGen.TGen_Std.@_TY_NAME_@
+     renames @_TY_PREFIX_@_In_Out.Input;
 
    function @_TY_PREFIX_@_Input
      (@_GLOBAL_PREFIX_@_Header : not null access Ada.Streams.Root_Stream_Type'Class;

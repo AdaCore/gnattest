@@ -3,12 +3,14 @@
 @@--  @_GLOBAL_PREFIX_@ Prefix used to prefix all entities local to the unit.
 @@--  @_TY_PREFIX_@ Prefix used to prefix all entities for the current type.
 @@--  @_TY_NAME_@ Name of the current type.
+@@--  @_OUTPUT_SUPPORTED_@ True if this type supports output marshallers
 @@--  @_ADA_DIM_@ Suffixes of the array attributes for each dimension.
 @@--  @_COMPONENT_WRITE_@ Call to Write for the component type on
 @@--       @_GLOBAL_PREFIX_@_E.
 @@--  @_COMPONENT_READ_@ Call to Read for the component type on
 @@--       @_GLOBAL_PREFIX_@_E.
 @@--
+@@IF@@ @_OUTPUT_SUPPORTED_@
    procedure @_TY_PREFIX_@_Write
      (@_GLOBAL_PREFIX_@_JSON : in out TGen.JSON.JSON_Value;
       @_GLOBAL_PREFIX_@_V    : TGen.TGen_Std.@_TY_NAME_@)
@@ -31,6 +33,7 @@
       TGen.JSON.Set_Field
          (@_GLOBAL_PREFIX_@_JSON, "array", @_GLOBAL_PREFIX_@_JSON_Array);
    end @_TY_PREFIX_@_Write;
+@@END_IF@@
 
    procedure @_TY_PREFIX_@_Read
      (@_GLOBAL_PREFIX_@_JSON : TGen.JSON.JSON_Value;
@@ -79,3 +82,89 @@
       end;    
       end if;
    end @_TY_PREFIX_@_Read;
+
+@@IF@@ not @_OUTPUT_SUPPORTED_@
+
+      procedure @_TY_PREFIX_@_To_JSON
+     (@_GLOBAL_PREFIX_@_Stream    : not null access Ada.Streams.Root_Stream_Type'Class;
+      @_GLOBAL_PREFIX_@_Buffer    : in out Interfaces.Unsigned_8;
+      @_GLOBAL_PREFIX_@_Offset    : in out TGen.Marshalling_Lib.Offset_Type;
+      @_GLOBAL_PREFIX_@_JSON      : out TGen.JSON.JSON_Value;
+      @_GLOBAL_PREFIX_@_Header    : access Ada.Streams.Root_Stream_Type'Class := null;
+      @_GLOBAL_PREFIX_@_Flush_Hdr : Boolean := False)
+   is
+      @_GLOBAL_PREFIX_@_JSON_Array_Sizes : TGen.JSON.JSON_Array;
+      @_GLOBAL_PREFIX_@_JSON_Array : TGen.JSON.JSON_Array;
+
+      --  Declare a value of type @_TY_NAME_@ and initialize it from the header
+      --  (if needed), so we can easily iterate through the right amount of
+      --  elements.
+@@INCLUDE@@ B2J_declare_header.tmplt
+      begin
+         @_GLOBAL_PREFIX_@_JSON := TGen.JSON.Create_Object;
+@@TABLE@@
+         TGen.JSON.Append
+            (@_GLOBAL_PREFIX_@_JSON_Array_Sizes,
+             TGen.JSON.Create (Natural'Image (Ada_Value'Length@_ADA_DIM_@)));
+@@END_TABLE@@
+         TGen.JSON.Set_Field
+            (@_GLOBAL_PREFIX_@_JSON,
+             "sizes",
+             @_GLOBAL_PREFIX_@_JSON_Array_Sizes);
+         for @_GLOBAL_PREFIX_@_E of Ada_Value loop
+@_COMPONENT_B2J_@
+         end loop;
+         TGen.JSON.Set_Field
+            (@_GLOBAL_PREFIX_@_JSON, "array", @_GLOBAL_PREFIX_@_JSON_Array);
+      end;
+   end @_TY_PREFIX_@_To_JSON;
+
+   procedure @_TY_PREFIX_@_To_Binary
+     (@_GLOBAL_PREFIX_@_Stream    : not null access Ada.Streams.Root_Stream_Type'Class;
+      @_GLOBAL_PREFIX_@_Buffer    : in out Interfaces.Unsigned_8;
+      @_GLOBAL_PREFIX_@_Offset    : in out TGen.Marshalling_Lib.Offset_Type;
+      @_GLOBAL_PREFIX_@_JSON      : TGen.JSON.JSON_Value;
+      @_GLOBAL_PREFIX_@_Header    : access Ada.Streams.Root_Stream_Type'Class := null;
+      @_GLOBAL_PREFIX_@_Flush_Hdr : Boolean := False)
+   is
+      Ada_Value : constant TGen.TGen_Std.@_TY_NAME_@ :=
+        @_TY_PREFIX_@_Input (@_GLOBAL_PREFIX_@_JSON);
+@@IF@@ @_NEEDS_HEADER_@
+      Hdr_Stream : constant not null access Ada.Streams.Root_Stream_Type'Class :=
+        (if @_GLOBAL_PREFIX_@_Header /= null
+         then @_GLOBAL_PREFIX_@_Header
+         else @_GLOBAL_PREFIX_@_Stream);
+   begin
+      if @_GLOBAL_PREFIX_@_Flush_Hdr then
+         pragma Assert
+           (@_GLOBAL_PREFIX_@_Buffer = 0 and then @_GLOBAL_PREFIX_@_Offset = 0,
+            "Unexpected non-empty marshalling buffer");
+         @_TY_PREFIX_@_Output_Header (Hdr_Stream, Ada_Value);
+      else
+         @_TY_PREFIX_@_Write_Header
+           (Hdr_Stream,
+            @_GLOBAL_PREFIX_@_Buffer,
+            @_GLOBAL_PREFIX_@_Offset,
+            Ada_Value);
+      end if;
+@@ELSE@@
+   begin
+@@END_IF@@
+      if @_GLOBAL_PREFIX_@_JSON.Has_Field ("aggregate") then
+         raise TGen.Marshalling_Lib.Invalid_Value with
+           "cannot convert aggregate array notation to binary";
+      end if;
+      declare
+         TGen_Marshalling_JSON_Array : constant TGen.JSON.JSON_Array :=
+           @_GLOBAL_PREFIX_@_JSON.Get ("array");
+         Current_Index               : Positive :=
+           TGen.JSON.Array_First (TGen_Marshalling_JSON_Array);
+      begin
+         for Component of Ada_Value loop
+   @_COMPONENT_J2B_@
+            Current_Index := TGen.JSON.Array_Next
+              (TGen_Marshalling_JSON_Array, Current_Index);
+         end loop;
+      end;
+   end @_TY_PREFIX_@_To_Binary;
+@@END_IF@@

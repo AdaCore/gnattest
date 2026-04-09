@@ -3,6 +3,7 @@
 @@--  @_GLOBAL_PREFIX_@ Prefix for all public TGen entities of the unit.
 @@--  @_TY_PREFIX_@ Prefix for all entities of the current type.
 @@--  @_TY_NAME_@ Name of the current type.
+@@--  @_OUTPUT_SUPPORTED_@ True if this type supports output marshallers
 @@--  @_TY_SLUG_@ FQN of TY made compatible with an Ada identifier
 @@--  @_PARENT_TY_NAME_@ FQN of the type from which @_TY_NAME_@ derives
 @@--  @_PARENT_TY_NAME_SLUG_@ FQN of the parent type, compatible with an Ada identifier
@@ -18,6 +19,7 @@
       @_GLOBAL_PREFIX_@_V := @_PARENT_TY_NAME_SLUG_@_To_@_TY_SLUG_@ (Value);
    end @_TY_PREFIX_@_Read;
 
+@@IF@@ @_OUTPUT_SUPPORTED_@
    procedure @_TY_PREFIX_@_Write
       (@_GLOBAL_PREFIX_@_JSON : in out TGen.JSON.JSON_Value;
        @_GLOBAL_PREFIX_@_V    : TGen.TGen_Std.@_TY_NAME_@)
@@ -28,3 +30,4 @@
       @_PARENT_TY_PACKAGE_@.TGen_Support.@_GLOBAL_PREFIX_@_@_PARENT_TY_NAME_SLUG_@_Write
         (@_GLOBAL_PREFIX_@_JSON, Value);
    end @_TY_PREFIX_@_Write;
+@@END_IF@@

@@ -28,7 +28,11 @@ with Ada.Containers.Hashed_Maps;
 
 with Libadalang.Analysis;
 
+with TGen.Libgen;
+
 package TGen.Types.Translation is
+   subtype Proxy_Policy is TGen.Libgen.Proxy_Autodetect_Policy;
+   use type Proxy_Policy;
 
    package LAL renames Libadalang.Analysis;
 
@@ -43,17 +47,27 @@ package TGen.Types.Translation is
       end case;
    end record;
 
-   function Translate
-     (N : LAL.Type_Expr; Verbose : Boolean := False) return Translation_Result;
-   --  Translate N to TGen's internal type representation
+   type Translation_Ctx is private;
+
+   function Make_Translation_Context
+     (Verbose         : Boolean := False;
+      Proxy_Detection : Proxy_Policy := TGen.Libgen.Unit;
+      Relevant_Units  : TGen.Libgen.Get_Relevant_Units_CB := null)
+      return Translation_Ctx;
+   --  Create a Translation_Context object with adequate default values
 
    function Translate
-     (N : LAL.Base_Type_Decl; Verbose : Boolean := False)
+     (N : LAL.Type_Expr; Ctx : in out Translation_Ctx)
       return Translation_Result;
    --  Translate N to TGen's internal type representation
 
    function Translate
-     (N : LAL.Basic_Decl; Verbose : Boolean := False)
+     (N : LAL.Base_Type_Decl; Ctx : in out Translation_Ctx)
+      return Translation_Result;
+   --  Translate N to TGen's internal type representation
+
+   function Translate
+     (N : LAL.Basic_Decl; Ctx : in out Translation_Ctx)
       return Translation_Result;
 
    package Translation_Maps is new
@@ -89,6 +103,34 @@ package TGen.Types.Translation is
    --  Clear the translation cache
 
 private
+
+   type Translation_Ctx is record
+      Verbose : Boolean := False;
+
+      Skip_Proxy_Set : Ada_Qualified_Name_Set;
+      --  Names of types for which we should ignore the proxy aspect, and avoid
+      --  searching a proxy if unsupported.
+
+      Proxy_Detection : Proxy_Policy;
+      --  To which extend proxy subprograms should be searched for, for
+      --  unsupported types.
+
+      Unit_List_CB : TGen.Libgen.Get_Relevant_Units_CB := null;
+   end record;
+   --  Context for translating type declarations from LAL to TGen's internal
+   --  representation. It should be passed down at least to all subprograms
+   --  which may call a `Translate*` variant.
+
+   function Make_Translation_Context
+     (Verbose         : Boolean := False;
+      Proxy_Detection : Proxy_Policy := TGen.Libgen.Unit;
+      Relevant_Units  : TGen.Libgen.Get_Relevant_Units_CB := null)
+      return Translation_Ctx
+   is ((Verbose         => Verbose,
+        Skip_Proxy_Set  => Ada_Qualified_Name_Sets.Empty_Set,
+        Proxy_Detection => Proxy_Detection,
+        Unit_List_CB    => Relevant_Units));
+
    Anonymous_Typ_Index : Positive := 1;
    --  Index incremented each time we create an anonymous type, to uniquely
    --  identify every anonymous type created.

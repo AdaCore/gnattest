@@ -4,6 +4,7 @@
 @@--  @_ANCESTOR_TY_PREFIX_@ Prefix used to prefix the ancestor of the current
 @@--       type (for record types).
 @@--  @_TY_NAME_@ Name of the current type.
+@@--  @_OUTPUT_SUPPORTED_@ True if this type supports output marshallers
 @@--  @_FIRST_NAME_@ Names of the components for the 'First attributes. Only
 @@--       set if the current type is an array.
 @@--  @_LAST_NAME_@ Same as above for the 'Last attributes.
@@ -180,6 +181,13 @@
       end;
    end @_TY_PREFIX_@_As_Ancestor_Write_Header;
 @@END_IF@@
+   procedure @_TY_PREFIX_@_Output_Header
+     (@_GLOBAL_PREFIX_@_JSON : in out TGen.JSON.JSON_Value;
+      @_GLOBAL_PREFIX_@_V    : TGen.TGen_Std.@_TY_NAME_@) is
+   begin
+      @_TY_PREFIX_@_Write_Header
+         (@_GLOBAL_PREFIX_@_JSON, @_GLOBAL_PREFIX_@_V);
+   end @_TY_PREFIX_@_Output_Header;
 
    function @_TY_PREFIX_@_Input_Header
      (@_GLOBAL_PREFIX_@_JSON : TGen.JSON.JSON_Value)
@@ -193,11 +201,3 @@
            (@_GLOBAL_PREFIX_@_JSON, @_GLOBAL_PREFIX_@_V);
       end return;
    end @_TY_PREFIX_@_Input_Header;
-
-   procedure @_TY_PREFIX_@_Output_Header
-     (@_GLOBAL_PREFIX_@_JSON : in out TGen.JSON.JSON_Value;
-      @_GLOBAL_PREFIX_@_V    : TGen.TGen_Std.@_TY_NAME_@) is
-   begin
-      @_TY_PREFIX_@_Write_Header
-         (@_GLOBAL_PREFIX_@_JSON, @_GLOBAL_PREFIX_@_V);
-   end @_TY_PREFIX_@_Output_Header;

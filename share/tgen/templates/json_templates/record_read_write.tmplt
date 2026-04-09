@@ -3,6 +3,7 @@
 @@--  @_GLOBAL_PREFIX_@ Prefix used to prefix all entities local to the unit.
 @@--  @_TY_PREFIX_@ Prefix used to prefix all entities for the current type.
 @@--  @_TY_NAME_@ Name of the current type.
+@@--  @_OUTPUT_SUPPORTED_@ True if this type supports output marshallers
 @@--  @_ANCESTOR_TY_PREFIX_@ Prefix used to prefix all entities for the ancestor of the current type.
 @@--  @_ANCESTOR_TY_NAME_@ Name of the ancestor of current type.
 @@--  @_COMPONENT_WRITE_@ Calls to Write for the component type on all
@@ -15,6 +16,7 @@
 @@--       of @_GLOBAL_PREFIX_@_V.
 @@--
 
+@@IF@@ @_OUTPUT_SUPPORTED_@
    procedure @_TY_PREFIX_@_Write
      (@_GLOBAL_PREFIX_@_JSON : in out TGen.JSON.JSON_Value;
       @_GLOBAL_PREFIX_@_V    : TGen.TGen_Std.@_TY_NAME_@)
@@ -56,6 +58,7 @@
 @@END_IF@@
       null;
    end @_TY_PREFIX_@_As_Ancestor_Write;
+@@END_IF@@
 
    procedure @_TY_PREFIX_@_Read
      (@_GLOBAL_PREFIX_@_JSON : TGen.JSON.JSON_Value;
@@ -80,3 +83,159 @@
 @@END_IF@@
 
    end @_TY_PREFIX_@_Read;
+
+@@IF@@ not @_OUTPUT_SUPPORTED_@
+
+   procedure @_TY_PREFIX_@_As_Ancestor_To_JSON
+     (@_GLOBAL_PREFIX_@_Stream : not null access Ada.Streams.Root_Stream_Type'Class;
+      @_GLOBAL_PREFIX_@_Buffer : in out Interfaces.Unsigned_8;
+      @_GLOBAL_PREFIX_@_Offset : in out TGen.Marshalling_Lib.Offset_Type;
+      @_GLOBAL_PREFIX_@_Header : access Ada.Streams.Root_Stream_Type'Class;
+      @_GLOBAL_PREFIX_@_V      : TGen.TGen_Std.@_TY_NAME_@;
+      @_GLOBAL_PREFIX_@_JSON   : TGen.JSON.JSON_Value)
+   is
+      Components : constant TGen.JSON.JSON_Value :=
+        @_GLOBAL_PREFIX_@_JSON.Get ("components");
+   begin
+      --  In the binary format, components of the ancestor type come first in the
+      --  data stream.
+
+@@IF@@ @_ANCESTOR_TY_NAME_@ /= ""
+      @_ANCESTOR_TY_PREFIX_@_As_Ancestor_To_JSON
+        (@_GLOBAL_PREFIX_@_Stream,
+         @_GLOBAL_PREFIX_@_Buffer,
+         @_GLOBAL_PREFIX_@_Offset,
+         @_GLOBAL_PREFIX_@_Header,
+         TGen.TGen_Std.@_ANCESTOR_TY_NAME_@ (@_GLOBAL_PREFIX_@_V),
+         @_GLOBAL_PREFIX_@_JSON);
+@@END_IF@@
+
+   --  Then components always present
+
+@@IF@@ @_COMPONENT_B2J_@ /= ""
+@@TABLE@@
+@_COMPONENT_B2J_@
+@@END_TABLE@@
+@@END_IF@@
+
+   --  Then the variant part
+
+@_VARIANT_J2B_@
+   end @_TY_PREFIX_@_As_Ancestor_To_JSON;
+
+   procedure @_TY_PREFIX_@_To_JSON
+     (@_GLOBAL_PREFIX_@_Stream    : not null access Ada.Streams.Root_Stream_Type'Class;
+      @_GLOBAL_PREFIX_@_Buffer    : in out Interfaces.Unsigned_8;
+      @_GLOBAL_PREFIX_@_Offset    : in out TGen.Marshalling_Lib.Offset_Type;
+      @_GLOBAL_PREFIX_@_JSON      : out TGen.JSON.JSON_Value;
+      @_GLOBAL_PREFIX_@_Header    : access Ada.Streams.Root_Stream_Type'Class := null;
+      @_GLOBAL_PREFIX_@_Flush_Hdr : Boolean := False)
+   is
+      Components : TGen.JSON.JSON_Value := TGen.JSON.Create_Object;
+
+@@INCLUDE@@ B2J_declare_header.tmplt
+@@--  Additional offset as B2J_declare_header introduces a nested declare block
+         begin
+         --  Set the components as a field to @_GLOBAL_PREFIX_@_JSON now
+         --  as this just sets a reference, all changes to Components afterwards
+         --  will be reflected in the final JSON value.
+
+         TGen.JSON.Set_Field
+            (@_GLOBAL_PREFIX_@_JSON, "components", Components);
+
+         --  @_TY_PREFIX_@_As_Ancestor_To_JSON does what we want, except
+         --  initialize the Ada value from the header if any, and initialize
+         --  the return value.
+
+         @_TY_PREFIX_@_As_Ancestor_To_JSON
+            (@_GLOBAL_PREFIX_@_Stream,
+             @_GLOBAL_PREFIX_@_Buffer,
+             @_GLOBAL_PREFIX_@_Offset,
+             @_GLOBAL_PREFIX_@_Header,
+             Ada_Value,
+             @_GLOBAL_PREFIX_@_JSON);
+      end;
+   end @_TY_PREFIX_@_To_JSON;
+
+   procedure @_TY_PREFIX_@_As_Ancestor_To_Binary
+     (@_GLOBAL_PREFIX_@_Stream : not null access Ada.Streams.Root_Stream_Type'Class;
+      @_GLOBAL_PREFIX_@_Buffer : in out Interfaces.Unsigned_8;
+      @_GLOBAL_PREFIX_@_Offset : in out TGen.Marshalling_Lib.Offset_Type;
+      @_GLOBAL_PREFIX_@_Header : access Ada.Streams.Root_Stream_Type'Class;
+      @_GLOBAL_PREFIX_@_V      : TGen.TGen_Std.@_TY_NAME_@;
+      @_GLOBAL_PREFIX_@_JSON   : TGen.JSON.JSON_Value)
+   is
+      Components : constant TGen.JSON.JSON_Value :=
+        @_GLOBAL_PREFIX_@_JSON.Get ("Components");
+   begin
+   --  First write the components of the ancestor type
+
+@@IF@@ @_ANCESTOR_TY_NAME_@ /= ""
+     @_ANCESTOR_TY_PREFIX_@_As_Ancestor_To_Binary
+       (@_GLOBAL_PREFIX_@_Stream,
+        @_GLOBAL_PREFIX_@_Buffer,
+        @_GLOBAL_PREFIX_@_Offset,
+        @_GLOBAL_PREFIX_@_Header,
+        TGen.TGen_Std.@_ANCESTOR_TY_NAME_@ (@_GLOBAL_PREFIX_@_V),
+        @_GLOBAL_PREFIX_@_JSON);
+@@END_IF@@
+
+   --  Then the components that are always present
+
+@@IF@@ @_COMPONENT_J2B_@ /= ""
+@@TABLE@@
+@_COMPONENT_J2B_@
+@@END_TABLE@@
+@@END_IF@@
+
+   --  Then the variant part
+
+@_VARIANT_J2B_@
+   end @_TY_PREFIX_@_As_Ancestor_To_Binary;
+
+   procedure @_TY_PREFIX_@_To_Binary
+     (@_GLOBAL_PREFIX_@_Stream    : not null access Ada.Streams.Root_Stream_Type'Class;
+      @_GLOBAL_PREFIX_@_Buffer    : in out Interfaces.Unsigned_8;
+      @_GLOBAL_PREFIX_@_Offset    : in out TGen.Marshalling_Lib.Offset_Type;
+      @_GLOBAL_PREFIX_@_JSON      : TGen.JSON.JSON_Value;
+      @_GLOBAL_PREFIX_@_Header    : access Ada.Streams.Root_Stream_Type'Class := null;
+      @_GLOBAL_PREFIX_@_Flush_Hdr : Boolean := False)
+   is
+      Ada_Value : constant TGen.TGen_Std.@_TY_NAME_@ :=
+        @_TY_PREFIX_@_Input (@_GLOBAL_PREFIX_@_JSON);
+
+@@IF@@ @_NEEDS_HEADER_@
+      Hdr_Stream : constant not null access Ada.Streams.Root_Stream_Type'Class :=
+        (if @_GLOBAL_PREFIX_@_Header /= null
+         then @_GLOBAL_PREFIX_@_Header
+         else @_GLOBAL_PREFIX_@_Stream);
+   begin
+      if @_GLOBAL_PREFIX_@_Flush_Hdr then
+         pragma Assert
+           (@_GLOBAL_PREFIX_@_Buffer = 0 and then @_GLOBAL_PREFIX_@_Offset = 0,
+            "Unexpected non-empty marshalling buffer");
+         @_TY_PREFIX_@_Output_Header (Hdr_Stream, Ada_Value);
+      else
+         @_TY_PREFIX_@_Write_Header
+           (Hdr_Stream,
+            @_GLOBAL_PREFIX_@_Buffer,
+            @_GLOBAL_PREFIX_@_Offset,
+            Ada_Value);
+      end if;
+@@ELSE@@
+   begin
+@@END_IF@@
+      --  @_TY_PREFIX_@_As_Ancestor_To_Binary does what we want but
+      --  initialize the Ada value from the JSON value if any, and
+      --  doesn't write the header to stream, so use it now.
+
+      @_TY_PREFIX_@_As_Ancestor_To_Binary
+        (@_GLOBAL_PREFIX_@_Stream,
+         @_GLOBAL_PREFIX_@_Buffer,
+         @_GLOBAL_PREFIX_@_Offset,
+         @_GLOBAL_PREFIX_@_Header,
+         Ada_Value,
+         @_GLOBAL_PREFIX_@_JSON);
+   end @_TY_PREFIX_@_To_Binary;
+
+@@END_IF@@

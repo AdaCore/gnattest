@@ -1,0 +1,40 @@
+@@--  Common code to input the header of a type from a binary stream,
+@@--  if the type needs one, and declare an Ada value from it.
+@@--  This assumes it is inserted starting from the "is" keyword of a
+@@--  subprogram, inserts the "begin" keyword and starts a nested declare
+@@--  block.
+@@--
+@@--  @_GLOBAL_PREFIX_@ Prefix used to prefix all entities local to the unit.
+@@--  @_TY_PREFIX_@ Prefix used to prefix all entities for the current type.
+@@--  @_NEEDS_HEADER_@ True if the current type needs a header.
+@@--
+@@IF@@ @_NEEDS_HEADER_@
+      Hdr_Stream : constant not null access Ada.Streams.Root_Stream_Type'Class :=
+        (if @_GLOBAL_PREFIX_@_Header /= null
+         then @_GLOBAL_PREFIX_@_Header
+         else @_GLOBAL_PREFIX_@_Stream);
+      Header     : @_TY_PREFIX_@_Header_Type;
+   begin
+      if @_GLOBAL_PREFIX_@_Flush_Hdr then
+         pragma Assert
+           (@_GLOBAL_PREFIX_@_Buffer = 0 and then @_GLOBAL_PREFIX_@_Offset = 0,
+            "Unexpected non empty marshalling buffer");
+         Header := @_TY_PREFIX_@_Input_Header (Hdr_Stream);
+      else
+         @_TY_PREFIX_@_Read_Header
+           (Hdr_Stream,
+            @_GLOBAL_PREFIX_@_Buffer,
+            @_GLOBAL_PREFIX_@_Offset,
+            Header);
+      end if;
+@@ELSE@@
+   begin
+@@END_IF@@
+      declare
+@@INLINE@@
+         Ada_Value : TGen.TGen_Std.@_TY_NAME_@
+@@IF@@ @_NEEDS_HEADER_@
+           := @_TY_PREFIX_@_Init_From_Header (Header)
+@@END_IF@@
+           ;
+@@END_INLINE@@

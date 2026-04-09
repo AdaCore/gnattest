@@ -22,10 +22,14 @@
 @@--               subprogram.
 @@--  @_OUTPUT_FN_@ Name of the binary output function name for the parameter
 @@--                of the subprogram.
+@@--  @_PARAM_JSON_TO_BIN_FN_@ Name of the JSON to Bin conversion subprogram
+@@--                           for the parameter.
 @@--  @_GLOBAL_INPUT_FN_@ Name of the JSON input function for the global inputs
 @@--                      of the subprogram.
 @@--  @_GLOBAL_OUTPUT_FN_@ Name of the binary output function name for the
 @@--                       global inputs of the subprogram.
+@@--  @_PARAM_JSON_TO_BIN_FN_@ Name of the JSON to Bin conversion subprogram
+@@--                           for the global inputs of the subprogram.
 @@--  @_NUM_TESTS_@ Number of tests to be generated for this subprogram (upper
 @@--                bound for enumerative strategies)
 @@--  @_ENUM_STRAT_@ Whether the strategy to be used is the default enum one, or
@@ -130,13 +134,9 @@
            and then (Num_Tests < @_NUM_TESTS_@ or else @_NUM_TESTS_@ = 0)
       loop
          Generate_One : declare
-            Values   : constant TGen.JSON.JSON_Value :=
+            Values      : constant TGen.JSON.JSON_Value :=
               Subp.all.Encode
                 (Strat.Generate (TGen.Strategies.Disc_Value_Maps.Empty_Map));
-@@TABLE'ALIGN_ON(":")@@
-            Ada_@_PARAM_NAME_@ : TGen.TGen_Std.@_PARAM_TY_@ :=
-              @_INPUT_FN_@ (Values.Get ("param_values").Get ("@_PARAM_NAME_@"));
-@@END_TABLE@@
          begin
             Ada.Streams.Stream_IO.Create
               (File,
@@ -144,12 +144,17 @@
                  Output_Dir & GNAT.OS_Lib.Directory_Separator & "@_TC_NAME_@-" & Ada.Strings.Fixed.Trim
                    (Positive'Image (Num_Tests), Ada.Strings.Both));
             Stream := Ada.Streams.Stream_IO.Stream (File);
-@@TABLE@@
-            @_OUTPUT_FN_@ (Stream, Ada_@_PARAM_NAME_@);
+@@TABLE'ALIGN_ON(":")@@
+            @_PARAM_JSON_TO_BIN_FN_@ (Stream, Values.Get ("param_values").Get ("@_PARAM_NAME_@"));
 @@END_TABLE@@
+         if Values.Has_Field ("global_values")
+           and then Values.Get ("global_values").Kind not in TGen.JSON.JSON_Null_Type
+         then
+            null;
 @@TABLE@@
-            @_GLOBAL_OUTPUT_FN_@ (Stream, @_GLOBAL_NAME_@);
+            @_GLOBAL_JSON_TO_BIN_FN_@ (Stream, Values.Get ("global_values").Get ("@_GLOBAL_NAME_@"));
 @@END_TABLE@@
+         end if;
             Ada.Streams.Stream_IO.Close (File);
             Num_Tests := Num_Tests + 1;
          end Generate_One;

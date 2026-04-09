@@ -55,12 +55,55 @@ package TGen.Libgen is
    type Ada_Language_Version is (Unspecified, Ada_12, Ada_22);
    --  Ada language versions
 
+   type IO_Support is mod 4;
+   IO_None   : constant IO_Support := 0;
+   IO_Input  : constant IO_Support := 1;
+   IO_Output : constant IO_Support := 2;
+   IO_Full   : constant IO_Support := 3;
+   --  Kind of operations we support for a given type
+   --
+   --  IO_None means the type is unsupported,
+   --  IO_Input means TGen can generate input marshallers
+   --  IO_Output means TGen can generate output marshallers
+   --  IO_Both means TGen can generate both input & output marshallers.
+   --
+   --  This is independent from the capability of generating test inputs, TGen
+   --  can always generate tests inputs as long as a Include_Subp does not
+   --  return False, even if IO_Output is not set.
+
+   type Get_Relevant_Units_CB is
+     access function
+       (Decl : LAL.Base_Type_Decl) return LAL.Analysis_Unit_Array;
+   --  Callback type which should provide the set of units to be searched for
+   --  when TGen needs to autodetect a proxy. Only used in case All_Refs is
+   --  set in the TGen context.
+
+   type Proxy_Autodetect_Policy is
+     (None,
+      --  No attempt will be made to locate a proxy subprogram
+      Unit,
+      --  Only the unit in which an unsupported type is declared will be
+      --  searched.
+      All_Refs
+      --  Inspect all references of the unsupported type with LAL to find a
+      --  suitable proxy function, among the units returned by the callback
+      --  defined in the TGen context.
+     );
+   --  Different policy kind for autodetecting proxy subprograms for
+   --  unsupported types. Proxy subprograms are functions used to generate a
+   --  value for their return type. TGen will generate inputs for the
+   --  parameters of the subprogram, and serialize those, potentially allowing
+   --  support for more type that those natively supported by TGen.
+
    type Libgen_Context is private;
 
    function Create
      (Output_Dir         : String;
       User_Project_Path  : String;
-      Root_Templates_Dir : String := "") return Libgen_Context;
+      Root_Templates_Dir : String := "";
+      Proxy_Detection    : Proxy_Autodetect_Policy := Unit;
+      Relevant_Units     : Get_Relevant_Units_CB := null)
+      return Libgen_Context;
    --  Initialize a context object.
    --  Output dir is the path to the directory in which the generated library
    --  will be generated, Root_Templates_Dir is the path to the root dir of
@@ -71,23 +114,33 @@ package TGen.Libgen is
    --  If Root_Templates_Dir is the empty string, try to locate the templates
    --  in their canonical installation path, i.e.
    --  <executable_location>/../share/tgen/templates.
+   --
+   --  Proxy_Detection defines where TGen will look for to identify a suitable
+   --  subprogram. If it is set to All_Refs, Relevant_Units must return a list
+   --  of analysis units in which the proxy will be searched for.
 
    function Create
      (Output_Dir         : GNATCOLL.VFS.Virtual_File;
       User_Project_Path  : GNATCOLL.VFS.Virtual_File;
-      Root_Templates_Dir : GNATCOLL.VFS.Virtual_File) return Libgen_Context;
+      Root_Templates_Dir : GNATCOLL.VFS.Virtual_File;
+      Proxy_Detection    : Proxy_Autodetect_Policy := Unit;
+      Relevant_Units     : Get_Relevant_Units_CB := null)
+      return Libgen_Context;
    --  Same as above, but with virtual files
 
    function Supported_Subprogram
-     (Subp : LAL.Basic_Decl'Class) return Typ_Access;
+     (Subp            : LAL.Basic_Decl'Class;
+      Proxy_Detection : Proxy_Autodetect_Policy := Unit;
+      Relevant_Units  : Get_Relevant_Units_CB := null) return Typ_Access;
    --  If the Subp is a supported subprogram profile, return a Function_Typ,
    --  otherwise return an Unsupported_Typ with the reason why it is not
    --  supported inlined in the Unsupported_Typ.Reason field.
 
    function Include_Subp
-     (Ctx   : in out Libgen_Context;
-      Subp  : LAL.Basic_Decl'Class;
-      Diags : out TGen.Strings.String_Vectors.Vector) return Boolean;
+     (Ctx                  : in out Libgen_Context;
+      Subp                 : LAL.Basic_Decl'Class;
+      Diags                : out TGen.Strings.String_Vectors.Vector;
+      Requested_IO_Support : IO_Support := IO_Full) return Boolean;
    --  Register all the types in the parameters of Subp in the set of types for
    --  which the marshalling library will be generated. This procedures does
    --  not actually generate any sources, call Generate to create the support
@@ -97,19 +150,25 @@ package TGen.Libgen is
    --  types, or if some of the types are unsupported for marshalling,
    --  and report diagnostics in Diags. In that case, the context is not
    --  modified. Otherwise, Diags should be ignored.
+   --
+   --  Requested_IO_Support is used to indicated to TGen what level of support
+   --  is required in the marshallers (Input only, Output only or both).
+   --  If a given type is not supported in the requested configuration, then
+   --  Include_Subp will return False, with the corresponding diagnostics.
 
    procedure Generate
      (Ctx : in out Libgen_Context; Part : Any_Library_Part := All_Parts);
    --  Output all of the support library files
 
    function Generate
-     (Ctx   : in out Libgen_Context;
-      Subp  : LAL.Basic_Decl'Class;
-      Diags : out TGen.Strings.String_Vectors.Vector;
-      Part  : Any_Library_Part := All_Parts) return Boolean;
+     (Ctx                  : in out Libgen_Context;
+      Subp                 : LAL.Basic_Decl'Class;
+      Diags                : out TGen.Strings.String_Vectors.Vector;
+      Part                 : Any_Library_Part := All_Parts;
+      Requested_IO_Support : IO_Support := IO_Full) return Boolean;
    --  Shortcut for
    --
-   --     if Include_Subp (Ctx, Subp, Diag) then
+   --     if Include_Subp (Ctx, Subp, Diag, Requested_IO_Support) then
    --       Generate (Ctx);
    --     else
    --        return False;
@@ -320,6 +379,14 @@ private
       --  Language version to be used in the compilation switches of the
       --  generated projects. If Unspecified, no language version switch will
       --  be added to the projects.
+
+      Proxy_Detection : Proxy_Autodetect_Policy := Unit;
+      --  Defines the extent to which TGen should look for proxy subprograms,
+      --  for unsupported types.
+
+      Unit_List_CB : Get_Relevant_Units_CB := null;
+      --  Callback returning a list of analysis units in which a proxy should
+      --  be searched.
    end record;
 
 end TGen.Libgen;

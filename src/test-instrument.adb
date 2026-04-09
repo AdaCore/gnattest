@@ -158,8 +158,14 @@ package body Test.Instrument is
 
          end if;
 
+         --  Register marshaller generation for the subprogram. We only need
+         --  output marshallers for test instrumentation.
+
          if not TGen.Libgen.Include_Subp
-                  (TGen_Libgen_Ctx, Node.As_Basic_Decl, Diags)
+                  (TGen_Libgen_Ctx,
+                   Node.As_Basic_Decl,
+                   Diags,
+                   TGen.Libgen.IO_Output)
          then
             Report_Std (Join (Diags) & ASCII.LF);
             return Over;
@@ -874,8 +880,11 @@ package body Test.Instrument is
 
       for Param of Decl.F_Subp_Spec.P_Params loop
          declare
+            Ctx              : TGen.Types.Translation.Translation_Ctx :=
+              TGen.Types.Translation.Make_Translation_Context
+                (Verbose => Test.Common.Verbose);
             Param_Typ        : constant TGen.Types.Typ_Access :=
-              TGen.Types.Translation.Translate (Param.F_Type_Expr).Res;
+              TGen.Types.Translation.Translate (Param.F_Type_Expr, Ctx).Res;
             Support_Pkg_Name : constant String :=
               (if Param_Typ.Fully_Private
                then ".TGen_Support_Private."

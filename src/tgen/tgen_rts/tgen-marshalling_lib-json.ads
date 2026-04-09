@@ -68,7 +68,7 @@ package TGen.Marshalling_Lib.JSON is
    generic
       type T is limited private;
 
-      with procedure Write (JSON : in out TGen.JSON.JSON_Value; V : T);
+      with procedure Write (JSON : in out TGen.JSON.JSON_Value; V : T) is null;
 
       with procedure Read (JSON : TGen.JSON.JSON_Value; V : out T);
 
@@ -87,11 +87,13 @@ package TGen.Marshalling_Lib.JSON is
 
       with function Init (H : Header) return T;
 
-      with procedure Output_Header (JSON : in out TGen.JSON.JSON_Value; V : T);
+      with
+        procedure Output_Header (JSON : in out TGen.JSON.JSON_Value; V : T)
+        is null;
 
       with function Input_Header (JSON : TGen.JSON.JSON_Value) return Header;
 
-      with procedure Write (JSON : in out TGen.JSON.JSON_Value; V : T);
+      with procedure Write (JSON : in out TGen.JSON.JSON_Value; V : T) is null;
 
       with procedure Read (JSON : TGen.JSON.JSON_Value; V : out T);
 

@@ -219,9 +219,11 @@ package body TGen.Libgen is
       for T of Types loop
          declare
             Spec_Part, Private_Part, Body_Part : aliased Unbounded_String;
+            T_IO_Support                       : constant IO_Support :=
+              Get_IO_Support (T.all);
          begin
 
-            if Is_Supported_Type (T.all)
+            if T_IO_Support /= IO_None
               --  We ignore instance types when generating marshallers as they
               --  are not types per-se, but a convenient way of binding a type
               --  to its strategy context.
@@ -229,7 +231,13 @@ package body TGen.Libgen is
               and then T.all not in Instance_Typ'Class
             then
                if T.all.Kind in Function_Kind then
-                  if JSON_Marshalling_Enabled then
+
+                  --  We need output capabilities to be able to generate the
+                  --  testcase serializers.
+
+                  if JSON_Marshalling_Enabled
+                    and then (T_IO_Support and IO_Output) /= IO_None
+                  then
                      TGen
                        .Marshalling
                        .JSON_Marshallers
@@ -903,7 +911,9 @@ package body TGen.Libgen is
    function Create
      (Output_Dir         : String;
       User_Project_Path  : String;
-      Root_Templates_Dir : String := "") return Libgen_Context
+      Root_Templates_Dir : String := "";
+      Proxy_Detection    : Proxy_Autodetect_Policy := Unit;
+      Relevant_Units     : Get_Relevant_Units_CB := null) return Libgen_Context
    is
       Actual_Templates_Dir : constant String :=
         (if Root_Templates_Dir = ""
@@ -923,13 +933,17 @@ package body TGen.Libgen is
          User_Project_Path       => To_Unbounded_String (User_Project_Path),
          Lib_Support_Generated   => False,
          Has_Preprocessor_Config => False,
+         Proxy_Detection         => Proxy_Detection,
+         Unit_List_CB            => Relevant_Units,
          others                  => <>);
    end Create;
 
    function Create
      (Output_Dir         : GNATCOLL.VFS.Virtual_File;
       User_Project_Path  : GNATCOLL.VFS.Virtual_File;
-      Root_Templates_Dir : GNATCOLL.VFS.Virtual_File) return Libgen_Context
+      Root_Templates_Dir : GNATCOLL.VFS.Virtual_File;
+      Proxy_Detection    : Proxy_Autodetect_Policy := Unit;
+      Relevant_Units     : Get_Relevant_Units_CB := null) return Libgen_Context
    is
       use GNATCOLL.VFS;
    begin
@@ -937,7 +951,9 @@ package body TGen.Libgen is
         Create
           (Output_Dir         => +Output_Dir.Full_Name,
            Root_Templates_Dir => +Root_Templates_Dir.Full_Name,
-           User_Project_Path  => +User_Project_Path.Full_Name);
+           User_Project_Path  => +User_Project_Path.Full_Name,
+           Proxy_Detection    => Proxy_Detection,
+           Relevant_Units     => Relevant_Units);
    end Create;
 
    --------------------------
@@ -945,11 +961,17 @@ package body TGen.Libgen is
    --------------------------
 
    function Supported_Subprogram
-     (Subp : LAL.Basic_Decl'Class) return Typ_Access
+     (Subp            : LAL.Basic_Decl'Class;
+      Proxy_Detection : Proxy_Autodetect_Policy := Unit;
+      Relevant_Units  : Get_Relevant_Units_CB := null) return Typ_Access
    is
       Diags     : String_Vectors.Vector;
+      Ctx       : Translation_Ctx :=
+        Make_Translation_Context
+          (Proxy_Detection => Proxy_Detection,
+           Relevant_Units  => Relevant_Units);
       Trans_Res : constant Translation_Result :=
-        Translate (Subp.As_Basic_Decl);
+        Translate (Subp.As_Basic_Decl, Ctx);
    begin
       Array_Limit_Frozen := True;
       if Trans_Res.Success then
@@ -1004,9 +1026,10 @@ package body TGen.Libgen is
    ------------------
 
    function Include_Subp
-     (Ctx   : in out Libgen_Context;
-      Subp  : Basic_Decl'Class;
-      Diags : out String_Vectors.Vector) return Boolean
+     (Ctx                  : in out Libgen_Context;
+      Subp                 : LAL.Basic_Decl'Class;
+      Diags                : out TGen.Strings.String_Vectors.Vector;
+      Requested_IO_Support : IO_Support := IO_Full) return Boolean
    is
       use Ada_Qualified_Name_Sets_Maps;
 
@@ -1032,7 +1055,11 @@ package body TGen.Libgen is
 
       Dummy_Inserted : Boolean;
 
-      Trans_Res : constant Typ_Access := Supported_Subprogram (Subp);
+      Trans_Res : constant Typ_Access :=
+        Supported_Subprogram (Subp, Ctx.Proxy_Detection, Ctx.Unit_List_CB);
+
+      Subp_IO_Support : constant IO_Support := Get_IO_Support (Trans_Res.all);
+      --  Level of IO we have for this subprogram
 
       Subp_Info : Subp_Information :=
         (UID    =>
@@ -1044,6 +1071,31 @@ package body TGen.Libgen is
       if Trans_Res.all.Kind = Unsupported then
          Diags := Trans_Res.all.Get_Diagnostics;
          return False;
+      end if;
+
+      --  Check whether the subprogram meets the expected level of IO support
+
+      if (Subp_IO_Support and Requested_IO_Support) /= Requested_IO_Support
+      then
+         declare
+            Missing_IO_Support : constant IO_Support :=
+              Requested_IO_Support
+              - (Subp_IO_Support and Requested_IO_Support);
+            --  IO capabilities missing among those requested
+         begin
+            Diags :=
+              TGen.Strings.String_Vectors.To_Vector
+                (+"Warning: Cannot generate "
+                 & (case Missing_IO_Support is
+                      when IO_None   => "no",
+                      when IO_Input  => "input",
+                      when IO_Output => "output",
+                      when IO_Full   => "input and output")
+                 & " marshallers for "
+                 & Trans_Res.FQN (No_Std => True),
+                 1);
+            return False;
+         end;
       end if;
 
       --  Check if the subprogram was already translated
@@ -1370,8 +1422,8 @@ package body TGen.Libgen is
             begin
                --  If no type is supported, do not generate a support library
 
-               if not (for all T of Element (Cur) =>
-                         not Is_Supported_Type (T.all))
+               if (for some T of Element (Cur) =>
+                     Get_IO_Support (T.all) /= IO_None)
                then
                   if Is_Generic_Inst then
                      Create_Generic_Wrapper_Package_If_Not_Exists
@@ -1393,8 +1445,8 @@ package body TGen.Libgen is
                --  If all types are not supported, do not generate a support
                --  library.
 
-               if not (for all T of Element (Cur) =>
-                         not Is_Supported_Type (T.all))
+               if (for some T of Element (Cur) =>
+                     Get_IO_Support (T.all) /= IO_None)
                then
                   Generate_Value_Gen_Library
                     (Ctx,
@@ -1417,12 +1469,13 @@ package body TGen.Libgen is
    --------------
 
    function Generate
-     (Ctx   : in out Libgen_Context;
-      Subp  : LAL.Basic_Decl'Class;
-      Diags : out String_Vectors.Vector;
-      Part  : Any_Library_Part := All_Parts) return Boolean is
+     (Ctx                  : in out Libgen_Context;
+      Subp                 : LAL.Basic_Decl'Class;
+      Diags                : out String_Vectors.Vector;
+      Part                 : Any_Library_Part := All_Parts;
+      Requested_IO_Support : IO_Support := IO_Full) return Boolean is
    begin
-      if Include_Subp (Ctx, Subp, Diags) then
+      if Include_Subp (Ctx, Subp, Diags, Requested_IO_Support) then
          Generate (Ctx, Part);
       else
          return False;
@@ -1609,6 +1662,7 @@ package body TGen.Libgen is
             Param_Types : Vector_Tag;
             Input_FNs   : Vector_Tag;
             Output_FNs  : Vector_Tag;
+            J2B_FNs     : Vector_Tag;
 
             Global_Names      : Vector_Tag;
             Global_Slugs      : Vector_Tag;
@@ -1618,7 +1672,8 @@ package body TGen.Libgen is
 
             Fun_Typ : Function_Typ renames Function_Typ (Subp.all);
 
-            Subp_Name : constant String := Fun_Typ.Slug;
+            Subp_Name      : constant String := Fun_Typ.Slug;
+            Global_J2B_FNs : Vector_Tag;
 
             Concrete_Typ : Typ_Access;
             --  Shortcut to hold the concrete type of a parameter
@@ -1667,6 +1722,8 @@ package body TGen.Libgen is
                Input_FNs.Append (Input_Fname_For_Typ (Concrete_Typ.all.Name));
                Output_FNs.Append
                  (Output_Fname_For_Typ (Concrete_Typ.all.Name));
+               J2B_FNs.Append
+                 (JSON_to_Bin_Fname_For_Typ (Concrete_Typ.all.Name));
             end loop;
             Assocs.Insert (Assoc ("PARAM_NAME", Param_Names));
             Assocs.Insert (Assoc ("PARAM_TY", Param_Types));
@@ -1693,6 +1750,8 @@ package body TGen.Libgen is
                  (Input_Fname_For_Typ (Concrete_Typ.all.Name));
                Global_Output_FNs.Append
                  (Output_Fname_For_Typ (Concrete_Typ.all.Name));
+               Global_J2B_FNs.Append
+                 (JSON_to_Bin_Fname_For_Typ (Concrete_Typ.all.Name));
             end loop;
             Assocs.Insert (Assoc ("GLOBAL_NAME", Global_Names));
             Assocs.Insert (Assoc ("GLOBAL_SLUG", Global_Slugs));
@@ -1700,8 +1759,10 @@ package body TGen.Libgen is
 
             Assocs.Insert (Assoc ("INPUT_FN", Input_FNs));
             Assocs.Insert (Assoc ("OUTPUT_FN", Output_FNs));
+            Assocs.Insert (Assoc ("PARAM_JSON_TO_BIN_FN", J2B_FNs));
             Assocs.Insert (Assoc ("GLOBAL_INPUT_FN", Global_Input_FNs));
             Assocs.Insert (Assoc ("GLOBAL_OUTPUT_FN", Global_Output_FNs));
+            Assocs.Insert (Assoc ("GLOBAL_JSON_TO_BIN_FN", Global_J2B_FNs));
             Assocs.Insert (Assoc ("TC_DIR", Test_Output_Dir));
 
             --  This should match what is generated by Default_Blob_Filename

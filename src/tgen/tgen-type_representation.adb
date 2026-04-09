@@ -885,6 +885,9 @@ package body TGen.Type_Representation is
                end loop;
                Insert (Assocs, Assoc ("GLOBAL_NAME", Global_Names));
                Insert (Assocs, Assoc ("GLOBAL_TYPE", Global_Types));
+               Insert
+                 (Assocs,
+                  Assoc ("SUBP_UID", String'(+Function_Type.Subp_UID)));
             end;
          end if;
 
@@ -1163,8 +1166,27 @@ package body TGen.Type_Representation is
               Init_Package_Code & Derived_Private_Subtype_Typ_Init;
          end;
 
+      elsif Typ in Proxy_Typ'Class then
+         Insert
+           (Assocs,
+            Assoc
+              ("PROXY_TY_PREFIX",
+               Proxy_Typ (Typ).Proxy_Subprogram.Slug (Is_Top_Level_Gen)));
+         declare
+            Proxy_Typ_Decl : constant Unbounded_String :=
+              Parse (Proxy_Type_Decl_Template, Assocs);
+            Proxy_Typ_Init : constant Unbounded_String :=
+              Parse (Proxy_Type_Init_Template, Assocs);
+         begin
+            Put_Line
+              (F_Spec,
+               "   " & Ty_Prefix & "_Typ_Ref : TGen.Types.Typ_Access;");
+            Put_Line (F_Body, +Proxy_Typ_Decl);
+            Init_Package_Code := Init_Package_Code & Proxy_Typ_Init;
+         end;
       else
-         raise Program_Error;
+         raise Program_Error
+           with "Unimplemented type representation for " & Typ.Kind'Image;
       end if;
 
    end Generate_Type_Representation_For_Typ;

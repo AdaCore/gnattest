@@ -2,6 +2,7 @@
 @@--  @_GLOBAL_PREFIX_@ Prefix used to prefix all entities local to the unit.
 @@--  @_TY_PREFIX_@ Prefix used to prefix all entities for the current type.
 @@--  @_TY_NAME_@ Name of the current type.
+@@--  @_OUTPUT_SUPPORTED_@ True if this type supports output marshallers
 @@--  @_NEEDS_HEADER_@ True if the current type needs a header.
 @@--  @_IS_SCALAR_@ True if the current type is a scalar type.
 @@--  @_MARSHALLING_LIB_@ Name of the libary file for the marshalling
@@ -21,6 +22,7 @@
        (@_GLOBAL_PREFIX_@_JSON, @_GLOBAL_PREFIX_@_V);
    end @_TY_PREFIX_@_Read_No_Param;
 
+@@IF@@ @_OUTPUT_SUPPORTED_@
    procedure @_TY_PREFIX_@_Write_No_Param
      (@_GLOBAL_PREFIX_@_JSON : in out TGen.JSON.JSON_Value;
       @_GLOBAL_PREFIX_@_V    : TGen.TGen_Std.@_TY_NAME_@)
@@ -29,12 +31,15 @@
      @_TY_PREFIX_@_Write
        (@_GLOBAL_PREFIX_@_JSON, @_GLOBAL_PREFIX_@_V);
    end @_TY_PREFIX_@_Write_No_Param;
+@@END_IF@@
 
    package @_TY_PREFIX_@_In_Out_JSON is
      new @_MARSHALLING_LIB_@.JSON.@_GENERIC_NAME_@_JSON
        (T     => TGen.TGen_Std.@_TY_NAME_@,
-        Read  => @_TY_PREFIX_@_Read_No_Param,
-        Write => @_TY_PREFIX_@_Write_No_Param);
+@@IF@@ @_OUTPUT_SUPPORTED_@
+        Write => @_TY_PREFIX_@_Write_No_Param,
+@@END_IF@@
+        Read  => @_TY_PREFIX_@_Read_No_Param);
 @@ELSE@@
    package @_TY_PREFIX_@_In_Out_JSON is
      new @_MARSHALLING_LIB_@.JSON.@_GENERIC_NAME_@_JSON
@@ -43,16 +48,135 @@
         Header        => @_TY_PREFIX_@_Header_Type,
         Init          => @_TY_PREFIX_@_Init_From_Header,
         Input_Header  => @_TY_PREFIX_@_Input_Header,
+@@IF@@ @_OUTPUT_SUPPORTED_@
         Output_Header => @_TY_PREFIX_@_Output_Header,
 @@END_IF@@
-        Read   => @_TY_PREFIX_@_Read,
-        Write  => @_TY_PREFIX_@_Write);
 @@END_IF@@
-
-   function @_TY_PREFIX_@_Output
-     (@_GLOBAL_PREFIX_@_V : TGen.TGen_Std.@_TY_NAME_@) return TGen.JSON.JSON_Value
-     renames @_TY_PREFIX_@_In_Out_JSON.Output;
+@@IF@@ @_OUTPUT_SUPPORTED_@
+        Write  => @_TY_PREFIX_@_Write,
+@@END_IF@@
+        Read   => @_TY_PREFIX_@_Read);
+@@END_IF@@
 
    function @_TY_PREFIX_@_Input
      (@_GLOBAL_PREFIX_@_JSON : TGen.JSON.JSON_Value) return TGen.TGen_Std.@_TY_NAME_@
      renames @_TY_PREFIX_@_In_Out_JSON.Input;
+
+@@IF@@ @_OUTPUT_SUPPORTED_@
+
+  function @_TY_PREFIX_@_Output
+     (@_GLOBAL_PREFIX_@_V : TGen.TGen_Std.@_TY_NAME_@) return TGen.JSON.JSON_Value
+     renames @_TY_PREFIX_@_In_Out_JSON.Output;
+
+   procedure @_TY_PREFIX_@_To_JSON
+     (@_GLOBAL_PREFIX_@_Stream    : not null access Ada.Streams.Root_Stream_Type'Class;
+      @_GLOBAL_PREFIX_@_Buffer    : in out Interfaces.Unsigned_8;
+      @_GLOBAL_PREFIX_@_Offset    : in out TGen.Marshalling_Lib.Offset_Type;
+      @_GLOBAL_PREFIX_@_JSON      : out TGen.JSON.JSON_Value;
+      @_GLOBAL_PREFIX_@_Header    : access Ada.Streams.Root_Stream_Type'Class := null;
+      @_GLOBAL_PREFIX_@_Flush_Hdr : Boolean := False)
+   is
+@@INCLUDE@@ B2J_declare_header.tmplt
+      begin
+         @_TY_PREFIX_@_Read (@_GLOBAL_PREFIX_@_Stream,
+         @_GLOBAL_PREFIX_@_Buffer, @_GLOBAL_PREFIX_@_Offset, Ada_Value);
+         @_GLOBAL_PREFIX_@_JSON := @_TY_PREFIX_@_Output (Ada_Value);
+      end;
+   end @_TY_PREFIX_@_To_JSON;
+
+   procedure @_TY_PREFIX_@_To_Binary
+     (@_GLOBAL_PREFIX_@_Stream    : not null access Ada.Streams.Root_Stream_Type'Class;
+      @_GLOBAL_PREFIX_@_Buffer    : in out Interfaces.Unsigned_8;
+      @_GLOBAL_PREFIX_@_Offset    : in out TGen.Marshalling_Lib.Offset_Type;
+      @_GLOBAL_PREFIX_@_JSON      : TGen.JSON.JSON_Value;
+      @_GLOBAL_PREFIX_@_Header    : access Ada.Streams.Root_Stream_Type'Class := null;
+      @_GLOBAL_PREFIX_@_Flush_Hdr : Boolean := False)
+   is
+      Ada_Value : constant TGen.TGen_Std.@_TY_NAME_@ :=
+        @_TY_PREFIX_@_Input (@_GLOBAL_PREFIX_@_JSON);
+@@IF@@ @_NEEDS_HEADER_@
+      Hdr_Stream : constant not null access Ada.Streams.Root_Stream_Type'Class :=
+        (if @_GLOBAL_PREFIX_@_Header /= null
+         then @_GLOBAL_PREFIX_@_Header
+         else @_GLOBAL_PREFIX_@_Stream);
+   begin
+      if @_GLOBAL_PREFIX_@_Flush_Hdr then
+         pragma Assert
+           (@_GLOBAL_PREFIX_@_Buffer = 0 and then @_GLOBAL_PREFIX_@_Offset = 0,
+            "Unexpected non-empty marshalling buffer");
+         @_TY_PREFIX_@_Output_Header (Hdr_Stream, Ada_Value);
+      else
+         @_TY_PREFIX_@_Write_Header
+           (Hdr_Stream,
+            @_GLOBAL_PREFIX_@_Buffer,
+            @_GLOBAL_PREFIX_@_Offset,
+            Ada_Value);
+      end if;
+@@ELSE@@
+   begin
+@@END_IF@@
+      @_TY_PREFIX_@_Write
+        (@_GLOBAL_PREFIX_@_Stream,
+         @_GLOBAL_PREFIX_@_Buffer,
+         @_GLOBAL_PREFIX_@_Offset,
+         Ada_Value);
+   end @_TY_PREFIX_@_To_Binary;
+@@END_IF@@
+
+   function @_TY_PREFIX_@_To_JSON
+     (@_GLOBAL_PREFIX_@_Header : not null access Ada.Streams.Root_Stream_Type'Class;
+      @_GLOBAL_PREFIX_@_Stream : not null access Ada.Streams.Root_Stream_Type'Class)
+      return TGen.JSON.JSON_Value
+   is
+      Buffer : Interfaces.Unsigned_8 := 0;
+      Offset : TGen.Marshalling_Lib.Offset_Type := 0;
+   begin
+      return Res : TGen.JSON.JSON_Value do
+         @_TY_PREFIX_@_To_JSON
+           (@_GLOBAL_PREFIX_@_Stream,
+            Buffer,
+            Offset,
+            Res,
+            @_GLOBAL_PREFIX_@_Header,
+            @_GLOBAL_PREFIX_@_Flush_Hdr => True);
+      end return;
+   end @_TY_PREFIX_@_To_JSON;
+
+   function @_TY_PREFIX_@_To_JSON
+     (@_GLOBAL_PREFIX_@_Stream : not null access Ada.Streams.Root_Stream_Type'Class)
+      return TGen.JSON.JSON_Value
+   is
+   begin
+      return @_TY_PREFIX_@_To_JSON (@_GLOBAL_PREFIX_@_Stream, @_GLOBAL_PREFIX_@_Stream);
+   end @_TY_PREFIX_@_To_JSON;
+
+   procedure @_TY_PREFIX_@_To_Binary
+     (@_GLOBAL_PREFIX_@_Header : not null access Ada.Streams.Root_Stream_Type'Class;
+      @_GLOBAL_PREFIX_@_Stream : not null access Ada.Streams.Root_Stream_Type'Class;
+      @_GLOBAL_PREFIX_@_JSON  : TGen.JSON.JSON_Value)
+   is
+      Buffer : Interfaces.Unsigned_8 := 0;
+      Offset : TGen.Marshalling_Lib.Offset_Type := 0;
+   begin
+      @_TY_PREFIX_@_To_Binary
+        (@_GLOBAL_PREFIX_@_Stream,
+         Buffer,
+         Offset,
+         @_GLOBAL_PREFIX_@_JSON,
+         @_GLOBAL_PREFIX_@_Header,
+         @_GLOBAL_PREFIX_@_Flush_Hdr => True);
+      if Offset /= 0 then
+         Interfaces.Unsigned_8'Write(@_GLOBAL_PREFIX_@_Stream, Buffer);
+      end if;
+   end @_TY_PREFIX_@_To_Binary;
+
+   procedure @_TY_PREFIX_@_To_Binary
+     (@_GLOBAL_PREFIX_@_Stream : not null access Ada.Streams.Root_Stream_Type'Class;
+      @_GLOBAL_PREFIX_@_JSON  : TGen.JSON.JSON_Value)
+   is
+   begin
+      @_TY_PREFIX_@_To_Binary
+        (@_GLOBAL_PREFIX_@_Stream,
+         @_GLOBAL_PREFIX_@_Stream,
+         @_GLOBAL_PREFIX_@_JSON);
+   end @_TY_PREFIX_@_To_Binary;
