@@ -7,3 +7,5 @@ description: Check that gnattest can generate tests in binary format directly,
   generated.
 
 driver: shell_script
+
+baseline_regexp: true
