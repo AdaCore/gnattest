@@ -1,5 +1,3 @@
-with Ada.Text_IO; use Ada.Text_IO;
-
 package body Lists is
 
    function To_DLL (Arr : Int_Array) return DLL_Access is
@@ -21,19 +19,16 @@ package body Lists is
       Cur : DLL_Access := List;
    begin
       if List = null then
-         Put_Line ("[]");
+         null;
          return;
       end if;
       loop
          if Cur.Prev /= null and then Cur.Prev.Next /= Cur then
             raise Constraint_Error with "malformed doubly linked list";
          end if;
-         Put ("[" & Cur.Value'Image & "]");
          Cur := Cur.Next;
          exit when Cur = null;
-         Put(" <-> ");
       end loop;
-      New_Line;
    end Check_And_Print_DLL;
 
 end Lists;
