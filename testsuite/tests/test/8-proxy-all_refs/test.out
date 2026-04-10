@@ -24,11 +24,6 @@ Bind
    [Ada]          test_runner.ali
 Link
    [link]         test_runner.adb
- 524453158
--6717808
--1500502807
- 604
--610670150
 pkg.ads:7:4: info: corresponding test PASSED
 pkg.ads:7:4: info: corresponding test PASSED
 pkg.ads:7:4: info: corresponding test PASSED

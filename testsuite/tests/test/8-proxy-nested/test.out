@@ -1,14 +1,4 @@
 pkg.ads:8:06: warning: "TGen_Proxy" is not a valid aspect identifier [enabled by default]
-[]
-[ 54, 87]
-[ 69]
-[ 8, 1]
-[ 25]
-{Disc: 10; Index: 10; First_Acc : 71; Other_Stuff 96}
-{Disc: 1; Index: 4; First_Acc : 7; Comp: 71}
-{Disc: 1; Index: 3; First_Acc : 3; Comp: 3}
-{Disc: 1; Index: 10; First_Acc : 80; Comp: 100}
-{Disc: 1; Index: 10; First_Acc : 82; Comp: 52}
 pkg.ads:23:4: info: corresponding test PASSED
 pkg.ads:23:4: info: corresponding test PASSED
 pkg.ads:23:4: info: corresponding test PASSED
