@@ -539,9 +539,7 @@ package body Utils.Projects is
    --------------------------
 
    procedure Process_Command_Line
-     (Cmd               : in out Command_Line;
-      Global_Report_Dir : out String_Ref;
-      Print_Help        : not null access procedure)
+     (Cmd : in out Command_Line; Print_Help : not null access procedure)
    is
       --  We have to Parse the command line BEFORE we Parse the project file,
       --  because command-line args tell us the name of the project file, and
@@ -696,28 +694,6 @@ package body Utils.Projects is
                   Arg (Cmd) = Update_All,
                   Arg (Cmd) = No_Subprojects,
                   Arg_Length (Cmd, Files) > 0);
-
-               --  Set the directory to place the global tool results into.
-
-               declare
-                  Root_Prj               : constant GPR2.Project.View.Object :=
-                    Global_Project_Tree.Root_Project;
-                  Global_Report_Dir_File : Virtual_File :=
-                    Root_Prj.Object_Directory.Virtual_File;
-               begin
-                  --  TODO??? simplify this code and assume we always have an
-                  --  object directory.
-
-                  if Global_Report_Dir_File = No_File then
-                     Global_Report_Dir_File :=
-                       GNATCOLL.VFS.Create
-                         (GNATCOLL.VFS."+"
-                            (String (Root_Prj.Path_Name.Dir_Name)));
-                  end if;
-                  Global_Report_Dir :=
-                    new String'
-                      (GNATCOLL.VFS."+" (Global_Report_Dir_File.Full_Name));
-               end;
 
                --  Create a temporary directory when processing a non-aggregate
                --  project.

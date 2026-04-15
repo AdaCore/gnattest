@@ -28,6 +28,9 @@ with Test.Actions;
 package Utils.Drivers is
 
    procedure Driver
-     (Cmd : in out Command_Line; Tool : in out Test.Actions.Tool_State);
+     (Cmd : Command_Line; Tool : in out Test.Actions.Tool_State);
+
+   procedure Make_Dir (Dir : String);
+   --  Create directory Dir if it doesn't already exist.
 
 end Utils.Drivers;
