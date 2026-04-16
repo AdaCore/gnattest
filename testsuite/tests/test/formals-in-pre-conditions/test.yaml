@@ -1,0 +1,7 @@
+description: |
+  This test checks that TGen correctly ignores formals in pre and post
+  conditions.
+
+driver: gnattest_tgen
+
+default-gpr: True

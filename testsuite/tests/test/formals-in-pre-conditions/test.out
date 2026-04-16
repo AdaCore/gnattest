@@ -1,0 +1,14 @@
+gnattest: Error while processing <| SubpDecl ["Id"] bar.ads:6:4-6:44 [foo.ads:8:7] |>:
+foo.inner.inst.id.X: foo.inner.inst.ctx is not supported (Private types declared in nested package are not supported)
+
+foo.ads:5:4: info: corresponding test PASSED
+foo.ads:5:4: info: corresponding test PASSED
+foo.ads:5:4: info: corresponding test PASSED
+foo.ads:5:4: info: corresponding test PASSED
+foo.ads:5:4: info: corresponding test PASSED
+foo.ads:5:4: error: corresponding test FAILED: Test not implemented. (foo-test_data-tests.adb:61)
+bar.ads:6:4: instance at foo.ads:8:7: error: corresponding test FAILED: Test not implemented. (bar-test_data-tests.adb:60)
+bar.ads:8:4: instance at foo.ads:8:7: error: corresponding test FAILED: Test not implemented. (bar-test_data-tests.adb:96)
+baz.ads:4:4: instance at foo.ads:9:7: error: corresponding test FAILED: Test not implemented. (baz-test_data-tests.adb:60)
+9 tests run: 5 passed; 4 failed; 0 crashed.
+Test runner dumped 5 tests

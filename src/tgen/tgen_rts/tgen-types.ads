@@ -69,6 +69,9 @@ package TGen.Types is
       Has_Static_Predicate : Boolean := False;
       --  Whether the type has a static predicate (`with Static_Predicate`)
 
+      Supports_Wrappers : Boolean := True;
+      --  Whether the type supports wrapper generation.
+
    end record
    with
      Dynamic_Predicate =>

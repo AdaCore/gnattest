@@ -863,12 +863,21 @@ package body TGen.Libgen is
                  Filename => "Dummy",
                  Buffer   => +Subp.Pre,
                  Rule     => Libadalang.Common.Expr_Rule);
-            Generate_Wrapper_For_Subprogram
-              (F_Spec             => F_Spec,
-               F_Body             => F_Body,
-               Subprogram         => Function_Typ (As_Function_Typ (Subp.T)),
-               Precond            => Unit.Root,
-               Templates_Root_Dir => To_String (Ctx.Root_Templates_Dir));
+
+            if Subp.T.Supports_Wrappers then
+               Generate_Wrapper_For_Subprogram
+                 (F_Spec             => F_Spec,
+                  F_Body             => F_Body,
+                  Subprogram         =>
+                    Function_Typ (As_Function_Typ (Subp.T)),
+                  Precond            => Unit.Root,
+                  Templates_Root_Dir => To_String (Ctx.Root_Templates_Dir));
+            else
+               Put_Line
+                 (Standard_Error,
+                  "warning: (TGen) wrapper generation not supported for "
+                  & To_Ada (Subp.T.Name));
+            end if;
          end;
       end loop;
 
