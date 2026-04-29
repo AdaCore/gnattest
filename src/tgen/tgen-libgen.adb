@@ -981,11 +981,28 @@ package body TGen.Libgen is
            Relevant_Units  => Relevant_Units);
       Trans_Res : constant Translation_Result :=
         Translate (Subp.As_Basic_Decl, Ctx);
+
+      procedure Append_Wrapper_Diagnostic (Trans_Typ : Typ_Access);
+      --  Appends diagnostic if wrappers are not supported for the given type.
+
+      procedure Append_Wrapper_Diagnostic (Trans_Typ : Typ_Access) is
+      begin
+         if not Trans_Typ.Supports_Wrappers then
+            return;
+         end if;
+
+         Diags.Append
+           ("wrapper generation not supported for "
+            & Ada.Strings.Unbounded.To_Unbounded_String
+                (To_Ada (Trans_Typ.Name)));
+
+      end Append_Wrapper_Diagnostic;
    begin
       Array_Limit_Frozen := True;
       if Trans_Res.Success then
          Diags := Trans_Res.Res.all.Get_Diagnostics;
          if Diags.Is_Empty then
+            Append_Wrapper_Diagnostic (Trans_Res.Res);
             return Trans_Res.Res;
          end if;
       else
