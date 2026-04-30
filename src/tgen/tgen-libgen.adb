@@ -1361,7 +1361,8 @@ package body TGen.Libgen is
          Put_Line
            (Prj_File,
             "   Build_Mode : Build_Mode_Type := external"
-            & " (""BUILD_MODE"", ""dev"");");
+            & " (""TGEN_SUPPORT_BUILD_MODE"","
+            & " external (""BUILD_MODE"", ""dev""));");
          Put_Line (Prj_File, "   for Library_Name use Lib_Name;");
          Put_Line (Prj_File, "   for Library_Kind use Library_Type;");
          Put_Line
