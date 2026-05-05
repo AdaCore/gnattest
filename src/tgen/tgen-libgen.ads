@@ -295,6 +295,9 @@ package TGen.Libgen is
       return Boolean;
    --  Returns whether the given package is a top level generic instantiation
 
+   function Supports_Wrappers (Subp : LAL.Basic_Decl'Class) return Boolean;
+   --  Does `Subp` declaration supports TGen wrappers?
+
 private
    use TGen.Strings;
    use TGen.Context;

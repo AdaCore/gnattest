@@ -828,6 +828,15 @@ package body TGen.Libgen is
            Name                 => To_Filename (Wrapper_Pkg));
 
    begin
+
+      if (for all Subp of Ctx.Included_Subps.Element (Pkg_Name) =>
+            not Subp.T.Supports_Wrappers)
+      then
+         --  No declarations are compatible with wrappers. Nothing to do to
+         --  for this package. Avoid creating body of empty packages.
+         return;
+      end if;
+
       Create (F_Spec, Out_File, File_Name & ".ads");
       Create (F_Body, Out_File, File_Name & ".adb");
 
@@ -2208,4 +2217,17 @@ package body TGen.Libgen is
    begin
       return Ctx.Generic_Package_Instantiations.Contains (Pkg_Name);
    end Is_Top_Level_Generic_Inst;
+
+   -----------------------
+   -- Supports_Wrappers --
+   -----------------------
+
+   function Supports_Wrappers (Subp : LAL.Basic_Decl'Class) return Boolean is
+      A : constant Libadalang.Analysis.Expr'Class :=
+        Subp.P_Get_Aspect (To_Unbounded_Text (To_Text ("Pre"))).Value;
+   begin
+      return
+        not A.Is_Null and then not TGen.LAL_Utils.Is_Formal_Expression (A);
+   end Supports_Wrappers;
+
 end TGen.Libgen;

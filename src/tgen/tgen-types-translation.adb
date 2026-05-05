@@ -323,50 +323,6 @@ package body TGen.Types.Translation is
       end return;
    end "+";
 
-   function Is_Formal_Expression (E : Expr'Class) return Boolean;
-   --  Return True if E is an expression that contains a reference to a formal
-   --  generic parameter, False otherwise.
-
-   --------------------------
-   -- Is_Formal_Expression --
-   --------------------------
-
-   function Is_Formal_Expression (E : Expr'Class) return Boolean is
-
-      function Formal_Visitor (Node : Ada_Node'Class) return Visit_Status;
-      --  Visitor to look for formals in an expression.
-
-      --------------------
-      -- Formal_Visitor --
-      --------------------
-
-      function Formal_Visitor (Node : Ada_Node'Class) return Visit_Status is
-      begin
-         --  We want to forbid usages of generic formal parameters in pre and
-         --  post conditions.
-
-         if Node.Kind in Ada_Name
-           and then not Node.As_Name.P_Referenced_Decl.Is_Null
-           and then Node.As_Name.P_Referenced_Decl.P_Is_Formal
-         then
-            return Stop;
-         end if;
-
-         return Into;
-      end Formal_Visitor;
-   begin
-
-      --  The node is not generic. No need to check further.
-
-      if E.P_Generic_Instantiations'Length = 0 then
-         return False;
-      end if;
-
-      return
-        Traverse (E.P_Get_Uninstantiated_Node, Formal_Visitor'Access) = Stop;
-
-   end Is_Formal_Expression;
-
    --------------
    -- PP_Cache --
    --------------
@@ -4709,7 +4665,8 @@ package body TGen.Types.Translation is
                 (To_Unbounded_Text (To_Text ("Pre")))
                 .Value;
          begin
-            F_Typ.Supports_Wrappers := not Is_Formal_Expression (A);
+            F_Typ.Supports_Wrappers :=
+              not TGen.LAL_Utils.Is_Formal_Expression (A);
          end;
       end if;
 
