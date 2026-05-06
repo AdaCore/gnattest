@@ -1,0 +1,278 @@
+gnattest: Error while processing <ExprFunction ["Make_Node"] bar.ads:9:4-10:32>:
+bar.make_node.Parent: bar.node_acc is not supported (No valid proxy subprogram for annotated type bar.node_acc: Using Get_Parent as proxy would cause infinite recursion)
+
+gnattest: Error while processing <ExprFunction ["Get_Parent"] bar.ads:12:4-12:65>:
+bar.get_parent.Nbar.node.Parent: bar.node_acc is not supported (No valid proxy subprogram for annotated type bar.node_acc: Using Get_Parent as proxy would cause infinite recursion)
+
+gnattest: Error while processing <SubpDecl ["Create"] foo.ads:67:3-67:65>:
+foo.create.rootfoo.node.swap_child: foo.link_to_node is not supported (Access types are not supported)
+foo.create.rootfoo.node.stay_child: foo.link_to_node is not supported (Access types are not supported)
+foo.create.rootfoo.node.first_parent: foo.link_to_node is not supported (Access types are not supported)
+foo.create.rootfoo.node.next_sibling: foo.link_to_node is not supported (Access types are not supported)
+
+gnattest: Error while processing <SubpDecl ["Add_Multiplicity"] foo.ads:90:3-90:75>:
+foo.add_multiplicity.psfoo.poset.white: foo.link_to_array_of_nodes is not supported (Access types are not supported)
+foo.add_multiplicity.psfoo.poset.black: foo.link_to_vecvec is not supported (Access types are not supported)
+
+gnattest: Error while processing <SubpDecl ["Set_Coefficients_to_Zero"] foo.ads:95:3-95:60>:
+foo.set_coefficients_to_zero.psfoo.poset.white: foo.link_to_array_of_nodes is not supported (Access types are not supported)
+foo.set_coefficients_to_zero.psfoo.poset.black: foo.link_to_vecvec is not supported (Access types are not supported)
+
+gnattest: Error while processing <SubpDecl ["Add_from_Leaves_to_Root"] foo.ads:100:3-100:59>:
+foo.add_from_leaves_to_root.psfoo.poset.white: foo.link_to_array_of_nodes is not supported (Access types are not supported)
+foo.add_from_leaves_to_root.psfoo.poset.black: foo.link_to_vecvec is not supported (Access types are not supported)
+
+gnattest: Error while processing <SubpDecl ["Root_Rows"] foo.ads:109:3-109:54>:
+foo.root_rows.psfoo.poset.white: foo.link_to_array_of_nodes is not supported (Access types are not supported)
+foo.root_rows.psfoo.poset.black: foo.link_to_vecvec is not supported (Access types are not supported)
+
+gnattest: Error while processing <SubpDecl ["Root_Columns"] foo.ads:115:3-115:57>:
+foo.root_columns.psfoo.poset.white: foo.link_to_array_of_nodes is not supported (Access types are not supported)
+foo.root_columns.psfoo.poset.black: foo.link_to_vecvec is not supported (Access types are not supported)
+
+gnattest: Error while processing <SubpDecl ["Equal"] foo.ads:121:3-121:52>:
+foo.equal.nd1foo.node.swap_child: foo.link_to_node is not supported (Access types are not supported)
+foo.equal.nd1foo.node.stay_child: foo.link_to_node is not supported (Access types are not supported)
+foo.equal.nd1foo.node.first_parent: foo.link_to_node is not supported (Access types are not supported)
+foo.equal.nd1foo.node.next_sibling: foo.link_to_node is not supported (Access types are not supported)
+foo.equal.nd2foo.node.swap_child: foo.link_to_node is not supported (Access types are not supported)
+foo.equal.nd2foo.node.stay_child: foo.link_to_node is not supported (Access types are not supported)
+foo.equal.nd2foo.node.first_parent: foo.link_to_node is not supported (Access types are not supported)
+foo.equal.nd2foo.node.next_sibling: foo.link_to_node is not supported (Access types are not supported)
+
+gnattest: Error while processing <SubpDecl ["Position"] foo.ads:127:3-127:69>:
+foo.position.ndfoo.node.swap_child: foo.link_to_node is not supported (Access types are not supported)
+foo.position.ndfoo.node.stay_child: foo.link_to_node is not supported (Access types are not supported)
+foo.position.ndfoo.node.first_parent: foo.link_to_node is not supported (Access types are not supported)
+foo.position.ndfoo.node.next_sibling: foo.link_to_node is not supported (Access types are not supported)
+foo.position.first_ndfoo.node.swap_child: foo.link_to_node is not supported (Access types are not supported)
+foo.position.first_ndfoo.node.stay_child: foo.link_to_node is not supported (Access types are not supported)
+foo.position.first_ndfoo.node.first_parent: foo.link_to_node is not supported (Access types are not supported)
+foo.position.first_ndfoo.node.next_sibling: foo.link_to_node is not supported (Access types are not supported)
+
+gnattest: Error while processing <SubpDecl ["Retrieve"] foo.ads:134:3-134:73>:
+foo.retrieve.psfoo.poset.white: foo.link_to_array_of_nodes is not supported (Access types are not supported)
+foo.retrieve.psfoo.poset.black: foo.link_to_vecvec is not supported (Access types are not supported)
+
+gnattest: Error while processing <SubpDecl ["Retrieve_Leaf"] foo.ads:140:3-141:75>:
+foo.retrieve_leaf.psfoo.poset.white: foo.link_to_array_of_nodes is not supported (Access types are not supported)
+foo.retrieve_leaf.psfoo.poset.black: foo.link_to_vecvec is not supported (Access types are not supported)
+foo.retrieve_leaf.lnd: foo.link_to_node is not supported (Access types are not supported)
+
+gnattest: Error while processing <SubpDecl ["Is_Stay_Child"] foo.ads:149:3-149:65>:
+foo.is_stay_child.parentfoo.node.swap_child: foo.link_to_node is not supported (Access types are not supported)
+foo.is_stay_child.parentfoo.node.stay_child: foo.link_to_node is not supported (Access types are not supported)
+foo.is_stay_child.parentfoo.node.first_parent: foo.link_to_node is not supported (Access types are not supported)
+foo.is_stay_child.parentfoo.node.next_sibling: foo.link_to_node is not supported (Access types are not supported)
+foo.is_stay_child.childfoo.node.swap_child: foo.link_to_node is not supported (Access types are not supported)
+foo.is_stay_child.childfoo.node.stay_child: foo.link_to_node is not supported (Access types are not supported)
+foo.is_stay_child.childfoo.node.first_parent: foo.link_to_node is not supported (Access types are not supported)
+foo.is_stay_child.childfoo.node.next_sibling: foo.link_to_node is not supported (Access types are not supported)
+
+gnattest: Error while processing <SubpDecl ["Is_Swap_Child"] foo.ads:155:3-155:65>:
+foo.is_swap_child.parentfoo.node.swap_child: foo.link_to_node is not supported (Access types are not supported)
+foo.is_swap_child.parentfoo.node.stay_child: foo.link_to_node is not supported (Access types are not supported)
+foo.is_swap_child.parentfoo.node.first_parent: foo.link_to_node is not supported (Access types are not supported)
+foo.is_swap_child.parentfoo.node.next_sibling: foo.link_to_node is not supported (Access types are not supported)
+foo.is_swap_child.childfoo.node.swap_child: foo.link_to_node is not supported (Access types are not supported)
+foo.is_swap_child.childfoo.node.stay_child: foo.link_to_node is not supported (Access types are not supported)
+foo.is_swap_child.childfoo.node.first_parent: foo.link_to_node is not supported (Access types are not supported)
+foo.is_swap_child.childfoo.node.next_sibling: foo.link_to_node is not supported (Access types are not supported)
+
+gnattest: Error while processing <SubpDecl ["Number_of_Parents"] foo.ads:165:3-165:61>:
+foo.number_of_parents.ndfoo.node.swap_child: foo.link_to_node is not supported (Access types are not supported)
+foo.number_of_parents.ndfoo.node.stay_child: foo.link_to_node is not supported (Access types are not supported)
+foo.number_of_parents.ndfoo.node.first_parent: foo.link_to_node is not supported (Access types are not supported)
+foo.number_of_parents.ndfoo.node.next_sibling: foo.link_to_node is not supported (Access types are not supported)
+
+gnattest: Error while processing <SubpDecl ["Multiplicity_of_Parents"] foo.ads:170:3-170:72>:
+foo.multiplicity_of_parents.ndfoo.node.swap_child: foo.link_to_node is not supported (Access types are not supported)
+foo.multiplicity_of_parents.ndfoo.node.stay_child: foo.link_to_node is not supported (Access types are not supported)
+foo.multiplicity_of_parents.ndfoo.node.first_parent: foo.link_to_node is not supported (Access types are not supported)
+foo.multiplicity_of_parents.ndfoo.node.next_sibling: foo.link_to_node is not supported (Access types are not supported)
+
+gnattest: Error while processing <SubpDecl ["Retrieve_Parent"] foo.ads:175:3-175:77>:
+foo.retrieve_parent.ndfoo.node.swap_child: foo.link_to_node is not supported (Access types are not supported)
+foo.retrieve_parent.ndfoo.node.stay_child: foo.link_to_node is not supported (Access types are not supported)
+foo.retrieve_parent.ndfoo.node.first_parent: foo.link_to_node is not supported (Access types are not supported)
+foo.retrieve_parent.ndfoo.node.next_sibling: foo.link_to_node is not supported (Access types are not supported)
+
+gnattest: Error while processing <SubpDecl ["Degree_of_Freedom"] foo.ads:181:3-181:62>:
+foo.degree_of_freedom.psfoo.poset.white: foo.link_to_array_of_nodes is not supported (Access types are not supported)
+foo.degree_of_freedom.psfoo.poset.black: foo.link_to_vecvec is not supported (Access types are not supported)
+
+bar.ads:4:42: warning: "TGen_Proxy" is not a valid aspect identifier [enabled by default]
+bar.ads:9:4: error: corresponding test FAILED: Test not implemented. (bar-test_data-tests.adb:45)
+bar.ads:12:4: error: corresponding test FAILED: Test not implemented. (bar-test_data-tests.adb:66)
+foo.ads:62:3: error: corresponding test FAILED: Test 1 for Create, generated by TGen, crashed: 
+raised PROGRAM_ERROR : foo.adb:18 explicit raise
+Load address: <addr>
+Call stack traceback locations:
+<addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr>
+ (foo-test_data-test_create_1479ae.adb:54)
+foo.ads:62:3: error: corresponding test FAILED: Test 2 for Create, generated by TGen, crashed: 
+raised PROGRAM_ERROR : foo.adb:18 explicit raise
+Load address: <addr>
+Call stack traceback locations:
+<addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr>
+ (foo-test_data-test_create_1479ae.adb:102)
+foo.ads:62:3: error: corresponding test FAILED: Test 3 for Create, generated by TGen, crashed: 
+raised PROGRAM_ERROR : foo.adb:18 explicit raise
+Load address: <addr>
+Call stack traceback locations:
+<addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr>
+ (foo-test_data-test_create_1479ae.adb:152)
+foo.ads:62:3: error: corresponding test FAILED: Test 4 for Create, generated by TGen, crashed: 
+raised PROGRAM_ERROR : foo.adb:18 explicit raise
+Load address: <addr>
+Call stack traceback locations:
+<addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr>
+ (foo-test_data-test_create_1479ae.adb:208)
+foo.ads:62:3: error: corresponding test FAILED: Test 5 for Create, generated by TGen, crashed: 
+raised PROGRAM_ERROR : foo.adb:18 explicit raise
+Load address: <addr>
+Call stack traceback locations:
+<addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr>
+ (foo-test_data-test_create_1479ae.adb:260)
+foo.ads:74:3: error: corresponding test FAILED: Test 1 for Create, generated by TGen, crashed: 
+raised PROGRAM_ERROR : foo.adb:30 explicit raise
+Load address: <addr>
+Call stack traceback locations:
+<addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr>
+ (foo-test_data-test_create_432406.adb:63)
+foo.ads:74:3: error: corresponding test FAILED: Test 2 for Create, generated by TGen, crashed: 
+raised PROGRAM_ERROR : foo.adb:30 explicit raise
+Load address: <addr>
+Call stack traceback locations:
+<addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr>
+ (foo-test_data-test_create_432406.adb:130)
+foo.ads:74:3: error: corresponding test FAILED: Test 3 for Create, generated by TGen, crashed: 
+raised PROGRAM_ERROR : foo.adb:30 explicit raise
+Load address: <addr>
+Call stack traceback locations:
+<addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr>
+ (foo-test_data-test_create_432406.adb:197)
+foo.ads:74:3: error: corresponding test FAILED: Test 4 for Create, generated by TGen, crashed: 
+raised PROGRAM_ERROR : foo.adb:30 explicit raise
+Load address: <addr>
+Call stack traceback locations:
+<addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr>
+ (foo-test_data-test_create_432406.adb:261)
+foo.ads:74:3: error: corresponding test FAILED: Test 5 for Create, generated by TGen, crashed: 
+raised PROGRAM_ERROR : foo.adb:30 explicit raise
+Load address: <addr>
+Call stack traceback locations:
+<addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr>
+ (foo-test_data-test_create_432406.adb:319)
+foo.ads:81:3: error: corresponding test FAILED: Test 1 for Create, generated by TGen, crashed: 
+raised PROGRAM_ERROR : foo.adb:37 explicit raise
+Load address: <addr>
+Call stack traceback locations:
+<addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr>
+ (foo-test_data-test_create_8f38e2.adb:68)
+foo.ads:81:3: error: corresponding test FAILED: Test 2 for Create, generated by TGen, crashed: 
+raised PROGRAM_ERROR : foo.adb:37 explicit raise
+Load address: <addr>
+Call stack traceback locations:
+<addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr>
+ (foo-test_data-test_create_8f38e2.adb:122)
+foo.ads:81:3: error: corresponding test FAILED: Test 3 for Create, generated by TGen, crashed: 
+raised PROGRAM_ERROR : foo.adb:37 explicit raise
+Load address: <addr>
+Call stack traceback locations:
+<addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr>
+ (foo-test_data-test_create_8f38e2.adb:176)
+foo.ads:81:3: error: corresponding test FAILED: Test 4 for Create, generated by TGen, crashed: 
+raised PROGRAM_ERROR : foo.adb:37 explicit raise
+Load address: <addr>
+Call stack traceback locations:
+<addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr>
+ (foo-test_data-test_create_8f38e2.adb:242)
+foo.ads:81:3: error: corresponding test FAILED: Test 5 for Create, generated by TGen, crashed: 
+raised PROGRAM_ERROR : foo.adb:37 explicit raise
+Load address: <addr>
+Call stack traceback locations:
+<addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr>
+ (foo-test_data-test_create_8f38e2.adb:299)
+foo.ads:53:3: error: corresponding test FAILED: Test 1 for Generalizing_Moves, generated by TGen, crashed: 
+raised PROGRAM_ERROR : foo.adb:12 explicit raise
+Load address: <addr>
+Call stack traceback locations:
+<addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr>
+ (foo-test_data-test_generalizing_moves_69b63b.adb:26)
+foo.ads:53:3: error: corresponding test FAILED: Test 2 for Generalizing_Moves, generated by TGen, crashed: 
+raised PROGRAM_ERROR : foo.adb:12 explicit raise
+Load address: <addr>
+Call stack traceback locations:
+<addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr>
+ (foo-test_data-test_generalizing_moves_69b63b.adb:45)
+foo.ads:53:3: error: corresponding test FAILED: Test 3 for Generalizing_Moves, generated by TGen, crashed: 
+raised PROGRAM_ERROR : foo.adb:12 explicit raise
+Load address: <addr>
+Call stack traceback locations:
+<addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr>
+ (foo-test_data-test_generalizing_moves_69b63b.adb:64)
+foo.ads:53:3: error: corresponding test FAILED: Test 4 for Generalizing_Moves, generated by TGen, crashed: 
+raised PROGRAM_ERROR : foo.adb:12 explicit raise
+Load address: <addr>
+Call stack traceback locations:
+<addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr>
+ (foo-test_data-test_generalizing_moves_69b63b.adb:83)
+foo.ads:53:3: error: corresponding test FAILED: Test 5 for Generalizing_Moves, generated by TGen, crashed: 
+raised PROGRAM_ERROR : foo.adb:12 explicit raise
+Load address: <addr>
+Call stack traceback locations:
+<addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr>
+ (foo-test_data-test_generalizing_moves_69b63b.adb:102)
+foo.ads:44:3: error: corresponding test FAILED: Test 1 for Specializing_Moves, generated by TGen, crashed: 
+raised PROGRAM_ERROR : foo.adb:6 explicit raise
+Load address: <addr>
+Call stack traceback locations:
+<addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr>
+ (foo-test_data-test_specializing_moves_63a0a2.adb:26)
+foo.ads:44:3: error: corresponding test FAILED: Test 2 for Specializing_Moves, generated by TGen, crashed: 
+raised PROGRAM_ERROR : foo.adb:6 explicit raise
+Load address: <addr>
+Call stack traceback locations:
+<addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr>
+ (foo-test_data-test_specializing_moves_63a0a2.adb:45)
+foo.ads:44:3: error: corresponding test FAILED: Test 3 for Specializing_Moves, generated by TGen, crashed: 
+raised PROGRAM_ERROR : foo.adb:6 explicit raise
+Load address: <addr>
+Call stack traceback locations:
+<addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr>
+ (foo-test_data-test_specializing_moves_63a0a2.adb:64)
+foo.ads:44:3: error: corresponding test FAILED: Test 4 for Specializing_Moves, generated by TGen, crashed: 
+raised PROGRAM_ERROR : foo.adb:6 explicit raise
+Load address: <addr>
+Call stack traceback locations:
+<addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr>
+ (foo-test_data-test_specializing_moves_63a0a2.adb:83)
+foo.ads:44:3: error: corresponding test FAILED: Test 5 for Specializing_Moves, generated by TGen, crashed: 
+raised PROGRAM_ERROR : foo.adb:6 explicit raise
+Load address: <addr>
+Call stack traceback locations:
+<addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr> <addr>
+ (foo-test_data-test_specializing_moves_63a0a2.adb:102)
+foo.ads:44:3: error: corresponding test FAILED: Test not implemented. (foo-test_data-tests.adb:45)
+foo.ads:53:3: error: corresponding test FAILED: Test not implemented. (foo-test_data-tests.adb:66)
+foo.ads:62:3: error: corresponding test FAILED: Test not implemented. (foo-test_data-tests.adb:87)
+foo.ads:67:3: error: corresponding test FAILED: Test not implemented. (foo-test_data-tests.adb:108)
+foo.ads:74:3: error: corresponding test FAILED: Test not implemented. (foo-test_data-tests.adb:129)
+foo.ads:81:3: error: corresponding test FAILED: Test not implemented. (foo-test_data-tests.adb:150)
+foo.ads:90:3: error: corresponding test FAILED: Test not implemented. (foo-test_data-tests.adb:171)
+foo.ads:95:3: error: corresponding test FAILED: Test not implemented. (foo-test_data-tests.adb:192)
+foo.ads:100:3: error: corresponding test FAILED: Test not implemented. (foo-test_data-tests.adb:213)
+foo.ads:109:3: error: corresponding test FAILED: Test not implemented. (foo-test_data-tests.adb:234)
+foo.ads:115:3: error: corresponding test FAILED: Test not implemented. (foo-test_data-tests.adb:255)
+foo.ads:121:3: error: corresponding test FAILED: Test not implemented. (foo-test_data-tests.adb:276)
+foo.ads:127:3: error: corresponding test FAILED: Test not implemented. (foo-test_data-tests.adb:297)
+foo.ads:134:3: error: corresponding test FAILED: Test not implemented. (foo-test_data-tests.adb:318)
+foo.ads:140:3: error: corresponding test FAILED: Test not implemented. (foo-test_data-tests.adb:339)
+foo.ads:149:3: error: corresponding test FAILED: Test not implemented. (foo-test_data-tests.adb:360)
+foo.ads:155:3: error: corresponding test FAILED: Test not implemented. (foo-test_data-tests.adb:381)
+foo.ads:165:3: error: corresponding test FAILED: Test not implemented. (foo-test_data-tests.adb:402)
+foo.ads:170:3: error: corresponding test FAILED: Test not implemented. (foo-test_data-tests.adb:423)
+foo.ads:175:3: error: corresponding test FAILED: Test not implemented. (foo-test_data-tests.adb:444)
+foo.ads:181:3: error: corresponding test FAILED: Test not implemented. (foo-test_data-tests.adb:465)
+48 tests run: 0 passed; 48 failed; 0 crashed.

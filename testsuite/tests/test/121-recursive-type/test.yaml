@@ -1,0 +1,10 @@
+description: |
+  Make sure that TGen can handle types that reference themselves using an
+  access type.
+
+driver: gnattest_tgen
+
+default-gpr: true
+
+# Cannot dump test inputs for types with proxies
+suppress_test_dump: true
