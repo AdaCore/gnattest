@@ -881,11 +881,6 @@ package body TGen.Libgen is
                     Function_Typ (As_Function_Typ (Subp.T)),
                   Precond            => Unit.Root,
                   Templates_Root_Dir => To_String (Ctx.Root_Templates_Dir));
-            else
-               Put_Line
-                 (Standard_Error,
-                  "warning: (TGen) wrapper generation not supported for "
-                  & To_Ada (Subp.T.Name));
             end if;
          end;
       end loop;
