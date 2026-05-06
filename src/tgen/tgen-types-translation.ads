@@ -25,6 +25,7 @@
 --  to TGen's internal type representation.
 
 with Ada.Containers.Hashed_Maps;
+with Ada.Containers.Doubly_Linked_Lists;
 
 with Libadalang.Analysis;
 
@@ -104,8 +105,36 @@ package TGen.Types.Translation is
 
 private
 
+   package Ada_Qualified_Name_Stacks is new
+     Ada.Containers.Doubly_Linked_Lists
+       (Element_Type => Ada_Qualified_Name,
+        "="          => Ada_Identifier_Vectors."=");
+
    type Translation_Ctx is record
       Verbose : Boolean := False;
+
+      Translation_Stack : Ada_Qualified_Name_Stacks.List;
+      --  Name of types which are currently being translated. This is used to
+      --  prevent using a subprogram as a proxy which would introduce a
+      --  recursive loop for unmarshalling.
+      --
+      --  For instance, if we have the following:
+      --
+      --    type Node;
+      --    type Node_Acc is access Node;
+      --    type Node is record
+      --       Parent : Node_Acc;
+      --    end record;
+      --
+      --    function Get_Parent (N : Node) return Node_Acc;
+      --
+      --  Trying to use Get_Parent as a proxy for Node_Acc would cause a
+      --  infinite recursive calls when unmarshalling a Node_Acc element, as to
+      --  call Get_Parent, TGen would need to read a value of type Node, which
+      --  would need to call Get_Parent to create the `Parent` field, etc..
+      --
+      --  The list structure is useful to be able to re-create the circularity
+      --  chain for diagnostics (not implemented yet).
 
       Skip_Proxy_Set : Ada_Qualified_Name_Set;
       --  Names of types for which we should ignore the proxy aspect, and avoid
@@ -126,10 +155,11 @@ private
       Proxy_Detection : Proxy_Policy := TGen.Libgen.Unit;
       Relevant_Units  : TGen.Libgen.Get_Relevant_Units_CB := null)
       return Translation_Ctx
-   is ((Verbose         => Verbose,
-        Skip_Proxy_Set  => Ada_Qualified_Name_Sets.Empty_Set,
-        Proxy_Detection => Proxy_Detection,
-        Unit_List_CB    => Relevant_Units));
+   is ((Verbose           => Verbose,
+        Translation_Stack => Ada_Qualified_Name_Stacks.Empty_List,
+        Skip_Proxy_Set    => Ada_Qualified_Name_Sets.Empty_Set,
+        Proxy_Detection   => Proxy_Detection,
+        Unit_List_CB      => Relevant_Units));
 
    Anonymous_Typ_Index : Positive := 1;
    --  Index incremented each time we create an anonymous type, to uniquely

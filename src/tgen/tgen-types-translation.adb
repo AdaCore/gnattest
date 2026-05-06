@@ -22,6 +22,7 @@
 ------------------------------------------------------------------------------
 
 with Ada.Exceptions;
+with Ada.Finalization;
 with Ada.Strings.Wide_Wide_Unbounded;
 with Ada.Text_IO; use Ada.Text_IO;
 
@@ -51,6 +52,13 @@ package body TGen.Types.Translation is
    Me : constant Trace_Handle := Create ("TGen_Translation", Default => Off);
 
    Translation_Error : exception;
+
+   Recursive_Translation_Error : exception;
+   --  Exception raised when running into a recursive translation loop. See the
+   --  comment in Translation_Context for an example of when this could happen.
+   --
+   --  Recursive translation issues should only arise when translating a proxy
+   --  subprogram, it is thus only caught in that context.
 
    Non_Static_Error : exception;
    --  Exception raised when the translation of a type that should be static
@@ -269,13 +277,18 @@ package body TGen.Types.Translation is
    --  the reference to the translated subp representation.
 
    type Proxy_Failure_Reason is
-     (No_Subp, Mismatched_Ret_Type, Cannot_Generate, Has_Out_Params);
+     (No_Subp,
+      Mismatched_Ret_Type,
+      Infinite_Recursion,
+      Cannot_Generate,
+      Has_Out_Params);
    --  Reason why we couldn't find a proxy subprogram:
    --
    --  - No subprogram in the candidate list;
-   --  - No functions returning the expected type;
-   --  - No functions for which TGen could generate inputs;
-   --  - No functions with only in and in out parameters
+   --  - No function returning the expected type;
+   --  - No function without infinite recursion in marshalling;
+   --  - No function for which TGen could generate inputs;
+   --  - No function with only in and in out parameters
 
    function Extract_Proxy_From_Node_List
      (N              : Base_Type_Decl'Class;
@@ -3386,35 +3399,49 @@ package body TGen.Types.Translation is
 
       if Proxy_Res /= null then
          return (Success => True, Res => Proxy_Res);
-      elsif Failure_Reason = Has_Out_Params then
-         return
-           (Success     => False,
-            Diagnostics =>
-              To_Unbounded_String ("There are no functions named ")
-              & Image (Proxy_Name.Text)
-              & " with only ""in"" or ""in out"" parameters");
-      elsif Failure_Reason = Cannot_Generate then
-         return
-           (Success     => False,
-            Diagnostics =>
-              To_Unbounded_String ("There are no functions named ")
-              & Image (Proxy_Name.Text)
-              & " for which TGen can generate input values");
-      elsif Failure_Reason = Mismatched_Ret_Type then
-         return
-           (Success     => False,
-            Diagnostics =>
-              To_Unbounded_String ("There are no functions named ")
-              & Image (Proxy_Name.Text)
-              & " for which the return type matches "
-              & Image (Decl.P_Defining_Name.Text));
-      else
-         return
-           (Success     => False,
-            Diagnostics =>
-              To_Unbounded_String ("Could not find a function named ")
-              & Image (Proxy_Name.Text));
       end if;
+      case Failure_Reason is
+         when Has_Out_Params      =>
+            return
+              (Success     => False,
+               Diagnostics =>
+                 To_Unbounded_String ("There are no functions named ")
+                 & Image (Proxy_Name.Text)
+                 & " with only ""in"" or ""in out"" parameters");
+
+         when Cannot_Generate     =>
+            return
+              (Success     => False,
+               Diagnostics =>
+                 To_Unbounded_String ("There are no functions named ")
+                 & Image (Proxy_Name.Text)
+                 & " for which TGen can generate input values");
+
+         when Infinite_Recursion  =>
+            return
+              (Success     => False,
+               Diagnostics =>
+                 To_Unbounded_String
+                   ("Using "
+                    & Image (Proxy_Name.Text)
+                    & " as proxy would cause infinite recursion"));
+
+         when Mismatched_Ret_Type =>
+            return
+              (Success     => False,
+               Diagnostics =>
+                 To_Unbounded_String ("There are no functions named ")
+                 & Image (Proxy_Name.Text)
+                 & " for which the return type matches "
+                 & Image (Decl.P_Defining_Name.Text));
+
+         when No_Subp             =>
+            return
+              (Success     => False,
+               Diagnostics =>
+                 To_Unbounded_String ("Could not find a function named ")
+                 & Image (Proxy_Name.Text));
+      end case;
    end Locate_Proxy_For_Decl;
 
    ---------------------
@@ -3432,10 +3459,15 @@ package body TGen.Types.Translation is
       --  Translate the type without proxy first, so that we don't end up in
       --  a recursive translation cycle when processing the proxy
       --  subprogram itself.
+      --
+      --  Allow recursive translation of this type, as we need the non-proxy
+      --  translation for the return type of the proxy subprogram.
 
+      Ctx.Translation_Stack.Delete_Last;
       Ctx.Skip_Proxy_Set.Insert (FQN);
       Bare_Type_Trans := Translate (Decl.As_Base_Type_Decl, Ctx);
       Ctx.Skip_Proxy_Set.Delete (FQN);
+      Ctx.Translation_Stack.Append (FQN, 1);
 
       --  If there was a proper translation error when translating the
       --  original type, abort early.
@@ -3547,9 +3579,12 @@ package body TGen.Types.Translation is
          --  For which we can generate stuff
 
          declare
-            Subp_Translation : constant Translation_Result :=
-              Translate (Cur_Element, Ctx);
+            Subp_Translation : Translation_Result;
          begin
+            --  Translation done here and not above to be able to catch
+            --  exceptions.
+
+            Subp_Translation := Translate (Cur_Element, Ctx);
             if Subp_Translation.Success then
                if not Subp_Translation.Res.Get_Diagnostics.Is_Empty then
                   Me.Trace ("   Candidate does not allow generation");
@@ -3574,6 +3609,15 @@ package body TGen.Types.Translation is
             else
                Me.Trace ("   Unsuccessful candidate translation");
             end if;
+         exception
+            when Recursive_Translation_Error =>
+
+               --  TODO??? Should we try to re-build the recursion chain for
+               --  more accurate diagnostics? It could get very long
+
+               if Failure_Reason in No_Subp .. Cannot_Generate then
+                  Failure_Reason := Infinite_Recursion;
+               end if;
          end;
 
          <<Next_Candidate>>
@@ -3896,7 +3940,37 @@ package body TGen.Types.Translation is
                         (N.As_Base_Type_Decl)));
       --  True if N is the definition of an opaque type, False otherwise
 
+      type FQN_Auto_Remove_Cur is new Ada.Finalization.Limited_Controlled
+      with null record;
+      --  Type used to automatically remove the last element in
+      --  Ctx.Translation_Stack, if it is equal to FQN.
+
+      overriding
+      procedure Finalize (Self : in out FQN_Auto_Remove_Cur) is
+         Stack : Ada_Qualified_Name_Stacks.List renames Ctx.Translation_Stack;
+      begin
+         if not Stack.Is_Empty
+           and then Stack.Constant_Reference (Stack.Last) = FQN
+         then
+            Stack.Delete_Last;
+         end if;
+      end Finalize;
+
+      Stack_Cleaner : constant FQN_Auto_Remove_Cur :=
+        (Ada.Finalization.Limited_Controlled with null record)
+      with Unreferenced;
+      --  Will remove FQN from Ctx at the end of this subprogram call
+
    begin
+
+      --  Check whether we have landed in an infinite translation recursion
+      --  loop and record the type we are translating if not.
+
+      if Ctx.Translation_Stack.Contains (FQN) then
+         raise Recursive_Translation_Error with To_Ada (FQN);
+      end if;
+      Ctx.Translation_Stack.Append (FQN, 1);
+
       Is_Static :=
         Is_Static
         and then N.P_Is_Static_Decl
@@ -4171,11 +4245,13 @@ package body TGen.Types.Translation is
         and then not Ctx.Skip_Proxy_Set.Contains (FQN)
       then
          --  Disable proxy translation for N while we search for a proxy
-         --  subprogram. Also prevent recursive translations of the type from
-         --  being recorded in the cache, they's be shadowed by the current
-         --  one.
+         --  subprogram.
+         --
+         --  Allow recursive translation of N, it is necessary as it will be
+         --  the return type of its proxy subprogram.
 
          Ctx.Skip_Proxy_Set.Insert (FQN);
+         Ctx.Translation_Stack.Delete_Last;
 
          declare
             Decl_Scope : constant Declarative_Part := N.P_Declarative_Scope;
@@ -4211,6 +4287,7 @@ package body TGen.Types.Translation is
                        others           => <>));
             end if;
          end;
+         Ctx.Translation_Stack.Append (FQN, 1);
          Ctx.Skip_Proxy_Set.Delete (FQN);
 
          --  The translation of some of the proxy candidates may have
@@ -4243,6 +4320,10 @@ package body TGen.Types.Translation is
       return Specialized_Res;
 
    exception
+      --  Recursive_Translation_Error is not handled here as it can only occur
+      --  when trying to translate a proxy type. It is thus handled in
+      --  Extract_Proxy_From_Node_List.
+
       when Exc : Property_Error =>
          return
            (Success     => False,
