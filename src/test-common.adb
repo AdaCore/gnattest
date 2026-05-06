@@ -1293,7 +1293,7 @@ package body Test.Common is
         (Test.Common.TGen_Libgen_Ctx,
          [TGen.Libgen.Marshalling_Part     => True,
           TGen.Libgen.Test_Generation_Part => True,
-          TGen.Libgen.Wrappers_Part        => False]);
+          TGen.Libgen.Wrappers_Part        => Test.Common.Generate_Wrappers]);
       Need_Lib_Support := Generated;
    end Generate_TGen_Lib_Support;
 

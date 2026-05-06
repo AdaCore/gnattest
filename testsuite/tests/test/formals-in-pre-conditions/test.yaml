@@ -5,3 +5,4 @@ description: |
 driver: gnattest_tgen
 
 default-gpr: True
+extra_gnattest_args: ["--gen-wrappers"]

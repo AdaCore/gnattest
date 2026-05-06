@@ -1210,6 +1210,7 @@ package body Test.Actions is
          end if;
 
          Test.Common.Gen_Bin_Tests := Arg (Cmd, Gen_Test_Binary);
+         Test.Common.Generate_Wrappers := Arg (Cmd, Gen_Wrappers);
 
          --  Activate the first pass
 
