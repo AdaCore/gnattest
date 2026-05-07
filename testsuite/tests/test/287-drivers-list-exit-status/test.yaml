@@ -4,3 +4,5 @@ description: Test the executions of test drivers through the
   passing, some passing, all failing).
 
 driver: python_script
+
+native_only: true

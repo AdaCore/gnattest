@@ -20,13 +20,15 @@ We thus generate the truth table of the formula, and for each valuation:
      original and the wrapper subprogram: they should not raise any exception.
 """
 
-
+from pathlib import Path
 from e3.fs import mkdir
-
-from drivers.utils import run
 
 import os
 import shutil
+
+from drivers.utils import run
+from suite.context import thistest
+from suite.tutils import build_harness, run_command, run_harness
 
 
 class LogicalFormula:
@@ -192,17 +194,14 @@ orig_project = open(os.path.join("test", "test.gpr"), "w")
 test_pkg_wrapper_prj = open("test_pkg_wrapper.gpr", "w")
 test_pkg_wrapper_adb = open("test_pkg_wrapper.adb", "w")
 
-orig_project.write(
-    """
+orig_project.write("""
 project Test is
    for Source_Dirs use (".");
    for Object_Dir use "obj";
 end Test;
-"""
-)
+""")
 
-test_pkg_wrapper_prj.write(
-    """
+test_pkg_wrapper_prj.write("""
 with "test/test.gpr";
 with "tgen_support/tgen_support.gpr";
 
@@ -211,8 +210,7 @@ project Test_Pkg_Wrapper is
    for Object_Dir use "obj";
    for Main use ("test_pkg_wrapper.adb");
 end Test_Pkg_Wrapper;
-"""
-)
+""")
 
 pkg_adb.write("package body Pkg is\n")
 pkg_ads.write("package Pkg is\n")
@@ -255,17 +253,23 @@ test_pkg_wrapper_adb.close()
 
 # Wrap everything together: first, generate tgen support library
 
-laltools_root = os.path.dirname(os.path.dirname(shutil.which("gnattest")))
-templates_path = os.path.join(laltools_root, "share", "tgen", "templates")
-pkg_ads_path = os.path.join("test", "pkg.ads")
-tgen_marsh_path = str(shutil.which("tgen_marshalling"))
-run(
-    f"tgen_marshalling -P test/test.gpr --templates-dir='{templates_path}'"
-    f" -o tgen_support '{pkg_ads_path}'"
+gnattest = shutil.which("gnattest")
+if not gnattest:
+    exit(1)
+laltools_root = Path(gnattest).parent.parent
+templates_path = laltools_root / "share" / "tgen" / "templates"
+pkg_ads_path = Path("test") / "pkg.ads"
+
+run_command(
+    "tgen_marshalling",
+    "test/test.gpr",
+    [f"--templates-dir={templates_path}", "-o", "tgen_support", f"{pkg_ads_path}"],
 )
 
 # Then, build the test project
-run("gprbuild -q -P test_pkg_wrapper.gpr -cargs:Ada -gnata")
+build_harness("test_pkg_wrapper.gpr", ["-q", "-cargs:Ada", "-gnata"])
 
 # Run it. We don't expect any error
-run("obj/test_pkg_wrapper")
+run_harness("obj/test_pkg_wrapper")
+
+thistest.result()

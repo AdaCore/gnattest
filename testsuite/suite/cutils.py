@@ -1,0 +1,23 @@
+"""Common utility functions.
+
+This module exposes common utility functions, for both individual tests and the
+toplevel suite driver. In particular, they don't depend on the current
+"thistest" instance.
+"""
+
+import os
+import sys
+
+def exit_if(t, comment):
+    """
+    If `t` is true, print `comment` on the standard error stream and exit with
+    error status code.
+    """
+    if t:
+        sys.stderr.write(comment + "\n")
+        exit(1)
+
+def clear(f):
+    """Remove file F if it exists"""
+    if os.path.exists(f):
+        os.remove(f)

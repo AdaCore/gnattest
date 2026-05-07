@@ -3,3 +3,4 @@ description:
 
 driver: python_script
 
+native_only: true

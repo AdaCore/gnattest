@@ -1,5 +1,3 @@
-import os
-
 from drivers.base_driver import BaseDriver
 
 
