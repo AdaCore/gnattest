@@ -41,6 +41,17 @@ include:
       cpus: 16
       disk: 80
 
+  # Testing cross
+  - component: $CI_SERVER_FQDN/eng/gitlab-templates/test@~latest
+    inputs:
+      needs: ["instrumented-build:linux"]
+      job-name: gnattest-cross
+      anod-args: test gnattest --target="ppc-elf,,qemu-8641d" -QRTS="light-mpc8641"
+      image: pe-base
+      cpus: 16
+      disk: 80
+
+
   # Non instrumented builds of gnattest go into the testing stage, both Linux
   # and Windows.
   - component: $CI_SERVER_FQDN/eng/gitlab-templates/build@~latest

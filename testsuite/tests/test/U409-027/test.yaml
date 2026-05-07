@@ -2,3 +2,6 @@ description:
     gnattest test
 
 driver: python_script
+
+# The ada calendar library is not available on some cross target which would fail the test.
+native_only: True

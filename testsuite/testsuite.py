@@ -9,29 +9,34 @@ Run the libadalang-tools testsuite.
 """
 
 import os
+from typing import List
 
 import e3.testsuite
 from e3.fs import sync_tree
 from e3.os.process import Run
+from e3.testsuite.testcase_finder import ParsedTest
 
 from drivers.python_script import PythonScriptDriver
 from drivers.shell_script import ShellScriptDriver
 from drivers.gnattest_tgen import GNATTestTgenDriver
+from suite.control import add_shared_options_to
 
 
 class Testsuite(e3.testsuite.Testsuite):
-    tests_subdir = "tests"
+    @property
+    def tests_subdir(self) -> str:
+        return "tests"
 
     @property
     def test_driver_map(self):
         return {
-                "python_script": PythonScriptDriver,
-                "shell_script": ShellScriptDriver,
-                "gnattest_tgen": GNATTestTgenDriver,
-                # Driver available only in the GNATfuzz testsuite.
-                # Uses GNATtest and TGen
-                "fuzz_everything": GNATTestTgenDriver,
-            }
+            "python_script": PythonScriptDriver,
+            "shell_script": ShellScriptDriver,
+            "gnattest_tgen": GNATTestTgenDriver,
+            # Driver available only in the GNATfuzz testsuite.
+            # Uses GNATtest and TGen
+            "fuzz_everything": GNATTestTgenDriver,
+        }
 
     def add_options(self, parser):
         parser.add_argument(
@@ -71,6 +76,8 @@ class Testsuite(e3.testsuite.Testsuite):
             " preserve generation artifacts by setting the GNATTEST_DEBUG"
             " env variable to aid debugging.",
         )
+
+        add_shared_options_to(parser)
 
     def setup_tgen_runtime(
         self,
@@ -112,6 +119,10 @@ class Testsuite(e3.testsuite.Testsuite):
 
     def set_up(self):
         super().set_up()
+
+        # If the main arguments have not been properly defined stop.
+        if not self.main.args:
+            return
 
         self.env.no_wip = self.main.args.no_wip
         self.env.fold_casing = self.main.args.fold_casing
@@ -179,9 +190,33 @@ class Testsuite(e3.testsuite.Testsuite):
     def default_driver(self):
         """
         By default, all tests should specify the required driver, except when in
-        gnatffuzz_test mode, where we only want ot use the gnattest_tgen driver.
+        gnatfuzz_test mode, where we only want to use the gnattest_tgen driver.
         """
-        return "gnattest_tgen" if self.main.args.gnatfuzz_tests else None
+        return (
+            "gnattest_tgen"
+            if self.main.args and self.main.args.gnatfuzz_tests
+            else None
+        )
+
+    def get_test_list(self, sublist: List[str]) -> List[ParsedTest]:
+        """
+        Get the list of test to run.
+
+        If the target arguments was passed, filter to only run the crossable test.
+        """
+
+        def _filter_tests(test: ParsedTest):
+            return (
+                (test.driver_cls
+                and test.driver_cls.__name__ == "PythonScriptDriver")
+                and not test.test_env.get("native_only", False) 
+            )
+
+        test_list = super().get_test_list(sublist)
+        if self.main.args and self.main.args.target:
+            test_list = list(filter(_filter_tests, test_list))
+
+        return test_list
 
 
 if __name__ == "__main__":
