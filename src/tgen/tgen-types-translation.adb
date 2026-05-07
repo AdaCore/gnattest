@@ -4651,6 +4651,25 @@ package body TGen.Types.Translation is
          end if;
       end;
 
+      --  Check if the type supports wrappers.
+
+      if Designated_Decl.P_Has_Aspect (To_Unbounded_Text (To_Text ("Pre")))
+      then
+
+         --  Wrappers are not supported if the precondtions expression
+         --  contains references to generic formals.
+
+         declare
+            A : constant Libadalang.Analysis.Expr'Class :=
+              Designated_Decl.P_Get_Aspect
+                (To_Unbounded_Text (To_Text ("Pre")))
+                .Value;
+         begin
+            F_Typ.Supports_Wrappers :=
+              not TGen.LAL_Utils.Is_Formal_Expression (A);
+         end;
+      end if;
+
       Translation_Cache.Insert (F_Typ.Name, Typ_Access (F_Typ));
       Result.Res := Typ_Access (F_Typ);
       return Result;

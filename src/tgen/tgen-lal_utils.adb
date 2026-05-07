@@ -191,4 +191,47 @@ package body TGen.LAL_Utils is
       return not Decl.P_Private_Completion.Is_Null;
    end Derive_Opaque_Type;
 
+   --------------------------
+   -- Is_Formal_Expression --
+   --------------------------
+
+   function Is_Formal_Expression (E : LAL.Expr'Class) return Boolean is
+
+      use LAL;
+
+      function Formal_Visitor (Node : LAL.Ada_Node'Class) return Visit_Status;
+      --  Visitor to look for formals in an expression.
+
+      --------------------
+      -- Formal_Visitor --
+      --------------------
+
+      function Formal_Visitor (Node : LAL.Ada_Node'Class) return Visit_Status
+      is
+      begin
+         --  We want to forbid usages of generic formal parameters in pre and
+         --  post conditions.
+
+         if Node.Kind in Ada_Name
+           and then not Node.As_Name.P_Referenced_Decl.Is_Null
+           and then Node.As_Name.P_Referenced_Decl.P_Is_Formal
+         then
+            return Stop;
+         end if;
+
+         return Into;
+      end Formal_Visitor;
+   begin
+
+      --  The node is not generic. No need to check further.
+
+      if E.P_Generic_Instantiations'Length = 0 then
+         return False;
+      end if;
+
+      return
+        Traverse (E.P_Get_Uninstantiated_Node, Formal_Visitor'Access) = Stop;
+
+   end Is_Formal_Expression;
+
 end TGen.LAL_Utils;

@@ -67,6 +67,7 @@ package Test.Command_Lines is
       Minimize,
       Include_Subp_Name,
       Gen_Test_Binary,
+      Gen_Wrappers,
 
       --  Moved from the late Utils.Command_Lines.Common
 

@@ -111,4 +111,8 @@ package TGen.LAL_Utils is
    --  This function operates recursively in case of a multiple level type
    --  hierarchy.
 
+   function Is_Formal_Expression (E : LAL.Expr'Class) return Boolean;
+   --  Return True if E is an expression that contains a reference to a formal
+   --  generic parameter, False otherwise.
+
 end TGen.LAL_Utils;

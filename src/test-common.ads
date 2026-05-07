@@ -434,6 +434,9 @@ package Test.Common is
    --  Whether gnattest should generate tests in binary format instead of in
    --  JSON format.
 
+   Generate_Wrappers : Boolean := False;
+   --  Whether gnattest should generate TGen wrappers.
+
    JSON_Test_Dir : String_Access;
    --  Dir in which the test vector in json format should be stored / looked up
 

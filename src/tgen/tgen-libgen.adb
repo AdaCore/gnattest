@@ -828,6 +828,15 @@ package body TGen.Libgen is
            Name                 => To_Filename (Wrapper_Pkg));
 
    begin
+
+      if (for all Subp of Ctx.Included_Subps.Element (Pkg_Name) =>
+            not Subp.T.Supports_Wrappers)
+      then
+         --  No declarations are compatible with wrappers. Nothing to do to
+         --  for this package. Avoid creating body of empty packages.
+         return;
+      end if;
+
       Create (F_Spec, Out_File, File_Name & ".ads");
       Create (F_Body, Out_File, File_Name & ".adb");
 
@@ -863,12 +872,16 @@ package body TGen.Libgen is
                  Filename => "Dummy",
                  Buffer   => +Subp.Pre,
                  Rule     => Libadalang.Common.Expr_Rule);
-            Generate_Wrapper_For_Subprogram
-              (F_Spec             => F_Spec,
-               F_Body             => F_Body,
-               Subprogram         => Function_Typ (As_Function_Typ (Subp.T)),
-               Precond            => Unit.Root,
-               Templates_Root_Dir => To_String (Ctx.Root_Templates_Dir));
+
+            if Subp.T.Supports_Wrappers then
+               Generate_Wrapper_For_Subprogram
+                 (F_Spec             => F_Spec,
+                  F_Body             => F_Body,
+                  Subprogram         =>
+                    Function_Typ (As_Function_Typ (Subp.T)),
+                  Precond            => Unit.Root,
+                  Templates_Root_Dir => To_String (Ctx.Root_Templates_Dir));
+            end if;
          end;
       end loop;
 
@@ -972,11 +985,28 @@ package body TGen.Libgen is
            Relevant_Units  => Relevant_Units);
       Trans_Res : constant Translation_Result :=
         Translate (Subp.As_Basic_Decl, Ctx);
+
+      procedure Append_Wrapper_Diagnostic (Trans_Typ : Typ_Access);
+      --  Appends diagnostic if wrappers are not supported for the given type.
+
+      procedure Append_Wrapper_Diagnostic (Trans_Typ : Typ_Access) is
+      begin
+         if not Trans_Typ.Supports_Wrappers then
+            return;
+         end if;
+
+         Diags.Append
+           ("wrapper generation not supported for "
+            & Ada.Strings.Unbounded.To_Unbounded_String
+                (To_Ada (Trans_Typ.Name)));
+
+      end Append_Wrapper_Diagnostic;
    begin
       Array_Limit_Frozen := True;
       if Trans_Res.Success then
          Diags := Trans_Res.Res.all.Get_Diagnostics;
          if Diags.Is_Empty then
+            Append_Wrapper_Diagnostic (Trans_Res.Res);
             return Trans_Res.Res;
          end if;
       else
@@ -2182,4 +2212,17 @@ package body TGen.Libgen is
    begin
       return Ctx.Generic_Package_Instantiations.Contains (Pkg_Name);
    end Is_Top_Level_Generic_Inst;
+
+   -----------------------
+   -- Supports_Wrappers --
+   -----------------------
+
+   function Supports_Wrappers (Subp : LAL.Basic_Decl'Class) return Boolean is
+      A : constant Libadalang.Analysis.Expr'Class :=
+        Subp.P_Get_Aspect (To_Unbounded_Text (To_Text ("Pre"))).Value;
+   begin
+      return
+        not A.Is_Null and then not TGen.LAL_Utils.Is_Formal_Expression (A);
+   end Supports_Wrappers;
+
 end TGen.Libgen;

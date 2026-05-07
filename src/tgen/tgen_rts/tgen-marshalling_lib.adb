@@ -103,7 +103,7 @@ package body TGen.Marshalling_Lib is
             Read_Remainder (Stream, Buffer, Offset, Num, Byte);
             Val := Long_Long_Long_Unsigned (Byte);
             M := Shift_Right (M, Natural (Num));
-            Base := 2 ** Natural (Num);
+            Base := 2**Natural (Num);
          end;
       end if;
 
@@ -161,7 +161,7 @@ package body TGen.Marshalling_Lib is
       end if;
 
       --  Truncate V to its expected length
-      V := V and (2 ** Natural (Num) - 1);
+      V := V and (2**Natural (Num) - 1);
       Offset := Offset + Num;
    end Read_Remainder;
 
@@ -185,7 +185,7 @@ package body TGen.Marshalling_Lib is
               (if M < 128
                then Offset_Type'Min (-Offset, Size (Unsigned_8 (M)))
                else -Offset);
-            Mask : constant Long_Long_Long_Unsigned := 2 ** Natural (Num) - 1;
+            Mask : constant Long_Long_Long_Unsigned := 2**Natural (Num) - 1;
          begin
             Write_Remainder
               (Stream, Buffer, Offset, Num, Unsigned_8 (V and Mask));
@@ -721,9 +721,8 @@ package body TGen.Marshalling_Lib is
       is
       begin
          if F < 0
-           and then
-             Long_Long_Long_Integer (L)
-             > Long_Long_Long_Integer'Last + Long_Long_Long_Integer (F)
+           and then Long_Long_Long_Integer (L)
+                    > Long_Long_Long_Integer'Last + Long_Long_Long_Integer (F)
          then
             Max := Long_Long_Long_Unsigned'Last;
             Use_Coarse := True;
