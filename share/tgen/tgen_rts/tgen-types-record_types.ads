@@ -158,6 +158,10 @@ package TGen.Types.Record_Types is
             --  one of the discriminants of the ancestor part, which is then
             --  not constrained.
 
+            Has_Discr_Correspondence : Boolean := False;
+            --  True if the list of constraints includes discriminant
+            --  correspondences for derived types.
+
          when others =>
             null;
       end case;
