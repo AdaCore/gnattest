@@ -101,8 +101,11 @@ class PythonScriptDriver(BaseDriver):
         if mopt.build:
             self.testcase_cmd.append("--build=%s" % mopt.build)
 
-        if self.env.root_dir: 
+        if self.env.root_dir:
             self.testcase_cmd.append("--root-dir=%s" % self.env.root_dir)
+
+        if mopt.log_all:
+            self.testcase_cmd.append("--log-all")
 
     def run(self):
         env = dict(os.environ)
