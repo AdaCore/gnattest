@@ -83,8 +83,14 @@ package Utils.Projects is
       Stub_Exclusion_List_Attr,
       --  List of spec:filename that should not be stubbed
 
-      Default_Stub_Exclusion_List_Attr
+      Stub_Inclusion_List_Attr,
+      --  List of spec:filename that should not stubbed
+
+      Default_Stub_Exclusion_List_Attr,
       --  Response file to specify a stub exclusion list
+
+      Default_Stub_Inclusion_List_Attr
+      --  Response file to specify a stub inclusion list
 
      );
    --  List of GPR attributes

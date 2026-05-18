@@ -1,0 +1,4 @@
+description: Check that when excluding units from the stubbing process, gnattest
+  does not generate calls for their stubbing setters in code comments.
+
+driver: shell_script

@@ -1033,33 +1033,116 @@ package body Test.Common is
       return (for some P of P_List => P.Kind = Ada_Private_Part);
    end Is_Private;
 
-   ---------------------------------
-   -- Store_Default_Excluded_Stub --
-   ---------------------------------
+   ------------------------
+   -- Store_Default_Stub --
+   ------------------------
 
-   procedure Store_Default_Excluded_Stub (Excluded : String) is
+   procedure Store_Default_Stub
+     (Unit : String; Status : Stub_Status_Type; Error_Out : Boolean := True) is
    begin
-      Trace (Me_Stub, "do not ever stub " & Excluded);
-      Default_Stub_Exclusion_List.Include (Excluded);
-   end Store_Default_Excluded_Stub;
+      if Error_Out then
+         if not Default_Stub_List (not Status).Is_Empty then
+            Cmd_Error
+              ("Simultaneous use of --excluded-from-stubbing and"
+               & " --included-for-stubbing");
+         end if;
+      end if;
+      Trace (Me_Stub, Image (Status) & " " & Unit);
+      Default_Stub_List (Status).Include (Unit);
+   end Store_Default_Stub;
 
-   -------------------------
-   -- Store_Excluded_Stub --
-   -------------------------
+   ----------------
+   -- Store_Stub --
+   ----------------
 
-   procedure Store_Excluded_Stub (Source : String; Excluded : String) is
+   procedure Store_Stub
+     (UUT : String; Unit : String; Status : Stub_Status_Type)
+   is
       Local_Set : String_Set.Set := String_Set.Empty_Set;
    begin
-      Trace (Me_Stub, "do not stub " & Excluded & " when testing " & Source);
-      if Stub_Exclusion_Lists.Contains (Source) then
-         Local_Set := Copy (Stub_Exclusion_Lists.Element (Source));
-         Local_Set.Include (Excluded);
-         Stub_Exclusion_Lists.Replace (Source, Local_Set);
-      else
-         Local_Set.Include (Excluded);
-         Stub_Exclusion_Lists.Include (Source, Local_Set);
+      --  Error out if the user uses default --excluded-from-stubbing and
+      --  --included-for-stubbing.
+
+      if Stub_Lists (not Status).Contains (UUT) then
+         Cmd_Error
+           ("Simultaneous use of --excluded-from-stubbing "
+            & " and --included-for-stubbing for unit "
+            & UUT);
       end if;
-   end Store_Excluded_Stub;
+
+      Trace (Me_Stub, " " & Image (Status) & Unit & " when testing " & UUT);
+      if Stub_Lists (Status).Contains (UUT) then
+         Local_Set := Copy (Stub_Lists (Status).Element (UUT));
+         Local_Set.Include (Unit);
+         Stub_Lists (Status).Replace (UUT, Local_Set);
+      else
+         Local_Set.Include (Unit);
+         Stub_Lists (Status).Include (UUT, Local_Set);
+      end if;
+   end Store_Stub;
+
+   ---------------------
+   -- Has_Stub_Config --
+   ---------------------
+
+   function Has_Stub_Config return Boolean is
+   begin
+      return
+        not Default_Stub_List (Excluded).Is_Empty
+        or else not Default_Stub_List (Included).Is_Empty;
+   end Has_Stub_Config;
+
+   --------------------------
+   -- Has_Unit_Stub_Config --
+   --------------------------
+
+   function Has_Unit_Stub_Config (UUT : String) return Boolean is
+   begin
+      return
+        Stub_Lists (Excluded).Contains (UUT)
+        or else Stub_Lists (Included).Contains (UUT);
+   end Has_Unit_Stub_Config;
+
+   --------------
+   -- Has_Stub --
+   --------------
+
+   function Has_Stub (Unit : String) return Boolean is
+      function Is_Included return Boolean
+      is (Default_Stub_List (Included).Is_Empty
+          or else Default_Stub_List (Included).Contains (Unit));
+
+      function Is_Excluded return Boolean
+      is (Default_Stub_List (Excluded).Contains (Unit));
+   begin
+      return not Is_Excluded and then Is_Included;
+   end Has_Stub;
+
+   --------------
+   -- Has_Stub --
+   --------------
+
+   function Has_Stub (UUT : String; Unit : String) return Boolean is
+      function Is_Locally_Included return Boolean
+      is (Stub_Lists (Included).Contains (UUT)
+          and then Stub_Lists (Included).Element (UUT).Contains (Unit));
+
+      function Is_Locally_Excluded return Boolean
+      is (Stub_Lists (Excluded).Contains (UUT)
+          and then Stub_Lists (Excluded).Element (UUT).Contains (Unit));
+   begin
+      --  Local configuration overrides the global one
+
+      if Is_Locally_Excluded then
+         return False;
+      end if;
+
+      if Is_Locally_Included then
+         return True;
+      end if;
+
+      return Has_Stub (Unit);
+   end Has_Stub;
 
    -------------------
    -- Abstract_Type --

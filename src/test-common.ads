@@ -215,21 +215,45 @@ package Test.Common is
    --  more code than necessary, but we won't be missing any non-ghost
    --  cases.
 
-   --------------------
-   -- Stub exclusion --
-   --------------------
+   --------------------------------
+   -- Stub inclusion / exclusion --
+   --------------------------------
 
-   Default_Stub_Exclusion_List : String_Set.Set := String_Set.Empty_Set;
-   package String_To_String_Set is new
-     Ada.Containers.Indefinite_Ordered_Maps (String, String_Set.Set);
-   use String_To_String_Set;
-   Stub_Exclusion_Lists        : String_To_String_Set.Map :=
-     String_To_String_Set.Empty_Map;
+   type Stub_Status_Type is (Included, Excluded);
 
-   procedure Store_Default_Excluded_Stub (Excluded : String);
-   --  Store data on units that should not be stubbed for all UUTs
-   procedure Store_Excluded_Stub (Source : String; Excluded : String);
-   --  Store data on units that should not be stubbed for given UUT
+   function "not" (E : Stub_Status_Type) return Stub_Status_Type
+   is (case E is
+         when Included => Excluded,
+         when Excluded => Included);
+
+   function Image (S : Stub_Status_Type) return String
+   is (case S is
+         when Included => "included to stubbing",
+         when Excluded => "excluded from stubbing");
+
+   procedure Store_Default_Stub
+     (Unit : String; Status : Stub_Status_Type; Error_Out : Boolean := True);
+   --  Indicate that the unit should / should not be stubbed according to
+   --  Status. If Error_Out is set to True, error out when there are already
+   --  default stubs with the opposite Status.
+
+   procedure Store_Stub
+     (UUT : String; Unit : String; Status : Stub_Status_Type);
+   --  Indicate that the unit should / should not be stubbed according to
+   --  status, for the given UUT identified by its specification filename.
+
+   function Has_Stub_Config return Boolean;
+   --  Whether the user passed --exclude-from-stubbing or --include-to-stubbing
+
+   function Has_Unit_Stub_Config (UUT : String) return Boolean;
+   --  Whether the given UUT has a specific stub configuration, i.e. when
+   --  the user passes --exclude-from-stubbing=spec:filename.
+
+   function Has_Stub (Unit : String) return Boolean;
+   --  Whether the given unit is stubbed
+
+   function Has_Stub (UUT : String; Unit : String) return Boolean;
+   --  Return whether the given unit is stubbed for the given UUT
 
    ------------------------
    --  String constants  --
@@ -560,4 +584,25 @@ private
    Need_Lib_Support : Lib_Support_Status := Not_Needed;
    --  Whether we actually need to output the tgen_support library or not
 
+   ---------------------------------
+   --  Stub inclusion / exclusion --
+   ---------------------------------
+
+   type Default_Stub_Array is array (Stub_Status_Type) of String_Set.Set;
+   No_Default_Stub_Array : constant Default_Stub_Array :=
+     (Included => String_Set.Empty_Set, Excluded => String_Set.Empty_Set);
+
+   Default_Stub_List : Default_Stub_Array := No_Default_Stub_Array;
+   --  When using --excluded-from-stubbing=filename
+
+   package String_To_String_Set is new
+     Ada.Containers.Indefinite_Ordered_Maps (String, String_Set.Set);
+   use String_To_String_Set;
+   type Stub_Array is array (Stub_Status_Type) of String_To_String_Set.Map;
+   No_Stub_Array : constant Stub_Array :=
+     (Included => String_To_String_Set.Empty_Map,
+      Excluded => String_To_String_Set.Empty_Map);
+
+   Stub_Lists : Stub_Array := No_Stub_Array;
+   --  When using --excluded-from-stubbing=spec:filename
 end Test.Common;

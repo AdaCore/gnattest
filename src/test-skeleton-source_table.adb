@@ -253,7 +253,7 @@ package body Test.Skeleton.Source_Table is
    --  Create a extending project tree rooted at Proj, overriding the default
    --  sources in the tree with the required stubs and helper units.
    --  Get_Sources is a callback to get the list of sources that should be part
-   --  of the extending project for Proj ???
+   --  of the extending project for Proj.
    --
    --  This is a helper for Enforce_Custom_Project_Extension and
    --  Enforce_Project_Extension.
@@ -658,6 +658,7 @@ package body Test.Skeleton.Source_Table is
    -----------------------------
    --  Get_Source_Output_Dir  --
    -----------------------------
+
    function Get_Source_Output_Dir (Source_Name : String) return String is
       SN : constant String := Normalize_Source_Name (Source_Name);
       SR : constant SF_Record := Source_File_Table.Element (SF_Table, SN);
@@ -1609,8 +1610,6 @@ package body Test.Skeleton.Source_Table is
    is
       Short_Name : constant String := Base_Name (File_Name);
 
-      Excluded_Sources : String_Set.Set := String_Set.Empty_Set;
-
       Subroot_Prj_Name : constant String :=
         Get_Source_Project_Name (File_Name);
 
@@ -1633,7 +1632,7 @@ package body Test.Skeleton.Source_Table is
                if SF_Table.Constant_Reference (Cur).Project_Name.all = Proj
                  and then not Is_Body (Key)
                  and then Source_Stubbed (Key)
-                 and then not Excluded_Sources.Contains (Base_Name (Key))
+                 and then Has_Stub (Base_Name (File_Name), Base_Name (Key))
                then
                   Current_Proj_Present_Sources.Include (Key);
                end if;
@@ -1643,29 +1642,12 @@ package body Test.Skeleton.Source_Table is
 
       --  Start of processing for Enforce_Custom_Project_Extension
    begin
-      Union (Excluded_Sources, Default_Stub_Exclusion_List);
-      if Stub_Exclusion_Lists.Contains (Short_Name) then
-         Union (Excluded_Sources, Stub_Exclusion_Lists.Element (Short_Name));
-      end if;
-
-      if Excluded_Sources.Is_Empty then
-         Trace
-           (Me,
-            "No special extending project subtree needed for" & Short_Name);
-         return;
-      end if;
-
       Trace
         (Me, "Creating extending project subtree for source " & Short_Name);
 
       if Me_Verbose.Is_Active then
          Trace (Me_Verbose, "Current infix is " & Current_Source_Infix);
          Trace (Me_Verbose, "Root of subtree is " & Subroot_Prj_Name);
-         Trace (Me_Verbose, "excluded sources are:");
-         Increase_Indent (Me_Verbose);
-         for Source of Excluded_Sources loop
-            Trace (Me_Verbose, Source);
-         end loop;
          Decrease_Indent (Me_Verbose);
       end if;
 
@@ -1705,8 +1687,7 @@ package body Test.Skeleton.Source_Table is
                if SF_Table.Constant_Reference (Cur).Project_Name.all = Proj
                  and then not Is_Body (Key)
                  and then Source_Stubbed (Key)
-                 and then not Default_Stub_Exclusion_List.Contains
-                                (Base_Name (Key))
+                 and then Has_Stub (Base_Name (Key))
                then
                   Current_Proj_Present_Sources.Include (Key);
                end if;

@@ -7968,6 +7968,9 @@ package body Test.Skeleton is
    function Get_Direct_Callees_Setters
      (Subp : Basic_Decl) return String_Set.Set
    is
+      Spec_Name : constant String :=
+        Ada.Directories.Simple_Name (Subp.Unit.Get_Filename);
+
       Result : String_Set.Set;
 
       function Get_Callees (Node : Ada_Node'Class) return Visit_Status;
@@ -8012,7 +8015,15 @@ package body Test.Skeleton is
          end if;
 
          if not Source_Present (Decl.Unit.Get_Filename) then
-            --
+            return Over;
+         end if;
+
+         --  Skip if it is part of the stub exclusion list for the unit
+
+         if not Has_Stub
+                  (Spec_Name,
+                   Ada.Directories.Simple_Name (Decl.Unit.Get_Filename))
+         then
             return Over;
          end if;
 
@@ -8482,16 +8493,8 @@ package body Test.Skeleton is
             return False;
          end if;
 
-         if Default_Stub_Exclusion_List.Contains (File_Name) then
+         if not Has_Stub (Arg_File_Name, File_Name) then
             return False;
-         end if;
-
-         if Stub_Exclusion_Lists.Contains (Arg_File_Name) then
-            if Stub_Exclusion_Lists.Element (Arg_File_Name).Contains
-                 (File_Name)
-            then
-               return False;
-            end if;
          end if;
          return True;
       end Good_To_Stub;

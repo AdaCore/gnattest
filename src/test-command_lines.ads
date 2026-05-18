@@ -168,6 +168,7 @@ package Test.Command_Lines is
 
    type Test_String_Seqs is
      (Exclude_From_Stubbing,
+      Include_For_Stubbing,
 
       --  Moved from the late Utils.Command_Lines.Common
 
@@ -182,6 +183,7 @@ package Test.Command_Lines is
    package Test_String_Seq_Syntax is new
      Test_String_Seq_Switches.Set_Syntax
        ([Exclude_From_Stubbing => '!',
+         Include_For_Stubbing  => '!',
          Debug                 => '!',
          Files                 => '=',
          Ignore                => '=',
