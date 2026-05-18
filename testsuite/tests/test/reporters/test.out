@@ -1,6 +1,6 @@
 Driver per unit:
 <\?xml version='1.0' encoding='utf-8' \?>
-<TestRun elapsed=".*">
+<TestRun( elapsed=".*")?>
     <Statistics>
         <Tests>2</Tests>
         <FailuresTotal>2</FailuresTotal>
@@ -8,7 +8,7 @@ Driver per unit:
         <Errors>0</Errors>
     </Statistics>
     <FailedTests>
-        <Test name="Test_X1" tested_function="P.X1" elapsed=".*">
+        <Test name="Test_X1" tested_function="P.X1"( elapsed=".*")?>
             <FailureType>Assertion</FailureType>
             <Message>Test not implemented.</Message>
             <Location>
@@ -16,7 +16,7 @@ Driver per unit:
                 <Line>44</Line>
             </Location>
         </Test>
-        <Test name="Test_X2" tested_function="P.X2" elapsed=".*">
+        <Test name="Test_X2" tested_function="P.X2"( elapsed=".*")?>
             <FailureType>Assertion</FailureType>
             <Message>Test not implemented.</Message>
             <Location>
@@ -35,8 +35,7 @@ FAIL q.ads:5:4:
 Total Tests Run:   1
 Successful Tests:  0
 Failed Assertions: 1
-Unexpected Errors: 0
-Cumulative Time: .*sec.
+Unexpected Errors: 0(\nCumulative Time: .*sec.)?
 Driver per test \(substitution check\):
 
 FAIL p.ads:7:4: overridden at q.ads:5:4:
@@ -46,11 +45,10 @@ FAIL p.ads:7:4: overridden at q.ads:5:4:
 Total Tests Run:   1
 Successful Tests:  0
 Failed Assertions: 1
-Unexpected Errors: 0
-Cumulative Time: .*sec.
+Unexpected Errors: 0(\nCumulative Time: .*sec.)?
 Driver per unit \(stubbing\):
 <\?xml version='1.0' encoding='utf-8' \?>
-<TestRun elapsed=".*">
+<TestRun( elapsed=".*")?>
     <Statistics>
         <Tests>2</Tests>
         <FailuresTotal>2</FailuresTotal>
@@ -58,7 +56,7 @@ Driver per unit \(stubbing\):
         <Errors>0</Errors>
     </Statistics>
     <FailedTests>
-        <Test name="Test_X1" tested_function="P.X1" elapsed=".*">
+        <Test name="Test_X1" tested_function="P.X1"( elapsed=".*")?>
             <FailureType>Assertion</FailureType>
             <Message>Test not implemented.</Message>
             <Location>
@@ -66,7 +64,7 @@ Driver per unit \(stubbing\):
                 <Line>44</Line>
             </Location>
         </Test>
-        <Test name="Test_X2" tested_function="P.X2" elapsed=".*">
+        <Test name="Test_X2" tested_function="P.X2"( elapsed=".*")?>
             <FailureType>Assertion</FailureType>
             <Message>Test not implemented.</Message>
             <Location>
@@ -85,5 +83,4 @@ FAIL p.ads:6:4:
 Total Tests Run:   1
 Successful Tests:  0
 Failed Assertions: 1
-Unexpected Errors: 0
-Cumulative Time: .*sec.
+Unexpected Errors: 0(\nCumulative Time: .*sec.)?

@@ -3,5 +3,5 @@ description:
   --exit-status, check that passing one of their two possible options is
   accepted in any casing.
 
-driver: shell_script
+driver: python_script
 

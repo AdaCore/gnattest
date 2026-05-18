@@ -11,4 +11,4 @@ description: |
   In this test, instead of generating the tests for "nested/prj_1" in foo/
   they would have been generated under foo/nested/prj_1/.
 
-driver: shell_script
+driver: python_script

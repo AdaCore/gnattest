@@ -13,13 +13,19 @@ def contents_of(filename):
         return "\n".join(f.readlines())
 
 def test(arg):
-    actual_p = run_gnattest("simple", [f"--dump-subp-hash={arg}"], True, output=PIPE)
+    actual_p = run_gnattest(
+        "simple",
+        [f"--dump-subp-hash={arg}"],
+        output=PIPE,
+        output_in_baseline=False,
+        allow_failure=True,
+    )
     if actual_p.status != 0:
         print(f"Error running {actual_p.command_line_image()}:")
         print(actual_p.out)
         exit(1)
     actual_hash = actual_p.out.strip()
-    
+
     expected_p = run_gnattest("simple", ["simple.ads", "--gen-test-vectors"], True)
     if expected_p.status != 0:
         print(f"Error running {expected_p.command_line_image()}:")
