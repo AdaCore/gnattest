@@ -229,8 +229,9 @@ package TGen.JSON.Test_Cases is
    --  Returns subprogram global values if applicable.
 
    function Create_Parameter
-     (Name : String; Type_Name : String; Value : JSON_Value)
-      return Subprogram_Parameter;
+     (Name : String; Type_Name : String; Mode : String; Value : JSON_Value)
+      return Subprogram_Parameter
+   with Pre => Mode in "in" | "out" | "in out";
    --  Create a parameter object for the given Ada Name, for which the type's
    --  fully qualified name is Type_Name, and represented by Value.
    --
