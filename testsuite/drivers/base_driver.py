@@ -69,10 +69,16 @@ class BaseDriver(DiffTestDriver):
 
     @property
     def test_control_creator(self):
+        assert self.env.main_options
         return YAMLTestControlCreator(
             {
                 "windows": self.env.target.os.name == "windows",
                 "x86": self.env.target.cpu.bits == 32,
+                "native": self.env.target.is_host,
+                "rts_light": self.env.main_options.RTS
+                and ("light" in self.env.main_options.RTS),
+                "rts_embedded": self.env.main_options.RTS
+                and ("embedded" in self.env.main_options.RTS),
             }
         )
 

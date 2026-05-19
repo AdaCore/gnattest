@@ -2,6 +2,9 @@ description: |
   From acats testsuite (`cxc7002a`).
   Original test here https://github.com/simonjwright/ACATS/blob/master/tests/cxc/cxc7002.a
 
-driver: shell_script
+driver: python_script
 
 canonicalize_backslashes: true
+
+control:
+  - [SKIP, 'not native', 'Test not designed for cross applications']

@@ -1,5 +1,8 @@
-Units remaining: 2     Units remaining: 1     gnattest: Could not find unit aunit.ads while processing tests.ads to find additional tests.
+Units remaining: 2     
+Units remaining: 1     
+gnattest: Could not find unit aunit.ads while processing tests.ads to find additional tests.
 Ensure extra_tests.gpr passed to --additional-tests depends on the tested project and can be compiled.
-Units remaining: 2     Units remaining: 1     gnattest: Could not find unit pkg.ads while processing tests.ads to find additional tests.
+Units remaining: 2     
+Units remaining: 1     
+gnattest: Could not find unit pkg.ads while processing tests.ads to find additional tests.
 Ensure extra_tests.gpr passed to --additional-tests depends on the tested project and can be compiled.
->>>program returned status code 1

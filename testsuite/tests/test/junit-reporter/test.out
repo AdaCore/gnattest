@@ -1,53 +1,53 @@
 Driver per unit:
 <\?xml version="1.0" encoding="utf-8"\?>
-<testsuites skipped="0" tests="2" failures="2" errors="0" time=".*">
-    <testsuite name="P.T_Test_Data.T_Tests" skipped="0" tests="2" failures="2" errors="0" time=".*">
-        <testcase name="Test_X1" classname="P.T_Test_Data.T_Tests" file=".*/gnattest/tests/p-t_test_data-t_tests.ads" time=".*">
+<testsuites skipped="0" tests="2" failures="2" errors="0"( time=".*")?>
+    <testsuite name="P.T_Test_Data.T_Tests" skipped="0" tests="2" failures="2" errors="0"( time=".*")?>
+        <testcase name="Test_X1" classname="P.T_Test_Data.T_Tests" file=".*/gnattest/tests/p-t_test_data-t_tests.ads"( time=".*")?>
             <failure><\!\[CDATA\[Assertion failed: "Test not implemented." at p-t_test_data-t_tests.adb:44]]></failure>
         </testcase>
-        <testcase name="Test_X2" classname="P.T_Test_Data.T_Tests" file=".*/gnattest/tests/p-t_test_data-t_tests.ads" time=".*">
+        <testcase name="Test_X2" classname="P.T_Test_Data.T_Tests" file=".*/gnattest/tests/p-t_test_data-t_tests.ads"( time=".*")?>
             <failure><\!\[CDATA\[Assertion failed: "Test not implemented." at p-t_test_data-t_tests.adb:65]]></failure>
         </testcase>
     </testsuite>
 </testsuites>
 Driver per test:
 <\?xml version="1.0" encoding="utf-8"\?>
-<testsuites skipped="0" tests="1" failures="1" errors="0" time=".*">
-    <testsuite name="Q.T2_Test_Data.T2_Tests" skipped="0" tests="1" failures="1" errors="0" time=".*">
-        <testcase name="Test_X2" classname="Q.T2_Test_Data.T2_Tests" file="tests/q-t2_test_data-t2_tests.ads" time=".*">
+<testsuites skipped="0" tests="1" failures="1" errors="0"( time=".*")?>
+    <testsuite name="Q.T2_Test_Data.T2_Tests" skipped="0" tests="1" failures="1" errors="0"( time=".*")?>
+        <testcase name="Test_X2" classname="Q.T2_Test_Data.T2_Tests" file="tests/q-t2_test_data-t2_tests.ads"( time=".*")?>
             <failure><\!\[CDATA\[Assertion failed: "Test not implemented." at q-t2_test_data-t2_tests.adb:44]]></failure>
         </testcase>
     </testsuite>
 </testsuites>
 Driver per test \(substitution check\):
 <\?xml version="1.0" encoding="utf-8"\?>
-<testsuites skipped="0" tests="1" failures="1" errors="0" time=".*">
-    <testsuite name="Q.T2_Test_Data.T2_Tests" skipped="0" tests="1" failures="1" errors="0" time=".*">
-        <testcase name="Test_X2" classname="Q.T2_Test_Data.T2_Tests" file="tests/q-t2_test_data-t2_tests.ads" time=".*">
+<testsuites skipped="0" tests="1" failures="1" errors="0"( time=".*")?>
+    <testsuite name="Q.T2_Test_Data.T2_Tests" skipped="0" tests="1" failures="1" errors="0"( time=".*")?>
+        <testcase name="Test_X2" classname="Q.T2_Test_Data.T2_Tests" file="tests/q-t2_test_data-t2_tests.ads"( time=".*")?>
             <failure><\!\[CDATA\[Assertion failed: "Test not implemented." at p-t_test_data-t_tests.adb:65]]></failure>
         </testcase>
     </testsuite>
 </testsuites>
 Driver per unit \(stubbing\):
 <\?xml version="1.0" encoding="utf-8"\?>
-<testsuites skipped="0" tests="2" failures="2" errors="0" time=".*">
-    <testsuite name="P.T_Test_Data.T_Tests" skipped="0" tests="2" failures="2" errors="0" time=".*">
-        <testcase name="Test_X1" classname="P.T_Test_Data.T_Tests" file=".*/gnattest_stub/tests/p-t_test_data-t_tests.ads" time=".*">
+<testsuites skipped="0" tests="2" failures="2" errors="0"( time=".*")?>
+    <testsuite name="P.T_Test_Data.T_Tests" skipped="0" tests="2" failures="2" errors="0"( time=".*")?>
+        <testcase name="Test_X1" classname="P.T_Test_Data.T_Tests" file=".*/gnattest_stub/tests/p-t_test_data-t_tests.ads"( time=".*")?>
             <failure><\!\[CDATA\[Assertion failed: "Test not implemented." at p-t_test_data-t_tests.adb:44]]></failure>
         </testcase>
-        <testcase name="Test_X2" classname="P.T_Test_Data.T_Tests" file=".*/gnattest_stub/tests/p-t_test_data-t_tests.ads" time=".*">
+        <testcase name="Test_X2" classname="P.T_Test_Data.T_Tests" file=".*/gnattest_stub/tests/p-t_test_data-t_tests.ads"( time=".*")?>
             <failure><\!\[CDATA\[Assertion failed: "Test not implemented." at p-t_test_data-t_tests.adb:65]]></failure>
         </testcase>
     </testsuite>
 </testsuites>
 Driver file path relative \(stubbing\):
 <\?xml version="1.0" encoding="utf-8"\?>
-<testsuites skipped="0" tests="2" failures="2" errors="0" time=".*">
-    <testsuite name="P.T_Test_Data.T_Tests" skipped="0" tests="2" failures="2" errors="0" time=".*">
-        <testcase name="Test_X1" classname="P.T_Test_Data.T_Tests" file="tests/p-t_test_data-t_tests.ads" time=".*">
+<testsuites skipped="0" tests="2" failures="2" errors="0"( time=".*")?>
+    <testsuite name="P.T_Test_Data.T_Tests" skipped="0" tests="2" failures="2" errors="0"( time=".*")?>
+        <testcase name="Test_X1" classname="P.T_Test_Data.T_Tests" file="tests/p-t_test_data-t_tests.ads"( time=".*")?>
             <failure><\!\[CDATA\[Assertion failed: "Test not implemented." at p-t_test_data-t_tests.adb:44]]></failure>
         </testcase>
-        <testcase name="Test_X2" classname="P.T_Test_Data.T_Tests" file="tests/p-t_test_data-t_tests.ads" time=".*">
+        <testcase name="Test_X2" classname="P.T_Test_Data.T_Tests" file="tests/p-t_test_data-t_tests.ads"( time=".*")?>
             <failure><\!\[CDATA\[Assertion failed: "Test not implemented." at p-t_test_data-t_tests.adb:65]]></failure>
         </testcase>
     </testsuite>

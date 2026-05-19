@@ -1,6 +1,6 @@
 description:
     gnattest test
 
-driver: shell_script
+driver: python_script
 control:
     - [SKIP, 'windows', 'No symbolic links on Windows']

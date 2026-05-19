@@ -1,4 +1,6 @@
 description: Check that the stubbing mode of gnattest correctly supports
   aggregate library projects.
 
-driver: shell_script
+driver: python_script
+control:
+  - [SKIP, 'not native', 'Test not designed for cross applications']

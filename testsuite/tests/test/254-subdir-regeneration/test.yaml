@@ -5,5 +5,5 @@ description:
   This is to avoid gnattest seeing a previouly generated test subdirectory
   as a source directory when ran twice in row.
 
-driver: shell_script
+driver: python_script
 

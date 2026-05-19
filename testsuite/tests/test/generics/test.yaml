@@ -2,4 +2,4 @@ description: |
   Generates a test harness for a generic package (instantiated in a regular
   package). One unimplemented test sould be generated.
 
-driver: shell_script
+driver: python_script
