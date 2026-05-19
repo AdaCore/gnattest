@@ -4,3 +4,5 @@ description:
 driver: python_script
 baseline_regexp: True
 
+control:
+  - [SKIP, 'rts_light', 'Test needs at least embedded runtime']

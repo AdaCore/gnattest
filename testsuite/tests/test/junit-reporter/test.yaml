@@ -4,3 +4,6 @@ description:
 driver: python_script
 canonicalize_backslashes: True
 baseline_regexp: True
+
+control:
+  - [SKIP, "rts_light", "JUnit reporter needs embedded runtime"]
