@@ -41,15 +41,26 @@ include:
       cpus: 16
       disk: 80
 
-  # Testing cross
+  # Testing cross - light runtime, 32bit target
   - component: $CI_SERVER_FQDN/eng/gitlab-templates/test@~latest
     inputs:
       needs: ["instrumented-build:linux"]
-      job-name: gnattest-cross
-      anod-args: test gnattest --target="ppc-elf,,qemu-8641d" -QRTS="light-mpc8641"
+      job-name: gnattest-cross-light
+      anod-args: run test_cross_light
       image: pe-base
       cpus: 16
       disk: 80
+
+  # Testing cross - embedded runtime, 64bit target
+  - component: $CI_SERVER_FQDN/eng/gitlab-templates/test@~latest
+    inputs:
+      needs: ["instrumented-build:linux"]
+      job-name: gnattest-cross-embedded
+      anod-args: run test_cross_embedded
+      image: pe-base
+      cpus: 16
+      disk: 80
+
 
 
   # Non instrumented builds of gnattest go into the testing stage, both Linux
@@ -116,6 +127,16 @@ gnattest:linux:
   <<: *artifacts
 
 gnattest-gnatfuzz:linux:
+  <<: *test_before_script
+  <<: *test_after_script
+  <<: *artifacts
+
+gnattest-cross-light:linux:
+  <<: *test_before_script
+  <<: *test_after_script
+  <<: *artifacts
+
+gnattest-cross-embedded:linux:
   <<: *test_before_script
   <<: *test_after_script
   <<: *artifacts
