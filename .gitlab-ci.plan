@@ -1,10 +1,10 @@
 cov_qualifier={"instr-cov": True}
 
-def build_(qualifier=cov_qualifier):
+def build(qualifier=cov_qualifier):
     with defaults(qualifier=qualifier):
         anod_build("gnattest")
 
-def test_(qualifier=cov_qualifier):
+def test_native(qualifier=cov_qualifier):
     with defaults(qualifier=qualifier):
         # Install the component built in the preceding CI build job
         anod_install("gnattest")
@@ -33,14 +33,3 @@ def test_cross_embedded():
         target="aarch64-elf,,qemu-zynqmp",
         qualifier={"RTS": "embedded-zynqmp", **cov_qualifier},
     )
-
-
-# Edge
-
-edge_qualifier = {"edge": True, **cov_qualifier}
-
-def build_edge():
-    build_(edge_qualifier)
-
-def test_edge():
-    test_(edge_qualifier)

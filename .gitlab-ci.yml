@@ -25,7 +25,7 @@ include:
     inputs:
       stage: build
       job-name: instrumented-build
-      anod-args: run build_$ACI_TRACK
+      anod-args: run build
       cpus: 16
       image: pe-base
       save-component: true
@@ -36,7 +36,7 @@ include:
     inputs:
       needs: ["instrumented-build:linux"]
       job-name: gnattest
-      anod-args: run test_$ACI_TRACK
+      anod-args: run test_native
       image: pe-base
       cpus: 16
       disk: 80
