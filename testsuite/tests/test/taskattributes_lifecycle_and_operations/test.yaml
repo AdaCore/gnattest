@@ -6,4 +6,5 @@ driver: python_script
 
 canonicalize_backslashes: true
 
-native_only: true
+control:
+  - [SKIP, 'not native', 'Test not designed for cross applications']

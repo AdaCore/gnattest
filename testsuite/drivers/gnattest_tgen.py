@@ -5,7 +5,7 @@ from pathlib import Path
 
 from typing import AnyStr
 
-from e3.testsuite.driver.classic import TestAbortWithError
+from e3.testsuite.driver.classic import TestAbortWithError, TestSkip
 from e3.testsuite.driver.diff import PatternSubstitute
 from e3.fs import cp
 
@@ -48,6 +48,13 @@ class GNATTestTgenDriver(BaseDriver):
     @property
     def output_refiners(self):
         return super().output_refiners + [Address_Hider()]
+    
+    def set_up(self):
+        super().set_up()
+
+        # gnattest_tgen should not be run in cross configs for now
+        if self.env.main_options and self.env.main_options.target:
+            raise TestSkip("TGen does not run for cross targets yet")
 
     def run(self):
         # generate a default gpr file if the test asks for one

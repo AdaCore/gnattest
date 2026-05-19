@@ -1,3 +1,4 @@
+from e3.testsuite.driver.classic import TestSkip
 from drivers.base_driver import BaseDriver
 
 
@@ -15,6 +16,13 @@ class ShellScriptDriver(BaseDriver):
     This driver will run the sh script. Its output is then checked against
     the expected output (test.out file). Use this driver only for legacy tests.
     """
+
+    def set_up(self):
+        super().set_up()
+
+        # shell scripts should not be run in cross configs
+        if self.env.main_options and self.env.main_options.target:
+            raise TestSkip("Shell script does not run for cross targets")
 
     @property
     def default_process_timeout(self):

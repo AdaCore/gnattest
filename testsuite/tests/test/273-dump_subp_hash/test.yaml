@@ -2,4 +2,5 @@ description: Test that asserts that --dump-subp-hash=<filename>:<line>
     indeed prints the correct hash.
 
 driver: python_script
-native_only: true
+control:
+  - [SKIP, 'not native', 'Test not designed for cross applications']

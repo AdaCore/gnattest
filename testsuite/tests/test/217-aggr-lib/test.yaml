@@ -2,4 +2,5 @@ description: Check that the stubbing mode of gnattest correctly supports
   aggregate library projects.
 
 driver: python_script
-native_only: true
+control:
+  - [SKIP, 'not native', 'Test not designed for cross applications']

@@ -2,4 +2,5 @@ description: Ensure that gnattest generates legal sources when some
   defining names contain trivia tokens, such as newline characters.
 
 driver: python_script
-native_only: true
+control:
+  - [SKIP, 'not native', 'Test not designed for cross applications']

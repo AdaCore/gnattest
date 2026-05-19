@@ -198,26 +198,6 @@ class Testsuite(e3.testsuite.Testsuite):
             else None
         )
 
-    def get_test_list(self, sublist: List[str]) -> List[ParsedTest]:
-        """
-        Get the list of test to run.
-
-        If the target arguments was passed, filter to only run the crossable test.
-        """
-
-        def _filter_tests(test: ParsedTest):
-            return (
-                (test.driver_cls
-                and test.driver_cls.__name__ == "PythonScriptDriver")
-                and not test.test_env.get("native_only", False) 
-            )
-
-        test_list = super().get_test_list(sublist)
-        if self.main.args and self.main.args.target:
-            test_list = list(filter(_filter_tests, test_list))
-
-        return test_list
-
 
 if __name__ == "__main__":
     Testsuite(os.path.dirname(__file__)).testsuite_main()

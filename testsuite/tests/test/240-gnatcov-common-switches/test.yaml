@@ -3,4 +3,5 @@ description: Test that the common switches in the gnatcov package are correctly
 
 driver: python_script
 
-native_only: true
+control:
+  - [SKIP, 'not native', 'Test not designed for cross applications']
