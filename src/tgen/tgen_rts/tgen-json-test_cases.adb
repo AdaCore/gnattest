@@ -366,7 +366,7 @@ package body TGen.JSON.Test_Cases is
    ----------------------
 
    function Create_Parameter
-     (Name : String; Type_Name : String; Value : JSON_Value)
+     (Name : String; Type_Name : String; Mode : String; Value : JSON_Value)
       return Subprogram_Parameter is
    begin
       return
@@ -375,6 +375,7 @@ package body TGen.JSON.Test_Cases is
       do
          Res.Parameter_Root.Set_Field ("name", Create (Name));
          Res.Parameter_Root.Set_Field ("type_name", Create (Type_Name));
+         Res.Parameter_Root.Set_Field ("mode", Create (Mode));
          Res.Parameter_Root.Set_Field ("value", Value);
       end return;
    end Create_Parameter;

@@ -1691,6 +1691,7 @@ package body TGen.Libgen is
 
             Param_Names : Vector_Tag;
             Param_Types : Vector_Tag;
+            Param_Modes : Vector_Tag;
             Input_FNs   : Vector_Tag;
             Output_FNs  : Vector_Tag;
             J2B_FNs     : Vector_Tag;
@@ -1750,6 +1751,10 @@ package body TGen.Libgen is
                   Concrete_Typ := Element (Param_Cur);
                end if;
                Param_Types.Append (Concrete_Typ.all.FQN (No_Std => Bin_Tests));
+               Param_Modes.Append
+                 (Fun_Typ.Param_Modes.Constant_Reference
+                    (Unbounded_String (Key (Param_Cur)))
+                    .Image);
                Input_FNs.Append (Input_Fname_For_Typ (Concrete_Typ.all.Name));
                Output_FNs.Append
                  (Output_Fname_For_Typ (Concrete_Typ.all.Name));
@@ -1758,6 +1763,7 @@ package body TGen.Libgen is
             end loop;
             Assocs.Insert (Assoc ("PARAM_NAME", Param_Names));
             Assocs.Insert (Assoc ("PARAM_TY", Param_Types));
+            Assocs.Insert (Assoc ("PARAM_MODE", Param_Modes));
 
             --  Deal with globals
 

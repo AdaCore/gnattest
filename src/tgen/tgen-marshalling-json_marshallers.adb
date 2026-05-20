@@ -305,6 +305,7 @@ package body TGen.Marshalling.JSON_Marshallers is
       Param_Names      : Vector_Tag;
       Param_Types      : Vector_Tag;
       Param_Full_Types : Vector_Tag;
+      Param_Modes      : Vector_Tag;
       Param_FNs        : Vector_Tag;
 
       Global_Names      : Vector_Tag;
@@ -351,9 +352,14 @@ package body TGen.Marshalling.JSON_Marshallers is
            (Output_Fname_For_Typ
               (FN_Typ.Component_Types.Constant_Reference (Param_Cur).all
                  .Name));
+         Param_Modes.Append
+           (FN_Typ.Param_Modes.Constant_Reference
+              (Unbounded_String (Key (Param_Cur)))
+              .Image);
       end loop;
       Assocs.Insert (Assoc ("PARAM_NAME", Param_Names));
       Assocs.Insert (Assoc ("PARAM_TY", Param_Types));
+      Assocs.Insert (Assoc ("PARAM_MODE", Param_Modes));
       Assocs.Insert (Assoc ("LAL_PARAM_TY", Param_Full_Types));
       Assocs.Insert (Assoc ("PARAM_TY_OUTPUT_FN", Param_FNs));
 

@@ -89,6 +89,7 @@
                TGen.JSON.Test_Cases.Create_Parameter
                  (Name      => "@_PARAM_NAME_@",
                   Type_Name => "@_PARAM_TY_@",
+                  Mode      => "@_PARAM_MODE_@",
                   Value     => Values.Get("param_values").Get("@_PARAM_NAME_@")));
 @@END_TABLE@@
 @@TABLE@@
@@ -97,6 +98,7 @@
                TGen.JSON.Test_Cases.Create_Parameter
                  (Name      => "@_GLOBAL_NAME_@",
                   Type_Name => "@_GLOBAL_TY_@",
+                  Mode      => "in",
                   Value     => Values.Get("global_values").Get("@_GLOBAL_NAME_@")));
 @@END_TABLE@@
             TGen.JSON.Test_Cases.Add_Test
