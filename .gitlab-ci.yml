@@ -106,8 +106,7 @@ include:
   after_script:
     - cat /tmp/ci_env.sh
     - . /tmp/ci_env.sh
-    - TEST_BSN=$(anod eval --primitive=test gnattest -Q instr-cov build_space_name --sandbox-dir=$ANOD_DEFAULT_SANDBOX_DIR)
-    - mv $ANOD_DEFAULT_SANDBOX_DIR/x86_64-linux/$TEST_BSN/test/coverage/cobertura.xml $CI_PROJECT_DIR/coverage/cobertura.xml
+    - find $ANOD_DEFAULT_SANDBOX_DIR -name "cobertura.xml" -exec mv {} $CI_PROJECT_DIR/coverage/cobertura.xml \;
 
 .common_artifacts_bits: &artifacts
   artifacts:
