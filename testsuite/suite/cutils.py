@@ -8,6 +8,7 @@ toplevel suite driver. In particular, they don't depend on the current
 import os
 import sys
 
+
 def exit_if(t, comment):
     """
     If `t` is true, print `comment` on the standard error stream and exit with
@@ -17,7 +18,23 @@ def exit_if(t, comment):
         sys.stderr.write(comment + "\n")
         exit(1)
 
+
 def clear(f):
     """Remove file F if it exists"""
     if os.path.exists(f):
         os.remove(f)
+
+
+def contents_of(filename: str) -> str:
+    """
+    Return the contents of filename as a single string. filename is expected to exist.
+    """
+    with open(filename) as fd:
+        return fd.read()
+
+
+def cat(filename: str, flush=False):
+    """
+    Print the contents of filename on stdout. filename is expected to exist
+    """
+    print(contents_of(filename), flush=flush)
