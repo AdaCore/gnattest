@@ -25,7 +25,7 @@ include:
     inputs:
       stage: build
       job-name: instrumented-build
-      anod-args: run build_$ACI_TRACK
+      anod-args: run build
       cpus: 16
       image: pe-base
       save-component: true
@@ -36,20 +36,31 @@ include:
     inputs:
       needs: ["instrumented-build:linux"]
       job-name: gnattest
-      anod-args: run test_$ACI_TRACK
+      anod-args: run test_native
       image: pe-base
       cpus: 16
       disk: 80
 
-  # Testing cross
+  # Testing cross - light runtime, 32bit target
   - component: $CI_SERVER_FQDN/eng/gitlab-templates/test@~latest
     inputs:
       needs: ["instrumented-build:linux"]
-      job-name: gnattest-cross
-      anod-args: test gnattest --target="ppc-elf,,qemu-8641d" -QRTS="light-mpc8641"
+      job-name: gnattest-cross-light
+      anod-args: run test_cross_light
       image: pe-base
       cpus: 16
       disk: 80
+
+  # Testing cross - embedded runtime, 64bit target
+  - component: $CI_SERVER_FQDN/eng/gitlab-templates/test@~latest
+    inputs:
+      needs: ["instrumented-build:linux"]
+      job-name: gnattest-cross-embedded
+      anod-args: run test_cross_embedded
+      image: pe-base
+      cpus: 16
+      disk: 80
+
 
 
   # Non instrumented builds of gnattest go into the testing stage, both Linux
@@ -95,8 +106,7 @@ include:
   after_script:
     - cat /tmp/ci_env.sh
     - . /tmp/ci_env.sh
-    - TEST_BSN=$(anod eval --primitive=test gnattest -Q instr-cov build_space_name --sandbox-dir=$ANOD_DEFAULT_SANDBOX_DIR)
-    - mv $ANOD_DEFAULT_SANDBOX_DIR/x86_64-linux/$TEST_BSN/test/coverage/cobertura.xml $CI_PROJECT_DIR/coverage/cobertura.xml
+    - find $ANOD_DEFAULT_SANDBOX_DIR -name "cobertura.xml" -exec mv {} $CI_PROJECT_DIR/coverage/cobertura.xml \;
 
 .common_artifacts_bits: &artifacts
   artifacts:
@@ -116,6 +126,16 @@ gnattest:linux:
   <<: *artifacts
 
 gnattest-gnatfuzz:linux:
+  <<: *test_before_script
+  <<: *test_after_script
+  <<: *artifacts
+
+gnattest-cross-light:linux:
+  <<: *test_before_script
+  <<: *test_after_script
+  <<: *artifacts
+
+gnattest-cross-embedded:linux:
   <<: *test_before_script
   <<: *test_after_script
   <<: *artifacts

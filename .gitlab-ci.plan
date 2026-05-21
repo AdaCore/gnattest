@@ -1,10 +1,10 @@
 cov_qualifier={"instr-cov": True}
 
-def build_(qualifier=cov_qualifier):
+def build(qualifier=cov_qualifier):
     with defaults(qualifier=qualifier):
         anod_build("gnattest")
 
-def test_(qualifier=cov_qualifier):
+def test_native(qualifier=cov_qualifier):
     with defaults(qualifier=qualifier):
         # Install the component built in the preceding CI build job
         anod_install("gnattest")
@@ -16,12 +16,20 @@ def test_gnatfuzz_tests(qualifier=cov_qualifier):
         anod_install("gnattest")
         anod_test("gnattest", qualifier={"gnatfuzz-tests": True, **cov_qualifier})
 
-# Edge
+# light runtime on a 32bit target
+def test_cross_light():
+    anod_install("gnattest", qualifier=cov_qualifier)
+    anod_test(
+        "gnattest",
+        target="ppc-elf,,qemu-8641d",
+        qualifier={"RTS": "light-mpc8641", **cov_qualifier},
+    )
 
-edge_qualifier = {"edge": True, **cov_qualifier}
-
-def build_edge():
-    build_(edge_qualifier)
-
-def test_edge():
-    test_(edge_qualifier)
+# embedded runtime on a 64bit target
+def test_cross_embedded():
+    anod_install("gnattest", qualifier=cov_qualifier)
+    anod_test(
+        "gnattest",
+        target="aarch64-elf,,qemu-zynqmp",
+        qualifier={"RTS": "embedded-zynqmp", **cov_qualifier},
+    )
