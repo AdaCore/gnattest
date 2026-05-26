@@ -1,0 +1,10 @@
+project Contracts is
+
+   for Source_Dirs use ("src");
+   
+   package gnattest is
+      for harness_dir use ".";
+   end gnattest;
+
+end Contracts;
+

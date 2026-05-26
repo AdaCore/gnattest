@@ -3,7 +3,6 @@ project Test1 is
      for Default_Switches use
         ("--passed-tests=show",
          "--skeleton-default=Fail",
-         "--separate-drivers=TesT",
          "--exit-status=ON");
    end Gnattest;
 end Test1;
