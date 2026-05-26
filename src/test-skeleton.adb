@@ -6906,6 +6906,7 @@ package body Test.Skeleton is
 
       Test_Cases    : TGen_JSON_TC.JSON_Test_Cases :=
         TGen_JSON_TC.No_JSON_Test_Cases;
+      Subp_Hash     : String (1 .. 16);
       Subprogram_TC : TGen_JSON_TC.Subprogram_Test_Case;
       Param_Values  : TGen_JSON_TC.Subprogram_Parameter_Vector;
       Global_Values : TGen_JSON_TC.Subprogram_Parameter_Vector;
@@ -6961,18 +6962,15 @@ package body Test.Skeleton is
          --  full hash of the subprogram. If not found, skip to the next
          --  subprogram.
 
-         declare
-            Subp_Hash : constant String :=
-              TGen.LAL_Utils.Short_Hash
-                (Subp => Subp.Subp_Declaration.As_Basic_Decl);
-         begin
-            if TGen_JSON_TC.Has_Subprogram (Test_Cases, Subp_Hash) then
-               Subprogram_TC :=
-                 TGen_JSON_TC.Get_Subprogram (Test_Cases, Subp_Hash);
-            else
-               Subprogram_TC := TGen_JSON_TC.No_Subprogram_Test_Case;
-            end if;
-         end;
+         Subp_Hash :=
+           TGen.LAL_Utils.Short_Hash
+             (Subp => Subp.Subp_Declaration.As_Basic_Decl);
+         if TGen_JSON_TC.Has_Subprogram (Test_Cases, Subp_Hash) then
+            Subprogram_TC :=
+              TGen_JSON_TC.Get_Subprogram (Test_Cases, Subp_Hash);
+         else
+            Subprogram_TC := TGen_JSON_TC.No_Subprogram_Test_Case;
+         end if;
 
          if Subprogram_TC = TGen_JSON_TC.No_Subprogram_Test_Case then
             goto Continue;
@@ -7617,7 +7615,7 @@ package body Test.Skeleton is
                     (Body_Kind,
                      Com
                      & "   pragma Annotate (Xcov, Dump_Buffers, """
-                     & Subp.Subp_Full_Hash.all
+                     & Subp_Hash
                      & "-gen-"
                      & Trim (Integer'Image (Test_Count - 1), Both)
                      & """);");
@@ -7635,7 +7633,7 @@ package body Test.Skeleton is
                     (Body_Kind,
                      Com
                      & "      pragma Annotate (Xcov, Dump_Buffers, """
-                     & Subp.Subp_Full_Hash.all
+                     & Subp_Hash
                      & "-gen-"
                      & Trim (Integer'Image (Test_Count - 1), Both)
                      & """);");
@@ -8697,7 +8695,8 @@ package body Test.Skeleton is
          S_Put
            (6,
             "pragma Annotate (Xcov, Dump_Buffers, """
-            & Subp.Subp_Full_Hash.all
+            & TGen.LAL_Utils.Short_Hash
+                (Subp => Subp.Subp_Declaration.As_Basic_Decl)
             & """);");
          New_Line_Count;
       end if;
