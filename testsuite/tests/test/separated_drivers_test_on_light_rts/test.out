@@ -1,0 +1,1 @@
+gnattest: --separate-drivers=test is not supported on light runtimes

@@ -1,0 +1,8 @@
+description:
+    gnattest test
+
+driver: python_script
+
+control:
+    - [SKIP, 'not rts_light', 'test checks light runtime-sepcific restriction']
+

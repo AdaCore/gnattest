@@ -857,6 +857,15 @@ package body Test.Actions is
 
             elsif Separate_Drivers_Val = "test" then
                Test.Common.Driver_Per_Unit := False;
+               if Ada.Strings.Fixed.Index
+                    (Test.Common.RTS_Attribute_Val.all, "light", 1)
+                 > 0
+               then
+                  Cmd_Error_No_Help
+                    ("--separate-drivers=test is not supported "
+                     & "on light runtimes");
+
+               end if;
 
             else
                Cmd_Error_No_Help
@@ -1533,7 +1542,11 @@ package body Test.Actions is
       Put
         (" --recursive-stub        - Recursively stub dependencies of stubbed units\n");
       Put ("\n");
-
+      Put
+        (" --separate-drivers=(unit|test)     - Generate individual test driver executables, either one per unit under test or one per test");
+      Put ("                                      Default to test.\n");
+      Put
+        ("                                      The test value is not compatible with light runtime profiles.\n");
       Put
         (" --exclude-from-stubbing=file       - List of sources whose bodies should not\n");
       Put ("                                      be stubbed\n");
