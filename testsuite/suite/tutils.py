@@ -35,8 +35,13 @@ def run_wrapper(
     thistest.log(" ".join(args), True)
     ret = Run(args, **kwargs)
     if output_in_baseline:
-        print(ret.out, flush=True, end="")
-        print(ret.err, file=stderr, flush=True, end="")
+        output = ret.out
+        error = ret.err
+        if os.name == "nt":
+            output = output.replace('\r\n','\n')
+            error = error.replace('\r','')
+        print(output, flush=True, end="")
+        print(error, file=stderr, flush=True, end="")
     if (not allow_failure and ret.status != 0) or thistest.options.log_all:
         thistest.output_report(ret.out, new_line=False)
         thistest.output_report(ret.err, new_line=False)
