@@ -5,11 +5,11 @@ factorize some common test utils.
 """
 
 import os
-from shutil import which
 from subprocess import PIPE, STDOUT
 from sys import stderr
 import sys
 from e3.os.process import Run
+from e3.os.fs import which
 
 from suite.context import thistest
 
@@ -38,8 +38,8 @@ def run_wrapper(
         output = ret.out
         error = ret.err
         if os.name == "nt":
-            output = output.replace('\r\n','\n')
-            error = error.replace('\r','')
+            output = output.replace("\r\n", "\n")
+            error = error.replace("\r", "")
         print(output, flush=True, end="")
         print(error, file=stderr, flush=True, end="")
     if (not allow_failure and ret.status != 0) or thistest.options.log_all:
@@ -113,7 +113,6 @@ def build_harness(
     return run_command(
         "gprbuild", gpr, args, output_in_baseline, allow_failure, **run_args
     )
-
 
 def run_harness(
     executable: str,
