@@ -21,6 +21,7 @@
 -- <http://www.gnu.org/licenses/>.                                          --
 ------------------------------------------------------------------------------
 
+with Ada.Command_Line;
 with Ada.Exceptions;
 
 with GNAT.Command_Line;
@@ -40,6 +41,7 @@ with Utils_Debug; use Utils_Debug;
 
 with Test.Command_Lines; use Test.Command_Lines;
 with Test.Actions;
+with Test.Setup;
 
 procedure Test.Main is
 
@@ -56,6 +58,17 @@ begin
 
    --  By default, send errors to stdout
    Utils.Err_Out.Output_Enabled := True;
+
+   --  Subcommand dispatch: a leading "setup" word routes to the AUnit
+   --  setup logic. Anything else falls through to the classic gnattest
+   --  pipeline below.
+
+   if Ada.Command_Line.Argument_Count >= 1
+     and then Ada.Command_Line.Argument (1) = "setup"
+   then
+      Test.Setup.Run;
+      return;
+   end if;
 
    Test.Register_Specific_Attributes;
 

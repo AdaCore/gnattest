@@ -65,6 +65,7 @@ with Test.Generation;
 with Test.Harness;
 with Test.Harness.Source_Table;
 with Test.Mapping;
+with Test.Setup;
 with Test.Skeleton;
 with Test.Skeleton.Source_Table;
 with Test.Suite_Min;
@@ -1502,6 +1503,10 @@ package body Test.Actions is
       Put (" or   gnattest test_drivers.list [opts]\n");
       Put ("        - executes tests and aggregates the results\n");
       Put ("\n");
+      Put (" or   gnattest setup [opts]\n");
+      Put
+        ("        - builds and installs the AUnit library and TGen runtimes\n");
+      Put ("\n");
       Put (" --version        - Display version and exit\n");
       Put (" --help           - Display usage and exit\n");
       Put (" -v, --verbose    - Verbose mode\n");
@@ -1643,6 +1648,11 @@ package body Test.Actions is
       Put ("                               drivers are spawned\n");
       Put
         (" --subdirs=dirname           - Look for test drivers in subdirs\n");
+      Put ("\n");
+
+      Put ("Setup mode options:\n");
+      Put ("\n");
+      Test.Setup.Print_Help;
       pragma Style_Checks ("M79");
    end Tool_Help;
 
