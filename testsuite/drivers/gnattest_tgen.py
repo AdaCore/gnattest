@@ -1,5 +1,7 @@
 from glob import glob
 
+from re import Match
+
 import os
 from pathlib import Path
 
@@ -20,6 +22,29 @@ class Address_Hider(PatternSubstitute):
 
     def __init__(self):
         super().__init__(pattern=r"0x[0-9a-f]{8,}", replacement="<addr>")
+
+
+def build_lineno_replacement(m : Match) -> str:
+    """
+    Assuming the match instance contains a nested match group containing
+    a filename, return filename:<line_number> to be used as baseline placeholder
+    """
+    return m.group(1) + ":<line_number>"
+
+
+class LineHider(PatternSubstitute):
+    """
+    Refiner that identifies the line of a test procedure in a gnattest harness
+    output and replaces it by a placeholder. The line at which test procedure
+    is generated in the harness has no relevance, and can vary depending on the
+    target.
+    """
+
+    def __init__(self):
+        super().__init__(
+            pattern=r" \((.*-test_data-test_.*[0-9a-f]*.adb):[0-9]*\)",
+            replacement=build_lineno_replacement,
+        )
 
 
 class GNATTestTgenDriver(BaseDriver):
@@ -47,8 +72,8 @@ class GNATTestTgenDriver(BaseDriver):
 
     @property
     def output_refiners(self):
-        return super().output_refiners + [Address_Hider()]
-    
+        return super().output_refiners + [Address_Hider(), LineHider()]
+
     def set_up(self):
         super().set_up()
 
