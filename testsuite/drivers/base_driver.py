@@ -72,7 +72,7 @@ class BaseDriver(DiffTestDriver):
         assert self.env.main_options
         return YAMLTestControlCreator(
             {
-                "windows": self.env.target.os.name == "windows",
+                "windows": "windows" in self.env.host.os.name,
                 "x86": self.env.target.cpu.bits == 32,
                 "native": self.env.target.is_host,
                 "rts_light": self.env.main_options.RTS
