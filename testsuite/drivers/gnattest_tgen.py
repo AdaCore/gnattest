@@ -21,7 +21,7 @@ class Address_Hider(PatternSubstitute):
     """
 
     def __init__(self):
-        super().__init__(pattern=r"0x[0-9a-f]{8,}", replacement="<addr>")
+        super().__init__(pattern=r"0x[0-9a-f]{6,}", replacement="<addr>")
 
 
 def build_lineno_replacement(m : Match) -> str:
