@@ -717,6 +717,22 @@ package body Test.Actions is
       --  Checking if argument project has Make package specified.
       Test.Common.Make_Package_Present := Root_Prj.Has_Package (+"make");
 
+      --  Checking which configuration packages the argument project
+      --  explicitly declares, so that the corresponding packages of
+      --  gnattest_common.gpr can extend them.
+      Test.Common.Builder_Package_Present :=
+        Root_Prj.Has_Package
+          (+"builder", With_Defaults => False, With_Config => False);
+      Test.Common.Linker_Package_Present :=
+        Root_Prj.Has_Package
+          (+"linker", With_Defaults => False, With_Config => False);
+      Test.Common.Binder_Package_Present :=
+        Root_Prj.Has_Package
+          (+"binder", With_Defaults => False, With_Config => False);
+      Test.Common.Compiler_Package_Present :=
+        Root_Prj.Has_Package
+          (+"compiler", With_Defaults => False, With_Config => False);
+
       --  We need to fill a local source table since gnattest actually needs
       --  info not only on current source but on any particular one or even
       --  all of them at once.
@@ -1346,21 +1362,6 @@ package body Test.Actions is
       then
          Cmd_Error_No_Help
            ("cannot find " & Test.Common.Additional_Tests_Prj.all);
-      end if;
-
-      if Root_Prj.Has_Attribute (Attr_Id ("compiler", "default_switches")) then
-         declare
-            Switches : constant GPR2.Project.Attribute.Object :=
-              Project_Tree.Root_Project.Attribute
-                (Name  => Attr_Id ("compiler", "default_switches"),
-                 Index => GPR2.Project.Attribute_Index.Create (Ada_Language));
-         begin
-            for Switch of Switches.Values loop
-               if Switch.Text = "-gnatE" then
-                  Test.Common.Inherited_Switches.Append (String (Switch.Text));
-               end if;
-            end loop;
-         end;
       end if;
 
       Ignored.Clear;

@@ -130,9 +130,14 @@ package body Test.Harness is
    --  Generates files containing pragmas suppressing pre and postconditions
    --  and possibly manipulating ghost policy.
 
-   procedure Generate_Gnattest_Common_Prj;
+   procedure Generate_Gnattest_Common_Prj (Source_Prj : String);
    --  Generates abstract project file gnattest_common that contains different
-   --  attributes relevant to the harness.
+   --  attributes relevant to the harness. When the argument project defines
+   --  Builder, Linker, Binder or Compiler packages, the corresponding
+   --  packages of gnattest_common extend them so that the configuration of
+   --  the original project is inherited by the harness, except in stub mode
+   --  where the argument project cannot be imported since it is extended by
+   --  the generated stub projects.
 
    procedure Generate_Filtering_Map;
    --  Generates package responsible for filtering execution of tests by slocs
@@ -420,13 +425,106 @@ package body Test.Harness is
    -- Generate_Gnattest_Common_Prj --
    ----------------------------------
 
-   procedure Generate_Gnattest_Common_Prj is
+   procedure Generate_Gnattest_Common_Prj (Source_Prj : String) is
       Gnattest_Common_Prj : constant String := Gnattest_Common_Prj_Name;
+
+      --  In stub mode the argument project is extended by the generated stub
+      --  projects, so it cannot also be imported by gnattest_common.
+
+      Extend_User_Project : constant Boolean :=
+        not Stub_Mode_ON
+        and then (Builder_Package_Present
+                  or else Linker_Package_Present
+                  or else Binder_Package_Present
+                  or else Compiler_Package_Present);
+
+      Source_Prj_Name : constant String :=
+        Base_Name (Source_Prj, File_Extension (Source_Prj));
+
+      function Extends_Clause
+        (Pkg : String; Pkg_Present : Boolean) return String
+      is (if Extend_User_Project and then Pkg_Present
+          then " extends " & Source_Prj_Name & "." & Pkg
+          else "");
+      --  Returns the extends clause of package Pkg when it should inherit
+      --  from the corresponding package of the argument project, an empty
+      --  string otherwise.
+
+      procedure Add_Switches_And_Default_Switches_From_Source_Prj
+        (Prepend_Switches : String;
+         Append_Switches  : String;
+         Pkg_Name         : String;
+         Pkg_In_User_Prj  : Boolean);
+      --  Set Pkg_Name.Switches ("Ada") and Pkg_Name.Default_Switches ("Ada")
+      --  attribute definition to Prepend_Switches and Append_Switches. Also
+      --  add Source_Prj.Pkg_Name original attribute definition in between the
+      --  former and the latter if Pkg_In_User_Prj is True.
+
+      function Add_Switches_From_Source_Prj
+        (Prepend_Switches : String;
+         Append_Switches  : String;
+         Attr             : String;
+         Pkg_Name         : String;
+         Pkg_In_User_Prj  : Boolean) return String
+      is ("for "
+          & Attr
+          & " (""ada"") use "
+          & Prepend_Switches
+          & (if Extend_User_Project and then Pkg_In_User_Prj
+             then
+               " & "
+               & Source_Prj_Name
+               & "."
+               & Pkg_Name
+               & "'Default_Switches (""ada"")"
+             else "")
+          & (if Append_Switches'Length > 0
+             then " & " & Append_Switches
+             else "")
+          & ";");
+
+      -------------------------------------------------------
+      -- Add_Switches_And_Default_Switches_From_Source_Prj --
+      -------------------------------------------------------
+
+      procedure Add_Switches_And_Default_Switches_From_Source_Prj
+        (Prepend_Switches : String;
+         Append_Switches  : String;
+         Pkg_Name         : String;
+         Pkg_In_User_Prj  : Boolean)
+      is
+         Attrs : Utils.String_Utilities.String_Vector;
+      begin
+         Attrs.Append ("Default_Switches");
+         Attrs.Append ("Switches");
+         for Attr of Attrs loop
+            S_Put
+              (6,
+               Add_Switches_From_Source_Prj
+                 (Prepend_Switches,
+                  Append_Switches,
+                  Attr,
+                  Pkg_Name,
+                  Pkg_In_User_Prj));
+            Put_New_Line;
+         end loop;
+      end Add_Switches_And_Default_Switches_From_Source_Prj;
+
    begin
       if Is_Regular_File (Gnattest_Common_Prj) then
          return;
       end if;
       Create (Gnattest_Common_Prj);
+
+      if Extend_User_Project then
+         S_Put
+           (0,
+            "with """
+            & (+Relative_Path
+                  (Create (+Source_Prj), Create (+Harness_Dir.all)))
+            & """;");
+         Put_New_Line;
+      end if;
 
       S_Put (0, "abstract project Gnattest_Common is");
       Put_New_Line;
@@ -466,7 +564,11 @@ package body Test.Harness is
       Put_New_Line;
 
       Put_New_Line;
-      S_Put (3, "package Builder is");
+      S_Put
+        (3,
+         "package Builder"
+         & Extends_Clause ("Builder", Builder_Package_Present)
+         & " is");
       Put_New_Line;
       S_Put (6, "case TD_Compilation is");
       Put_New_Line;
@@ -490,18 +592,32 @@ package body Test.Harness is
       Put_New_Line;
       Put_New_Line;
 
-      S_Put (3, "package Linker is");
+      S_Put
+        (3,
+         "package Linker"
+         & Extends_Clause ("Linker", Linker_Package_Present)
+         & " is");
       Put_New_Line;
-      S_Put (6, "for Default_Switches (""ada"") use (""-g"");");
-      Put_New_Line;
+      Add_Switches_And_Default_Switches_From_Source_Prj
+        (Prepend_Switches => "(""-g"")",
+         Append_Switches  => "",
+         Pkg_Name         => "Linker",
+         Pkg_In_User_Prj  => Linker_Package_Present);
       S_Put (3, "end Linker;");
       Put_New_Line;
       Put_New_Line;
 
-      S_Put (3, "package Binder is");
+      S_Put
+        (3,
+         "package Binder"
+         & Extends_Clause ("Binder", Binder_Package_Present)
+         & " is");
       Put_New_Line;
-      S_Put (6, "for Default_Switches (""ada"") use (""-E"", ""-static"");");
-      Put_New_Line;
+      Add_Switches_And_Default_Switches_From_Source_Prj
+        (Prepend_Switches => "(""-E"", ""-static"")",
+         Append_Switches  => "",
+         Pkg_Name         => "Binder",
+         Pkg_In_User_Prj  => Binder_Package_Present);
       S_Put (3, "end Binder;");
       Put_New_Line;
       Put_New_Line;
@@ -521,17 +637,18 @@ package body Test.Harness is
       S_Put (3, "end case;");
       Put_New_Line;
 
-      S_Put (3, "package Compiler is");
+      S_Put
+        (3,
+         "package Compiler"
+         & Extends_Clause ("Compiler", Compiler_Package_Present)
+         & " is");
       Put_New_Line;
-      S_Put (6, "for Default_Switches (""ada"") use");
-      Put_New_Line;
-      S_Put (8, "(""-g"", ""-gnatyM0""");
-      for Sw of Inherited_Switches loop
-         S_Put (0, ", """ & Sw & """");
-      end loop;
-      Inherited_Switches.Clear;
-      S_Put (0, ") & Contract_Switches;");
-      Put_New_Line;
+      Add_Switches_And_Default_Switches_From_Source_Prj
+        (Prepend_Switches =>
+           "(""-g"", ""-gnatyM0"", ""-gnatwA"") & Contract_Switches",
+         Append_Switches  => "(""-gnatyN"")",
+         Pkg_Name         => "Compiler",
+         Pkg_In_User_Prj  => Compiler_Package_Present);
       S_Put (3, "end Compiler;");
       Put_New_Line;
       Put_New_Line;
@@ -1333,7 +1450,7 @@ package body Test.Harness is
 
    procedure Project_Creator (Source_Prj : String) is
    begin
-      Generate_Gnattest_Common_Prj;
+      Generate_Gnattest_Common_Prj (Source_Prj);
 
       Create (Harness_Dir.all & "test_driver.gpr");
 
@@ -3652,7 +3769,7 @@ package body Test.Harness is
       end Generate_Aggregate_Project;
 
    begin
-      Generate_Gnattest_Common_Prj;
+      Generate_Gnattest_Common_Prj (Source_Prj);
 
       --  suppress.adc & suppress_no_ghost.adc
       Generate_Global_Config_Pragmas_File;
