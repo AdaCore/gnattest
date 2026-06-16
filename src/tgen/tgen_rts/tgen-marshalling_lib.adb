@@ -507,21 +507,26 @@ package body TGen.Marshalling_Lib is
 
             when Extended =>
                declare
-                  function To_Bits is new
-                    Ada.Unchecked_Conversion
-                      (Source => Long_Long_Float,
-                       Target => Unsigned_128);
-                  Max  : constant Long_Long_Long_Unsigned :=
-                    Long_Long_Long_Unsigned (Unsigned_128'Last);
-                  V_F  : constant Long_Long_Float := Long_Long_Float (V);
-                  Bits : constant Unsigned_128 := To_Bits (V_F);
+                  Arr_Size : constant Unsigned_8 :=
+                    Long_Long_Float'Size / Long_Long_Long_Unsigned'Size;
+                  Bits_Arr :
+                    array (Unsigned_8 range 1 .. Arr_Size)
+                    of Long_Long_Long_Unsigned;
+                  for Bits_Arr'Address use V'Address;
                begin
-                  Write
-                    (Stream,
-                     Buffer,
-                     Offset,
-                     Max,
-                     Long_Long_Long_Unsigned (Bits));
+                  --  Reverse iteration to match the previous implementation,
+                  --  where the least significant bytes were written first.
+                  --  Since x86 is little endian, they'll be at the end of the
+                  --  array overlay.
+
+                  for Idx in reverse Bits_Arr'Range loop
+                     Write
+                       (Stream,
+                        Buffer,
+                        Offset,
+                        Long_Long_Long_Unsigned'Last,
+                        Bits_Arr (Idx));
+                  end loop;
                end;
          end case;
       end Write;
@@ -622,19 +627,28 @@ package body TGen.Marshalling_Lib is
 
             when Extended =>
                declare
-                  function From_Bits is new
-                    Ada.Unchecked_Conversion
-                      (Source => Unsigned_128,
-                       Target => Long_Long_Float);
-                  Max  : constant Long_Long_Long_Unsigned :=
-                    Long_Long_Long_Unsigned (Unsigned_128'Last);
-                  Bits : Long_Long_Long_Unsigned;
-                  V_F  : Long_Long_Float;
-                  V_B  : T'Base;
-
+                  V_F      : Long_Long_Float;
+                  V_B      : T'Base;
+                  Arr_Size : constant Unsigned_8 :=
+                    Long_Long_Float'Size / Long_Long_Long_Unsigned'Size;
+                  Bits_Arr :
+                    array (Unsigned_8 range 1 .. Arr_Size)
+                    of Long_Long_Long_Unsigned;
+                  for Bits_Arr'Address use V_F'Address;
                begin
-                  Read (Stream, Buffer, Offset, Max, Bits);
-                  V_F := From_Bits (Unsigned_128 (Bits));
+                  --  Reverse iteration to match the previous implementation,
+                  --  where the least significant bytes were written first.
+                  --  Since x86 is little endian, they'll be at the end of the
+                  --  array overlay.
+
+                  for Idx in reverse Bits_Arr'Range loop
+                     Read
+                       (Stream,
+                        Buffer,
+                        Offset,
+                        Long_Long_Long_Unsigned'Last,
+                        Bits_Arr (Idx));
+                  end loop;
 
                   --  Reject invalid floating point values (Nan and infinities)
                   --  ??? Do we want to support them?
@@ -649,7 +663,7 @@ package body TGen.Marshalling_Lib is
                   elsif V_F > Long_Long_Float (Last) then
                      V_B := Last;
                   else
-                     V_B := T'Base (V_F);
+                     V_B := T'Base (V);
                   end if;
 
                   if V_B not in T then
