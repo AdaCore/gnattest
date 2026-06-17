@@ -453,8 +453,8 @@ package TGen.JSON is
 
    function Global_Hash
      (Param_Values : JSON_Array; Globals : JSON_Array) return UTF8_String;
-   --  Return the SHA1 of all the param values and globals value hashes concatenated together
-   --  to form a hash for the whole TGen test case.
+   --  Return the SHA1 of all the param values and globals value hashes
+   --  concatenated together to form a hash for the whole TGen test case.
 
    ---------------
    -- Iteration --
