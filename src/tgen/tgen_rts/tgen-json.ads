@@ -444,6 +444,18 @@ package TGen.JSON is
        Val.Kind = JSON_Object_Type
        and then Get (Val, Field).Kind = JSON_Array_Type;
 
+   ----------
+   -- Hash --
+   ----------
+
+   function Hash (Val : JSON_Value) return UTF8_String;
+   --  Return the SHA1 hash associated with the JSON_Value passed as arguement
+
+   function Global_Hash
+     (Param_Values : JSON_Array; Globals : JSON_Array) return UTF8_String;
+   --  Return the SHA1 of all the param values and globals value hashes concatenated together
+   --  to form a hash for the whole TGen test case.
+
    ---------------
    -- Iteration --
    ---------------

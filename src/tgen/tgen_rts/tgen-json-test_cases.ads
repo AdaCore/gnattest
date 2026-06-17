@@ -304,4 +304,6 @@ private
    function Read_Whole_File (Filename : String) return String;
    --  Return the content of a text file as a string
 
+   No_Hash : constant UTF8_Unbounded_String := To_Unbounded_String ("");
+
 end TGen.JSON.Test_Cases;

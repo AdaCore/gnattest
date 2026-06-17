@@ -1,0 +1,5 @@
+description: Test to check that TGen test case are not duplicated
+
+driver: python_script
+control:
+  - [SKIP, "not native", "Test not designed for cross applications"]

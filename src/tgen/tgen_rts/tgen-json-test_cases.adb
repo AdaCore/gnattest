@@ -177,9 +177,23 @@ package body TGen.JSON.Test_Cases is
      (Self : in out Subprogram_Test_Case; New_Test : Subprogram_Test)
    is
       Subp_Tests : JSON_Array;
+      Hash       : constant UTF8_Unbounded_String :=
+        (if New_Test.Root.Has_Field ("hash")
+         then Get (New_Test.Root, "hash")
+         else No_Hash);
    begin
       if Self.Subp_Root.Has_Field ("test_vectors") then
          Subp_Tests := Self.Subp_Root.Get ("test_vectors");
+      end if;
+
+      if Hash /= No_Hash then
+         for Test of Subp_Tests loop
+            if Test.Has_Field ("hash")
+              and then Get (Test, "hash").Data.Str_Value = Hash
+            then
+               return;
+            end if;
+         end loop;
       end if;
       Append (Subp_Tests, New_Test.Root);
       Self.Subp_Root.Set_Field ("test_vectors", Subp_Tests);
@@ -199,9 +213,13 @@ package body TGen.JSON.Test_Cases is
    begin
       Res.Set_Field ("param_values", Param_Values.Values);
       Res.Set_Field ("origin", Create (Origin));
+
       if Length (Globals.Values) /= 0 then
          Res.Set_Field ("global_values", Globals.Values);
       end if;
+
+      Res.Set_Field
+        ("hash", Global_Hash (Param_Values.Values, Globals.Values));
       return Subprogram_Test'(Root => Res);
    end Create_Subprogram_Test;
 
@@ -377,6 +395,7 @@ package body TGen.JSON.Test_Cases is
          Res.Parameter_Root.Set_Field ("type_name", Create (Type_Name));
          Res.Parameter_Root.Set_Field ("mode", Create (Mode));
          Res.Parameter_Root.Set_Field ("value", Value);
+         Res.Parameter_Root.Set_Field ("hash", Hash (Value));
       end return;
    end Create_Parameter;
 

@@ -1,0 +1,10 @@
+Units remaining: 3     
+Units remaining: 2     
+Units remaining: 1     
+simple_tgen_dup.ads:3:4: info: corresponding test PASSED
+simple_tgen_dup.ads:3:4: info: corresponding test PASSED
+simple_tgen_dup.ads:3:4: info: corresponding test PASSED
+simple_tgen_dup.ads:3:4: info: corresponding test PASSED
+simple_tgen_dup.ads:3:4: info: corresponding test PASSED
+simple_tgen_dup.ads:3:4: error: corresponding test FAILED: Test not implemented. (simple_tgen_dup-test_data-tests.adb:45)
+6 tests run: 5 passed; 1 failed; 0 crashed.

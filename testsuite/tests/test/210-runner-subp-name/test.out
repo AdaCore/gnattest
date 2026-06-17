@@ -1,14 +1,6 @@
 pkg.ads:10:4: (Pkg.Inherited_Prim) info: corresponding test PASSED
 pkg.ads:11:4: (Pkg.Overridden_Prim) info: corresponding test PASSED
 pkg.ads:10:4: (Pkg.Inherited_Prim) info: corresponding test PASSED
-pkg.ads:10:4: (Pkg.Inherited_Prim) info: corresponding test PASSED
-pkg.ads:10:4: (Pkg.Inherited_Prim) info: corresponding test PASSED
-pkg.ads:10:4: (Pkg.Inherited_Prim) info: corresponding test PASSED
-pkg.ads:10:4: (Pkg.Inherited_Prim) info: corresponding test PASSED
-pkg.ads:11:4: (Pkg.Overridden_Prim) info: corresponding test PASSED
-pkg.ads:11:4: (Pkg.Overridden_Prim) info: corresponding test PASSED
-pkg.ads:11:4: (Pkg.Overridden_Prim) info: corresponding test PASSED
-pkg.ads:11:4: (Pkg.Overridden_Prim) info: corresponding test PASSED
 pkg.ads:11:4: (Pkg.Overridden_Prim) info: corresponding test PASSED
 pkg.ads:3:4: (Pkg.Simple) info: corresponding test PASSED
 pkg.ads:3:4: (Pkg.Simple) info: corresponding test PASSED
@@ -23,12 +15,8 @@ pkg.ads:4:4: (Pkg.With_TC) info: corresponding test PASSED
 pkg.ads:3:4: (Pkg.Simple) info: corresponding test PASSED
 pkg.ads:5:6: (Trivial_TC) info: corresponding test PASSED
 user.ads:7:4: (User.Overridden_Prim) info: corresponding test PASSED
-user.ads:7:4: (User.Overridden_Prim) info: corresponding test PASSED
-user.ads:7:4: (User.Overridden_Prim) info: corresponding test PASSED
-user.ads:7:4: (User.Overridden_Prim) info: corresponding test PASSED
-user.ads:7:4: (User.Overridden_Prim) info: corresponding test PASSED
 gen.ads:4:4: (Gen.Gen) instance at user.ads:11:4: info: corresponding test PASSED
 user.ads:7:4: (User.Overridden_Prim) info: corresponding test PASSED
 pkg.ads:10:4: (Pkg.Inherited_Prim) inherited at user.ads:6:4: info: corresponding test PASSED
 pkg.ads:11:4: (Pkg.Overridden_Prim) overridden at user.ads:7:4: info: corresponding test PASSED
-33 tests run: 33 passed; 0 failed; 0 crashed.
+21 tests run: 21 passed; 0 failed; 0 crashed.
