@@ -1819,6 +1819,11 @@ package body TGen.Types.Record_Types is
          end loop;
          Res.Set_Field ("param_values", Params);
          Res.Set_Field ("global_values", Globals);
+         if Params.Kind = JSON_Array_Type
+           and then Globals.Kind = JSON_Array_Type
+         then
+            Res.Set_Field ("hash", Global_Hash (Params.Get, Globals.Get));
+         end if;
       end return;
    end Encode;
 
@@ -1893,6 +1898,13 @@ package body TGen.Types.Record_Types is
       end loop;
       Set_Field (Result, "param_values", Param_Values);
       Set_Field (Result, "global_values", Global_Values);
+      if Param_Values.Kind = JSON_Array_Type
+        and then Global_Values.Kind = JSON_Array_Type
+      then
+         Result.Set_Field
+           ("hash", Global_Hash (Param_Values.Get, Global_Values.Get));
+      end if;
+
       return Result;
    end Generate;
 
@@ -1984,6 +1996,13 @@ package body TGen.Types.Record_Types is
       end loop;
       Result.Set_Field ("param_values", Param_Values);
       Result.Set_Field ("global_values", Global_Values);
+      if Param_Values.Kind = JSON_Array_Type
+        and then Global_Values.Kind = JSON_Array_Type
+      then
+         Result.Set_Field
+           ("hash", Global_Hash (Param_Values.Get, Global_Values.Get));
+      end if;
+
       return Result;
    end Generate;
 

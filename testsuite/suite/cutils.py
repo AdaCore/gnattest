@@ -6,6 +6,7 @@ toplevel suite driver. In particular, they don't depend on the current
 """
 
 import os
+from pathlib import Path
 import sys
 
 
@@ -38,3 +39,10 @@ def cat(filename: str, flush=False):
     Print the contents of filename on stdout. filename is expected to exist
     """
     print(contents_of(filename), flush=flush)
+
+def remove_file(filename: Path): 
+    """
+    Remove a file.
+    """
+    if filename.exists() and filename.is_file():
+        filename.unlink()

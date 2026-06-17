@@ -54,11 +54,8 @@ procedure TGen_Marshalling is
       To_Unbounded_String
         ("identity_answer-60e02304b78676d9f32ebf521cd31a0d6d089a6a-t2"),
       To_Unbounded_String
-        ("identity_answer-60e02304b78676d9f32ebf521cd31a0d6d089a6a-t3"),
-      To_Unbounded_String
-        ("identity_answer-60e02304b78676d9f32ebf521cd31a0d6d089a6a-t4"),
-      To_Unbounded_String
-        ("identity_answer-60e02304b78676d9f32ebf521cd31a0d6d089a6a-t5")];
+        ("identity_answer-60e02304b78676d9f32ebf521cd31a0d6d089a6a-t3")
+     ];
 
    Answers_Input_Files : constant Answers_Marshaller.File_Array :=
      [To_Unbounded_String

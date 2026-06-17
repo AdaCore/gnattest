@@ -30,6 +30,7 @@ with Ada.Text_IO.Unbounded_IO;
 with Ada.Unchecked_Deallocation;
 with Interfaces;                       use Interfaces;
 with System.Atomic_Counters;           use System.Atomic_Counters;
+with GNAT.SHA1;
 
 with GNAT.Encode_UTF8_String;
 with GNAT.Decode_UTF8_String;
@@ -1618,6 +1619,37 @@ package body TGen.JSON is
    begin
       return Get (Get (Val, Field));
    end Get;
+
+   ----------
+   -- Hash --
+   ----------
+
+   function Hash (Val : JSON_Value) return UTF8_String is
+      Ctx : GNAT.SHA1.Context;
+   begin
+      GNAT.SHA1.Update (Ctx, Val.Write (Compact => True));
+      return GNAT.SHA1.Digest (Ctx);
+   end Hash;
+
+   function Global_Hash
+     (Param_Values : JSON_Array; Globals : JSON_Array) return UTF8_String
+   is
+      Buffer : Unbounded_String;
+   begin
+      for Value of Param_Values loop
+         if Value.Has_Field ("hash") then
+            Buffer := Buffer & Get (Value, "hash").Data.Str_Value;
+         end if;
+      end loop;
+
+      for Value of Globals loop
+         if Value.Has_Field ("hash") then
+            Buffer := Buffer & Get (Value, "hash").Data.Str_Value;
+         end if;
+      end loop;
+
+      return Hash (Create (Buffer));
+   end Global_Hash;
 
    -----------
    -- Clone --

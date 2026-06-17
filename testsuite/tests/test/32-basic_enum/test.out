@@ -47,8 +47,6 @@ pkg.ads:47:4: info: corresponding test PASSED
 pkg.ads:47:4: info: corresponding test PASSED
 pkg.ads:27:4: info: corresponding test PASSED
 pkg.ads:36:4: info: corresponding test PASSED
-pkg.ads:36:4: info: corresponding test PASSED
-pkg.ads:36:4: info: corresponding test PASSED
 pkg.ads:31:4: info: corresponding test PASSED
 pkg.ads:31:4: info: corresponding test PASSED
 pkg.ads:31:4: info: corresponding test PASSED
@@ -124,8 +122,6 @@ pkg.ads:13:4: info: corresponding test PASSED
 pkg.ads:13:4: info: corresponding test PASSED
 pkg.ads:13:4: info: corresponding test PASSED
 pkg.ads:13:4: info: corresponding test PASSED
-pkg.ads:41:4: info: corresponding test PASSED
-pkg.ads:41:4: info: corresponding test PASSED
 pkg.ads:41:4: info: corresponding test PASSED
 pkg.ads:13:4: error: corresponding test FAILED: Test not implemented. (pkg-test_data-tests.adb:45)
 pkg.ads:23:4: error: corresponding test FAILED: Test not implemented. (pkg-test_data-tests.adb:66)
@@ -137,4 +133,4 @@ pkg.ads:47:4: error: corresponding test FAILED: Test not implemented. (pkg-test_
 pkg.ads:58:4: error: corresponding test FAILED: Test not implemented. (pkg-test_data-tests.adb:192)
 pkg.ads:64:4: error: corresponding test FAILED: Test not implemented. (pkg-test_data-tests.adb:213)
 pkg.ads:70:4: error: corresponding test FAILED: Test not implemented. (pkg-test_data-tests.adb:234)
-139 tests run: 129 passed; 10 failed; 0 crashed.
+135 tests run: 125 passed; 10 failed; 0 crashed.
