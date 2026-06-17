@@ -130,16 +130,55 @@ package body TGen.LAL_Utils is
    function Ultimate_Enclosing_Compilation_Unit
      (Subp : LAL.Basic_Decl'Class) return LAL.Basic_Decl
    is
+      use Libadalang.Analysis;
       Instantiation_Chain : constant LAL.Generic_Instantiation_Array :=
         Subp.P_Generic_Instantiations;
-      Res                 : constant LAL.Basic_Decl :=
-        LAL.P_Enclosing_Compilation_Unit
-          (if Instantiation_Chain'Length > 0
-           then Instantiation_Chain (Instantiation_Chain'Last)
-           else Subp)
-          .P_Decl;
    begin
-      return Res;
+
+      --  For anonymous type return the enclosing compilation unit of the
+      --  last element in the instantiation chain (the instantiated type).
+
+      if Instantiation_Chain'Length > 0
+        and then Subp.Kind in Ada_Anonymous_Type_Decl_Range
+      then
+         return
+           LAL.P_Enclosing_Compilation_Unit
+             (if Instantiation_Chain'Length > 0
+              then Instantiation_Chain (Instantiation_Chain'Last)
+              else Subp)
+             .P_Decl;
+      end if;
+
+      --  Walk the instantiation chain (innermost first, outermost last) and
+      --  return the first instantiation whose enclosing compilation unit FQN
+      --  is a prefix of the subprogram's own FQN. This handles both the
+      --  simple case (top-level generic instantiation: the outermost entry
+      --  matches) and the child-generic case (the outermost entry's CU may
+      --  not be a prefix when the chain spans multiple compilation units).
+
+      declare
+         Subp_FQN : constant LAL.Unbounded_Text_Type_Array :=
+           Subp.P_Fully_Qualified_Name_Array;
+      begin
+         for Inst of Instantiation_Chain loop
+            declare
+               CU_Decl : constant LAL.Basic_Decl :=
+                 LAL.P_Enclosing_Compilation_Unit (Inst).P_Decl;
+               CU_FQN  : constant LAL.Unbounded_Text_Type_Array :=
+                 CU_Decl.P_Fully_Qualified_Name_Array;
+            begin
+               if CU_FQN'Length <= Subp_FQN'Length
+                 and then Subp_FQN
+                            (Subp_FQN'First
+                             .. Subp_FQN'First + CU_FQN'Length - 1)
+                          = CU_FQN
+               then
+                  return CU_Decl;
+               end if;
+            end;
+         end loop;
+      end;
+      return Subp.P_Enclosing_Compilation_Unit.P_Decl;
    end Ultimate_Enclosing_Compilation_Unit;
 
    -------------------------------------------
