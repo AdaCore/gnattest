@@ -8,7 +8,7 @@ from e3.env import Env
 from e3.main import Main
 from e3.os.fs import cd
 
-from suite.cutils import exit_if
+from suite.cutils import exit_if, indent_after_first_line
 from suite import control
 
 logger = e3.log.getLogger("os_fs")
@@ -216,6 +216,17 @@ class Test(object):
     def flush(self):
         """Calls self.report.flush."""
         self.report.flush()
+
+    def failed(self, comment: str = "assertion failed") -> None:
+        """Register a check failure."""
+        self.output_report("  * %s" % indent_after_first_line(comment, "    "))
+        self.report.enable_diffs()
+        self.n_failed += 1
+
+    def fail_if(self, expr: bool, comment: str = "assertion failed") -> None:
+        """Register a check failure when EXPR is true."""
+        if expr:
+            self.failed(comment)
 
     def result(self):
         """Output the final result which the testsuite driver looks for.
