@@ -34,6 +34,15 @@ with GNAT.OS_Lib;
 with GNATCOLL.OS.Process;
 with GNATCOLL.VFS; use GNATCOLL.VFS;
 
+with GPR2; use GPR2;
+with GPR2.Options;
+with GPR2.Project.Attribute;
+with GPR2.Project.Attribute_Index;
+with GPR2.Project.Configuration;
+with GPR2.Project.Registry.Attribute;
+with GPR2.Project.Tree;
+with GPR2.Project.View;
+
 with Test.Command_Lines; use Test.Command_Lines;
 use Test.Command_Lines.Test_String_Switches;
 use Test.Command_Lines.Test_Boolean_Switches;
@@ -61,11 +70,16 @@ package body Test.Setup is
       Gargs   : GNATCOLL.OS.Process.Argument_List;
       Verbose : Boolean := False;
       Quiet   : Boolean := False;
+
+      Compiler_Prefix : Boolean := False;
+      --  When set, install at the install prefix of the compiler. Resolved
+      --  into Prefix early in Run.
    end record;
 
    --  Local helpers
 
-   procedure Fail (Msg : String);
+   procedure Fail (Msg : String)
+   with No_Return;
    --  Terminate the process with an error code, displaying Msg with the
    --  "gnattest setup:" prefix.
 
@@ -82,6 +96,10 @@ package body Test.Setup is
 
    function Gnattest_Prefix return String;
    --  Return the install prefix of gnattest
+
+   function Compiler_Install_Prefix (Opts : Setup_Options) return String;
+   --  Return the install prefix of the Ada compiler that will build the
+   --  library according to Opts.
 
    procedure Run_Build
      (Opts         : Setup_Options;
@@ -194,6 +212,8 @@ package body Test.Setup is
       Put_Line ("  --RTS=<name>        Runtime to use (e.g. light, embedded)");
       Put_Line ("  --config=<file>     gprbuild configuration project");
       Put_Line ("  --prefix=<dir>      Install prefix (default: gnattest's)");
+      Put_Line ("  --compiler-prefix   Install at the compiler's install");
+      Put_Line ("                      prefix. Overrides --prefix.");
       Put_Line ("  --rts-profile=<p>   auto | full | zfp | zfp-cross |");
       Put_Line ("                      ravenscar | ravenscar-cert | cert");
       Put_Line ("                      (default: auto, from --RTS/--target)");
@@ -257,6 +277,81 @@ package body Test.Setup is
    begin
       return Containing_Directory (Bindir);
    end Gnattest_Prefix;
+
+   -----------------------------
+   -- Compiler_Install_Prefix --
+   -----------------------------
+
+   function Compiler_Install_Prefix (Opts : Setup_Options) return String is
+      use Ada.Directories;
+
+      Target : constant String := To_String (Opts.Target);
+
+      --  A minimal Ada project so that loading it autoconfigures the Ada
+      --  compiler for the requested target/RTS. We then read the resulting
+      --  configuration rather than assuming any particular driver name.
+
+      Prj_Name : constant String :=
+        Compose (Utils.Environment.Tool_Temp_Dir.all, "gnattest_setup.gpr");
+      Tree     : GPR2.Project.Tree.Object;
+      Opt      : GPR2.Options.Object;
+   begin
+      declare
+         use Ada.Text_IO;
+         F : File_Type;
+      begin
+         Create (F, Out_File, Prj_Name);
+         Put_Line (F, "project Gnattest_Setup is");
+         Put_Line (F, "   for Source_Dirs use ();");
+         Put_Line (F, "   for Languages use (""Ada"");");
+         Put_Line (F, "end Gnattest_Setup;");
+         Close (F);
+      end;
+
+      Opt.Add_Switch (GPR2.Options.P, Prj_Name);
+      if not Is_Native (Opts) then
+         Opt.Add_Switch (GPR2.Options.Target, Target);
+      end if;
+      if Length (Opts.RTS) > 0 then
+         Opt.Add_Switch (GPR2.Options.RTS, To_String (Opts.RTS));
+      end if;
+      if Length (Opts.Config) > 0 then
+         Opt.Add_Switch (GPR2.Options.Config, To_String (Opts.Config));
+      end if;
+
+      if not Tree.Load
+               (Opt,
+                With_Runtime     => True,
+                Absent_Dir_Error => GPR2.No_Error,
+                Check_Drivers    => False)
+        or else not Tree.Has_Configuration
+      then
+         Fail
+           ("--compiler-prefix: could not find a compiler for the requested"
+            & " target/RTS");
+      end if;
+
+      declare
+         View : constant GPR2.Project.View.Object :=
+           Tree.Configuration.Corresponding_View;
+         Attr : constant GPR2.Project.Attribute.Object :=
+           View.Attribute
+             (Name  => GPR2.Project.Registry.Attribute.Compiler.Driver,
+              Index =>
+                GPR2.Project.Attribute_Index.Create (GPR2.Ada_Language));
+      begin
+         if not Attr.Is_Defined then
+            Fail ("--compiler-prefix: no Ada compiler driver in config");
+         end if;
+
+         --  Compilers are installed in <prefix>/bin, so the prefix is the
+         --  driver's grandparent directory.
+
+         return
+           Containing_Directory
+             (Containing_Directory (String (Attr.Value.Text)));
+      end;
+   end Compiler_Install_Prefix;
 
    ----------------------
    -- Source_AUnit_Dir --
@@ -564,6 +659,14 @@ package body Test.Setup is
          Opts.Verbose := Arg (Cmd, Verbose);
          Opts.Quiet := Arg (Cmd, Quiet);
          Opts.Gargs := Gargs;
+         Opts.Compiler_Prefix := Arg (Cmd, Compiler_Prefix);
+
+         --  Resolve --compiler-prefix into an explicit install prefix
+
+         if Opts.Compiler_Prefix then
+            Opts.Prefix :=
+              To_Unbounded_String (Compiler_Install_Prefix (Opts));
+         end if;
 
          Profile :=
            (if Opts.Profile = Auto

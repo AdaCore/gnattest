@@ -72,6 +72,7 @@ package Test.Command_Lines is
       --  `gnattest setup` mode
 
       Save_Temps,
+      Compiler_Prefix,
 
       --  Moved from the late Utils.Command_Lines.Common
 
