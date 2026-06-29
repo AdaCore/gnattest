@@ -1,0 +1,8 @@
+description: Test that the Builder, Linker, Binder and Compiler packages of
+  the generated gnattest_common.gpr extend the corresponding packages of the
+  argument project when it defines them, except in stub mode where the
+  argument project cannot be imported.
+
+driver: python_script
+control:
+  - [SKIP, 'not native', 'Test not designed for cross applications']

@@ -355,6 +355,15 @@ package Test.Common is
    IDE_Package_Present  : Boolean := False;
    Make_Package_Present : Boolean := False;
 
+   Builder_Package_Present  : Boolean := False;
+   Linker_Package_Present   : Boolean := False;
+   Binder_Package_Present   : Boolean := False;
+   Compiler_Package_Present : Boolean := False;
+   --  Indicate the presence of the corresponding packages in the argument
+   --  project. When present, the corresponding packages declared in the
+   --  generated gnattest_common.gpr extend them, so that the configuration
+   --  of the original project is inherited by the test harness.
+
    Tmp_Test_Prj : GNAT.OS_Lib.String_Access := null;
 
    type Reporters is (Gnattest, Xml, Junit, Text, Xml_Deprecated);
@@ -401,8 +410,6 @@ package Test.Common is
    Gnattest_Generated_Present : Boolean := False;
    --  Indicates if any of the source projects already have
    --  gnattest_generated.ads so that it won't be duplicated.
-
-   Inherited_Switches : List_Of_Strings.List := List_Of_Strings.Empty_List;
 
    Relocatable_Harness : Boolean := False;
 
