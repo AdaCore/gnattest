@@ -1,0 +1,4 @@
+with "r.gpr";
+project Q is
+   for Source_Dirs use ("src2");
+end Q;

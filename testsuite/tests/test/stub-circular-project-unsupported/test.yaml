@@ -1,0 +1,5 @@
+description:
+    gnattest must reject circular project trees (limited with) in stub mode
+    instead of generating a harness that fails to build (S219-064).
+
+driver: shell_script

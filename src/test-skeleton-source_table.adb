@@ -865,6 +865,86 @@ package body Test.Skeleton.Source_Table is
       Decrease_Indent (Me);
    end Initialize_Project_Table;
 
+   ------------------------------------
+   -- Get_Circular_Dependency_Chain --
+   ------------------------------------
+
+   function Get_Circular_Dependency_Chain return String is
+
+      function Path_To
+        (From : String; Target : String; Seen : in out String_Set.Set)
+         return String;
+      --  Following import edges (both regular and "limited with"), return a
+      --  textual path "From -> ... -> Target", or the empty string if Target
+      --  cannot be reached from From.
+
+      -------------
+      -- Path_To --
+      -------------
+
+      function Path_To
+        (From : String; Target : String; Seen : in out String_Set.Set)
+         return String
+      is
+         Cur : constant Project_File_Table.Cursor := PF_Table.Find (From);
+      begin
+         if From = Target then
+            return Target;
+         end if;
+
+         --  Projects absent from the table (e.g. externally built ones) have
+         --  no outgoing edges we know of.
+
+         if not Has_Element (Cur) or else Seen.Contains (From) then
+            return "";
+         end if;
+
+         Seen.Include (From);
+
+         for Dep of Element (Cur).Imported_List loop
+            declare
+               Sub : constant String := Path_To (Dep, Target, Seen);
+            begin
+               if Sub /= "" then
+                  return From & " -> " & Sub;
+               end if;
+            end;
+         end loop;
+
+         return "";
+      end Path_To;
+
+   begin
+      --  A circular project dependency only breaks stub generation when the
+      --  cycle goes through a regular "with": extending the importing project
+      --  then drags in the original of an imported project that is itself
+      --  extended, yielding an illegal "extends an already imported project".
+      --  A cycle made exclusively of "limited with" edges is handled fine and
+      --  must not be reported. We therefore look for a regular edge X -> Y
+      --  whose target Y can reach X again, which closes such a cycle.
+
+      for C in PF_Table.Iterate loop
+         declare
+            X : constant String := Key (C);
+         begin
+            for Y of Element (C).Imported_List loop
+               if not Element (C).Limited_Withed.Contains (Y) then
+                  declare
+                     Seen : String_Set.Set;
+                     Back : constant String := Path_To (Y, X, Seen);
+                  begin
+                     if Back /= "" then
+                        return X & " -> " & Back;
+                     end if;
+                  end;
+               end if;
+            end loop;
+         end;
+      end loop;
+
+      return "";
+   end Get_Circular_Dependency_Chain;
+
    -------------
    -- Is_Body --
    -------------
