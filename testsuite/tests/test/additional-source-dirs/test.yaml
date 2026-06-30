@@ -1,0 +1,6 @@
+description: Check that Gnattest_Common.Additional_Source_Dirs lets several
+  project harnesses share common, hand-written test code. Two projects ship a
+  persistent gnattest_common.gpr pointing at the same shared directory, and
+  their test skeletons consume a unit found only there.
+
+driver: python_script

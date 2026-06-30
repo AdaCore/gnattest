@@ -8764,7 +8764,7 @@ package body Test.Skeleton is
       Put_New_Line;
 
       S_Put_Line (3, "for Source_Dirs use");
-
+      S_Put_Line (5, "Gnattest_Common.Additional_Source_Dirs &");
       if Out_Dirs.Is_Empty then
          S_Put_Line (5, "(""common"");");
          Put_New_Line;
