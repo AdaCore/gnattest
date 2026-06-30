@@ -1549,8 +1549,9 @@ package body Test.Actions is
         (" --recursive-stub        - Recursively stub dependencies of stubbed units\n");
       Put ("\n");
       Put
-        (" --separate-drivers=(unit|test)     - Generate individual test driver executables, either one per unit under test or one per test");
-      Put ("                                      Default to test.\n");
+        (" --separate-drivers=(unit|test)     - Generate individual test driver executables, either one per unit under test or one per test\n");
+      Put
+        ("                                      Defaults to unit when the value is omitted.\n");
       Put
         ("                                      The test value is not compatible with light runtime profiles.\n");
       Put
