@@ -335,8 +335,6 @@ package Test.Common is
      new String'("gnattest" & GNAT.OS_Lib.Directory_Separator & "tests");
    --  Name of default directory to place test files
 
-   Generate_Separates : Boolean := False;
-
    Stub_Mode_ON : Boolean := False;
 
    Recursive_Stubbing_ON : Boolean := False;

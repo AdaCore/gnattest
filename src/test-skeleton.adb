@@ -4103,9 +4103,7 @@ package body Test.Skeleton is
       use GNAT.OS_Lib;
    begin
 
-      if not Generate_Separates then
-         Test_Info.Include (Data.Unit_File_Name.all, 0);
-      end if;
+      Test_Info.Include (Data.Unit_File_Name.all, 0);
 
       Test_Unit_Suffix := new String'(Test_Unit_Name_Suff);
 
@@ -4949,118 +4947,13 @@ package body Test.Skeleton is
 
             Reset_Line_Counter;
 
-            if Generate_Separates then
-               Create
-                 (Output_Dir
-                  & Directory_Separator
-                  & Test_File_Name.all
-                  & ".adb");
-               Put_Harness_Header;
-            else
-               Get_Subprograms_From_Package
-                 (Output_Dir
-                  & Directory_Separator
-                  & Test_File_Name.all
-                  & ".adb");
-               Create (Tmp_File_Name);
-               Put_TP_Header (Test_Data_Package_Name.all);
+            Get_Subprograms_From_Package
+              (Output_Dir & Directory_Separator & Test_File_Name.all & ".adb");
+            Create (Tmp_File_Name);
+            Put_TP_Header (Test_Data_Package_Name.all);
 
-               --  gathering transition data
-               if Transition then
-                  Subp_Cur := Data.Subp_List.First;
-                  loop
-                     exit when Subp_Cur = Subp_Data_List.No_Element;
-
-                     Current_Subp := Subp_Data_List.Element (Subp_Cur);
-
-                     if Current_Subp.Corresp_Type = Current_Type.Type_Number
-                     then
-                        UH.Version := new String'("1");
-                        UH.Hash :=
-                          new String'
-                            (Subp_Data_List.Element (Subp_Cur)
-                               .Subp_Hash_V1.all);
-                        if Subp_Data_List.Element (Subp_Cur).Has_TC_Info then
-                           UH.TC_Hash :=
-                             new String'
-                               (Subp_Data_List.Element (Subp_Cur)
-                                  .TC_Info
-                                  .TC_Hash.all);
-                        else
-                           UH.TC_Hash := new String'("");
-                        end if;
-
-                        Current_Subp := Subp_Data_List.Element (Subp_Cur);
-
-                        Get_Subprogram_From_Separate
-                          (Output_Dir
-                           & Directory_Separator
-                           & Unit_To_File_Name
-                               (Unit_Name.all
-                                & "."
-                                & Test_Routine_Prefix
-                                & Current_Subp.Subp_Text_Name.all
-                                & "_"
-                                & Current_Subp.Subp_Hash_V1
-                                    (Current_Subp.Subp_Hash_V1'First
-                                     .. Current_Subp.Subp_Hash_V1'First + 5)
-                                & (if Current_Subp.Has_TC_Info
-                                   then
-                                     "_"
-                                     & Current_Subp.TC_Info.TC_Hash
-                                         (Current_Subp.TC_Info.TC_Hash'First
-                                          .. Current_Subp.TC_Info.TC_Hash'First
-                                             + 5)
-                                   else ""))
-                           & ".adb",
-                           UH,
-                           Current_Subp);
-                     end if;
-                     Subp_Data_List.Next (Subp_Cur);
-                  end loop;
-               end if;
-
-               --  gathering used short names
-               Subp_Cur := Data.Subp_List.First;
-               loop
-                  exit when Subp_Cur = Subp_Data_List.No_Element;
-
-                  Current_Subp := Subp_Data_List.Element (Subp_Cur);
-
-                  if Current_Subp.Corresp_Type = Current_Type.Type_Number then
-                     UH.Version := new String'(Hash_Version);
-                     UH.Hash := new String'(Current_Subp.Subp_Full_Hash.all);
-                     if Current_Subp.Has_TC_Info then
-                        UH.TC_Hash :=
-                          new String'
-                            (Sanitize_TC_Name (Current_Subp.TC_Info.Name.all));
-                     else
-                        UH.TC_Hash := new String'("");
-                     end if;
-
-                     MD_Cur := Find (Markered_Data_Map, UH);
-
-                     if MD_Cur /= Markered_Data_Maps.No_Element then
-                        MD := Markered_Data_Maps.Element (MD_Cur);
-                        if MD.Short_Name_Used then
-                           Short_Names_Used.Include
-                             (To_Lower (MD.Short_Name.all));
-                           Shortnamed_Subps.Include
-                             (Current_Subp.Subp_Declaration);
-
-                           Name_Numbers.Include
-                             (To_Lower (Current_Subp.Subp_Text_Name.all), 1);
-                           Elem_Numbers.Include
-                             (Current_Subp.Subp_Declaration, 1);
-                        end if;
-                     end if;
-
-                  end if;
-
-                  Subp_Data_List.Next (Subp_Cur);
-               end loop;
-
-               --  updating hash v.1 to hash v.2 where possible
+            --  gathering transition data
+            if Transition then
                Subp_Cur := Data.Subp_List.First;
                loop
                   exit when Subp_Cur = Subp_Data_List.No_Element;
@@ -5069,258 +4962,342 @@ package body Test.Skeleton is
 
                   if Current_Subp.Corresp_Type = Current_Type.Type_Number then
                      UH.Version := new String'("1");
-                     UH.Hash := new String'(Current_Subp.Subp_Hash_V1.all);
-                     if Current_Subp.Has_TC_Info then
+                     UH.Hash :=
+                       new String'
+                         (Subp_Data_List.Element (Subp_Cur).Subp_Hash_V1.all);
+                     if Subp_Data_List.Element (Subp_Cur).Has_TC_Info then
                         UH.TC_Hash :=
-                          new String'(Current_Subp.TC_Info.TC_Hash.all);
+                          new String'
+                            (Subp_Data_List.Element (Subp_Cur)
+                               .TC_Info
+                               .TC_Hash.all);
                      else
                         UH.TC_Hash := new String'("");
                      end if;
 
-                     MD_Cur := Find (Markered_Data_Map, UH);
+                     Current_Subp := Subp_Data_List.Element (Subp_Cur);
 
-                     if MD_Cur /= Markered_Data_Maps.No_Element then
-                        MD := Markered_Data_Maps.Element (MD_Cur);
-
-                        Markered_Data_Map.Delete (MD_Cur);
-                        Free (UH.Hash);
-                        UH.Hash :=
-                          new String'(Current_Subp.Subp_Hash_V2_1.all);
-                        Free (UH.Version);
-                        UH.Version := new String'("2");
-
-                        Markered_Data_Map.Include (UH, MD);
-                     end if;
-
+                     Get_Subprogram_From_Separate
+                       (Output_Dir
+                        & Directory_Separator
+                        & Unit_To_File_Name
+                            (Unit_Name.all
+                             & "."
+                             & Test_Routine_Prefix
+                             & Current_Subp.Subp_Text_Name.all
+                             & "_"
+                             & Current_Subp.Subp_Hash_V1
+                                 (Current_Subp.Subp_Hash_V1'First
+                                  .. Current_Subp.Subp_Hash_V1'First + 5)
+                             & (if Current_Subp.Has_TC_Info
+                                then
+                                  "_"
+                                  & Current_Subp.TC_Info.TC_Hash
+                                      (Current_Subp.TC_Info.TC_Hash'First
+                                       .. Current_Subp.TC_Info.TC_Hash'First
+                                          + 5)
+                                else ""))
+                        & ".adb",
+                        UH,
+                        Current_Subp);
                   end if;
-
                   Subp_Data_List.Next (Subp_Cur);
                end loop;
+            end if;
 
-               --  updating hash v.2 to hash v.2.1 where possible
-               Subp_Cur := Data.Subp_List.First;
-               loop
-                  exit when Subp_Cur = Subp_Data_List.No_Element;
+            --  gathering used short names
+            Subp_Cur := Data.Subp_List.First;
+            loop
+               exit when Subp_Cur = Subp_Data_List.No_Element;
 
-                  Current_Subp := Subp_Data_List.Element (Subp_Cur);
+               Current_Subp := Subp_Data_List.Element (Subp_Cur);
 
-                  if Current_Subp.Corresp_Type = Current_Type.Type_Number then
+               if Current_Subp.Corresp_Type = Current_Type.Type_Number then
+                  UH.Version := new String'(Hash_Version);
+                  UH.Hash := new String'(Current_Subp.Subp_Full_Hash.all);
+                  if Current_Subp.Has_TC_Info then
+                     UH.TC_Hash :=
+                       new String'
+                         (Sanitize_TC_Name (Current_Subp.TC_Info.Name.all));
+                  else
+                     UH.TC_Hash := new String'("");
+                  end if;
+
+                  MD_Cur := Find (Markered_Data_Map, UH);
+
+                  if MD_Cur /= Markered_Data_Maps.No_Element then
+                     MD := Markered_Data_Maps.Element (MD_Cur);
+                     if MD.Short_Name_Used then
+                        Short_Names_Used.Include
+                          (To_Lower (MD.Short_Name.all));
+                        Shortnamed_Subps.Include
+                          (Current_Subp.Subp_Declaration);
+
+                        Name_Numbers.Include
+                          (To_Lower (Current_Subp.Subp_Text_Name.all), 1);
+                        Elem_Numbers.Include
+                          (Current_Subp.Subp_Declaration, 1);
+                     end if;
+                  end if;
+
+               end if;
+
+               Subp_Data_List.Next (Subp_Cur);
+            end loop;
+
+            --  updating hash v.1 to hash v.2 where possible
+            Subp_Cur := Data.Subp_List.First;
+            loop
+               exit when Subp_Cur = Subp_Data_List.No_Element;
+
+               Current_Subp := Subp_Data_List.Element (Subp_Cur);
+
+               if Current_Subp.Corresp_Type = Current_Type.Type_Number then
+                  UH.Version := new String'("1");
+                  UH.Hash := new String'(Current_Subp.Subp_Hash_V1.all);
+                  if Current_Subp.Has_TC_Info then
+                     UH.TC_Hash :=
+                       new String'(Current_Subp.TC_Info.TC_Hash.all);
+                  else
+                     UH.TC_Hash := new String'("");
+                  end if;
+
+                  MD_Cur := Find (Markered_Data_Map, UH);
+
+                  if MD_Cur /= Markered_Data_Maps.No_Element then
+                     MD := Markered_Data_Maps.Element (MD_Cur);
+
+                     Markered_Data_Map.Delete (MD_Cur);
+                     Free (UH.Hash);
+                     UH.Hash := new String'(Current_Subp.Subp_Hash_V2_1.all);
+                     Free (UH.Version);
                      UH.Version := new String'("2");
-                     UH.Hash := new String'(Current_Subp.Subp_Hash_V2_1.all);
 
-                     if Current_Subp.Has_TC_Info then
-                        UH.TC_Hash :=
-                          new String'(Current_Subp.TC_Info.TC_Hash.all);
-                     else
-                        UH.TC_Hash := new String'("");
-                     end if;
-
-                     MD_Cur := Find (Markered_Data_Map, UH);
-
-                     if MD_Cur /= Markered_Data_Maps.No_Element then
-                        MD := Markered_Data_Maps.Element (MD_Cur);
-
-                        Markered_Data_Map.Delete (MD_Cur);
-                        Free (UH.Version);
-                        UH.Version := new String'("2.1");
-                        if UH.TC_Hash.all /= "" then
-                           Free (UH.TC_Hash);
-                           UH.TC_Hash :=
-                             new String'
-                               (Sanitize_TC_Name
-                                  (Current_Subp.TC_Info.Name.all));
-                        end if;
-
-                        Markered_Data_Map.Include (UH, MD);
-                     end if;
-
+                     Markered_Data_Map.Include (UH, MD);
                   end if;
 
-                  Subp_Data_List.Next (Subp_Cur);
-               end loop;
+               end if;
 
-               --  updating hash v.2.1 to hash v.2.2
-               --  and looking for new short names
-               Subp_Cur := Data.Subp_List.First;
-               loop
-                  exit when Subp_Cur = Subp_Data_List.No_Element;
+               Subp_Data_List.Next (Subp_Cur);
+            end loop;
 
-                  Current_Subp := Subp_Data_List.Element (Subp_Cur);
+            --  updating hash v.2 to hash v.2.1 where possible
+            Subp_Cur := Data.Subp_List.First;
+            loop
+               exit when Subp_Cur = Subp_Data_List.No_Element;
 
-                  if Current_Subp.Corresp_Type = Current_Type.Type_Number then
+               Current_Subp := Subp_Data_List.Element (Subp_Cur);
+
+               if Current_Subp.Corresp_Type = Current_Type.Type_Number then
+                  UH.Version := new String'("2");
+                  UH.Hash := new String'(Current_Subp.Subp_Hash_V2_1.all);
+
+                  if Current_Subp.Has_TC_Info then
+                     UH.TC_Hash :=
+                       new String'(Current_Subp.TC_Info.TC_Hash.all);
+                  else
+                     UH.TC_Hash := new String'("");
+                  end if;
+
+                  MD_Cur := Find (Markered_Data_Map, UH);
+
+                  if MD_Cur /= Markered_Data_Maps.No_Element then
+                     MD := Markered_Data_Maps.Element (MD_Cur);
+
+                     Markered_Data_Map.Delete (MD_Cur);
+                     Free (UH.Version);
                      UH.Version := new String'("2.1");
-                     UH.Hash := new String'(Current_Subp.Subp_Hash_V2_1.all);
-
-                     if Current_Subp.Has_TC_Info then
+                     if UH.TC_Hash.all /= "" then
+                        Free (UH.TC_Hash);
                         UH.TC_Hash :=
                           new String'
                             (Sanitize_TC_Name (Current_Subp.TC_Info.Name.all));
-                     else
-                        UH.TC_Hash := new String'("");
                      end if;
 
-                     MD_Cur := Find (Markered_Data_Map, UH);
-
-                     if MD_Cur /= Markered_Data_Maps.No_Element then
-                        MD := Markered_Data_Maps.Element (MD_Cur);
-
-                        if not Short_Names_Used.Contains (MD.Short_Name.all)
-                          or else Shortnamed_Subps.Contains
-                                    (Current_Subp.Subp_Declaration)
-                        then
-                           Short_Names_Used.Include (MD.Short_Name.all);
-                           Shortnamed_Subps.Include
-                             (Current_Subp.Subp_Declaration);
-
-                           Name_Numbers.Include
-                             (To_Lower (Current_Subp.Subp_Text_Name.all), 1);
-                           Elem_Numbers.Include
-                             (Current_Subp.Subp_Declaration, 1);
-
-                           MD.Short_Name_Used := True;
-                        end if;
-
-                        Markered_Data_Map.Delete (MD_Cur);
-                        Free (UH.Hash);
-                        UH.Hash :=
-                          new String'(Current_Subp.Subp_Full_Hash.all);
-                        Free (UH.Version);
-                        UH.Version := new String'(Hash_Version);
-                        Markered_Data_Map.Include (UH, MD);
-                     end if;
-
+                     Markered_Data_Map.Include (UH, MD);
                   end if;
 
-                  Subp_Data_List.Next (Subp_Cur);
-               end loop;
+               end if;
 
-               --  creating markered_data and deciding on new short names
-               Subp_Cur := Data.Subp_List.First;
-               loop
-                  exit when Subp_Cur = Subp_Data_List.No_Element;
+               Subp_Data_List.Next (Subp_Cur);
+            end loop;
 
-                  Current_Subp := Subp_Data_List.Element (Subp_Cur);
+            --  updating hash v.2.1 to hash v.2.2
+            --  and looking for new short names
+            Subp_Cur := Data.Subp_List.First;
+            loop
+               exit when Subp_Cur = Subp_Data_List.No_Element;
 
-                  if Current_Subp.Corresp_Type = Current_Type.Type_Number then
-                     UH.Version := new String'(Hash_Version);
-                     UH.Hash := new String'(Current_Subp.Subp_Full_Hash.all);
-                     if Current_Subp.Has_TC_Info then
-                        UH.TC_Hash :=
-                          new String'
-                            (Sanitize_TC_Name (Current_Subp.TC_Info.Name.all));
-                     else
-                        UH.TC_Hash := new String'("");
-                     end if;
+               Current_Subp := Subp_Data_List.Element (Subp_Cur);
 
-                     MD_Cur := Find (Markered_Data_Map, UH);
+               if Current_Subp.Corresp_Type = Current_Type.Type_Number then
+                  UH.Version := new String'("2.1");
+                  UH.Hash := new String'(Current_Subp.Subp_Hash_V2_1.all);
 
-                     if MD_Cur = Markered_Data_Maps.No_Element then
-
-                        MD.Commented_Out := False;
-                        MD.Short_Name_Used := False;
-                        MD.Short_Name :=
-                          new String'
-                            (To_Lower (Current_Subp.Subp_Text_Name.all));
-                        MD.TR_Text.Clear;
-
-                        if not Short_Names_Used.Contains
-                                 (To_Lower (Current_Subp.Subp_Text_Name.all))
-                          or else Shortnamed_Subps.Contains
-                                    (Current_Subp.Subp_Declaration)
-                        then
-                           --  Short name is free, we can use it
-                           MD.Short_Name_Used := True;
-                           Short_Names_Used.Include
-                             (To_Lower (Current_Subp.Subp_Text_Name.all));
-                           Shortnamed_Subps.Include
-                             (Current_Subp.Subp_Declaration);
-
-                           Name_Numbers.Include
-                             (To_Lower (Current_Subp.Subp_Text_Name.all), 1);
-                           Elem_Numbers.Include
-                             (Current_Subp.Subp_Declaration, 1);
-
-                           --  Looking for a dangling test with same short
-                           --  name but different hash.
-                           MD_Cur :=
-                             Find_Same_Short_Name
-                               (Markered_Data_Map, Current_Subp);
-
-                           if MD_Cur /= Markered_Data_Maps.No_Element then
-                              --  Using corresponding dangling test
-
-                              MD.TR_Text.Clear;
-                              MD.TR_Text :=
-                                Markered_Data_Maps.Element (MD_Cur).TR_Text;
-
-                              --  also need to copy Commented_Out since
-                              --  the test can be dangling for a long time
-                              --  or just become dangling
-                              MD.Commented_Out :=
-                                Markered_Data_Maps.Element (MD_Cur)
-                                  .Commented_Out;
-
-                              Markered_Data_Map.Delete (MD_Cur);
-                              MD.Issue_Warning := True;
-                           end if;
-
-                        end if;
-
-                        Markered_Data_Map.Insert (UH, MD);
-
-                     end if;
-
+                  if Current_Subp.Has_TC_Info then
+                     UH.TC_Hash :=
+                       new String'
+                         (Sanitize_TC_Name (Current_Subp.TC_Info.Name.all));
+                  else
+                     UH.TC_Hash := new String'("");
                   end if;
 
-                  Subp_Data_List.Next (Subp_Cur);
-               end loop;
+                  MD_Cur := Find (Markered_Data_Map, UH);
 
-               --  setting overloading numbers;
-               Subp_Cur := Data.Subp_List.First;
-               loop
-                  exit when Subp_Cur = Subp_Data_List.No_Element;
+                  if MD_Cur /= Markered_Data_Maps.No_Element then
+                     MD := Markered_Data_Maps.Element (MD_Cur);
 
-                  Current_Subp := Subp_Data_List.Element (Subp_Cur);
-
-                  if Current_Subp.Corresp_Type = Current_Type.Type_Number then
-
-                     if Name_Numbers.Find
-                          (To_Lower (Current_Subp.Subp_Text_Name.all))
-                       = Name_Frequency.No_Element
+                     if not Short_Names_Used.Contains (MD.Short_Name.all)
+                       or else Shortnamed_Subps.Contains
+                                 (Current_Subp.Subp_Declaration)
                      then
+                        Short_Names_Used.Include (MD.Short_Name.all);
+                        Shortnamed_Subps.Include
+                          (Current_Subp.Subp_Declaration);
 
                         Name_Numbers.Include
                           (To_Lower (Current_Subp.Subp_Text_Name.all), 1);
                         Elem_Numbers.Include
                           (Current_Subp.Subp_Declaration, 1);
 
-                     else
-                        if Elem_Numbers.Find (Current_Subp.Subp_Declaration)
-                          = Elem_Number_Maps.No_Element
-                        then
-
-                           declare
-                              X : constant Natural :=
-                                Name_Numbers.Element
-                                  (To_Lower (Current_Subp.Subp_Text_Name.all));
-                           begin
-                              Name_Numbers.Replace
-                                (To_Lower (Current_Subp.Subp_Text_Name.all),
-                                 X + 1);
-                              Elem_Numbers.Include
-                                (Current_Subp.Subp_Declaration, X + 1);
-                           end;
-
-                        end if;
+                        MD.Short_Name_Used := True;
                      end if;
+
+                     Markered_Data_Map.Delete (MD_Cur);
+                     Free (UH.Hash);
+                     UH.Hash := new String'(Current_Subp.Subp_Full_Hash.all);
+                     Free (UH.Version);
+                     UH.Version := new String'(Hash_Version);
+                     Markered_Data_Map.Include (UH, MD);
+                  end if;
+
+               end if;
+
+               Subp_Data_List.Next (Subp_Cur);
+            end loop;
+
+            --  creating markered_data and deciding on new short names
+            Subp_Cur := Data.Subp_List.First;
+            loop
+               exit when Subp_Cur = Subp_Data_List.No_Element;
+
+               Current_Subp := Subp_Data_List.Element (Subp_Cur);
+
+               if Current_Subp.Corresp_Type = Current_Type.Type_Number then
+                  UH.Version := new String'(Hash_Version);
+                  UH.Hash := new String'(Current_Subp.Subp_Full_Hash.all);
+                  if Current_Subp.Has_TC_Info then
+                     UH.TC_Hash :=
+                       new String'
+                         (Sanitize_TC_Name (Current_Subp.TC_Info.Name.all));
+                  else
+                     UH.TC_Hash := new String'("");
+                  end if;
+
+                  MD_Cur := Find (Markered_Data_Map, UH);
+
+                  if MD_Cur = Markered_Data_Maps.No_Element then
+
+                     MD.Commented_Out := False;
+                     MD.Short_Name_Used := False;
+                     MD.Short_Name :=
+                       new String'(To_Lower (Current_Subp.Subp_Text_Name.all));
+                     MD.TR_Text.Clear;
+
+                     if not Short_Names_Used.Contains
+                              (To_Lower (Current_Subp.Subp_Text_Name.all))
+                       or else Shortnamed_Subps.Contains
+                                 (Current_Subp.Subp_Declaration)
+                     then
+                        --  Short name is free, we can use it
+                        MD.Short_Name_Used := True;
+                        Short_Names_Used.Include
+                          (To_Lower (Current_Subp.Subp_Text_Name.all));
+                        Shortnamed_Subps.Include
+                          (Current_Subp.Subp_Declaration);
+
+                        Name_Numbers.Include
+                          (To_Lower (Current_Subp.Subp_Text_Name.all), 1);
+                        Elem_Numbers.Include
+                          (Current_Subp.Subp_Declaration, 1);
+
+                        --  Looking for a dangling test with same short
+                        --  name but different hash.
+                        MD_Cur :=
+                          Find_Same_Short_Name
+                            (Markered_Data_Map, Current_Subp);
+
+                        if MD_Cur /= Markered_Data_Maps.No_Element then
+                           --  Using corresponding dangling test
+
+                           MD.TR_Text.Clear;
+                           MD.TR_Text :=
+                             Markered_Data_Maps.Element (MD_Cur).TR_Text;
+
+                           --  also need to copy Commented_Out since
+                           --  the test can be dangling for a long time
+                           --  or just become dangling
+                           MD.Commented_Out :=
+                             Markered_Data_Maps.Element (MD_Cur).Commented_Out;
+
+                           Markered_Data_Map.Delete (MD_Cur);
+                           MD.Issue_Warning := True;
+                        end if;
+
+                     end if;
+
+                     Markered_Data_Map.Insert (UH, MD);
 
                   end if;
 
-                  Subp_Data_List.Next (Subp_Cur);
-               end loop;
-               Name_Numbers.Clear;
+               end if;
 
-            end if;
+               Subp_Data_List.Next (Subp_Cur);
+            end loop;
+
+            --  setting overloading numbers;
+            Subp_Cur := Data.Subp_List.First;
+            loop
+               exit when Subp_Cur = Subp_Data_List.No_Element;
+
+               Current_Subp := Subp_Data_List.Element (Subp_Cur);
+
+               if Current_Subp.Corresp_Type = Current_Type.Type_Number then
+
+                  if Name_Numbers.Find
+                       (To_Lower (Current_Subp.Subp_Text_Name.all))
+                    = Name_Frequency.No_Element
+                  then
+
+                     Name_Numbers.Include
+                       (To_Lower (Current_Subp.Subp_Text_Name.all), 1);
+                     Elem_Numbers.Include (Current_Subp.Subp_Declaration, 1);
+
+                  else
+                     if Elem_Numbers.Find (Current_Subp.Subp_Declaration)
+                       = Elem_Number_Maps.No_Element
+                     then
+
+                        declare
+                           X : constant Natural :=
+                             Name_Numbers.Element
+                               (To_Lower (Current_Subp.Subp_Text_Name.all));
+                        begin
+                           Name_Numbers.Replace
+                             (To_Lower (Current_Subp.Subp_Text_Name.all),
+                              X + 1);
+                           Elem_Numbers.Include
+                             (Current_Subp.Subp_Declaration, X + 1);
+                        end;
+
+                     end if;
+                  end if;
+
+               end if;
+
+               Subp_Data_List.Next (Subp_Cur);
+            end loop;
+            Name_Numbers.Clear;
 
             S_Put (0, "with AUnit.Assertions; use AUnit.Assertions;");
             New_Line_Count;
@@ -5372,155 +5349,131 @@ package body Test.Skeleton is
                      end if;
                   end if;
 
-                  if Generate_Separates then
-                     S_Put
-                       (3,
-                        "procedure "
-                        & Subp_Data_List.Element (Subp_Cur)
-                            .Subp_Mangle_Name.all
-                        & " (Gnattest_T : in out Test_"
-                        & Current_Type.Main_Type_Text_Name.all
-                        & ") is separate;");
+                  Test_Info.Replace
+                    (Data.Unit_File_Name.all,
+                     Test_Info.Element (Data.Unit_File_Name.all) + 1);
 
-                     New_Line_Count;
-                     Print_Comment_Declaration
-                       (Subp_Data_List.Element (Subp_Cur), 3);
-                     New_Line_Count;
+                  All_Tests_Counter := All_Tests_Counter + 1;
 
-                  else
-
-                     Test_Info.Replace
-                       (Data.Unit_File_Name.all,
-                        Test_Info.Element (Data.Unit_File_Name.all) + 1);
-
-                     All_Tests_Counter := All_Tests_Counter + 1;
-
-                     UH.Version := new String'(Hash_Version);
-                     UH.Hash :=
+                  UH.Version := new String'(Hash_Version);
+                  UH.Hash :=
+                    new String'
+                      (Subp_Data_List.Element (Subp_Cur).Subp_Full_Hash.all);
+                  if Subp_Data_List.Element (Subp_Cur).Has_TC_Info then
+                     UH.TC_Hash :=
                        new String'
-                         (Subp_Data_List.Element (Subp_Cur)
-                            .Subp_Full_Hash.all);
-                     if Subp_Data_List.Element (Subp_Cur).Has_TC_Info then
-                        UH.TC_Hash :=
-                          new String'
-                            (Sanitize_TC_Name
-                               (Subp_Data_List.Element (Subp_Cur)
-                                  .TC_Info
-                                  .Name.all));
-                     else
-                        UH.TC_Hash := new String'("");
+                         (Sanitize_TC_Name
+                            (Subp_Data_List.Element (Subp_Cur)
+                               .TC_Info
+                               .Name.all));
+                  else
+                     UH.TC_Hash := new String'("");
+                  end if;
+
+                  MD_Cur := Find (Markered_Data_Map, UH);
+                  MD := Markered_Data_Maps.Element (MD_Cur);
+
+                  Put_Opening_Comment_Section
+                    (Subp_Data_List.Element (Subp_Cur),
+                     Elem_Numbers.Element (Current_Subp.Subp_Declaration),
+                     Use_Short_Name => MD.Short_Name_Used,
+                     Type_Name      => Current_Type.Main_Type_Text_Name.all,
+                     Add_Cov_Dump   => Data.Has_Gen_Tests and then Minimize);
+
+                  if Is_Unimplemented_Test (MD.TR_Text) then
+                     TR_SLOC_Buffer.Append
+                       ((new String'(Data.Unit_Full_Name.all),
+                         new String'(Test_File_Name.all & ".adb"),
+                         null,
+                         Subp_Data_List.Element (Subp_Cur),
+                         New_Line_Counter));
+                  else
+                     TR_SLOC_Buffer.Append
+                       ((new String'(Data.Unit_Full_Name.all),
+                         new String'(Test_File_Name.all & ".adb"),
+                         new String'("modified"),
+                         Subp_Data_List.Element (Subp_Cur),
+                         New_Line_Counter));
+                  end if;
+
+                  if MD.TR_Text.Is_Empty then
+
+                     if Stub_Mode_ON then
+                        Setters_Set :=
+                          Get_Direct_Callees_Setters
+                            (Current_Subp.Subp_Declaration.As_Basic_Decl);
                      end if;
 
-                     MD_Cur := Find (Markered_Data_Map, UH);
-                     MD := Markered_Data_Maps.Element (MD_Cur);
-
-                     Put_Opening_Comment_Section
-                       (Subp_Data_List.Element (Subp_Cur),
-                        Elem_Numbers.Element (Current_Subp.Subp_Declaration),
-                        Use_Short_Name => MD.Short_Name_Used,
-                        Type_Name      => Current_Type.Main_Type_Text_Name.all,
-                        Add_Cov_Dump   =>
-                          Data.Has_Gen_Tests and then Minimize);
-
-                     if Is_Unimplemented_Test (MD.TR_Text) then
-                        TR_SLOC_Buffer.Append
-                          ((new String'(Data.Unit_Full_Name.all),
-                            new String'(Test_File_Name.all & ".adb"),
-                            null,
-                            Subp_Data_List.Element (Subp_Cur),
-                            New_Line_Counter));
-                     else
-                        TR_SLOC_Buffer.Append
-                          ((new String'(Data.Unit_Full_Name.all),
-                            new String'(Test_File_Name.all & ".adb"),
-                            new String'("modified"),
-                            Subp_Data_List.Element (Subp_Cur),
-                            New_Line_Counter));
-                     end if;
-
-                     if MD.TR_Text.Is_Empty then
-
-                        if Stub_Mode_ON then
-                           Setters_Set :=
-                             Get_Direct_Callees_Setters
-                               (Current_Subp.Subp_Declaration.As_Basic_Decl);
-                        end if;
-
-                        New_Tests_Counter := New_Tests_Counter + 1;
-                        New_Line_Count;
-                        S_Put (6, "pragma Unreferenced (Gnattest_T);");
-                        New_Line_Count;
-                        New_Line_Count;
-                        S_Put (3, "begin");
-                        New_Line_Count;
-                        New_Line_Count;
-                        if not Setters_Set.Is_Empty then
-                           for Set of Setters_Set loop
-                              S_Put (3, "--  " & Set & "( );");
-                              New_Line_Count;
-                           end loop;
-                           New_Line_Count;
-                           Setters_Set.Clear;
-                        end if;
-
-                        S_Put (6, "AUnit.Assertions.Assert");
-                        New_Line_Count;
-                        S_Put (8, "(Gnattest_Generated.Default_Assert_Value,");
-                        New_Line_Count;
-                        S_Put (9, """Test not implemented."");");
-                        New_Line_Count;
-                        New_Line_Count;
-                     else
-
-                        if MD.Issue_Warning then
-                           Report_Std
-                             ("warning: (gnattest) "
-                              & Base_Name (Data.Unit_File_Name.all)
-                              & ":"
-                              & Trim
-                                  (First_Line_Number
-                                     (Current_Subp.Subp_Declaration)'Img,
-                                   Both)
-                              & ":"
-                              & Trim
-                                  (First_Column_Number
-                                     (Current_Subp.Subp_Declaration)'Img,
-                                   Both)
-                              & ": test for "
-                              & MD.Short_Name.all
-                              & " at "
-                              & Unit_Name.all
-                              & ":"
-                              & Trim (Integer'Image (New_Line_Counter), Both)
-                              & " might be out of date ("
-                              & MD.Short_Name.all
-                              & " has been changed)");
-                        end if;
-
-                        for I in
-                          MD.TR_Text.First_Index .. MD.TR_Text.Last_Index
-                        loop
-                           if MD.Commented_Out then
-                              S_Put
-                                (0, Uncomment_Line (MD.TR_Text.Element (I)));
-                           else
-                              S_Put (0, MD.TR_Text.Element (I));
-                           end if;
+                     New_Tests_Counter := New_Tests_Counter + 1;
+                     New_Line_Count;
+                     S_Put (6, "pragma Unreferenced (Gnattest_T);");
+                     New_Line_Count;
+                     New_Line_Count;
+                     S_Put (3, "begin");
+                     New_Line_Count;
+                     New_Line_Count;
+                     if not Setters_Set.Is_Empty then
+                        for Set of Setters_Set loop
+                           S_Put (3, "--  " & Set & "( );");
                            New_Line_Count;
                         end loop;
+                        New_Line_Count;
+                        Setters_Set.Clear;
                      end if;
 
-                     Markered_Data_Map.Delete (MD_Cur);
-
-                     Put_Closing_Comment_Section
-                       (Subp_Data_List.Element (Subp_Cur),
-                        Elem_Numbers.Element (Current_Subp.Subp_Declaration),
-                        Use_Short_Name => MD.Short_Name_Used,
-                        Add_Cov_Dump   =>
-                          Data.Has_Gen_Tests and then Minimize);
+                     S_Put (6, "AUnit.Assertions.Assert");
                      New_Line_Count;
+                     S_Put (8, "(Gnattest_Generated.Default_Assert_Value,");
+                     New_Line_Count;
+                     S_Put (9, """Test not implemented."");");
+                     New_Line_Count;
+                     New_Line_Count;
+                  else
 
+                     if MD.Issue_Warning then
+                        Report_Std
+                          ("warning: (gnattest) "
+                           & Base_Name (Data.Unit_File_Name.all)
+                           & ":"
+                           & Trim
+                               (First_Line_Number
+                                  (Current_Subp.Subp_Declaration)'Img,
+                                Both)
+                           & ":"
+                           & Trim
+                               (First_Column_Number
+                                  (Current_Subp.Subp_Declaration)'Img,
+                                Both)
+                           & ": test for "
+                           & MD.Short_Name.all
+                           & " at "
+                           & Unit_Name.all
+                           & ":"
+                           & Trim (Integer'Image (New_Line_Counter), Both)
+                           & " might be out of date ("
+                           & MD.Short_Name.all
+                           & " has been changed)");
+                     end if;
+
+                     for I in MD.TR_Text.First_Index .. MD.TR_Text.Last_Index
+                     loop
+                        if MD.Commented_Out then
+                           S_Put (0, Uncomment_Line (MD.TR_Text.Element (I)));
+                        else
+                           S_Put (0, MD.TR_Text.Element (I));
+                        end if;
+                        New_Line_Count;
+                     end loop;
                   end if;
+
+                  Markered_Data_Map.Delete (MD_Cur);
+
+                  Put_Closing_Comment_Section
+                    (Subp_Data_List.Element (Subp_Cur),
+                     Elem_Numbers.Element (Current_Subp.Subp_Declaration),
+                     Use_Short_Name => MD.Short_Name_Used,
+                     Add_Cov_Dump   => Data.Has_Gen_Tests and then Minimize);
+                  New_Line_Count;
 
                end if;
 
@@ -5614,41 +5567,39 @@ package body Test.Skeleton is
             Add_Buffered_TR_Slocs
               (TP_List, Format_Time (File_Time_Stamp (Tmp_File_Name)));
 
-            if not Generate_Separates then
-               declare
-                  Old_Package : constant String :=
-                    (if Test.Common.Instrument
-                     then
-                       Harness_Dir_Str.all
-                       & Directory_Separator
-                       & "test_obj"
-                       & Directory_Separator
-                       & Test_Prj_Prefix
-                       & To_Lower (String (Project_Tree.Root_Project.Name))
-                       & Instr_Suffix
-                     else Output_Dir)
+            declare
+               Old_Package : constant String :=
+                 (if Test.Common.Instrument
+                  then
+                    Harness_Dir_Str.all
                     & Directory_Separator
-                    & Test_File_Name.all
-                    & ".adb";
-                  Success     : Boolean;
-               begin
-                  if Is_Regular_File (Old_Package) then
-                     Delete_File (Old_Package, Success);
-                     if not Success then
-                        Cmd_Error_No_Help ("cannot delete " & Old_Package);
-                     end if;
-                  end if;
-                  Copy_File (Tmp_File_Name, Old_Package, Success);
+                    & "test_obj"
+                    & Directory_Separator
+                    & Test_Prj_Prefix
+                    & To_Lower (String (Project_Tree.Root_Project.Name))
+                    & Instr_Suffix
+                  else Output_Dir)
+                 & Directory_Separator
+                 & Test_File_Name.all
+                 & ".adb";
+               Success     : Boolean;
+            begin
+               if Is_Regular_File (Old_Package) then
+                  Delete_File (Old_Package, Success);
                   if not Success then
-                     Cmd_Error_No_Help
-                       ("cannot copy tmp test package to " & Old_Package);
+                     Cmd_Error_No_Help ("cannot delete " & Old_Package);
                   end if;
-                  Delete_File (Tmp_File_Name, Success);
-                  if not Success then
-                     Cmd_Error_No_Help ("cannot delete tmp test package");
-                  end if;
-               end;
-            end if;
+               end if;
+               Copy_File (Tmp_File_Name, Old_Package, Success);
+               if not Success then
+                  Cmd_Error_No_Help
+                    ("cannot copy tmp test package to " & Old_Package);
+               end if;
+               Delete_File (Tmp_File_Name, Success);
+               if not Success then
+                  Cmd_Error_No_Help ("cannot delete tmp test package");
+               end if;
+            end;
 
             Markered_Data_Map.Clear;
          end if;
@@ -6133,31 +6084,63 @@ package body Test.Skeleton is
          --  Generating simple test package body
          if Actual_Test then
 
-            if Generate_Separates then
-               Create
-                 (Output_Dir
-                  & Directory_Separator
-                  & Test_File_Name.all
-                  & ".adb");
-               Put_Harness_Header;
-            else
-               Get_Subprograms_From_Package
-                 (Output_Dir
-                  & Directory_Separator
-                  & Test_File_Name.all
-                  & ".adb");
+            Get_Subprograms_From_Package
+              (Output_Dir & Directory_Separator & Test_File_Name.all & ".adb");
 
-               --  updating hash v2 to v2.1 and change TC hash to TC names
+            --  updating hash v2 to v2.1 and change TC hash to TC names
+            Subp_Cur := Subp_List.First;
+            loop
+               exit when Subp_Cur = Subp_Data_List.No_Element;
+
+               if Subp_Data_List.Element (Subp_Cur).Corresp_Type = 0 then
+                  UH.Version := new String'("2");
+                  UH.Hash :=
+                    new String'
+                      (Subp_Data_List.Element (Subp_Cur).Subp_Full_Hash.all);
+                  if Subp_Data_List.Element (Subp_Cur).Has_TC_Info then
+                     UH.TC_Hash :=
+                       new String'
+                         (Subp_Data_List.Element (Subp_Cur)
+                            .TC_Info
+                            .TC_Hash.all);
+                  else
+                     UH.TC_Hash := new String'("");
+                  end if;
+
+                  MD_Cur := Find (Markered_Data_Map, UH);
+
+                  if MD_Cur /= Markered_Data_Maps.No_Element then
+                     MD := Markered_Data_Maps.Element (MD_Cur);
+
+                     Free (UH.Version);
+                     UH.Version := new String'(Hash_Version);
+                     if UH.TC_Hash.all /= "" then
+                        Free (UH.TC_Hash);
+                        UH.TC_Hash :=
+                          new String'
+                            (Sanitize_TC_Name
+                               (Subp_Data_List.Element (Subp_Cur)
+                                  .TC_Info
+                                  .Name.all));
+                     end if;
+                  end if;
+
+               end if;
+
+               Subp_Data_List.Next (Subp_Cur);
+            end loop;
+
+            --  gathering transition data
+            if Transition then
                Subp_Cur := Subp_List.First;
                loop
                   exit when Subp_Cur = Subp_Data_List.No_Element;
 
                   if Subp_Data_List.Element (Subp_Cur).Corresp_Type = 0 then
-                     UH.Version := new String'("2");
+                     UH.Version := new String'("1");
                      UH.Hash :=
                        new String'
-                         (Subp_Data_List.Element (Subp_Cur)
-                            .Subp_Full_Hash.all);
+                         (Subp_Data_List.Element (Subp_Cur).Subp_Hash_V1.all);
                      if Subp_Data_List.Element (Subp_Cur).Has_TC_Info then
                         UH.TC_Hash :=
                           new String'
@@ -6168,355 +6151,302 @@ package body Test.Skeleton is
                         UH.TC_Hash := new String'("");
                      end if;
 
-                     MD_Cur := Find (Markered_Data_Map, UH);
+                     Current_Subp := Subp_Data_List.Element (Subp_Cur);
 
-                     if MD_Cur /= Markered_Data_Maps.No_Element then
-                        MD := Markered_Data_Maps.Element (MD_Cur);
-
-                        Free (UH.Version);
-                        UH.Version := new String'(Hash_Version);
-                        if UH.TC_Hash.all /= "" then
-                           Free (UH.TC_Hash);
-                           UH.TC_Hash :=
-                             new String'
-                               (Sanitize_TC_Name
-                                  (Subp_Data_List.Element (Subp_Cur)
-                                     .TC_Info
-                                     .Name.all));
-                        end if;
-                     end if;
-
+                     Get_Subprogram_From_Separate
+                       (Output_Dir
+                        & Directory_Separator
+                        & Unit_To_File_Name
+                            (Unit_Name.all
+                             & "."
+                             & Test_Routine_Prefix
+                             & Current_Subp.Subp_Text_Name.all
+                             & "_"
+                             & Current_Subp.Subp_Hash_V1
+                                 (Current_Subp.Subp_Hash_V1'First
+                                  .. Current_Subp.Subp_Hash_V1'First + 5)
+                             & (if Current_Subp.Has_TC_Info
+                                then
+                                  "_"
+                                  & Current_Subp.TC_Info.TC_Hash
+                                      (Current_Subp.TC_Info.TC_Hash'First
+                                       .. Current_Subp.TC_Info.TC_Hash'First
+                                          + 5)
+                                else ""))
+                        & ".adb",
+                        UH,
+                        Current_Subp);
                   end if;
-
                   Subp_Data_List.Next (Subp_Cur);
                end loop;
+            end if;
 
-               --  gathering transition data
-               if Transition then
-                  Subp_Cur := Subp_List.First;
-                  loop
-                     exit when Subp_Cur = Subp_Data_List.No_Element;
+            --  gathering used short names
+            Subp_Cur := Subp_List.First;
+            loop
+               exit when Subp_Cur = Subp_Data_List.No_Element;
 
-                     if Subp_Data_List.Element (Subp_Cur).Corresp_Type = 0 then
-                        UH.Version := new String'("1");
-                        UH.Hash :=
-                          new String'
+               Current_Subp := Subp_Data_List.Element (Subp_Cur);
+
+               if Subp_Data_List.Element (Subp_Cur).Corresp_Type = 0 then
+                  UH.Version := new String'(Hash_Version);
+                  UH.Hash :=
+                    new String'
+                      (Subp_Data_List.Element (Subp_Cur).Subp_Full_Hash.all);
+                  if Subp_Data_List.Element (Subp_Cur).Has_TC_Info then
+                     UH.TC_Hash :=
+                       new String'
+                         (Sanitize_TC_Name
                             (Subp_Data_List.Element (Subp_Cur)
-                               .Subp_Hash_V1.all);
-                        if Subp_Data_List.Element (Subp_Cur).Has_TC_Info then
-                           UH.TC_Hash :=
-                             new String'
-                               (Subp_Data_List.Element (Subp_Cur)
-                                  .TC_Info
-                                  .TC_Hash.all);
-                        else
-                           UH.TC_Hash := new String'("");
-                        end if;
+                               .TC_Info
+                               .Name.all));
+                  else
+                     UH.TC_Hash := new String'("");
+                  end if;
 
-                        Current_Subp := Subp_Data_List.Element (Subp_Cur);
+                  MD_Cur := Find (Markered_Data_Map, UH);
 
-                        Get_Subprogram_From_Separate
-                          (Output_Dir
-                           & Directory_Separator
-                           & Unit_To_File_Name
-                               (Unit_Name.all
-                                & "."
-                                & Test_Routine_Prefix
-                                & Current_Subp.Subp_Text_Name.all
-                                & "_"
-                                & Current_Subp.Subp_Hash_V1
-                                    (Current_Subp.Subp_Hash_V1'First
-                                     .. Current_Subp.Subp_Hash_V1'First + 5)
-                                & (if Current_Subp.Has_TC_Info
-                                   then
-                                     "_"
-                                     & Current_Subp.TC_Info.TC_Hash
-                                         (Current_Subp.TC_Info.TC_Hash'First
-                                          .. Current_Subp.TC_Info.TC_Hash'First
-                                             + 5)
-                                   else ""))
-                           & ".adb",
-                           UH,
-                           Current_Subp);
+                  if MD_Cur /= Markered_Data_Maps.No_Element then
+                     MD := Markered_Data_Maps.Element (MD_Cur);
+                     if MD.Short_Name_Used then
+                        Short_Names_Used.Include
+                          (To_Lower (MD.Short_Name.all));
+                        Shortnamed_Subps.Include
+                          (Current_Subp.Subp_Declaration);
+
+                        Name_Numbers.Include
+                          (To_Lower (Current_Subp.Subp_Text_Name.all), 1);
+                        Elem_Numbers.Include
+                          (Current_Subp.Subp_Declaration, 1);
                      end if;
-                     Subp_Data_List.Next (Subp_Cur);
-                  end loop;
+                  end if;
+
                end if;
 
-               --  gathering used short names
-               Subp_Cur := Subp_List.First;
-               loop
-                  exit when Subp_Cur = Subp_Data_List.No_Element;
+               Subp_Data_List.Next (Subp_Cur);
+            end loop;
 
-                  Current_Subp := Subp_Data_List.Element (Subp_Cur);
+            --  updating short names from markered data with hash v.1
+            --  to hash v.2.1 where possible
+            Subp_Cur := Subp_List.First;
+            loop
+               exit when Subp_Cur = Subp_Data_List.No_Element;
 
-                  if Subp_Data_List.Element (Subp_Cur).Corresp_Type = 0 then
-                     UH.Version := new String'(Hash_Version);
-                     UH.Hash :=
-                       new String'
-                         (Subp_Data_List.Element (Subp_Cur)
-                            .Subp_Full_Hash.all);
-                     if Subp_Data_List.Element (Subp_Cur).Has_TC_Info then
-                        UH.TC_Hash :=
-                          new String'
-                            (Sanitize_TC_Name
-                               (Subp_Data_List.Element (Subp_Cur)
-                                  .TC_Info
-                                  .Name.all));
-                     else
-                        UH.TC_Hash := new String'("");
-                     end if;
+               Current_Subp := Subp_Data_List.Element (Subp_Cur);
 
-                     MD_Cur := Find (Markered_Data_Map, UH);
+               if Subp_Data_List.Element (Subp_Cur).Corresp_Type = 0 then
+                  UH.Version := new String'("1");
+                  UH.Hash := new String'(Current_Subp.Subp_Hash_V1.all);
 
-                     if MD_Cur /= Markered_Data_Maps.No_Element then
-                        MD := Markered_Data_Maps.Element (MD_Cur);
-                        if MD.Short_Name_Used then
-                           Short_Names_Used.Include
-                             (To_Lower (MD.Short_Name.all));
-                           Shortnamed_Subps.Include
-                             (Current_Subp.Subp_Declaration);
-
-                           Name_Numbers.Include
-                             (To_Lower (Current_Subp.Subp_Text_Name.all), 1);
-                           Elem_Numbers.Include
-                             (Current_Subp.Subp_Declaration, 1);
-                        end if;
-                     end if;
-
+                  if Current_Subp.Has_TC_Info then
+                     UH.TC_Hash :=
+                       new String'(Current_Subp.TC_Info.TC_Hash.all);
+                  else
+                     UH.TC_Hash := new String'("");
                   end if;
 
-                  Subp_Data_List.Next (Subp_Cur);
-               end loop;
+                  MD_Cur := Find (Markered_Data_Map, UH);
 
-               --  updating short names from markered data with hash v.1
-               --  to hash v.2.1 where possible
-               Subp_Cur := Subp_List.First;
-               loop
-                  exit when Subp_Cur = Subp_Data_List.No_Element;
+                  if MD_Cur /= Markered_Data_Maps.No_Element then
+                     MD := Markered_Data_Maps.Element (MD_Cur);
 
-                  Current_Subp := Subp_Data_List.Element (Subp_Cur);
-
-                  if Subp_Data_List.Element (Subp_Cur).Corresp_Type = 0 then
-                     UH.Version := new String'("1");
-                     UH.Hash := new String'(Current_Subp.Subp_Hash_V1.all);
-
-                     if Current_Subp.Has_TC_Info then
-                        UH.TC_Hash :=
-                          new String'(Current_Subp.TC_Info.TC_Hash.all);
-                     else
-                        UH.TC_Hash := new String'("");
-                     end if;
-
-                     MD_Cur := Find (Markered_Data_Map, UH);
-
-                     if MD_Cur /= Markered_Data_Maps.No_Element then
-                        MD := Markered_Data_Maps.Element (MD_Cur);
-
-                        Markered_Data_Map.Delete (MD_Cur);
-                        Free (UH.Hash);
-                        UH.Hash :=
-                          new String'(Current_Subp.Subp_Hash_V2_1.all);
-                        Free (UH.Version);
-                        UH.Version := new String'(Hash_Version);
-                        if UH.TC_Hash.all /= "" then
-                           Free (UH.TC_Hash);
-                           UH.TC_Hash :=
-                             new String'
-                               (Sanitize_TC_Name
-                                  (Current_Subp.TC_Info.Name.all));
-                        end if;
-                        Markered_Data_Map.Include (UH, MD);
-                     end if;
-
-                  end if;
-
-                  Subp_Data_List.Next (Subp_Cur);
-               end loop;
-
-               --  updating short names from markered data with hash v.2.1
-               --  to hash v.2.2 where possible and gnathering short names
-               Subp_Cur := Subp_List.First;
-               loop
-                  exit when Subp_Cur = Subp_Data_List.No_Element;
-
-                  Current_Subp := Subp_Data_List.Element (Subp_Cur);
-
-                  if Subp_Data_List.Element (Subp_Cur).Corresp_Type = 0 then
-                     UH.Version := new String'("2.1");
+                     Markered_Data_Map.Delete (MD_Cur);
+                     Free (UH.Hash);
                      UH.Hash := new String'(Current_Subp.Subp_Hash_V2_1.all);
-
-                     if Current_Subp.Has_TC_Info then
-                        UH.TC_Hash :=
-                          new String'
-                            (Sanitize_TC_Name (Current_Subp.TC_Info.Name.all));
-                     else
-                        UH.TC_Hash := new String'("");
-                     end if;
-
-                     MD_Cur := Find (Markered_Data_Map, UH);
-
-                     if MD_Cur /= Markered_Data_Maps.No_Element then
-                        MD := Markered_Data_Maps.Element (MD_Cur);
-
-                        if not Short_Names_Used.Contains (MD.Short_Name.all)
-                          or else Shortnamed_Subps.Contains
-                                    (Current_Subp.Subp_Declaration)
-                        then
-                           Short_Names_Used.Include (MD.Short_Name.all);
-                           Shortnamed_Subps.Include
-                             (Current_Subp.Subp_Declaration);
-
-                           Name_Numbers.Include
-                             (To_Lower (Current_Subp.Subp_Text_Name.all), 1);
-                           Elem_Numbers.Include
-                             (Current_Subp.Subp_Declaration, 1);
-
-                           MD.Short_Name_Used := True;
-                        end if;
-
-                        Markered_Data_Map.Delete (MD_Cur);
-                        Free (UH.Hash);
-                        UH.Hash :=
-                          new String'(Current_Subp.Subp_Full_Hash.all);
-                        Free (UH.Version);
-                        UH.Version := new String'(Hash_Version);
-
-                        Markered_Data_Map.Include (UH, MD);
-                     end if;
-
-                  end if;
-
-                  Subp_Data_List.Next (Subp_Cur);
-               end loop;
-
-               --  creating markered_data and deciding on new short names
-               Subp_Cur := Subp_List.First;
-               loop
-                  exit when Subp_Cur = Subp_Data_List.No_Element;
-
-                  Current_Subp := Subp_Data_List.Element (Subp_Cur);
-
-                  if Subp_Data_List.Element (Subp_Cur).Corresp_Type = 0 then
+                     Free (UH.Version);
                      UH.Version := new String'(Hash_Version);
-                     UH.Hash := new String'(Current_Subp.Subp_Full_Hash.all);
-                     if Subp_Data_List.Element (Subp_Cur).Has_TC_Info then
+                     if UH.TC_Hash.all /= "" then
+                        Free (UH.TC_Hash);
                         UH.TC_Hash :=
                           new String'
                             (Sanitize_TC_Name (Current_Subp.TC_Info.Name.all));
-                     else
-                        UH.TC_Hash := new String'("");
                      end if;
-
-                     MD_Cur := Find (Markered_Data_Map, UH);
-
-                     if MD_Cur = Markered_Data_Maps.No_Element then
-
-                        MD.Commented_Out := False;
-                        MD.Short_Name_Used := False;
-                        MD.Short_Name :=
-                          new String'
-                            (To_Lower (Current_Subp.Subp_Text_Name.all));
-                        MD.TR_Text.Clear;
-
-                        if not Short_Names_Used.Contains
-                                 (To_Lower (Current_Subp.Subp_Text_Name.all))
-                          or else Shortnamed_Subps.Contains
-                                    (Current_Subp.Subp_Declaration)
-                        then
-                           --  Short name is free, we can use it
-                           MD.Short_Name_Used := True;
-                           Short_Names_Used.Include
-                             (To_Lower (Current_Subp.Subp_Text_Name.all));
-                           Shortnamed_Subps.Include
-                             (Current_Subp.Subp_Declaration);
-
-                           Name_Numbers.Include
-                             (To_Lower (Current_Subp.Subp_Text_Name.all), 1);
-                           Elem_Numbers.Include
-                             (Current_Subp.Subp_Declaration, 1);
-
-                           --  Looking for a dangling test with same short
-                           --  name but different hash.
-                           MD_Cur :=
-                             Find_Same_Short_Name
-                               (Markered_Data_Map, Current_Subp);
-
-                           if MD_Cur /= Markered_Data_Maps.No_Element then
-                              --  Using corresponding dangling test
-
-                              MD.TR_Text.Clear;
-                              MD.TR_Text :=
-                                Markered_Data_Maps.Element (MD_Cur).TR_Text;
-
-                              --  also need to copy Commented_Out since
-                              --  the test can be dangling for a long time
-                              --  or just become dangling
-                              MD.Commented_Out :=
-                                Markered_Data_Maps.Element (MD_Cur)
-                                  .Commented_Out;
-
-                              Markered_Data_Map.Delete (MD_Cur);
-                              MD.Issue_Warning := True;
-                           end if;
-
-                        end if;
-
-                        Markered_Data_Map.Insert (UH, MD);
-
-                     end if;
-
+                     Markered_Data_Map.Include (UH, MD);
                   end if;
 
-                  Subp_Data_List.Next (Subp_Cur);
-               end loop;
+               end if;
 
-               --  setting overloading numbers;
-               Subp_Cur := Subp_List.First;
-               loop
-                  exit when Subp_Cur = Subp_Data_List.No_Element;
+               Subp_Data_List.Next (Subp_Cur);
+            end loop;
 
-                  Current_Subp := Subp_Data_List.Element (Subp_Cur);
+            --  updating short names from markered data with hash v.2.1
+            --  to hash v.2.2 where possible and gnathering short names
+            Subp_Cur := Subp_List.First;
+            loop
+               exit when Subp_Cur = Subp_Data_List.No_Element;
 
-                  if Subp_Data_List.Element (Subp_Cur).Corresp_Type = 0 then
+               Current_Subp := Subp_Data_List.Element (Subp_Cur);
 
-                     if Name_Numbers.Find
-                          (To_Lower (Current_Subp.Subp_Text_Name.all))
-                       = Name_Frequency.No_Element
+               if Subp_Data_List.Element (Subp_Cur).Corresp_Type = 0 then
+                  UH.Version := new String'("2.1");
+                  UH.Hash := new String'(Current_Subp.Subp_Hash_V2_1.all);
+
+                  if Current_Subp.Has_TC_Info then
+                     UH.TC_Hash :=
+                       new String'
+                         (Sanitize_TC_Name (Current_Subp.TC_Info.Name.all));
+                  else
+                     UH.TC_Hash := new String'("");
+                  end if;
+
+                  MD_Cur := Find (Markered_Data_Map, UH);
+
+                  if MD_Cur /= Markered_Data_Maps.No_Element then
+                     MD := Markered_Data_Maps.Element (MD_Cur);
+
+                     if not Short_Names_Used.Contains (MD.Short_Name.all)
+                       or else Shortnamed_Subps.Contains
+                                 (Current_Subp.Subp_Declaration)
                      then
+                        Short_Names_Used.Include (MD.Short_Name.all);
+                        Shortnamed_Subps.Include
+                          (Current_Subp.Subp_Declaration);
 
                         Name_Numbers.Include
                           (To_Lower (Current_Subp.Subp_Text_Name.all), 1);
                         Elem_Numbers.Include
                           (Current_Subp.Subp_Declaration, 1);
 
-                     else
-                        if Elem_Numbers.Find (Current_Subp.Subp_Declaration)
-                          = Elem_Number_Maps.No_Element
-                        then
-                           declare
-                              X : constant Natural :=
-                                Name_Numbers.Element
-                                  (To_Lower (Current_Subp.Subp_Text_Name.all));
-                           begin
-                              Name_Numbers.Replace
-                                (To_Lower (Current_Subp.Subp_Text_Name.all),
-                                 X + 1);
-                              Elem_Numbers.Include
-                                (Current_Subp.Subp_Declaration, X + 1);
-                           end;
-                        end if;
+                        MD.Short_Name_Used := True;
                      end if;
+
+                     Markered_Data_Map.Delete (MD_Cur);
+                     Free (UH.Hash);
+                     UH.Hash := new String'(Current_Subp.Subp_Full_Hash.all);
+                     Free (UH.Version);
+                     UH.Version := new String'(Hash_Version);
+
+                     Markered_Data_Map.Include (UH, MD);
+                  end if;
+
+               end if;
+
+               Subp_Data_List.Next (Subp_Cur);
+            end loop;
+
+            --  creating markered_data and deciding on new short names
+            Subp_Cur := Subp_List.First;
+            loop
+               exit when Subp_Cur = Subp_Data_List.No_Element;
+
+               Current_Subp := Subp_Data_List.Element (Subp_Cur);
+
+               if Subp_Data_List.Element (Subp_Cur).Corresp_Type = 0 then
+                  UH.Version := new String'(Hash_Version);
+                  UH.Hash := new String'(Current_Subp.Subp_Full_Hash.all);
+                  if Subp_Data_List.Element (Subp_Cur).Has_TC_Info then
+                     UH.TC_Hash :=
+                       new String'
+                         (Sanitize_TC_Name (Current_Subp.TC_Info.Name.all));
+                  else
+                     UH.TC_Hash := new String'("");
+                  end if;
+
+                  MD_Cur := Find (Markered_Data_Map, UH);
+
+                  if MD_Cur = Markered_Data_Maps.No_Element then
+
+                     MD.Commented_Out := False;
+                     MD.Short_Name_Used := False;
+                     MD.Short_Name :=
+                       new String'(To_Lower (Current_Subp.Subp_Text_Name.all));
+                     MD.TR_Text.Clear;
+
+                     if not Short_Names_Used.Contains
+                              (To_Lower (Current_Subp.Subp_Text_Name.all))
+                       or else Shortnamed_Subps.Contains
+                                 (Current_Subp.Subp_Declaration)
+                     then
+                        --  Short name is free, we can use it
+                        MD.Short_Name_Used := True;
+                        Short_Names_Used.Include
+                          (To_Lower (Current_Subp.Subp_Text_Name.all));
+                        Shortnamed_Subps.Include
+                          (Current_Subp.Subp_Declaration);
+
+                        Name_Numbers.Include
+                          (To_Lower (Current_Subp.Subp_Text_Name.all), 1);
+                        Elem_Numbers.Include
+                          (Current_Subp.Subp_Declaration, 1);
+
+                        --  Looking for a dangling test with same short
+                        --  name but different hash.
+                        MD_Cur :=
+                          Find_Same_Short_Name
+                            (Markered_Data_Map, Current_Subp);
+
+                        if MD_Cur /= Markered_Data_Maps.No_Element then
+                           --  Using corresponding dangling test
+
+                           MD.TR_Text.Clear;
+                           MD.TR_Text :=
+                             Markered_Data_Maps.Element (MD_Cur).TR_Text;
+
+                           --  also need to copy Commented_Out since
+                           --  the test can be dangling for a long time
+                           --  or just become dangling
+                           MD.Commented_Out :=
+                             Markered_Data_Maps.Element (MD_Cur).Commented_Out;
+
+                           Markered_Data_Map.Delete (MD_Cur);
+                           MD.Issue_Warning := True;
+                        end if;
+
+                     end if;
+
+                     Markered_Data_Map.Insert (UH, MD);
 
                   end if;
 
-                  Subp_Data_List.Next (Subp_Cur);
-               end loop;
-               Name_Numbers.Clear;
+               end if;
 
-               Create (Tmp_File_Name);
-               Put_TP_Header (Test_Data_Package_Name.all);
-            end if;
+               Subp_Data_List.Next (Subp_Cur);
+            end loop;
+
+            --  setting overloading numbers;
+            Subp_Cur := Subp_List.First;
+            loop
+               exit when Subp_Cur = Subp_Data_List.No_Element;
+
+               Current_Subp := Subp_Data_List.Element (Subp_Cur);
+
+               if Subp_Data_List.Element (Subp_Cur).Corresp_Type = 0 then
+
+                  if Name_Numbers.Find
+                       (To_Lower (Current_Subp.Subp_Text_Name.all))
+                    = Name_Frequency.No_Element
+                  then
+
+                     Name_Numbers.Include
+                       (To_Lower (Current_Subp.Subp_Text_Name.all), 1);
+                     Elem_Numbers.Include (Current_Subp.Subp_Declaration, 1);
+
+                  else
+                     if Elem_Numbers.Find (Current_Subp.Subp_Declaration)
+                       = Elem_Number_Maps.No_Element
+                     then
+                        declare
+                           X : constant Natural :=
+                             Name_Numbers.Element
+                               (To_Lower (Current_Subp.Subp_Text_Name.all));
+                        begin
+                           Name_Numbers.Replace
+                             (To_Lower (Current_Subp.Subp_Text_Name.all),
+                              X + 1);
+                           Elem_Numbers.Include
+                             (Current_Subp.Subp_Declaration, X + 1);
+                        end;
+                     end if;
+                  end if;
+
+               end if;
+
+               Subp_Data_List.Next (Subp_Cur);
+            end loop;
+            Name_Numbers.Clear;
+
+            Create (Tmp_File_Name);
+            Put_TP_Header (Test_Data_Package_Name.all);
 
             S_Put (0, "with AUnit.Assertions; use AUnit.Assertions;");
             New_Line_Count;
@@ -6567,151 +6497,129 @@ package body Test.Skeleton is
                      end if;
                   end if;
 
-                  if Generate_Separates then
-                     S_Put
-                       (3,
-                        "procedure "
-                        & Subp_Data_List.Element (Subp_Cur)
-                            .Subp_Mangle_Name.all
-                        & " (Gnattest_T : in out Test) is separate;");
+                  Test_Info.Replace
+                    (Data.Unit_File_Name.all,
+                     Test_Info.Element (Data.Unit_File_Name.all) + 1);
 
-                     New_Line_Count;
-                     Print_Comment_Declaration
-                       (Subp_Data_List.Element (Subp_Cur), 3);
-                     New_Line_Count;
+                  All_Tests_Counter := All_Tests_Counter + 1;
 
-                  else
-
-                     Test_Info.Replace
-                       (Data.Unit_File_Name.all,
-                        Test_Info.Element (Data.Unit_File_Name.all) + 1);
-
-                     All_Tests_Counter := All_Tests_Counter + 1;
-
-                     UH.Version := new String'(Hash_Version);
-                     UH.Hash :=
+                  UH.Version := new String'(Hash_Version);
+                  UH.Hash :=
+                    new String'
+                      (Subp_Data_List.Element (Subp_Cur).Subp_Full_Hash.all);
+                  if Subp_Data_List.Element (Subp_Cur).Has_TC_Info then
+                     UH.TC_Hash :=
                        new String'
-                         (Subp_Data_List.Element (Subp_Cur)
-                            .Subp_Full_Hash.all);
-                     if Subp_Data_List.Element (Subp_Cur).Has_TC_Info then
-                        UH.TC_Hash :=
-                          new String'
-                            (Sanitize_TC_Name
-                               (Subp_Data_List.Element (Subp_Cur)
-                                  .TC_Info
-                                  .Name.all));
-                     else
-                        UH.TC_Hash := new String'("");
+                         (Sanitize_TC_Name
+                            (Subp_Data_List.Element (Subp_Cur)
+                               .TC_Info
+                               .Name.all));
+                  else
+                     UH.TC_Hash := new String'("");
+                  end if;
+
+                  MD_Cur := Find (Markered_Data_Map, UH);
+                  MD := Markered_Data_Maps.Element (MD_Cur);
+
+                  Put_Opening_Comment_Section
+                    (Subp_Data_List.Element (Subp_Cur),
+                     Elem_Numbers.Element (Current_Subp.Subp_Declaration),
+                     Use_Short_Name => MD.Short_Name_Used,
+                     Add_Cov_Dump   => Data.Has_Gen_Tests and then Minimize);
+
+                  if Is_Unimplemented_Test (MD.TR_Text) then
+                     TR_SLOC_Buffer.Append
+                       ((new String'(Data.Unit_Full_Name.all),
+                         new String'(Test_File_Name.all & ".adb"),
+                         null,
+                         Subp_Data_List.Element (Subp_Cur),
+                         New_Line_Counter));
+                  else
+                     TR_SLOC_Buffer.Append
+                       ((new String'(Data.Unit_Full_Name.all),
+                         new String'(Test_File_Name.all & ".adb"),
+                         new String'("modified"),
+                         Subp_Data_List.Element (Subp_Cur),
+                         New_Line_Counter));
+                  end if;
+
+                  if MD.TR_Text.Is_Empty then
+
+                     if Stub_Mode_ON then
+                        Setters_Set :=
+                          Get_Direct_Callees_Setters
+                            (Current_Subp.Subp_Declaration.As_Basic_Decl);
                      end if;
 
-                     MD_Cur := Find (Markered_Data_Map, UH);
-                     MD := Markered_Data_Maps.Element (MD_Cur);
-
-                     Put_Opening_Comment_Section
-                       (Subp_Data_List.Element (Subp_Cur),
-                        Elem_Numbers.Element (Current_Subp.Subp_Declaration),
-                        Use_Short_Name => MD.Short_Name_Used,
-                        Add_Cov_Dump   =>
-                          Data.Has_Gen_Tests and then Minimize);
-
-                     if Is_Unimplemented_Test (MD.TR_Text) then
-                        TR_SLOC_Buffer.Append
-                          ((new String'(Data.Unit_Full_Name.all),
-                            new String'(Test_File_Name.all & ".adb"),
-                            null,
-                            Subp_Data_List.Element (Subp_Cur),
-                            New_Line_Counter));
-                     else
-                        TR_SLOC_Buffer.Append
-                          ((new String'(Data.Unit_Full_Name.all),
-                            new String'(Test_File_Name.all & ".adb"),
-                            new String'("modified"),
-                            Subp_Data_List.Element (Subp_Cur),
-                            New_Line_Counter));
-                     end if;
-
-                     if MD.TR_Text.Is_Empty then
-
-                        if Stub_Mode_ON then
-                           Setters_Set :=
-                             Get_Direct_Callees_Setters
-                               (Current_Subp.Subp_Declaration.As_Basic_Decl);
-                        end if;
-
-                        New_Tests_Counter := New_Tests_Counter + 1;
-                        New_Line_Count;
-                        S_Put (6, "pragma Unreferenced (Gnattest_T);");
-                        New_Line_Count;
-                        New_Line_Count;
-                        S_Put (3, "begin");
-                        New_Line_Count;
-                        New_Line_Count;
-                        if not Setters_Set.Is_Empty then
-                           for Set of Setters_Set loop
-                              S_Put (3, "--  " & Set & "( );");
-                              New_Line_Count;
-                           end loop;
-                           New_Line_Count;
-                           Setters_Set.Clear;
-                        end if;
-                        S_Put (6, "AUnit.Assertions.Assert");
-                        New_Line_Count;
-                        S_Put (8, "(Gnattest_Generated.Default_Assert_Value,");
-                        New_Line_Count;
-                        S_Put (9, """Test not implemented."");");
-                        New_Line_Count;
-                        New_Line_Count;
-                     else
-
-                        if MD.Issue_Warning then
-                           Report_Std
-                             ("warning: (gnattest) "
-                              & Base_Name (Data.Unit_File_Name.all)
-                              & ":"
-                              & Trim
-                                  (First_Line_Number
-                                     (Current_Subp.Subp_Declaration)'Img,
-                                   Both)
-                              & ":"
-                              & Trim
-                                  (First_Column_Number
-                                     (Current_Subp.Subp_Declaration)'Img,
-                                   Both)
-                              & ": test for "
-                              & MD.Short_Name.all
-                              & " at "
-                              & Unit_Name.all
-                              & ":"
-                              & Trim (Integer'Image (New_Line_Counter), Both)
-                              & " might be out of date ("
-                              & MD.Short_Name.all
-                              & " has been changed)");
-                        end if;
-
-                        for I in
-                          MD.TR_Text.First_Index .. MD.TR_Text.Last_Index
-                        loop
-                           if MD.Commented_Out then
-                              S_Put
-                                (0, Uncomment_Line (MD.TR_Text.Element (I)));
-                           else
-                              S_Put (0, MD.TR_Text.Element (I));
-                           end if;
+                     New_Tests_Counter := New_Tests_Counter + 1;
+                     New_Line_Count;
+                     S_Put (6, "pragma Unreferenced (Gnattest_T);");
+                     New_Line_Count;
+                     New_Line_Count;
+                     S_Put (3, "begin");
+                     New_Line_Count;
+                     New_Line_Count;
+                     if not Setters_Set.Is_Empty then
+                        for Set of Setters_Set loop
+                           S_Put (3, "--  " & Set & "( );");
                            New_Line_Count;
                         end loop;
+                        New_Line_Count;
+                        Setters_Set.Clear;
+                     end if;
+                     S_Put (6, "AUnit.Assertions.Assert");
+                     New_Line_Count;
+                     S_Put (8, "(Gnattest_Generated.Default_Assert_Value,");
+                     New_Line_Count;
+                     S_Put (9, """Test not implemented."");");
+                     New_Line_Count;
+                     New_Line_Count;
+                  else
+
+                     if MD.Issue_Warning then
+                        Report_Std
+                          ("warning: (gnattest) "
+                           & Base_Name (Data.Unit_File_Name.all)
+                           & ":"
+                           & Trim
+                               (First_Line_Number
+                                  (Current_Subp.Subp_Declaration)'Img,
+                                Both)
+                           & ":"
+                           & Trim
+                               (First_Column_Number
+                                  (Current_Subp.Subp_Declaration)'Img,
+                                Both)
+                           & ": test for "
+                           & MD.Short_Name.all
+                           & " at "
+                           & Unit_Name.all
+                           & ":"
+                           & Trim (Integer'Image (New_Line_Counter), Both)
+                           & " might be out of date ("
+                           & MD.Short_Name.all
+                           & " has been changed)");
                      end if;
 
-                     Markered_Data_Map.Delete (MD_Cur);
-
-                     Put_Closing_Comment_Section
-                       (Subp_Data_List.Element (Subp_Cur),
-                        Elem_Numbers.Element (Current_Subp.Subp_Declaration),
-                        Use_Short_Name => MD.Short_Name_Used,
-                        Add_Cov_Dump   =>
-                          Data.Has_Gen_Tests and then Minimize);
-                     New_Line_Count;
-
+                     for I in MD.TR_Text.First_Index .. MD.TR_Text.Last_Index
+                     loop
+                        if MD.Commented_Out then
+                           S_Put (0, Uncomment_Line (MD.TR_Text.Element (I)));
+                        else
+                           S_Put (0, MD.TR_Text.Element (I));
+                        end if;
+                        New_Line_Count;
+                     end loop;
                   end if;
+
+                  Markered_Data_Map.Delete (MD_Cur);
+
+                  Put_Closing_Comment_Section
+                    (Subp_Data_List.Element (Subp_Cur),
+                     Elem_Numbers.Element (Current_Subp.Subp_Declaration),
+                     Use_Short_Name => MD.Short_Name_Used,
+                     Add_Cov_Dump   => Data.Has_Gen_Tests and then Minimize);
+                  New_Line_Count;
 
                end if;
 
@@ -6815,41 +6723,39 @@ package body Test.Skeleton is
             Add_Buffered_TR_Slocs
               (TP_List, Format_Time (File_Time_Stamp (Tmp_File_Name)));
 
-            if not Generate_Separates then
-               declare
-                  Old_Package : constant String :=
-                    (if Test.Common.Instrument
-                     then
-                       Harness_Dir_Str.all
-                       & Directory_Separator
-                       & "test_obj"
-                       & Directory_Separator
-                       & Test_Prj_Prefix
-                       & To_Lower (String (Project_Tree.Root_Project.Name))
-                       & Instr_Suffix
-                     else Output_Dir)
+            declare
+               Old_Package : constant String :=
+                 (if Test.Common.Instrument
+                  then
+                    Harness_Dir_Str.all
                     & Directory_Separator
-                    & Test_File_Name.all
-                    & ".adb";
-                  Success     : Boolean;
-               begin
-                  if Is_Regular_File (Old_Package) then
-                     Delete_File (Old_Package, Success);
-                     if not Success then
-                        Cmd_Error_No_Help ("cannot delete " & Old_Package);
-                     end if;
-                  end if;
-                  Copy_File (Tmp_File_Name, Old_Package, Success);
+                    & "test_obj"
+                    & Directory_Separator
+                    & Test_Prj_Prefix
+                    & To_Lower (String (Project_Tree.Root_Project.Name))
+                    & Instr_Suffix
+                  else Output_Dir)
+                 & Directory_Separator
+                 & Test_File_Name.all
+                 & ".adb";
+               Success     : Boolean;
+            begin
+               if Is_Regular_File (Old_Package) then
+                  Delete_File (Old_Package, Success);
                   if not Success then
-                     Cmd_Error_No_Help
-                       ("cannot copy tmp test package to " & Old_Package);
+                     Cmd_Error_No_Help ("cannot delete " & Old_Package);
                   end if;
-                  Delete_File (Tmp_File_Name, Success);
-                  if not Success then
-                     Cmd_Error_No_Help ("cannot delete tmp test package");
-                  end if;
-               end;
-            end if;
+               end if;
+               Copy_File (Tmp_File_Name, Old_Package, Success);
+               if not Success then
+                  Cmd_Error_No_Help
+                    ("cannot copy tmp test package to " & Old_Package);
+               end if;
+               Delete_File (Tmp_File_Name, Success);
+               if not Success then
+                  Cmd_Error_No_Help ("cannot delete tmp test package");
+               end if;
+            end;
 
             Markered_Data_Map.Clear;
 
