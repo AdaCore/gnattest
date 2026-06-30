@@ -115,7 +115,7 @@ package body Test.Mapping is
       Trace (Me, "generating mapping file");
       Create (Harness_Dir.all & Directory_Separator & "gnattest.xml");
 
-      if Generate_Separates then
+      if Stub_Mode_ON or else Separate_Drivers then
          S_Put (0, "<tests_mapping mode=""separates"">");
       else
          S_Put (0, "<tests_mapping mode=""monolith"">");
