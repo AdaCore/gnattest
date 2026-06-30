@@ -17,11 +17,16 @@ from drivers.base_driver import BaseDriver
 class Address_Hider(PatternSubstitute):
     """
     Refiner that identifies addresses from a symbolic Ada traceback and hides
-    the addresses, to stabilize the output
+    the addresses, to stabilize the output. All consecutive addresses separated
+    by a space will be collapsed into a single placeholder as the length of a
+    traceback may vary due to factors outside of gnattest/tgen's control.
     """
 
     def __init__(self):
-        super().__init__(pattern=r"0x[0-9a-f]{6,}", replacement="<addr>")
+        super().__init__(
+            pattern=r"(0x[0-9a-f]{6,} ?)+",
+            replacement="<addr_or_backtrace>",
+        )
 
 
 def build_lineno_replacement(m : Match) -> str:
