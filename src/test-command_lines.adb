@@ -97,4 +97,29 @@ package body Test.Command_Lines is
            when others => raise Program_Error);
    end Wide_Character_Encoding;
 
+   -------------------------
+   -- Setup_Profile_Value --
+   -------------------------
+
+   function Setup_Profile_Value (Text : String) return Setup_Profile_Type is
+   begin
+      if Text = "auto" then
+         return Auto;
+      elsif Text = "full" then
+         return Profile_Full;
+      elsif Text = "zfp" then
+         return Profile_ZFP;
+      elsif Text = "zfp-cross" then
+         return Profile_ZFP_Cross;
+      elsif Text = "ravenscar" then
+         return Profile_Ravenscar;
+      elsif Text = "ravenscar-cert" then
+         return Profile_Ravenscar_Cert;
+      elsif Text = "cert" then
+         return Profile_Cert;
+      else
+         raise Constraint_Error with "unknown --rts-profile value: " & Text;
+      end if;
+   end Setup_Profile_Value;
+
 end Test.Command_Lines;

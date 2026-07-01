@@ -243,3 +243,22 @@ install-tgen:
 	mkdir -p "$(DESTDIR)/share/tgen"
 	cp -r src/tgen/tgen_rts "$(DESTDIR)/share/tgen/"
 	cp -r share/tgen/templates "$(DESTDIR)/share/tgen/"
+
+# Path to the AUnit source tree shipped with gnattest. When the submodule
+# is wired up this points to aunit/. Override via AUNIT_SRC to build against
+# a local checkout during development.
+AUNIT_SRC ?= aunit
+
+.PHONY: install-aunit
+install-aunit:
+	@if [ ! -d "$(AUNIT_SRC)/lib/gnat" ] || [ ! -d "$(AUNIT_SRC)/include/aunit" ] ; then \
+		echo "error: AUnit sources not found at $(AUNIT_SRC)" ; \
+		echo "Either initialize the submodule:" ; \
+		echo "    git submodule update --init $(AUNIT_SRC)" ; \
+		echo "or point AUNIT_SRC at a local AUnit checkout:" ; \
+		echo "    make install-aunit AUNIT_SRC=/path/to/aunit DESTDIR=..." ; \
+		exit 1 ; \
+	fi
+	mkdir -p "$(DESTDIR)/share/aunit"
+	cp -r "$(AUNIT_SRC)/include" "$(DESTDIR)/share/aunit/"
+	cp -r "$(AUNIT_SRC)/lib"     "$(DESTDIR)/share/aunit/"

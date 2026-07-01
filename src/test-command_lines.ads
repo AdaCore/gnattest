@@ -69,6 +69,11 @@ package Test.Command_Lines is
       Gen_Test_Binary,
       Gen_Wrappers,
 
+      --  `gnattest setup` mode
+
+      Save_Temps,
+      Compiler_Prefix,
+
       --  Moved from the late Utils.Command_Lines.Common
 
       Version,
@@ -123,6 +128,11 @@ package Test.Command_Lines is
       Minimization_Filter,
       Dump_Subp_Hash,
       Detect_TGen_Proxies,
+
+      --  `gnattest setup` mode
+
+      Prefix,
+      Config,
 
       --  Moved from the late Utils.Command_Lines.Common
 
@@ -215,6 +225,46 @@ package Test.Command_Lines is
    package Ada_Version_Shorthands_2 is new
      Ada_Version_Switches.Set_Shorthands
        ([Ada_2005 => +"-gnat05", others => null]);
+
+   --  AUnit runtime profile, expected by aunit_shared.gpr's AUNIT_RUNTIME
+   --  external. Used only by `gnattest setup`.
+   type Setup_Profile_Type is
+     (Auto,
+      Profile_Full,
+      Profile_ZFP,
+      Profile_ZFP_Cross,
+      Profile_Ravenscar,
+      Profile_Ravenscar_Cert,
+      Profile_Cert);
+
+   --  Image must be inlined here so it is callable when Other_Switches is
+   --  instantiated below.
+   function Setup_Profile_Image (P : Setup_Profile_Type) return String
+   is (case P is
+         when Auto                   => "auto",
+         when Profile_Full           => "full",
+         when Profile_ZFP            => "zfp",
+         when Profile_ZFP_Cross      => "zfp-cross",
+         when Profile_Ravenscar      => "ravenscar",
+         when Profile_Ravenscar_Cert => "ravenscar-cert",
+         when Profile_Cert           => "cert");
+
+   function Setup_Profile_Value (Text : String) return Setup_Profile_Type;
+   --  Setup_Profile_Value raises Constraint_Error on unknown text, as
+   --  required by Other_Switches.
+
+   --  Switch enumeral; the switch name is "--rts-profile".
+   type Setup_Profile_Switch_Names is (Rts_Profile);
+
+   package Setup_Profile_Switches is new
+     Other_Switches
+       (Descriptor,
+        Setup_Profile_Switch_Names,
+        Setup_Profile_Type,
+        Setup_Profile_Image,
+        Setup_Profile_Value);
+   package Setup_Profile_Defaults is new
+     Setup_Profile_Switches.Set_Defaults ([Rts_Profile => Auto]);
 
    type Source_Selection_Type is
      (Update_All, No_Subprojects, No_Source_Selection);

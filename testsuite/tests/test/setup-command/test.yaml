@@ -1,0 +1,5 @@
+description: Check that `gnattest setup` builds and installs the bundled
+  AUnit library (and, in native mode, the TGen runtime) into a custom
+  --prefix, for whatever target/RTS configuration the testsuite runs in.
+
+driver: python_script
