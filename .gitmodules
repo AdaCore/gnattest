@@ -1,3 +1,4 @@
 [submodule "aunit"]
 	path = aunit
 	url = https://github.com/AdaCore/aunit
+	branch = master
