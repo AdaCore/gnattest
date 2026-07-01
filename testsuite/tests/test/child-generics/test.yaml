@@ -1,0 +1,4 @@
+description: |4
+    Check that TGen can handle a complex generic pacakges architecture
+
+driver: gnattest_tgen

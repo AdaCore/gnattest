@@ -1,0 +1,10 @@
+inter.ads:7:4: info: corresponding test PASSED
+inter.ads:7:4: info: corresponding test PASSED
+inter.ads:7:4: info: corresponding test PASSED
+inter.ads:7:4: info: corresponding test PASSED
+inter.ads:7:4: info: corresponding test PASSED
+inter.ads:7:4: error: corresponding test FAILED: Test not implemented. (inter-test_data-tests.adb:61)
+keccak-generic_keccakf-byte_lanes.ads:6:4: instance at keccak-keccak_1600.ads:13:4: error: corresponding test FAILED: Test not implemented. (keccak-generic_keccakf-byte_lanes-test_data-tests.adb:60)
+keccak-generic_keccakf-byte_lanes-twisted.ads:6:4: instance at ketje.ads:10:4: error: corresponding test FAILED: Test not implemented. (keccak-generic_keccakf-byte_lanes-twisted-test_data-tests.adb:60)
+8 tests run: 5 passed; 3 failed; 0 crashed.
+Test runner dumped 5 tests
