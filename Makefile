@@ -23,8 +23,8 @@ INSTALL_LIB_TARGETS = $(foreach libtype,$(LIBRARY_TYPE),install-lib-$(libtype))
 
 LIB_PROJECT = src/gnattest.gpr
 TGEN_RTS_PROJECTS = \
-	src/tgen/tgen_rts/tgen_rts.gpr \
-	src/tgen/tgen_rts/tgen_marshalling_rts.gpr
+	share/tgen/tgen_rts/tgen_rts.gpr \
+	share/tgen/tgen_rts/tgen_marshalling_rts.gpr
 
 BIN_PROJECT = src/build.gpr
 
@@ -241,7 +241,7 @@ install-bin-strip:
 .PHONY: install-tgen
 install-tgen:
 	mkdir -p "$(DESTDIR)/share/tgen"
-	cp -r src/tgen/tgen_rts "$(DESTDIR)/share/tgen/"
+	cp -r share/tgen/tgen_rts "$(DESTDIR)/share/tgen/"
 	cp -r share/tgen/templates "$(DESTDIR)/share/tgen/"
 
 # Path to the AUnit source tree shipped with gnattest. When the submodule

@@ -12,7 +12,7 @@ library project GNATtest is
    Library_Type : Library_Type_Type := external ("LIBRARY_TYPE", "static");
 
    for Source_Dirs use
-     (".", "tgen", "tgen/tgen_rts",
+     (".", "tgen", "../share/tgen/tgen_rts",
       "../share/tgen/templates",
       "../share/tgen/templates/marshalling_templates",
       "../share/tgen/templates/json_templates",
