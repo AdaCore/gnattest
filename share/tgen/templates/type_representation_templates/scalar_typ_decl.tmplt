@@ -40,8 +40,13 @@
               @_TY_PREFIX_@_Typ_Conversions.To_Big_Integer
                  (TGen.TGen_Std.@_TY_NAME_@'Last)),
        Mod_Value =>
-          TGen.Big_Int.From_Universal_Image
-            (TGen.TGen_Std.@_TY_NAME_@'Modulus'Image),
+       --  This isn't entirely accurate (a modular type can have a 'Last
+       --  smaller than it 'Modulus - 1), but it is good enough in practice
+       --  for value generation purposes, and we're sure it fits in memory.
+          TGen.Big_Int."+"
+            (@_TY_PREFIX_@_Typ_Conversions.To_Big_Integer
+              (TGen.TGen_Std.@_TY_NAME_@'Last),
+             TGen.Types.Big_One),
        others => <>);
 
 @@ELSIF@@ @_SCALAR_TYP_@ = "Char_Typ"
