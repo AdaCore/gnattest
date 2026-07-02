@@ -416,7 +416,7 @@ package body Test.Setup is
    begin
       Source.Copy (+Target, Success);
       if not Success then
-         Fail ("could not copy sources to " & Target);
+         Fail ("could not copy " & Source.Display_Full_Name & " to " & Target);
       end if;
    end Copy_Sources;
 
