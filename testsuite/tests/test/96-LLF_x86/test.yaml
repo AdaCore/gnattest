@@ -1,0 +1,10 @@
+description: Check that TGen rejects Long_Long_Float on
+  x86 (32bit) platforms. On that specific config, Long_Long_Float has a 80bit
+  size, which is greater than the 64bit max integer size, making it impossible
+  to properly generate values for them.
+
+driver: python_script
+
+control:
+  - [SKIP, 'not native', Test only works on x86 native platforms]
+  - [SKIP, 'not x86', 'Test requires x86 (32bit) platform to work']

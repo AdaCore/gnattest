@@ -51,13 +51,13 @@ package body TGen.Random is
    function Draw_Bits (N : Positive) return Unsigned_128 is
       function Rand is new GNAT.Random_Numbers.Random_Discrete (Unsigned_128);
    begin
-      return Rand (Generator_Instance, Min => 0, Max => 2 ** N);
+      return Rand (Generator_Instance, Min => 0, Max => 2**N);
    end Draw_Bits;
 
    function Draw_Bits (N : Positive) return Unsigned_64 is
       function Rand is new GNAT.Random_Numbers.Random_Discrete (Unsigned_64);
    begin
-      return Rand (Generator_Instance, Min => 0, Max => 2 ** N);
+      return Rand (Generator_Instance, Min => 0, Max => 2**N);
    end Draw_Bits;
 
    package Value_Functions is new
@@ -92,7 +92,7 @@ package body TGen.Random is
             return False;
          end if;
 
-         Size := 2 ** Bits;
+         Size := 2**Bits;
 
          while True loop
             declare
@@ -237,7 +237,7 @@ package body TGen.Random is
    ------------------
 
    function Random_Float (LB, HB : Float_Type) return Float_Type is
-      MS_Part : constant Unsigned_Type := 2 ** Mantissa_Size;
+      MS_Part : constant Unsigned_Type := 2**Mantissa_Size;
       XP_Part : Unsigned_Type renames Exponent_Max;
 
       LB_Unsigned : constant Unsigned_Type := Float_To_Unsigned (LB);
@@ -280,7 +280,8 @@ package body TGen.Random is
       if LB_Sign = HB_Sign and then LB_Exp = HB_Exp then
          Nb_Values :=
            Unsigned_Type
-             (HB_Sign * Int_Type (HB_Mantissa)
+             (HB_Sign
+              * Int_Type (HB_Mantissa)
               - LB_Sign * (Int_Type (LB_Mantissa)))
            + 1;
       else
@@ -294,7 +295,8 @@ package body TGen.Random is
            --  exponent depending on the sign
 
              Unsigned_Type
-                (MS_Part - Unsigned_Type (LB_Sign * Int_Type (LB_Mantissa)))
+                (MS_Part
+                 + Unsigned_Type ((-1) * LB_Sign * Int_Type (LB_Mantissa)))
            mod MS_Part
 
            --  Don't forget the LB_Mantissa value itself
@@ -413,7 +415,7 @@ package body TGen.Random is
        (Float_Type        => Float,
         Unsigned_Type     => Unsigned_32,
         Int_Type          => Integer,
-        Exponent_Max      => 2 ** 8,
+        Exponent_Max      => 2**8,
         Mantissa_Size     => 23,
         Float_To_Unsigned => Float_To_Unsigned_32,
         Unsigned_To_Float => Unsigned_32_To_Float,
@@ -431,7 +433,7 @@ package body TGen.Random is
        (Float_Type        => Long_Float,
         Unsigned_Type     => Unsigned_64,
         Int_Type          => Long_Long_Integer,
-        Exponent_Max      => 2 ** 11,
+        Exponent_Max      => 2**11,
         Mantissa_Size     => 52,
         Float_To_Unsigned => Long_Float_To_Unsigned_64,
         Unsigned_To_Float => Unsigned_64_To_Long_Float,
@@ -478,10 +480,10 @@ package body TGen.Random is
    function Random (Min, Max : Any_Float) return Any_Float is
    begin
       case Min.Precision is
-         when Single =>
+         when Single   =>
             return Create (Random_F (Value (Min), Value (Max)));
 
-         when Double =>
+         when Double   =>
             return Create (Random_LF (Value (Min), Value (Max)));
 
          when Extended =>

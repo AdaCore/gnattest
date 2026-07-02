@@ -1,0 +1,10 @@
+gnattest: Error while processing <ExprFunction ["Identity_LLF"] foo.ads:7:4-7:78>:
+foo.identity_llf.X: standard.long_long_float is not supported (Number of digits for this type (18) exceeds the capabilities of TGen (15))
+
+gnattest: Error while processing <ExprFunction ["Identity_My_LLF"] foo.ads:9:4-10:10>:
+foo.identity_my_llf.X: foo.my_llf is not supported (Number of digits for this type (18) exceeds the capabilities of TGen (15))
+
+gnattest: Error while processing <ExprFunction ["Identity_Custom_LLF"] foo.ads:12:4-14:10>:
+foo.identity_custom_llf.X: foo.custom_extended_float is not supported (Number of digits for this type (17) exceeds the capabilities of TGen (15))
+
+No subprogram supported for test case generation.
