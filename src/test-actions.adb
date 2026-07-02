@@ -37,7 +37,6 @@ with GNATCOLL.VFS;  use GNATCOLL.VFS;
 
 with Langkit_Support.Diagnostics;
 with Langkit_Support.Errors;
-with Langkit_Support.File_Readers;
 with Langkit_Support.Text;
 
 with GPR2; use GPR2;
@@ -51,10 +50,9 @@ with GPR2.Project.Attribute_Index;
 with GPR2.Project.Tree;
 with GPR2.Project.View;
 
-with Libadalang;               use Libadalang;
+with Libadalang;           use Libadalang;
 with Libadalang.Common;
-with Libadalang.Iterators;     use Libadalang.Iterators;
-with Libadalang.Preprocessing; use Libadalang.Preprocessing;
+with Libadalang.Iterators; use Libadalang.Iterators;
 with Libadalang.Project_Provider;
 
 with Test.Aggregator;
@@ -166,36 +164,13 @@ package body Test.Actions is
         or else Tool.Ctx_Counter = Max_Files_Per_Context
       then
          declare
-            Default_Config : Libadalang.Preprocessing.File_Config;
-            File_Configs   : Libadalang.Preprocessing.File_Config_Maps.Map;
-            File_Reader    :
-              Langkit_Support.File_Readers.File_Reader_Reference :=
-                Langkit_Support.File_Readers.No_File_Reader_Reference;
-
-            Provider : constant Unit_Provider_Reference :=
-              Libadalang.Project_Provider.Create_Project_Unit_Provider
-                (Tree => Project_Tree);
-
+            Prj_Tree : constant GPR2.Project.Tree.Object := Project_Tree;
          begin
-            --  Check if there are preprocessing directives and if so, update
-            --  the File_Reader.
-
-            Libadalang.Preprocessing.Extract_Preprocessor_Data_From_Project
-              (Tree           => Project_Tree,
-               Default_Config => Default_Config,
-               File_Configs   => File_Configs);
-
-            if Default_Config.Enabled or not File_Configs.Is_Empty then
-               File_Reader :=
-                 Libadalang.Preprocessing.Create_Preprocessor
-                   (Default_Config, File_Configs);
-            end if;
-
             Tool.Context :=
-              Create_Context
-                (Charset       => Char_Encoding,
-                 File_Reader   => File_Reader,
-                 Unit_Provider => Provider);
+              Libadalang.Analysis.Create_Context_From_Project
+                (Tree    => Prj_Tree,
+                 Project => Prj_Tree.Root_Project,
+                 Charset => Char_Encoding);
             Tool.Ctx_Counter := 0;
          end;
       else
