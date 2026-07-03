@@ -247,7 +247,7 @@ install-tgen:
 # Path to the AUnit source tree shipped with gnattest. When the submodule
 # is wired up this points to aunit/. Override via AUNIT_SRC to build against
 # a local checkout during development.
-AUNIT_SRC ?= share/aunit
+AUNIT_SRC ?= aunit
 
 .PHONY: install-aunit
 install-aunit:

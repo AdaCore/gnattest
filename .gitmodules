@@ -1,4 +1,4 @@
-[submodule "share/aunit"]
-	path = share/aunit
+[submodule "aunit"]
+	path = aunit
 	url = https://github.com/AdaCore/aunit
 	branch = master
