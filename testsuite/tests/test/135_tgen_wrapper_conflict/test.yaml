@@ -3,5 +3,3 @@ description: Test that TGen generates precondition wrappers that can be
   the package in which it is defined.
 
 driver: shell_script
-control:
-    - [XFAIL, 'x86', 'Marshalling not working for 32bits (UB03-008)']

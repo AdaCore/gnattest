@@ -2,6 +2,3 @@ description:
     Test that TGen is able to generate test for a subtype of a tagged record.
 
 driver: shell_script
-
-control:
-  - [XFAIL, 'x86', 'Marshalling not working for 32bits (UB03-008)']
