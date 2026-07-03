@@ -519,6 +519,8 @@ package body Test.Setup is
         (if Length (Opts.Prefix) > 0
          then To_String (Opts.Prefix)
          else Gnattest_Prefix);
+      Target : constant String := To_String (Opts.Target);
+
    begin
       Cmd.Append ("gprinstall");
       Cmd.Append ("-p");
@@ -534,6 +536,23 @@ package body Test.Setup is
       if Length (Opts.Config) > 0 then
          Cmd.Append ("--config=" & To_String (Opts.Config));
       end if;
+      if Target /= "" then
+         Cmd.Append ("--target=" & Target);
+      end if;
+      if Length (Opts.RTS) > 0 then
+         Cmd.Append ("--RTS=" & To_String (Opts.RTS));
+      end if;
+
+      --  Install Aunit and TGen in production mode by default, unless we have
+      --  debug mode enabled in gnattest
+      if not Utils_Debug.Debug_Flag_1 then
+         Cmd.Append ("-XAUNIT_BUILD_MODE=Install");
+         Cmd.Append ("-XTGEN_RTS_BUILD_MODE=prod");
+      else
+         Cmd.Append ("-XAUNIT_BUILD_MODE=Devel");
+         Cmd.Append ("-XTGEN_RTS_BUILD_MODE=dev");
+      end if;
+
       for Arg of Extra_Args loop
          Cmd.Append (Arg);
       end loop;
