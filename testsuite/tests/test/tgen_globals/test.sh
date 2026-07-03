@@ -9,6 +9,6 @@ gprbuild -q -P test_gen.gpr
 ./obj/example_gen > test/obj/gnattest/tests/JSON_Tests/pkg.json
 
 # Also test the generation
-gnattest -P test/test.gpr --gen-test-vectors
+gnattest -P test/test.gpr --enum-strat --gen-test-vectors
 gprbuild -q -P test/obj/gnattest/harness/test_driver.gpr
 ./test/obj/gnattest/harness/test_runner
