@@ -855,7 +855,10 @@ package body TGen.Libgen is
         (F_Body,
          "package "
          & Source_Package_Renaming
-         & " renames "
+         --  Prefix user package by the `Standard` package to remove ambiguity
+         --  in case the user package contains a subprogram declaration with
+         --  the same name.
+         & " renames Standard."
          & To_Ada (Pkg_Name)
          & ";");
       New_Line (F_Body);
