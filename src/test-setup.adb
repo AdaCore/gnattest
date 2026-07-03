@@ -55,6 +55,7 @@ with Utils.Command_Lines;    use Utils.Command_Lines;
 with Utils.Environment;
 with Utils.String_Utilities; use Utils.String_Utilities;
 with Utils.Tool_Names;
+with Utils_Debug;
 
 package body Test.Setup is
 
@@ -249,11 +250,13 @@ package body Test.Setup is
       RTS    : constant String := To_String (Opts.RTS);
       Target : constant String := To_String (Opts.Target);
    begin
-      if Contains (RTS, "ravenscar") and then Contains (RTS, "cert") then
-         return Profile_Ravenscar_Cert;
-      elsif Contains (RTS, "ravenscar") then
-         return Profile_Ravenscar;
-      elsif Contains (RTS, "zfp") then
+      if Contains (RTS, "embedded") or else Contains (RTS, "ravenscar") then
+         if Contains (RTS, "cert") then
+            return Profile_Ravenscar_Cert;
+         else
+            return Profile_Ravenscar;
+         end if;
+      elsif Contains (RTS, "light") or else Contains (RTS, "zfp") then
          if Target /= "" and then Target /= "native" then
             return Profile_ZFP_Cross;
          else
@@ -482,6 +485,17 @@ package body Test.Setup is
          Cmd.Append ("--config=" & To_String (Opts.Config));
       end if;
       Cmd.Append ("-XLIBRARY_TYPE=static");
+
+      --  Compile Aunit and TGen in production mode by default, unless we have
+      --  debug mode enabled in gnattest
+      if not Utils_Debug.Debug_Flag_1 then
+         Cmd.Append ("-XAUNIT_BUILD_MODE=Install");
+         Cmd.Append ("-XTGEN_RTS_BUILD_MODE=prod");
+      else
+         Cmd.Append ("-XAUNIT_BUILD_MODE=Devel");
+         Cmd.Append ("-XTGEN_RTS_BUILD_MODE=dev");
+      end if;
+
       for G of Opts.Gargs loop
          Cmd.Append (G);
       end loop;
@@ -630,6 +644,10 @@ package body Test.Setup is
 
       Parse
         (Setup_Args, Cmd, Phase => Cmd_Line_1, Collect_File_Names => False);
+
+      for Dbg of Test_String_Seq_Switches.Arg (Cmd, Debug) loop
+         Utils_Debug.Set_Debug_Options (Dbg.all);
+      end loop;
 
       if Arg (Cmd, Help) then
          Print_Help;
