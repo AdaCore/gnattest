@@ -1,0 +1,8 @@
+description: |
+  This test checks that TGen handles cases where a subprogram has the same
+  name as the enclosing package.
+
+driver: gnattest_tgen
+
+default-gpr: True
+extra_gnattest_args: ["--gen-wrappers"]
