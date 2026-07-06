@@ -756,6 +756,7 @@ package body TGen.Types.Translation is
          end if;
       end Find_Digits;
 
+      Digits_Limit : constant Natural := Max_Float_Precision (Decl);
       Digits_Value : Natural := 0;
       Has_Range    : Boolean;
       Min, Max     : Big_Reals.Big_Real;
@@ -766,6 +767,20 @@ package body TGen.Types.Translation is
 
    begin
       Find_Digits (Decl, Digits_Value);
+      if Digits_Value > Max_Float_Precision (Decl) then
+         return
+           (True,
+            Res =>
+              new Unsupported_Typ'
+                (Reason =>
+                   To_Unbounded_String ("Number of digits for this type (")
+                   & Trim (Digits_Value'Image)
+                   & ") exceeds the capabilities of TGen ("
+                   & Trim (Digits_Limit'Image)
+                   & ")",
+                 others => <>));
+      end if;
+
       Translate_Float_Range (Decl, Has_Range, Min, Max);
       if Has_Range then
          Res.Res :=

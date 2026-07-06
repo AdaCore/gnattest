@@ -213,8 +213,8 @@ package body TGen.Random is
       --  the exponent / the mantissa. It should be able to hold at least a
       --  mantissa binary representation.
 
-      Exponent_Size : Natural;
-      --  Size of the exponent in bits
+      Exponent_Max : Unsigned_Type;
+      --  Max value of the exponent
 
       Mantissa_Size : Natural;
       --  Size of the mantissa in bits
@@ -238,7 +238,7 @@ package body TGen.Random is
 
    function Random_Float (LB, HB : Float_Type) return Float_Type is
       MS_Part : constant Unsigned_Type := 2**Mantissa_Size;
-      XP_Part : constant Unsigned_Type := 2**Exponent_Size;
+      XP_Part : Unsigned_Type renames Exponent_Max;
 
       LB_Unsigned : constant Unsigned_Type := Float_To_Unsigned (LB);
       HB_Unsigned : constant Unsigned_Type := Float_To_Unsigned (HB);
@@ -295,7 +295,8 @@ package body TGen.Random is
            --  exponent depending on the sign
 
              Unsigned_Type
-                (Int_Type (MS_Part) - LB_Sign * Int_Type (LB_Mantissa))
+                (MS_Part
+                 + Unsigned_Type ((-1) * LB_Sign * Int_Type (LB_Mantissa)))
            mod MS_Part
 
            --  Don't forget the LB_Mantissa value itself
@@ -307,7 +308,7 @@ package body TGen.Random is
 
          Nb_Values_In_Last_Binade :=
            Unsigned_Type
-             (Int_Type (MS_Part) + HB_Sign * Int_Type (HB_Mantissa))
+             (MS_Part + Unsigned_Type (HB_Sign * Int_Type (HB_Mantissa)))
            mod MS_Part
            + 1;
 
@@ -365,9 +366,9 @@ package body TGen.Random is
                   Result_Sign := (if Intermediate_Exp < 0 then -1 else 1);
                   Result_Exp := Unsigned_Type (abs Intermediate_Exp);
                   Result_Mantissa :=
-                    Unsigned_Type
-                      (Int_Type (MS_Part)
-                       + Result_Sign * Int_Type (Rand mod MS_Part))
+                    (if Result_Sign = 1
+                     then MS_Part + (Rand mod MS_Part)
+                     else MS_Part - (Rand mod MS_Part))
                     mod MS_Part;
                end;
 
@@ -414,7 +415,7 @@ package body TGen.Random is
        (Float_Type        => Float,
         Unsigned_Type     => Unsigned_32,
         Int_Type          => Integer,
-        Exponent_Size     => 8,
+        Exponent_Max      => 2**8,
         Mantissa_Size     => 23,
         Float_To_Unsigned => Float_To_Unsigned_32,
         Unsigned_To_Float => Unsigned_32_To_Float,
@@ -432,11 +433,21 @@ package body TGen.Random is
        (Float_Type        => Long_Float,
         Unsigned_Type     => Unsigned_64,
         Int_Type          => Long_Long_Integer,
-        Exponent_Size     => 11,
+        Exponent_Max      => 2**11,
         Mantissa_Size     => 52,
         Float_To_Unsigned => Long_Float_To_Unsigned_64,
         Unsigned_To_Float => Unsigned_64_To_Long_Float,
         Random            => Random_Unsigned_64);
+
+   --  On all 32bit platforms Long_Long_Long_Integer and Unsigned_128 are
+   --  actually 64 bits, and Long_Long_Float is actually 64bit as well. The
+   --  only exception is x86, where LLF is 80 bits, but LLLI remains 64bits. We
+   --  should never have to use this instance in x86 though, as extended floats
+   --  will be marked as unsupported. In order not to complicate the build
+   --  we'll just silence warnings concerning conversion sizes for this
+   --  package.
+
+   pragma Warnings ("Z");  -- suspicious unchecked conversion
 
    function Long_Long_Float_To_Unsigned_128 is new
      Ada.Unchecked_Conversion
@@ -454,11 +465,13 @@ package body TGen.Random is
        (Float_Type        => Long_Long_Float,
         Unsigned_Type     => Unsigned_128,
         Int_Type          => Long_Long_Long_Integer,
-        Exponent_Size     => 15,
-        Mantissa_Size     => 63,
+        Exponent_Max      => Long_Long_Float'Machine_Emax,
+        Mantissa_Size     => Long_Long_Float'Machine_Mantissa - 1,
         Float_To_Unsigned => Long_Long_Float_To_Unsigned_128,
         Unsigned_To_Float => Unsigned_128_To_Long_Long_Float,
         Random            => Random_Unsigned_128);
+
+   pragma Warnings ("z");
 
    ------------
    -- Random --

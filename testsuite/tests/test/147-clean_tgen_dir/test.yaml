@@ -3,5 +3,3 @@ description:
     directory, removing stale sources.
 
 driver: shell_script
-control:
-    - [XFAIL, 'x86', 'Marshalling not working for 32bits (UB03-008)']

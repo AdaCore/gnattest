@@ -115,4 +115,11 @@ package TGen.LAL_Utils is
    --  Return True if E is an expression that contains a reference to a formal
    --  generic parameter, False otherwise.
 
+   function Max_Float_Precision
+     (N : Libadalang.Analysis.Ada_Node'Class) return Positive;
+   --  Check using target information either emitted by gnat along the runtime,
+   --  or from the knowledge base in LAL, what is the max amount of digits TGen
+   --  can support. In practice, only extended floats on x86 are
+   --  unsupported.
+
 end TGen.LAL_Utils;

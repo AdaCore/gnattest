@@ -1,11 +1,6 @@
 pkg.ads:8:06: warning: "TGen_Proxy" is not a valid aspect identifier [enabled by default]
 pkg.ads:23:4: info: corresponding test PASSED
 pkg.ads:23:4: info: corresponding test PASSED
-pkg.ads:23:4: info: corresponding test PASSED
-pkg.ads:23:4: info: corresponding test PASSED
-pkg.ads:23:4: info: corresponding test PASSED
-pkg.ads:25:4: info: corresponding test PASSED
-pkg.ads:25:4: info: corresponding test PASSED
 pkg.ads:25:4: info: corresponding test PASSED
 pkg.ads:25:4: info: corresponding test PASSED
 pkg.ads:25:4: info: corresponding test PASSED
@@ -17,4 +12,4 @@ pkg.ads:27:4: info: corresponding test PASSED
 pkg.ads:23:4: error: corresponding test FAILED: Test not implemented. (pkg-test_data-tests.adb:61)
 pkg.ads:25:4: error: corresponding test FAILED: Test not implemented. (pkg-test_data-tests.adb:97)
 pkg.ads:27:4: error: corresponding test FAILED: Test not implemented. (pkg-test_data-tests.adb:133)
-18 tests run: 15 passed; 3 failed; 0 crashed.
+13 tests run: 10 passed; 3 failed; 0 crashed.

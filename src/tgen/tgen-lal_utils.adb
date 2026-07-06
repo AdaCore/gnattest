@@ -24,6 +24,7 @@
 with Ada.Characters.Handling;
 
 with Libadalang.Common; use Libadalang.Common;
+with Libadalang.Target_Info;
 
 package body TGen.LAL_Utils is
 
@@ -272,5 +273,32 @@ package body TGen.LAL_Utils is
         Traverse (E.P_Get_Uninstantiated_Node, Formal_Visitor'Access) = Stop;
 
    end Is_Formal_Expression;
+
+   -------------------------
+   -- Max_Float_Precision --
+   -------------------------
+
+   function Max_Float_Precision
+     (N : Libadalang.Analysis.Ada_Node'Class) return Positive
+   is
+      use Libadalang.Analysis;
+      use Libadalang.Target_Info;
+
+      Target_Properties : constant Target_Information :=
+        N.Unit.Context.Get_Target_Information;
+      D_Properties      : Floating_Point_Type_Information renames
+        Target_Properties.Floating_Point_Types (Double_Id);
+      LD_Properties     : Floating_Point_Type_Information renames
+        Target_Properties.Floating_Point_Types (Long_Double_Id);
+   begin
+
+      if not LD_Properties.Present
+        or else Target_Properties.Long_Long_Long_Size < LD_Properties.Size
+      then
+         return Positive (D_Properties.Digs);
+      else
+         return Positive (LD_Properties.Digs);
+      end if;
+   end Max_Float_Precision;
 
 end TGen.LAL_Utils;

@@ -1,29 +1,26 @@
 Units remaining: 3     Units remaining: 2     Units remaining: 1     
 Pkg.Supported_Global is  3
-Pkg.Supported_Global is  135097
-Pkg.Supported_Global is  96
-Pkg.Supported_Global is -610670150
-Pkg.Supported_Global is  1840412406
-Pkg.Supported_Global is -246262021
+Pkg.Supported_Global is -2147483648
+Pkg.Supported_Global is -2147483648
+Pkg.Supported_Global is  2147483647
+Pkg.Supported_Global is  2147483647
 Pkg.Supported_Global is  3
-Pkg.Supported_Global is -70211
-Pkg.Supported_Global is -246262021
-Pkg.Supported_Global is  7817
-Pkg.Supported_Global is  1297714257
-Pkg.Supported_Global is  1757998681
-Pkg.Supported_Global is  1757998681
-Pkg.Supported_Global is  1757998681
-Pkg.Supported_Global is  1757998681
+Pkg.Supported_Global is -2147483648
+Pkg.Supported_Global is -2147483648
+Pkg.Supported_Global is -2147483648
+Pkg.Supported_Global is -2147483648
+Pkg.Supported_Global is -2147483648
+Pkg.Supported_Global is -2147483648
+Pkg.Supported_Global is -2147483648
+Pkg.Supported_Global is -2147483648
 Pkg.Supported_Global is  3
-Pkg.Supported_Global is  135097
-Pkg.Supported_Global is  96
-Pkg.Supported_Global is -610670150
-Pkg.Supported_Global is  1840412406
-Pkg.Supported_Global is -246262021
+Pkg.Supported_Global is -2147483648
+Pkg.Supported_Global is -2147483648
+Pkg.Supported_Global is  2147483647
+Pkg.Supported_Global is  2147483647
 pkg.ads:16:4: info: corresponding test PASSED
 pkg.ads:16:4: info: corresponding test PASSED
 pkg.ads:16:4: info: corresponding test PASSED
-pkg.ads:27:4: info: corresponding test PASSED
 pkg.ads:27:4: info: corresponding test PASSED
 pkg.ads:27:4: info: corresponding test PASSED
 pkg.ads:27:4: info: corresponding test PASSED
@@ -40,7 +37,6 @@ pkg.ads:14:4: info: corresponding test PASSED
 pkg.ads:20:4: info: corresponding test PASSED
 pkg.ads:20:4: info: corresponding test PASSED
 pkg.ads:20:4: info: corresponding test PASSED
-pkg.ads:18:4: info: corresponding test PASSED
 pkg.ads:18:4: info: corresponding test PASSED
 pkg.ads:18:4: info: corresponding test PASSED
 pkg.ads:18:4: info: corresponding test PASSED
@@ -52,4 +48,4 @@ pkg.ads:18:4: error: corresponding test FAILED: Test not implemented. (pkg-test_
 pkg.ads:20:4: error: corresponding test FAILED: Test not implemented. (pkg-test_data-tests.adb:108)
 pkg.ads:23:4: error: corresponding test FAILED: Test not implemented. (pkg-test_data-tests.adb:129)
 pkg.ads:27:4: error: corresponding test FAILED: Test not implemented. (pkg-test_data-tests.adb:150)
-32 tests run: 26 passed; 6 failed; 0 crashed.
+30 tests run: 24 passed; 6 failed; 0 crashed.

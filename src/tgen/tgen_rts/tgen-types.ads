@@ -252,6 +252,8 @@ package TGen.Types is
 
    Big_Zero : constant Big_Integer := TGen.Big_Int.To_Big_Integer (0);
 
+   Big_One : constant Big_Integer := TGen.Big_Int.To_Big_Integer (1);
+
    Big_Zero_F : constant Big_Reals.Big_Real := TGen.Big_Reals.To_Real (0);
 
    type Unsupported_Typ is new Typ with record

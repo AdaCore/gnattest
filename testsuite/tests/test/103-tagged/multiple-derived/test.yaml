@@ -3,6 +3,3 @@ description:
     record with multiple ancestors with fields of different types.
 
 driver: shell_script
-
-control:
-  - [XFAIL, 'x86', 'Marshalling not working for 32bits (UB03-008)']
