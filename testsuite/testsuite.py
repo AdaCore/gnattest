@@ -79,40 +79,22 @@ class Testsuite(e3.testsuite.Testsuite):
 
         add_shared_options_to(parser)
 
-    def setup_tgen_runtime(
-        self,
-        project_file: str,
-        rts_build_dir: str,
-        rts_install_dir: str,
-    ) -> None:
-        e3.testsuite.logger.info(f"Building {project_file} ...")
-        p_build = Run(
-            [
-                "gprbuild",
-                f"-P{os.path.join(rts_build_dir, project_file)}",
-                "-g",
-                "-bargs",
-                "-Es",
-            ]
-        )
-        if p_build.status != 0:
-            e3.testsuite.logger.fatal(f"Failed to build {project_file}: {p_build.out}")
+    def setup_tgen_runtime(self, rts_install_dir: str) -> None:
+        e3.testsuite.logger.info("Running gnattest setup ...")
+        args = self.main.args
+        assert args is not None
+        cmd = ["gnattest", "setup", f"--prefix={rts_install_dir}"]
+        if args.target:
+            # --target may use the extended target[,version[,machine[,mode]]]
+            # syntax; only pass the target triplet to gnattest.
+            cmd.append(f"--target={args.target.split(',')[0]}")
+        if args.RTS:
+            cmd.append(f"--RTS={args.RTS}")
+        p_setup = Run(cmd)
+        if p_setup.status != 0:
+            e3.testsuite.logger.fatal(f"Failed to run gnattest setup: {p_setup.out}")
             exit(1)
 
-        e3.testsuite.logger.info(f"Installing {project_file} ...")
-        p_install = Run(
-            [
-                "gprinstall",
-                "-p",
-                f"-P{os.path.join(rts_build_dir, project_file)}",
-                f"--prefix={rts_install_dir}",
-            ]
-        )
-        if p_install.status != 0:
-            e3.testsuite.logger.fatal(
-                f"Failed to install {project_file}: {p_install.out}"
-            )
-            exit(1)
         self.env.add_search_path(
             "GPR_PROJECT_PATH", os.path.join(rts_install_dir, "share", "gpr")
         )
@@ -133,34 +115,9 @@ class Testsuite(e3.testsuite.Testsuite):
         # the current directory.
         os.environ["PATH"] = "%s:." % os.environ["PATH"]
 
+        # Setup TGen runtime support
         if self.main.args.setup_tgen_rts:
-            # Copy the TGen_RTS sources from the tree to a temporary directory
-            rts_build_dir = os.path.join(self.working_dir, "tgen_rts")
-            light_rts_build_dir = os.path.join(self.working_dir, "light_tgen_rts")
-            rts_install_dir = os.path.join(rts_build_dir, "local")
-            light_rts_install_dir = os.path.join(light_rts_build_dir, "local")
-            sync_tree(
-                os.path.join(self.root_dir, "..", "src", "tgen", "tgen_rts"),
-                rts_build_dir,
-            )
-            sync_tree(
-                os.path.join(self.root_dir, "..", "src", "tgen", "tgen_rts"),
-                light_rts_build_dir,
-            )
-
-            # Setup TGen runtime support
-            self.setup_tgen_runtime(
-                project_file="tgen_rts.gpr",
-                rts_build_dir=rts_build_dir,
-                rts_install_dir=rts_install_dir,
-            )
-
-            # Setup light TGen runtime support
-            self.setup_tgen_runtime(
-                project_file="tgen_marshalling_rts.gpr",
-                rts_build_dir=light_rts_build_dir,
-                rts_install_dir=light_rts_install_dir,
-            )
+            self.setup_tgen_runtime(rts_install_dir=self.working_dir)
 
         if self.env.valgrind:
             # The --valgrind switch was given. Set the PATH to point to the
