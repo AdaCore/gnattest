@@ -23,12 +23,40 @@
 
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 
-with GNAT.Random_Numbers;
+pragma Warnings (Off, "*internal GNAT unit*");
+with System.Random_Numbers;
+pragma Warnings (On, "*internal GNAT unit*");
 
+with TGen.Runtime_Properties;
 with TGen.Strings; use TGen.Strings;
 with TGen.Random;  use TGen.Random;
 
 package body TGen.Types.Real_Types is
+
+   ---------------------
+   -- Make_JSON_Value --
+   ---------------------
+
+   function Make_JSON_Value (Self : Real_Typ; Val : Big_Real) return JSON_Value
+   is
+      Res : constant JSON_Value := Create_Object;
+   begin
+      if TGen.Runtime_Properties.Sec_Stack_Dynamic then
+         Res.Set_Field ("quotient", True);
+         Res.Set_Field ("value", To_Quotient_String (Val));
+      else
+         --  We don't really have a choice but to use conversion to LF then
+         --  outputting its image as string conversion for big reals is broken.
+         --
+         --  On all embedded platforms (but x86_64-elf) Long_Float is the same
+         --  thing as Long_Long_Float, so it should be ok in terms of
+         --  precision.
+
+         Res.Set_Field ("quotient", False);
+         Res.Set_Field ("value", LF_Conversions.From_Big_Real (Val)'Image);
+      end if;
+      return Res;
+   end Make_JSON_Value;
 
    ----------
    -- Init --
@@ -53,15 +81,13 @@ package body TGen.Types.Real_Types is
      (S : in out Real_Range_Strategy; Disc_Context : Disc_Value_Map)
       return JSON_Value
    is
-      Res : constant JSON_Value := Create_Object;
+      T : constant Real_Typ'Class := Real_Typ'Class (S.T.all);
    begin
       if S.Num_Generated /= 0 then
          S.Current_Val := S.Current_Val + S.Pitch;
       end if;
       S.Num_Generated := S.Num_Generated + 1;
-      Res.Set_Field ("quotient", True);
-      Res.Set_Field ("value", Create (To_Quotient_String (S.Current_Val)));
-      return Res;
+      return T.Make_JSON_Value (S.Current_Val);
    end Generate;
 
    ------------------------------
@@ -180,7 +206,7 @@ package body TGen.Types.Real_Types is
    end High_Bound_Or_Default;
 
    function Gen return T is
-      function Rand is new GNAT.Random_Numbers.Random_Float (T);
+      function Rand is new System.Random_Numbers.Random_Float (T);
 
       --  TODO: the random number generator generates number between 0 and 1:
       --  enhance that to generate number over the whole type span.
@@ -196,8 +222,7 @@ package body TGen.Types.Real_Types is
    ------------------------
 
    function Generate_Float_Typ (Ty : Typ'Class) return JSON_Value is
-      Result : constant JSON_Value := Create_Object;
-      Self   : constant Float_Typ := Float_Typ (Ty);
+      Self : constant Float_Typ := Float_Typ (Ty);
 
       LB : constant Any_Float :=
         (if Self.Has_Range
@@ -209,17 +234,7 @@ package body TGen.Types.Real_Types is
          else Last (Self.Digits_Value));
 
    begin
-      Set_Field (Result, "quotient", True);
-
-      --  We generate floats uniformly over the representation, and not
-      --  over the real range.
-
-      Set_Field
-        (Result,
-         "value",
-         To_Quotient_String (Value (TGen.Random.Random (LB, HB))));
-
-      return Result;
+      return Self.Make_JSON_Value (Value (TGen.Random.Random (LB, HB)));
    end Generate_Float_Typ;
 
    ----------------------
@@ -246,8 +261,7 @@ package body TGen.Types.Real_Types is
 
    function Generate_Ordinary_Fixed_Typ (Ty : Typ'Class) return JSON_Value is
       use LLLI_Conversions;
-      Result : constant JSON_Value := Create_Object;
-      Self   : constant Ordinary_Fixed_Typ := Ordinary_Fixed_Typ (Ty);
+      Self : constant Ordinary_Fixed_Typ := Ordinary_Fixed_Typ (Ty);
 
       --  Translate the fixed type to the integer type
 
@@ -278,12 +292,8 @@ package body TGen.Types.Real_Types is
          --  Cast it back to a fixed point value. TODO: represent exactly the
          --  fixed point number.
 
-         Set_Field (Result, "quotient", True);
-         Set_Field
-           (Result,
-            "value",
-            To_Quotient_String (To_Big_Real (Rand_Val) * Self.Delta_Value));
-         return Result;
+         return
+           Self.Make_JSON_Value (To_Big_Real (Rand_Val) * Self.Delta_Value);
       end;
    end Generate_Ordinary_Fixed_Typ;
 
@@ -293,8 +303,7 @@ package body TGen.Types.Real_Types is
 
    function Generate_Decimal_Fixed_Typ (Ty : Typ'Class) return JSON_Value is
       use LLLI_Conversions;
-      Result : constant JSON_Value := Create_Object;
-      Self   : constant Decimal_Fixed_Typ := Decimal_Fixed_Typ (Ty);
+      Self : constant Decimal_Fixed_Typ := Decimal_Fixed_Typ (Ty);
 
       --  TODO: Using High/Low_Bound_Or_Default ignores the digits value, which
       --  may not play nice with the digits value if it is too low. We may need
@@ -329,12 +338,8 @@ package body TGen.Types.Real_Types is
       begin
          --  Cast it back to a fixed point value
 
-         Set_Field (Result, "quotient", True);
-         Set_Field
-           (Result,
-            "value",
-            To_Quotient_String (To_Big_Real (Rand_Val) * Self.Delta_Value));
-         return Result;
+         return
+           Self.Make_JSON_Value (To_Big_Real (Rand_Val) * Self.Delta_Value);
       end;
    end Generate_Decimal_Fixed_Typ;
 

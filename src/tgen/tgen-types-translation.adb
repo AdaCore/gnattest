@@ -162,7 +162,7 @@ package body TGen.Types.Translation is
    procedure Subtract_Choice_From_Other
      (Others_Cur : Variant_Choice_Lists.Cursor;
       Choice     : Variant_Choice;
-      List       : in out Variant_Choice_Lists.List);
+      List       : in out Variant_Choice_Lists.Vector);
    --  Subtract the Integer ranges that correspond to the matching alternatives
    --  in Choice.Alt_Set from the corresponding set in the variant
    --  choice denoted by Others_Cur.
@@ -2364,7 +2364,7 @@ package body TGen.Types.Translation is
    procedure Subtract_Choice_From_Other
      (Others_Cur : Variant_Choice_Lists.Cursor;
       Choice     : Variant_Choice;
-      List       : in out Variant_Choice_Lists.List)
+      List       : in out Variant_Choice_Lists.Vector)
    is
       use Alternatives_Sets;
       New_Set            : Alternatives_Set;

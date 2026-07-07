@@ -22,7 +22,9 @@
 ------------------------------------------------------------------------------
 
 with Ada.Characters.Handling;
-with Ada.Environment_Variables;
+with Ada.Text_IO;
+
+with TGen.Environment;
 
 package body TGen.Logging is
 
@@ -31,10 +33,8 @@ package body TGen.Logging is
    ------------------
 
    function Create_Trace
-     (Unit_Name : Ada.Strings.Unbounded.Unbounded_String;
-      Output    : Ada.Text_IO.File_Access := Ada.Text_IO.Standard_Error)
-      return TGen_Trace
-   is (TGen_Trace'(Unit_Name => Unit_Name, Output => Output));
+     (Unit_Name : Ada.Strings.Unbounded.Unbounded_String) return TGen_Trace
+   is (TGen_Trace'(Unit_Name => Unit_Name));
 
    -----------
    -- Trace --
@@ -44,18 +44,20 @@ package body TGen.Logging is
       use Ada.Strings.Unbounded;
       use Ada.Characters.Handling;
    begin
-      --  Skip tracing if `TGEN_RTS_TRACE` is not set
-      if not Ada.Environment_Variables.Exists ("TGEN_RTS_TRACE")
-        or else
-          To_Lower (Ada.Environment_Variables.Value ("TGEN_RTS_TRACE"))
-          not in "1" | "true"
+      --  Skip tracing unless `TGEN_RTS_TRACE` is set to an enabling value. On
+      --  runtimes without environment-variable support, TGen.Environment
+      --  reports the variable as unset, so tracing is a no-op (which also
+      --  keeps the standard output clean for other consumers, e.g. the JSON
+      --  generation stream on target).
+
+      if To_Lower (TGen.Environment.Value ("TGEN_RTS_TRACE"))
+         not in "1" | "true"
       then
          return;
       end if;
 
       Ada.Text_IO.Put_Line
-        (Self.Output.all,
-         "["
+        ("["
          & TGen_Trace_Prefix
          & To_String (Self.Unit_Name)
          & "] "

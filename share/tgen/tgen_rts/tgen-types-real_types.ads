@@ -39,6 +39,12 @@ package TGen.Types.Real_Types is
    function High_Bound_Or_Default (Self : Real_Typ) return Big_Real
    is (To_Real (0));
 
+   function Make_JSON_Value
+     (Self : Real_Typ; Val : Big_Real) return JSON_Value;
+   --  Encode Val either as a quotient string if the runtime supports large
+   --  string manipulation on the secondary stack, or in decimal notation,
+   --  using the characteristics of Self to best choose the representation.
+
    type Real_Range_Strategy is new Enum_Strategy_Type with record
       T : Typ_Access;
       --  Reference to the type we are generating values for

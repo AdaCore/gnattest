@@ -23,7 +23,9 @@
 
 with Ada.Containers.Vectors;
 
-with GNAT.Random_Numbers;
+pragma Warnings (Off, "*internal GNAT unit*");
+with System.Random_Numbers;
+pragma Warnings (On, "*internal GNAT unit*");
 
 with TGen.Numerics; use TGen.Numerics;
 with TGen.Strings;  use TGen.Strings;
@@ -72,7 +74,7 @@ package body TGen.Types.Int_Types is
    end High_Bound;
 
    function Gen return T is
-      function Rand is new GNAT.Random_Numbers.Random_Discrete (T, T'First);
+      function Rand is new System.Random_Numbers.Random_Discrete (T, T'First);
    begin
       return Rand (Generator_Instance);
    end Gen;

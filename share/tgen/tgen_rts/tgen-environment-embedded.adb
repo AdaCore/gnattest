@@ -2,7 +2,7 @@
 --                                                                          --
 --                                  TGen                                    --
 --                                                                          --
---                    Copyright (C) 2022-2025, AdaCore                      --
+--                       Copyright (C) 2026, AdaCore                        --
 --                                                                          --
 -- TGen  is  free software; you can redistribute it and/or modify it  under --
 -- under  terms of  the  GNU General  Public License  as  published by  the --
@@ -21,38 +21,33 @@
 -- <http://www.gnu.org/licenses/>.                                          --
 ------------------------------------------------------------------------------
 
---  TGen trace module, this module is a very simple trace implementation that
---  is suitable for platforms that are not supported by GNATCOLL. Set the
---  Set the `TGEN_RTS_TRACE` environnment variable to enable traces. By default
---  no traces are emitted.
---
---  Usage:
---
---  with TGen.Logging; use TGen.Logging;
---  Me : constant TGen_Trace := Create_Trace ("My_Module");
---  ...
---  Trace (Me, +"Useful debug message");
+--  Default implementation for runtimes without Ada.Environment_Variables
+--  (embedded/cross runtimes): every variable is reported as unset, so callers
+--  fall back to their defaults. This file is the body of TGen.Environment; it
+--  is mapped to that unit through a Naming clause in tgen_rts.gpr (its file
+--  name does not follow the default GNAT convention on purpose, so the native
+--  body tgen-environment.adb remains the default one).
 
-with Ada.Strings.Unbounded;
+package body TGen.Environment is
 
-package TGen.Logging is
+   ------------
+   -- Exists --
+   ------------
 
-   type TGen_Trace is record
-      Unit_Name : Ada.Strings.Unbounded.Unbounded_String :=
-        Ada.Strings.Unbounded.Null_Unbounded_String;
-   end record;
+   function Exists (Name : String) return Boolean is
+      pragma Unreferenced (Name);
+   begin
+      return False;
+   end Exists;
 
-   TGen_Trace_Prefix : constant String := "tgen.";
-   --  Prefix to use for all TGen traces.
+   -----------
+   -- Value --
+   -----------
 
-   function Create_Trace
-     (Unit_Name : Ada.Strings.Unbounded.Unbounded_String) return TGen_Trace;
-   --  Create a TGen trace object for a given unit name.
+   function Value (Name : String; Default : String := "") return String is
+      pragma Unreferenced (Name);
+   begin
+      return Default;
+   end Value;
 
-   procedure Trace (Self : TGen_Trace; Message : String);
-   --  Write a message to the standard output with the configured package name.
-   --  Traces are only emitted when the TGEN_RTS_TRACE environment variable is
-   --  set (see TGen.Environment); on runtimes without environment-variable
-   --  support this is always a no-op.
-
-end TGen.Logging;
+end TGen.Environment;

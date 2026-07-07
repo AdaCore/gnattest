@@ -25,7 +25,13 @@
 
 with Interfaces; use Interfaces;
 
-with GNAT.Random_Numbers;
+--  System.Random_Numbers is used instead of GNAT.Random_Numbers because it is
+--  available on embedded runtimes (GNAT.Random_Numbers is a thin wrapper over
+--  it that is not shipped with cross runtimes). Silence the internal-unit
+--  portability warning.
+pragma Warnings (Off, "*internal GNAT unit*");
+with System.Random_Numbers;
+pragma Warnings (On, "*internal GNAT unit*");
 
 with TGen.Big_Int;  use TGen.Big_Int;
 with TGen.Numerics; use TGen.Numerics;
@@ -33,7 +39,7 @@ with TGen.Numerics; use TGen.Numerics;
 package TGen.Random is
    pragma Elaborate_Body;
 
-   Generator_Instance : GNAT.Random_Numbers.Generator;
+   Generator_Instance : System.Random_Numbers.Generator;
 
    Seed_Env_Var : constant String := "TGEN_RANDOM_SEED";
 

@@ -23,7 +23,6 @@
 --
 --  Type representation for record types, and associated generation functions
 
-with Ada.Containers.Doubly_Linked_Lists;
 with Ada.Containers.Hashed_Maps;
 with Ada.Containers.Vectors;
 with Ada.Strings.Unbounded.Equal_Case_Insensitive;
@@ -118,11 +117,13 @@ package TGen.Types.Record_Types is
    --  nested variant parts.
 
    package Variant_Choice_Lists is new
-     Ada.Containers.Doubly_Linked_Lists (Element_Type => Variant_Choice);
+     Ada.Containers.Vectors
+       (Index_Type   => Positive,
+        Element_Type => Variant_Choice);
 
    type Variant_Part is record
       Discr_Name      : Unbounded_String;
-      Variant_Choices : Variant_Choice_Lists.List;
+      Variant_Choices : Variant_Choice_Lists.Vector;
    end record;
 
    ------------

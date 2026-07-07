@@ -2,7 +2,38 @@ library project TGen_RTS is
    type Any_Library_Type is ("static", "relocatable", "static-pic");
    Library_Type : Any_Library_Type := external ("LIBRARY_TYPE", "static");
    type Build_Mode_Type is ("dev", "prod");
-   Build_Mode : Build_Mode_Type := external ("TGEN_RTS_BUILD_MODE", external("BUILD_MODE", "prod"));
+   Build_Mode : Build_Mode_Type := external
+     ("TGEN_RTS_BUILD_MODE", external("BUILD_MODE", "prod"));
+
+
+   RTS := Project'Runtime ("Ada");
+   --  Runtime the library is being built against. It is empty for the native
+   --  runtime, and non-empty for a named/embedded runtime selected via --RTS.
+
+   type TGen_RTS_Profile_Type is ("full", "marshalling");
+   Default_Profile := "full";
+   --  Source subset to build:
+   --    * "full"        : the whole library, including the generation side
+   --                      (type model, strategies, random, ...). This is the
+   --                      default on the native runtime, and can be requested
+   --                      on an embedded runtime (rich enough to host the
+   --                      generation side, i.e. providing
+   --                      System.Random_Numbers) so the value-generation
+   --                      harness can run on target.
+   --    * "marshalling" : only the test-case *marshalling* subset
+   --                      (binary + JSON marshalling). This is the default on
+   --                      a non-native runtime and is what the on-target AUnit
+   --                      test harness needs.
+   --  A few units always stay host-only regardless of the profile: the file
+   --  I/O children (json-utils, json-test_cases-io) and the instrumentation
+   --  support (instr_support, which pulls in GNAT.OS_Lib / Ada.Directories and
+   --  is not part of the generation link closure).
+
+   case RTS is
+      when ""     => Default_Profile := "full";
+      when others => Default_Profile := "marshalling";
+   end case;
+   Profile : TGen_RTS_Profile_Type := external ("TGEN_RTS_PROFILE", Default_Profile);
 
    for Library_Name use "tgen";
    for Library_Kind use Library_Type;
@@ -10,6 +41,58 @@ library project TGen_RTS is
    for Object_Dir use "obj-tgen_rts." & Library_Type;
 
    for Source_Dirs use (".");
+
+   --  Units that are never buildable off the native runtime.
+   Host_Only_Sources :=
+     ("tgen-json-utils.ads",               "tgen-json-utils.adb",
+      "tgen-json-test_cases-io.ads",       "tgen-json-test_cases-io.adb",
+      "tgen-instr_support.ads",            "tgen-instr_support.adb",
+      "tgen-runtime_properties.ads");
+
+   --  Generation-side units, excluded in the "marshalling" profile.
+   Generation_Sources :=
+     ("tgen-logging.ads",               "tgen-logging.adb",
+      "tgen-random.ads",                "tgen-random.adb",
+      "tgen-strategies.ads",            "tgen-strategies.adb",
+      "tgen-types.ads",                 "tgen-types.adb",
+      "tgen-types-array_types.ads",     "tgen-types-array_types.adb",
+      "tgen-types-constraints.ads",     "tgen-types-constraints.adb",
+      "tgen-types-discrete_types.ads",  "tgen-types-discrete_types.adb",
+      "tgen-types-enum_types.ads",      "tgen-types-enum_types.adb",
+      "tgen-types-int_types.ads",       "tgen-types-int_types.adb",
+      "tgen-types-real_types.ads",      "tgen-types-real_types.adb",
+      "tgen-types-record_types.ads",    "tgen-types-record_types.adb");
+
+   --  TGen.Environment has two bodies. tgen-environment.adb (default naming)
+   --  reads the real process environment via Ada.Environment_Variables and is
+   --  used on the native runtime; tgen-environment-embedded.adb returns
+   --  defaults and is selected (via package Naming below) on other runtimes.
+   case RTS is
+      when "" =>
+         --  Native: build everything but the alternate embedded env & runtime info body.
+         for Excluded_Source_Files use
+           ("tgen-environment-embedded.adb", "tgen-runtime_info_embedded.ads");
+      when others =>
+         case Profile is
+            when "full" =>
+               for Excluded_Source_Files use
+                 Host_Only_Sources & ("tgen-environment.adb");
+            when "marshalling" =>
+               for Excluded_Source_Files use
+                 Host_Only_Sources & Generation_Sources
+                 & ("tgen-environment.adb");
+         end case;
+   end case;
+
+   package Naming is
+      case RTS is
+         when "" =>
+            null;  --  default naming: tgen-environment.adb an tgen-runtime_properties are the bodies
+         when others =>
+            for Body ("TGen.Environment") use "tgen-environment-embedded.adb";
+            for Spec ("TGen.Runtime_Properties") use "tgen-runtime_properties_embedded.ads";
+      end case;
+   end Naming;
 
    package Compiler is
       case Build_Mode is

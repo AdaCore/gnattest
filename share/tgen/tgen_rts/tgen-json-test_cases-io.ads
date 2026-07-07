@@ -2,7 +2,7 @@
 --                                                                          --
 --                                  TGen                                    --
 --                                                                          --
---                    Copyright (C) 2022-2025, AdaCore                      --
+--                       Copyright (C) 2026, AdaCore                        --
 --                                                                          --
 -- TGen  is  free software; you can redistribute it and/or modify it  under --
 -- under  terms of  the  GNU General  Public License  as  published by  the --
@@ -21,38 +21,22 @@
 -- <http://www.gnu.org/licenses/>.                                          --
 ------------------------------------------------------------------------------
 
---  TGen trace module, this module is a very simple trace implementation that
---  is suitable for platforms that are not supported by GNATCOLL. Set the
---  Set the `TGEN_RTS_TRACE` environnment variable to enable traces. By default
---  no traces are emitted.
---
---  Usage:
---
---  with TGen.Logging; use TGen.Logging;
---  Me : constant TGen_Trace := Create_Trace ("My_Module");
---  ...
---  Trace (Me, +"Useful debug message");
+--  This unit provides the file-I/O operations for TGen JSON test cases
+--  (loading from and writing to a file). It relies on file-I/O facilities
+--  (GNAT.OS_Lib, Ada.Text_IO) and is therefore host-only: it is excluded when
+--  building TGen_RTS for an embedded runtime.
 
-with Ada.Strings.Unbounded;
+with GNAT.OS_Lib;
 
-package TGen.Logging is
+package TGen.JSON.Test_Cases.IO is
 
-   type TGen_Trace is record
-      Unit_Name : Ada.Strings.Unbounded.Unbounded_String :=
-        Ada.Strings.Unbounded.Null_Unbounded_String;
-   end record;
+   function Load_From_File (File_Path : String) return JSON_Test_Cases
+   with Pre => GNAT.OS_Lib.Is_Read_Accessible_File (File_Path);
+   --  Load a TGen JSON test case file and return an instance of the loaded
+   --  file. This function will raise an exception
+   --  (`TGen.JSON.Invalid_JSON_Stream`) if the JSON file is not valid.
 
-   TGen_Trace_Prefix : constant String := "tgen.";
-   --  Prefix to use for all TGen traces.
+   procedure Write_To_File (Self : JSON_Test_Cases; File_Path : String);
+   --  Write Self encoded as a JSON to File_Path
 
-   function Create_Trace
-     (Unit_Name : Ada.Strings.Unbounded.Unbounded_String) return TGen_Trace;
-   --  Create a TGen trace object for a given unit name.
-
-   procedure Trace (Self : TGen_Trace; Message : String);
-   --  Write a message to the standard output with the configured package name.
-   --  Traces are only emitted when the TGEN_RTS_TRACE environment variable is
-   --  set (see TGen.Environment); on runtimes without environment-variable
-   --  support this is always a no-op.
-
-end TGen.Logging;
+end TGen.JSON.Test_Cases.IO;

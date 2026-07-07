@@ -1633,6 +1633,7 @@ package body TGen.Libgen is
          Put_Line (F_Body, "with GNAT.OS_Lib;");
       else
          Put_Line (F_Body, "with TGen.JSON.Test_Cases;");
+         Put_Line (F_Body, "with TGen.JSON.Utils;");
       end if;
 
       Put_Line (F_Body, "with Ada.Environment_Variables;");

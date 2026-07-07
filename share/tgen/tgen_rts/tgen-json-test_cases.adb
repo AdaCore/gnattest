@@ -21,23 +21,9 @@
 -- <http://www.gnu.org/licenses/>.                                          --
 ------------------------------------------------------------------------------
 
-with Ada.Text_IO;
-with Ada.Text_IO.Unbounded_IO;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 
 package body TGen.JSON.Test_Cases is
-
-   ----------------------
-   --  Load_From_File  --
-   ----------------------
-
-   function Load_From_File (File_Path : String) return JSON_Test_Cases is
-      File_Content : constant String := Read_Whole_File (File_Path);
-      Root         : constant JSON_Value :=
-        TGen.JSON.Read (File_Content, File_Path);
-   begin
-      return JSON_Test_Cases'(Root => Root);
-   end Load_From_File;
 
    ---------------
    -- Bind_JSON --
@@ -48,20 +34,6 @@ package body TGen.JSON.Test_Cases is
    begin
       Self.Root := New_JSON;
    end Bind_JSON;
-
-   -------------------
-   -- Write_To_File --
-   -------------------
-
-   procedure Write_To_File (Self : JSON_Test_Cases; File_Path : String) is
-      use Ada.Text_IO;
-
-      FT : File_Type;
-   begin
-      Open (FT, Mode => Out_File, Name => File_Path);
-      Put_Line (FT, Self.Root.Write (Compact => False));
-      Close (FT);
-   end Write_To_File;
 
    -----------------------------------
    --  Add_Subprogram_To_JSON_File  --
@@ -398,28 +370,6 @@ package body TGen.JSON.Test_Cases is
          Res.Parameter_Root.Set_Field ("hash", Hash (Value));
       end return;
    end Create_Parameter;
-
-   -----------------------
-   --  Read_Whole_File  --
-   -----------------------
-
-   function Read_Whole_File (Filename : String) return String is
-      use Ada.Text_IO;
-
-      FT     : File_Type;
-      Result : Unbounded_String;
-      Line   : Unbounded_String;
-   begin
-      Open (FT, Mode => In_File, Name => Filename);
-
-      while not End_Of_File (FT) loop
-         Unbounded_IO.Get_Line (FT, Line);
-         Append (Result, Line);
-      end loop;
-
-      Close (FT);
-      return To_String (Result);
-   end Read_Whole_File;
 
    -----------
    -- Clone --
