@@ -3,6 +3,8 @@ obj
 bin
 lib.*
 lib
+**/lib-tgen_rts*
+**/obj-tgen_rts*
 
 # Testsuite output
 out

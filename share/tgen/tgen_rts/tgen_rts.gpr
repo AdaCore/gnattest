@@ -6,7 +6,7 @@ library project TGen_RTS is
 
    for Library_Name use "tgen";
    for Library_Kind use Library_Type;
-   for Library_Dir use "lib-gen_rts." & Library_Type;
+   for Library_Dir use "lib-tgen_rts." & Library_Type;
    for Object_Dir use "obj-tgen_rts." & Library_Type;
 
    for Source_Dirs use (".");
