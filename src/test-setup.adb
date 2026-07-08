@@ -62,6 +62,10 @@ package body Test.Setup is
    --  The runtime-profile enum and its --rts-profile switch live in
    --  Test.Command_Lines so the framework can parse the switch directly.
 
+   --  Whether to build the TGen runtime: forced on/off with --tgen /
+   --  --no-tgen, or decided by probing the compiler for Ada 2022 support.
+   type Tgen_Mode_Type is (Tgen_Auto, Tgen_Build, Tgen_Skip);
+
    type Setup_Options is record
       Target  : Unbounded_String;
       RTS     : Unbounded_String;
@@ -75,6 +79,8 @@ package body Test.Setup is
       Compiler_Prefix : Boolean := False;
       --  When set, install at the install prefix of the compiler. Resolved
       --  into Prefix early in Run.
+
+      Tgen_Mode : Tgen_Mode_Type := Tgen_Auto;
    end record;
 
    --  Local helpers
@@ -102,11 +108,25 @@ package body Test.Setup is
    --  Return the install prefix of the Ada compiler that will build the
    --  library according to Opts.
 
+   function Build_Command
+     (Opts         : Setup_Options;
+      Project_Path : String;
+      Extra_Args   : GNATCOLL.OS.Process.Argument_List)
+      return GNATCOLL.OS.Process.Argument_List;
+   --  gprbuild command line shared by Run_Build and the Ada 2022 probe
+
    procedure Run_Build
      (Opts         : Setup_Options;
       Project_Path : String;
       Extra_Args   : GNATCOLL.OS.Process.Argument_List);
    --  Common build helper
+
+   function Compiler_Supports_Ada_2022
+     (Opts : Setup_Options; Build_Dir : String) return Boolean;
+   --  Whether the selected Ada compiler can build the TGen runtime, which
+   --  requires Ada 2022 support. Checked by building, with the same gprbuild
+   --  options as the real build, a probe project staged under Build_Dir that
+   --  exercises the Ada 2022 features the TGen runtime relies on.
 
    procedure Run_Install
      (Opts         : Setup_Options;
@@ -218,6 +238,10 @@ package body Test.Setup is
       Put_Line ("  --rts-profile=<p>   auto | full | zfp | zfp-cross |");
       Put_Line ("                      ravenscar | ravenscar-cert | cert");
       Put_Line ("                      (default: auto, from --RTS/--target)");
+      Put_Line ("  --tgen / --no-tgen  Force or skip building the TGen");
+      Put_Line ("                      runtime. By default it is built in");
+      Put_Line ("                      native mode, if the compiler supports");
+      Put_Line ("                      Ada 2022.");
       Put_Line ("  -q                  Quiet mode");
       Put_Line ("  -v                  Verbose mode (echo invoked commands)");
       Put_Line ("  -gargs ...          Pass remaining args to gprbuild");
@@ -416,7 +440,7 @@ package body Test.Setup is
    begin
       Source.Copy (+Target, Success);
       if not Success then
-         Fail ("could not copy sources to " & Target);
+         Fail ("could not copy " & Source.Display_Full_Name & " to " & Target);
       end if;
    end Copy_Sources;
 
@@ -456,14 +480,15 @@ package body Test.Setup is
       end if;
    end Finalize;
 
-   ---------------
-   -- Run_Build --
-   ---------------
+   -------------------
+   -- Build_Command --
+   -------------------
 
-   procedure Run_Build
+   function Build_Command
      (Opts         : Setup_Options;
       Project_Path : String;
       Extra_Args   : GNATCOLL.OS.Process.Argument_List)
+      return GNATCOLL.OS.Process.Argument_List
    is
       Target : constant String := To_String (Opts.Target);
       Cmd    : GNATCOLL.OS.Process.Argument_List;
@@ -502,8 +527,70 @@ package body Test.Setup is
       for Arg of Extra_Args loop
          Cmd.Append (Arg);
       end loop;
-      Test.Subprocess.Run (Cmd, What => "gprbuild");
+      return Cmd;
+   end Build_Command;
+
+   ---------------
+   -- Run_Build --
+   ---------------
+
+   procedure Run_Build
+     (Opts         : Setup_Options;
+      Project_Path : String;
+      Extra_Args   : GNATCOLL.OS.Process.Argument_List) is
+   begin
+      Test.Subprocess.Run
+        (Build_Command (Opts, Project_Path, Extra_Args), What => "gprbuild");
    end Run_Build;
+
+   --------------------------------
+   -- Compiler_Supports_Ada_2022 --
+   --------------------------------
+
+   function Compiler_Supports_Ada_2022
+     (Opts : Setup_Options; Build_Dir : String) return Boolean
+   is
+      use Ada.Directories;
+      use Ada.Text_IO;
+
+      Probe_Dir : constant String := Compose (Build_Dir, "tgen_probe");
+      Probe_GPR : constant String :=
+        Compose (Probe_Dir, "tgen_probe", Extension => "gpr");
+      Probe_Src : constant String :=
+        Compose (Probe_Dir, "tgen_probe", Extension => "adb");
+      No_Args   : GNATCOLL.OS.Process.Argument_List;
+      F         : File_Type;
+   begin
+      Create_Path (Probe_Dir);
+
+      Create (F, Out_File, Probe_GPR);
+      Put_Line (F, "project Tgen_Probe is");
+      Put_Line (F, "   for Source_Dirs use (""."");");
+      Put_Line (F, "   for Object_Dir use ""obj"";");
+      Put_Line (F, "   package Compiler is");
+      Put_Line
+        (F, "      for Default_Switches (""Ada"") use (""-gnat2022"");");
+      Put_Line (F, "   end Compiler;");
+      Put_Line (F, "end Tgen_Probe;");
+      Close (F);
+
+      --  Square-bracket aggregates and target names ('@') are the Ada 2022
+      --  features the TGen runtime sources use.
+
+      Create (F, Out_File, Probe_Src);
+      Put_Line (F, "procedure Tgen_Probe is");
+      Put_Line (F, "   S : String (1 .. 4) := [others => ' '];");
+      Put_Line (F, "begin");
+      Put_Line (F, "   S (1) := 'x';");
+      Put_Line (F, "   S := @;");
+      Put_Line (F, "end Tgen_Probe;");
+      Close (F);
+
+      return
+        Test.Subprocess.Run_Status
+          (Build_Command (Opts, Probe_GPR, No_Args), Out_To_Null => True)
+        = 0;
+   end Compiler_Supports_Ada_2022;
 
    -----------------
    -- Run_Install --
@@ -697,6 +784,18 @@ package body Test.Setup is
          Opts.Quiet := Arg (Cmd, Quiet);
          Opts.Gargs := Gargs;
          Opts.Compiler_Prefix := Arg (Cmd, Compiler_Prefix);
+         Opts.Tgen_Mode :=
+           (if not Explicit (Cmd, Tgen)
+            then Tgen_Auto
+            elsif Arg (Cmd, Tgen)
+            then Tgen_Build
+            else Tgen_Skip);
+
+         if Opts.Tgen_Mode = Tgen_Build and then not Is_Native (Opts) then
+            Fail
+              ("--tgen: the TGen runtime supports native configurations"
+               & " only");
+         end if;
 
          --  Resolve --compiler-prefix into an explicit install prefix
 
@@ -754,17 +853,41 @@ package body Test.Setup is
             Run_Build_AUnit (Opts, Profile, Build_Dir);
             Run_Install_AUnit (Opts, Profile, Build_Dir);
 
-            --  In native mode, also stage and build/install the TGen runtimes
+            --  In native mode, also stage and build/install the TGen
+            --  runtimes, unless --no-tgen was passed or the compiler lacks
+            --  the Ada 2022 support they require (--tgen skips the probe
+            --  and forces the build).
 
-            if Is_Native (Opts) then
-               if Opts.Verbose then
-                  Ada.Text_IO.Put_Line
-                    ("gnattest setup: also building TGen runtime (native)");
+            declare
+               Build_TGen : Boolean :=
+                 Opts.Tgen_Mode = Tgen_Build
+                 or else (Opts.Tgen_Mode = Tgen_Auto
+                          and then Is_Native (Opts));
+            begin
+               if Build_TGen
+                 and then Opts.Tgen_Mode = Tgen_Auto
+                 and then not Compiler_Supports_Ada_2022 (Opts, Build_Dir)
+               then
+                  Build_TGen := False;
+                  if not Opts.Quiet then
+                     Ada.Text_IO.Put_Line
+                       ("gnattest setup: the compiler does not support Ada"
+                        & " 2022; skipping the TGen runtime (pass --tgen to"
+                        & " force building it)");
+                  end if;
                end if;
-               Copy_Sources (Src => Source_TGen_Dir, Dst_Parent => Build_Dir);
-               Run_Build_TGen (Opts, Build_Dir);
-               Run_Install_TGen (Opts, Build_Dir);
-            end if;
+
+               if Build_TGen then
+                  if Opts.Verbose then
+                     Ada.Text_IO.Put_Line
+                       ("gnattest setup: also building TGen runtime");
+                  end if;
+                  Copy_Sources
+                    (Src => Source_TGen_Dir, Dst_Parent => Build_Dir);
+                  Run_Build_TGen (Opts, Build_Dir);
+                  Run_Install_TGen (Opts, Build_Dir);
+               end if;
+            end;
          end;
 
          --  Remove Tool_Temp_Dir

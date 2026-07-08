@@ -73,6 +73,10 @@ package Test.Command_Lines is
 
       Save_Temps,
       Compiler_Prefix,
+      Tgen,
+      --  --tgen forces the TGen runtime build, --no-tgen skips it. When
+      --  neither is given, setup builds it only if the compiler supports
+      --  Ada 2022 (probed at run time).
 
       --  Moved from the late Utils.Command_Lines.Common
 

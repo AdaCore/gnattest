@@ -57,9 +57,26 @@ package body Test.Subprocess is
    procedure Run
      (Cmd : Argument_List; What : String := ""; Out_To_Null : Boolean := False)
    is
+      Return_Status : constant Integer := Run_Status (Cmd, Out_To_Null);
+   begin
+      if Return_Status /= 0 then
+         Report_Err
+           ((if What = "" then Cmd.First_Element else What) & " failed.");
+         PP_Cmd (Cmd, "Command was: ");
+         Utils.Environment.Clean_Up;
+         GNAT.OS_Lib.OS_Exit (1);
+      end if;
+   end Run;
+
+   ----------------
+   -- Run_Status --
+   ----------------
+
+   function Run_Status
+     (Cmd : Argument_List; Out_To_Null : Boolean := False) return Integer
+   is
       use GNATCOLL.OS.FS;
-      Return_Status : Integer;
-      Out_FD        : constant File_Descriptor :=
+      Out_FD : constant File_Descriptor :=
         (if Out_To_Null then Null_FD else Standout);
    begin
       if Utils_Debug.Debug_Flag_2
@@ -68,14 +85,7 @@ package body Test.Subprocess is
       then
          PP_Cmd (Cmd, "Running");
       end if;
-      Return_Status := Run (Cmd, Stdout => Out_FD, Stderr => Out_FD);
-      if Return_Status /= 0 then
-         Report_Err
-           ((if What = "" then Cmd.First_Element else What) & " failed.");
-         PP_Cmd (Cmd, "Command was: ");
-         Utils.Environment.Clean_Up;
-         GNAT.OS_Lib.OS_Exit (1);
-      end if;
+      return Run (Cmd, Stdout => Out_FD, Stderr => Out_FD);
    exception
       when Exc : GNATCOLL.OS.OS_Error =>
          PP_Cmd (Cmd, "Exception raised while running the following command:");
@@ -89,7 +99,7 @@ package body Test.Subprocess is
          end if;
          Utils.Environment.Clean_Up;
          GNAT.OS_Lib.OS_Exit (1);
-   end Run;
+   end Run_Status;
 
    ---------------------
    -- Populate_X_Vars --

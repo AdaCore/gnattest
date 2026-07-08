@@ -47,6 +47,12 @@ package Test.Subprocess is
    --  null. Otherwise it is forwarded. The standard error of the subprocess
    --  is forwarded to Stdout or null based on Out_To_Null.
 
+   function Run_Status
+     (Cmd : Argument_List; Out_To_Null : Boolean := False) return Integer;
+   --  Run the command in Cmd and return its exit status. Unlike Run, a
+   --  nonzero exit status is not fatal. Failing to spawn the command still
+   --  terminates the process. Out_To_Null is handled as in Run.
+
    procedure Populate_X_Vars
      (Cmd : in out Argument_List; Gnattest_Cmd : Command_Line);
    --  Copy all the -X arguments from Gnattest_Cmd to Cmd
