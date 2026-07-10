@@ -4673,7 +4673,7 @@ package body TGen.Types.Translation is
       then
 
          --  Wrappers are not supported if the precondtions expression
-         --  contains references to generic formals.
+         --  contains references to generic formals or to ghost entities.
 
          declare
             A : constant Libadalang.Analysis.Expr'Class :=
@@ -4682,7 +4682,8 @@ package body TGen.Types.Translation is
                 .Value;
          begin
             F_Typ.Supports_Wrappers :=
-              not TGen.LAL_Utils.Is_Formal_Expression (A);
+              not TGen.LAL_Utils.Is_Formal_Expression (A)
+              and then not TGen.LAL_Utils.Is_Ghost_Expression (A);
          end;
       end if;
 
