@@ -881,8 +881,8 @@ package body Test.Instrument is
       for Param of Decl.F_Subp_Spec.P_Params loop
          declare
             Ctx              : TGen.Types.Translation.Translation_Ctx :=
-              TGen.Types.Translation.Make_Translation_Context
-                (Verbose => Test.Common.Verbose);
+              TGen.Libgen.Make_Translation_Context
+                (Test.Common.TGen_Libgen_Ctx, Verbose => Test.Common.Verbose);
             Param_Typ        : constant TGen.Types.Typ_Access :=
               TGen.Types.Translation.Translate (Param.F_Type_Expr, Ctx).Res;
             Support_Pkg_Name : constant String :=

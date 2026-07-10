@@ -45,6 +45,7 @@ package body TGen.Parse_Strategy is
       Last_Comp_Unit_Index : Positive;
       T                    : Typ'Class;
       Strategy             : Expr'Class;
+      Cache                : TGen.Types.Translation.Translation_Cache_Access;
       Strategies           : out FQN_To_Parsed_Strat_Map) return Typ'Class;
    --  Check the strategy that applies to the type T, and return a new type
    --  where the type of each parameter / parameter component this strategy
@@ -58,6 +59,7 @@ package body TGen.Parse_Strategy is
       Last_Comp_Unit_Index : Positive;
       T                    : Scalar_Typ'Class;
       Strategy             : Expr'Class;
+      Cache                : TGen.Types.Translation.Translation_Cache_Access;
       Strategies           : out FQN_To_Parsed_Strat_Map) return Typ'Class;
    --  Check the strategy that applies to a parameter / parameter component
    --  that is a scalar type. If this strategy is valid, add an entry in the
@@ -70,6 +72,7 @@ package body TGen.Parse_Strategy is
       Last_Comp_Unit_Index : Positive;
       Rec_Typ              : Base_Record_Typ'Class;
       Strategy             : Expr'Class;
+      Cache                : TGen.Types.Translation.Translation_Cache_Access;
       Strategies           : out FQN_To_Parsed_Strat_Map) return Typ'Class;
    --  Same as Check_Strategy, but for a record type in tgen terminology
    --  (that is a function or record type).
@@ -112,6 +115,7 @@ package body TGen.Parse_Strategy is
       Last_Comp_Unit_Index : Positive;
       T                    : Scalar_Typ'Class;
       Strategy             : Expr'Class;
+      Cache                : TGen.Types.Translation.Translation_Cache_Access;
       Strategies           : out FQN_To_Parsed_Strat_Map) return Typ'Class
    is
       Result : Instance_Typ;
@@ -141,7 +145,7 @@ package body TGen.Parse_Strategy is
                All_Overloads   : constant Ada_Node_Array :=
                  Strategy.As_Base_Id.P_All_Env_Elements;
                Expected_Type   : constant Base_Type_Decl :=
-                 Type_Decl_Cache.Element (T.Name);
+                 Cache.Type_Decl_Cache.Element (T.Name);
                Fct_Return_Type : Base_Type_Decl;
                Strat           : Parsed_Strategy (Kind => Custom);
             begin
@@ -186,6 +190,7 @@ package body TGen.Parse_Strategy is
       Last_Comp_Unit_Index : Positive;
       Rec_Typ              : Base_Record_Typ'Class;
       Strategy             : Expr'Class;
+      Cache                : TGen.Types.Translation.Translation_Cache_Access;
       Strategies           : out FQN_To_Parsed_Strat_Maps.Map) return Typ'Class
    is
       use type Ada_Qualified_Name;
@@ -223,6 +228,7 @@ package body TGen.Parse_Strategy is
                        Last_Comp_Unit_Index,
                        Rec_Typ.Component_Types.Element (Assoc_Identifier).all,
                        Assoc.As_Aggregate_Assoc.F_R_Expr,
+                       Cache,
                        Strategies);
 
                   New_Typ_Ref : constant Typ_Access := new Typ'Class'(New_Typ);
@@ -246,6 +252,7 @@ package body TGen.Parse_Strategy is
       Last_Comp_Unit_Index : Positive;
       T                    : Typ'Class;
       Strategy             : Expr'Class;
+      Cache                : TGen.Types.Translation.Translation_Cache_Access;
       Strategies           : out FQN_To_Parsed_Strat_Map) return Typ'Class is
    begin
       pragma Warnings (Off);
@@ -256,6 +263,7 @@ package body TGen.Parse_Strategy is
               Last_Comp_Unit_Index,
               Base_Record_Typ'Class (T),
               Strategy,
+              Cache,
               Strategies);
       elsif T in Scalar_Typ'Class then
          return
@@ -264,6 +272,7 @@ package body TGen.Parse_Strategy is
               Last_Comp_Unit_Index,
               Scalar_Typ'Class (T),
               Strategy,
+              Cache,
               Strategies);
       end if;
       pragma Warnings (On);
@@ -276,6 +285,7 @@ package body TGen.Parse_Strategy is
    procedure Parse_Strategy
      (Fct_Typ    : in out Function_Typ'Class;
       Aspect     : Libadalang.Analysis.Aspect_Assoc;
+      Cache      : TGen.Types.Translation.Translation_Cache_Access;
       Strategies : out FQN_To_Parsed_Strat_Maps.Map) is
    begin
       pragma Assert (To_Lower (+Aspect.F_Id.Text) = "generation");
@@ -307,6 +317,7 @@ package body TGen.Parse_Strategy is
                        Fct_Typ.Last_Comp_Unit_Idx,
                        Fct_Typ,
                        Assoc.As_Aggregate_Assoc.F_R_Expr,
+                       Cache,
                        Strategies));
 
             else

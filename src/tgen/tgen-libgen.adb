@@ -972,22 +972,34 @@ package body TGen.Libgen is
            Relevant_Units     => Relevant_Units);
    end Create;
 
+   ------------------------------
+   -- Make_Translation_Context --
+   ------------------------------
+
+   function Make_Translation_Context
+     (Ctx : in out Libgen_Context; Verbose : Boolean := False)
+      return TGen.Types.Translation.Translation_Ctx is
+   begin
+      return
+        TGen.Types.Translation.Make_Translation_Context
+          (Cache           => Ctx.Cache,
+           Verbose         => Verbose,
+           Proxy_Detection => Ctx.Proxy_Detection,
+           Relevant_Units  => Ctx.Unit_List_CB);
+   end Make_Translation_Context;
+
    --------------------------
    -- Supported_Subprogram --
    --------------------------
 
    function Supported_Subprogram
-     (Subp            : LAL.Basic_Decl'Class;
-      Proxy_Detection : Proxy_Autodetect_Policy := Unit;
-      Relevant_Units  : Get_Relevant_Units_CB := null) return Typ_Access
+     (Ctx : in out Libgen_Context; Subp : LAL.Basic_Decl'Class)
+      return Typ_Access
    is
       Diags     : String_Vectors.Vector;
-      Ctx       : Translation_Ctx :=
-        Make_Translation_Context
-          (Proxy_Detection => Proxy_Detection,
-           Relevant_Units  => Relevant_Units);
+      Trans_Ctx : Translation_Ctx := Make_Translation_Context (Ctx);
       Trans_Res : constant Translation_Result :=
-        Translate (Subp.As_Basic_Decl, Ctx);
+        Translate (Subp.As_Basic_Decl, Trans_Ctx);
 
       procedure Append_Wrapper_Diagnostic (Trans_Typ : Typ_Access);
       --  Appends diagnostic if wrappers are not supported for the given type.
@@ -1088,8 +1100,7 @@ package body TGen.Libgen is
 
       Dummy_Inserted : Boolean;
 
-      Trans_Res : constant Typ_Access :=
-        Supported_Subprogram (Subp, Ctx.Proxy_Detection, Ctx.Unit_List_CB);
+      Trans_Res : constant Typ_Access := Supported_Subprogram (Ctx, Subp);
 
       Subp_IO_Support : constant IO_Support := Get_IO_Support (Trans_Res.all);
       --  Level of IO we have for this subprogram
@@ -1216,6 +1227,7 @@ package body TGen.Libgen is
               (Fct_Typ,
                Subp.P_Get_Aspect_Assoc
                  (To_Unbounded_Text (To_Text ("Generation"))),
+               Ctx.Cache,
                Ctx.Strategy_Map);
          end if;
 

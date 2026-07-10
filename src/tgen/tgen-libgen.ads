@@ -39,6 +39,7 @@ with TGen.Marshalling;
 with TGen.Parse_Strategy; use TGen.Parse_Strategy;
 with TGen.Strings;
 with TGen.Types;          use TGen.Types;
+with TGen.Types.Translation;
 with TGen.Wrappers;       use TGen.Wrappers;
 
 package TGen.Libgen is
@@ -71,29 +72,25 @@ package TGen.Libgen is
    --  can always generate tests inputs as long as a Include_Subp does not
    --  return False, even if IO_Output is not set.
 
-   type Get_Relevant_Units_CB is
-     access function
-       (Decl : LAL.Base_Type_Decl) return LAL.Analysis_Unit_Array;
+   subtype Get_Relevant_Units_CB is
+     TGen.Types.Translation.Get_Relevant_Units_CB;
    --  Callback type which should provide the set of units to be searched for
    --  when TGen needs to autodetect a proxy. Only used in case All_Refs is
    --  set in the TGen context.
 
-   type Proxy_Autodetect_Policy is
-     (None,
-      --  No attempt will be made to locate a proxy subprogram
-      Unit,
-      --  Only the unit in which an unsupported type is declared will be
-      --  searched.
-      All_Refs
-      --  Inspect all references of the unsupported type with LAL to find a
-      --  suitable proxy function, among the units returned by the callback
-      --  defined in the TGen context.
-     );
+   subtype Proxy_Autodetect_Policy is TGen.Types.Translation.Proxy_Policy;
    --  Different policy kind for autodetecting proxy subprograms for
    --  unsupported types. Proxy subprograms are functions used to generate a
    --  value for their return type. TGen will generate inputs for the
    --  parameters of the subprogram, and serialize those, potentially allowing
    --  support for more type that those natively supported by TGen.
+
+   function None return Proxy_Autodetect_Policy
+   renames TGen.Types.Translation.None;
+   function Unit return Proxy_Autodetect_Policy
+   renames TGen.Types.Translation.Unit;
+   function All_Refs return Proxy_Autodetect_Policy
+   renames TGen.Types.Translation.All_Refs;
 
    type Libgen_Context is private;
 
@@ -129,12 +126,21 @@ package TGen.Libgen is
    --  Same as above, but with virtual files
 
    function Supported_Subprogram
-     (Subp            : LAL.Basic_Decl'Class;
-      Proxy_Detection : Proxy_Autodetect_Policy := Unit;
-      Relevant_Units  : Get_Relevant_Units_CB := null) return Typ_Access;
+     (Ctx : in out Libgen_Context; Subp : LAL.Basic_Decl'Class)
+      return Typ_Access;
    --  If the Subp is a supported subprogram profile, return a Function_Typ,
    --  otherwise return an Unsupported_Typ with the reason why it is not
    --  supported inlined in the Unsupported_Typ.Reason field.
+   --
+   --  The translation performed uses (and populates) the translation cache
+   --  held by Ctx.
+
+   function Make_Translation_Context
+     (Ctx : in out Libgen_Context; Verbose : Boolean := False)
+      return TGen.Types.Translation.Translation_Ctx;
+   --  Create a Translation_Ctx sharing the translation cache held by Ctx, so
+   --  that translations are memoized across all the calls made against this
+   --  Libgen_Context.
 
    function Include_Subp
      (Ctx                  : in out Libgen_Context;
@@ -390,6 +396,11 @@ private
       Unit_List_CB : Get_Relevant_Units_CB := null;
       --  Callback returning a list of analysis units in which a proxy should
       --  be searched.
+
+      Cache : not null TGen.Types.Translation.Translation_Cache_Access :=
+        new TGen.Types.Translation.Translation_Cache_Type;
+      --  Cache used to memoize type translations performed on behalf of
+      --  this context, shared by every Translation_Ctx created from it.
    end record;
 
 end TGen.Libgen;
