@@ -1,0 +1,9 @@
+description: |
+  This test checks that TGen does not generate wrappers for subprograms
+  whose precondition references ghost code.
+
+driver: gnattest_tgen
+
+default-gpr: True
+
+extra_gnattest_args: ["--gen-wrappers"]

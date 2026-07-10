@@ -275,6 +275,69 @@ package body TGen.LAL_Utils is
    end Is_Formal_Expression;
 
    -------------------------
+   -- Is_Ghost_Expression --
+   -------------------------
+
+   function Is_Ghost_Expression (E : LAL.Expr'Class) return Boolean is
+
+      use LAL;
+
+      function Is_Ghost_Decl (Decl : LAL.Basic_Decl'Class) return Boolean;
+      --  Whether Decl is ghost code. Decl.P_Is_Ghost_Code cannot be called
+      --  directly on declarations with several defining names (e.g.
+      --  `X, Y : Integer;`), as it raises a precondition failure in this
+      --  case: check each defining name individually instead.
+
+      function Ghost_Visitor (Node : LAL.Ada_Node'Class) return Visit_Status;
+      --  Visitor to look for references to ghost entities in an expression.
+
+      -------------------
+      -- Is_Ghost_Decl --
+      -------------------
+
+      function Is_Ghost_Decl (Decl : LAL.Basic_Decl'Class) return Boolean is
+      begin
+         if Is_Null (Decl.P_Defining_Name) then
+            return Decl.P_Is_Ghost_Code;
+         else
+            return
+              (for all Name of Decl.P_Defining_Names => Name.P_Is_Ghost_Code);
+         end if;
+      exception
+         when Property_Error =>
+
+            --  Some declarations (e.g. predefined operators and other
+            --  compiler-synthesized entities) do not support aspect-related
+            --  queries. They can never be marked Ghost by the user, so treat
+            --  them as non-ghost.
+
+            return False;
+      end Is_Ghost_Decl;
+
+      -------------------
+      -- Ghost_Visitor --
+      -------------------
+
+      function Ghost_Visitor (Node : LAL.Ada_Node'Class) return Visit_Status is
+      begin
+         --  We want to forbid usages of ghost entities in pre and post
+         --  conditions, as ghost entities cannot be referenced outside of
+         --  ghost code or assertion expressions.
+
+         if Node.Kind in Ada_Name
+           and then not Node.As_Name.P_Referenced_Decl.Is_Null
+           and then Is_Ghost_Decl (Node.As_Name.P_Referenced_Decl)
+         then
+            return Stop;
+         end if;
+
+         return Into;
+      end Ghost_Visitor;
+   begin
+      return Traverse (E, Ghost_Visitor'Access) = Stop;
+   end Is_Ghost_Expression;
+
+   -------------------------
    -- Max_Float_Precision --
    -------------------------
 

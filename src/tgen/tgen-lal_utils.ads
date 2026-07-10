@@ -115,6 +115,10 @@ package TGen.LAL_Utils is
    --  Return True if E is an expression that contains a reference to a formal
    --  generic parameter, False otherwise.
 
+   function Is_Ghost_Expression (E : LAL.Expr'Class) return Boolean;
+   --  Return True if E is an expression that contains a reference to a ghost
+   --  entity, False otherwise.
+
    function Max_Float_Precision
      (N : Libadalang.Analysis.Ada_Node'Class) return Positive;
    --  Check using target information either emitted by gnat along the runtime,
