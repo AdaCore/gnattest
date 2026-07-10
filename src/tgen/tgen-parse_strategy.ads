@@ -29,6 +29,7 @@ with Ada.Strings.Unbounded.Equal_Case_Insensitive;
 with Libadalang.Analysis; use Libadalang.Analysis;
 
 with TGen.Types.Record_Types; use TGen.Types.Record_Types;
+with TGen.Types.Translation;
 
 --  This is a proof of concept for specification of strategies and by no
 --  means should be considered a full-fledged implementation. It supports
@@ -98,9 +99,12 @@ package TGen.Parse_Strategy is
    procedure Parse_Strategy
      (Fct_Typ    : in out Function_Typ'Class;
       Aspect     : Libadalang.Analysis.Aspect_Assoc;
+      Cache      : TGen.Types.Translation.Translation_Cache_Access;
       Strategies : out FQN_To_Parsed_Strat_Maps.Map);
    --  Parse a strategy aspect. For each strategy that is specified for a
    --  parameter / parameter component, put an entry in the Strategies map.
+   --  Cache is the translation cache to use to recover the LAL declaration
+   --  node of already-translated types by their fully qualified name.
    --
    --  Also returns a function type where every parameter / parameter component
    --  type to which a specified strategies applies to has been replaced by

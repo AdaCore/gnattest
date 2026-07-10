@@ -76,13 +76,11 @@ package body TGen.Types.Translation is
    package Text renames Langkit_Support.Text;
 
    function Get_From_Cache
-     (FQN : Ada_Qualified_Name; T : out Typ_Access) return Boolean;
-   --  Try to get a type named FQN from the cache. If the lookup is
+     (Ctx : in out Translation_Ctx;
+      FQN : Ada_Qualified_Name;
+      T   : out Typ_Access) return Boolean;
+   --  Try to get a type named FQN from Ctx's cache. If the lookup is
    --  succesful, return True and set T to the cached translation.
-
-   Cache_Hits : Natural := 0;
-   Cache_Miss : Natural := 0;
-   --  Stats for the cache
 
    function "+" (L : Ada_Node_List) return Ada_Node_Array;
    --  Convert L to a Ada_Node_Array. This downcasts all the nodes to an
@@ -327,9 +325,9 @@ package body TGen.Types.Translation is
    -- PP_Cache --
    --------------
 
-   procedure PP_Cache is
+   procedure PP_Cache (Cache : Translation_Cache_Access) is
       use Translation_Maps;
-      Cache_Cur : Cursor := Translation_Cache.First;
+      Cache_Cur : Cursor := Cache.Translation_Cache.First;
    begin
       while Has_Element (Cache_Cur) loop
          Put_Line
@@ -343,20 +341,22 @@ package body TGen.Types.Translation is
    --------------------
 
    function Get_From_Cache
-     (FQN : Ada_Qualified_Name; T : out Typ_Access) return Boolean
+     (Ctx : in out Translation_Ctx;
+      FQN : Ada_Qualified_Name;
+      T   : out Typ_Access) return Boolean
    is
       use Translation_Maps;
-      Cache_Cur : constant Cursor := Translation_Cache.Find (FQN);
+      Cache_Cur : constant Cursor := Ctx.Cache.Translation_Cache.Find (FQN);
    begin
       --  If we have the type name in the cache, return it
 
       if Cache_Cur /= No_Element then
-         Cache_Hits := Cache_Hits + 1;
+         Ctx.Cache.Cache_Hits := Ctx.Cache.Cache_Hits + 1;
          T := Element (Cache_Cur);
          return True;
       end if;
 
-      Cache_Miss := Cache_Miss + 1;
+      Ctx.Cache.Cache_Misses := Ctx.Cache.Cache_Misses + 1;
       return False;
    end Get_From_Cache;
 
@@ -3502,7 +3502,7 @@ package body TGen.Types.Translation is
          --  Remove the non-proxy type from the cache, the proxy one is the
          --  only one that really needs to be referenced.
 
-         Translation_Cache.Delete (FQN);
+         Ctx.Cache.Translation_Cache.Delete (FQN);
 
          if not Proxy_Subp_Res.Success then
             return
@@ -3607,7 +3607,8 @@ package body TGen.Types.Translation is
                   --  Delete this candidate from the translation set, it might
                   --  get revisited later
 
-                  Translation_Cache.Delete (Subp_Translation.Res.Name);
+                  Ctx.Cache.Translation_Cache.Delete
+                    (Subp_Translation.Res.Name);
                elsif (for some Param_Mode of
                         Function_Typ (Subp_Translation.Res.all).Param_Modes =>
                         Param_Mode = Out_Mode)
@@ -3617,7 +3618,8 @@ package body TGen.Types.Translation is
                   --  Delete this candidate from the translation set, it might
                   --  get revisited later
 
-                  Translation_Cache.Delete (Subp_Translation.Res.Name);
+                  Ctx.Cache.Translation_Cache.Delete
+                    (Subp_Translation.Res.Name);
                else
                   return Subp_Translation.Res;
                end if;
@@ -3881,7 +3883,7 @@ package body TGen.Types.Translation is
       begin
          --  If we have the type name in the cache, return it
 
-         if Get_From_Cache (FQN, Cache_T) then
+         if Get_From_Cache (Ctx, FQN, Cache_T) then
             return Res : Translation_Result (Success => True) do
                Res.Res := Cache_T;
             end return;
@@ -3894,8 +3896,8 @@ package body TGen.Types.Translation is
               Translate_Internal (Full_Decl, Ctx);
          begin
             if Trans_Res.Success then
-               Translation_Cache.Insert (FQN, Trans_Res.Res);
-               Type_Decl_Cache.Include (FQN, Full_Decl);
+               Ctx.Cache.Translation_Cache.Insert (FQN, Trans_Res.Res);
+               Ctx.Cache.Type_Decl_Cache.Include (FQN, Full_Decl);
             end if;
             return Trans_Res;
          end;
@@ -4256,7 +4258,7 @@ package body TGen.Types.Translation is
       if Specialized_Res.Success
         and then Specialized_Res.Res.Kind = Unsupported
         and then not Structurally_Unsupported
-        and then Ctx.Proxy_Detection /= TGen.Libgen.None
+        and then Ctx.Proxy_Detection /= None
         and then not Ctx.Skip_Proxy_Set.Contains (FQN)
       then
          --  Disable proxy translation for N while we search for a proxy
@@ -4286,9 +4288,7 @@ package body TGen.Types.Translation is
             --  If the search within the unit didn't yield a good proxy, search
             --  elsewhere if we're allowed.
 
-            if Proxy_Subp = null
-              and then Ctx.Proxy_Detection = TGen.Libgen.All_Refs
-            then
+            if Proxy_Subp = null and then Ctx.Proxy_Detection = All_Refs then
                Proxy_Subp := Find_Proxy_By_Xref (N, Ctx);
             end if;
 
@@ -4312,8 +4312,8 @@ package body TGen.Types.Translation is
          --  - The subprogram translation has been removed as well
          --  - This translation is potentially more precise.
 
-         if Translation_Cache.Contains (FQN) then
-            Translation_Cache.Delete (FQN);
+         if Ctx.Cache.Translation_Cache.Contains (FQN) then
+            Ctx.Cache.Translation_Cache.Delete (FQN);
          end if;
       end if;
 
@@ -4569,7 +4569,7 @@ package body TGen.Types.Translation is
       declare
          Cache_T : Typ_Access;
       begin
-         if Get_From_Cache (F_Typ.all.Name, Cache_T) then
+         if Get_From_Cache (Ctx, F_Typ.all.Name, Cache_T) then
             Result.Res := Cache_T;
             return Result;
          end if;
@@ -4609,9 +4609,10 @@ package body TGen.Types.Translation is
          --  representation be stored in an arena, and use indexes to ensure
          --  unicity of the type translations.
 
-         if Translation_Cache.Contains (F_Typ.Name) then
+         if Ctx.Cache.Translation_Cache.Contains (F_Typ.Name) then
             return
-              (Success => True, Res => Translation_Cache.Element (F_Typ.Name));
+              (Success => True,
+               Res     => Ctx.Cache.Translation_Cache.Element (F_Typ.Name));
          end if;
 
          for Param of Subp_Spec.P_Params loop
@@ -4685,7 +4686,7 @@ package body TGen.Types.Translation is
          end;
       end if;
 
-      Translation_Cache.Insert (F_Typ.Name, Typ_Access (F_Typ));
+      Ctx.Cache.Translation_Cache.Insert (F_Typ.Name, Typ_Access (F_Typ));
       Result.Res := Typ_Access (F_Typ);
       return Result;
    exception
@@ -4700,21 +4701,24 @@ package body TGen.Types.Translation is
    -- Print_Cache_Stats --
    -----------------------
 
-   procedure Print_Cache_Stats is
+   procedure Print_Cache_Stats (Cache : Translation_Cache_Access) is
    begin
       New_Line;
-      Put_Line ("Items in cache :" & Translation_Cache.Length'Image);
-      Put_Line ("Cache hits  :" & Cache_Hits'Image);
-      Put_Line ("Cache misses:" & Cache_Miss'Image);
+      Put_Line ("Items in cache :" & Cache.Translation_Cache.Length'Image);
+      Put_Line ("Cache hits  :" & Cache.Cache_Hits'Image);
+      Put_Line ("Cache misses:" & Cache.Cache_Misses'Image);
    end Print_Cache_Stats;
 
    -----------------
    -- Clear_Cache --
    -----------------
 
-   procedure Clear_Cache is
+   procedure Clear_Cache (Cache : Translation_Cache_Access) is
    begin
-      Translation_Cache.Clear;
+      Cache.Translation_Cache.Clear;
+      Cache.Type_Decl_Cache.Clear;
+      Cache.Cache_Hits := 0;
+      Cache.Cache_Misses := 0;
    end Clear_Cache;
 
 end TGen.Types.Translation;

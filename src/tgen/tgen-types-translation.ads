@@ -29,13 +29,69 @@ with Ada.Containers.Doubly_Linked_Lists;
 
 with Libadalang.Analysis;
 
-with TGen.Libgen;
-
 package TGen.Types.Translation is
-   subtype Proxy_Policy is TGen.Libgen.Proxy_Autodetect_Policy;
-   use type Proxy_Policy;
 
    package LAL renames Libadalang.Analysis;
+
+   type Get_Relevant_Units_CB is
+     access function
+       (Decl : LAL.Base_Type_Decl) return LAL.Analysis_Unit_Array;
+   --  Callback type which should provide the set of units to be searched for
+   --  when TGen needs to autodetect a proxy. Only used in case All_Refs is
+   --  set in the TGen context.
+
+   type Proxy_Policy is
+     (None,
+      --  No attempt will be made to locate a proxy subprogram
+      Unit,
+      --  Only the unit in which an unsupported type is declared will be
+      --  searched.
+      All_Refs
+      --  Inspect all references of the unsupported type with LAL to find a
+      --  suitable proxy function, among the units returned by the callback
+      --  defined in the TGen context.
+     );
+   --  Different policy kind for autodetecting proxy subprograms for
+   --  unsupported types. Proxy subprograms are functions used to generate a
+   --  value for their return type. TGen will generate inputs for the
+   --  parameters of the subprogram, and serialize those, potentially allowing
+   --  support for more type that those natively supported by TGen.
+
+   package Translation_Maps is new
+     Ada.Containers.Hashed_Maps
+       (Key_Type        => Ada_Qualified_Name,
+        Element_Type    => TGen.Types.Typ_Access,
+        Hash            => TGen.Strings.Hash2,
+        Equivalent_Keys => TGen.Strings.Ada_Identifier_Vectors."=",
+        "="             => TGen.Types."=");
+
+   package Type_Decl_Maps is new
+     Ada.Containers.Hashed_Maps
+       (Key_Type        => Ada_Qualified_Name,
+        Element_Type    => LAL.Base_Type_Decl,
+        Hash            => TGen.Strings.Hash2,
+        Equivalent_Keys => TGen.Strings.Ada_Identifier_Vectors."=",
+        "="             => Libadalang.Analysis."=");
+
+   type Translation_Cache_Type is record
+      Translation_Cache : Translation_Maps.Map;
+      --  Cache used for the memoization of Translate.
+
+      Type_Decl_Cache : Type_Decl_Maps.Map;
+      --  Cache to be able to find the LAL base type decl node from the fully
+      --  qualified name.
+
+      Cache_Hits   : Natural := 0;
+      Cache_Misses : Natural := 0;
+      --  Stats for the cache
+   end record;
+   --  Holds the state memoized across Translate calls. This is meant to be
+   --  owned by a long-lived object (e.g. a Libgen_Context) and shared, via
+   --  Translation_Cache_Access, by all the Translation_Ctx objects created
+   --  during its lifetime, so translations are memoized across calls without
+   --  resorting to a global variable.
+
+   type Translation_Cache_Access is access all Translation_Cache_Type;
 
    type Translation_Result (Success : Boolean := False) is record
       case Success is
@@ -51,11 +107,12 @@ package TGen.Types.Translation is
    type Translation_Ctx is private;
 
    function Make_Translation_Context
-     (Verbose         : Boolean := False;
-      Proxy_Detection : Proxy_Policy := TGen.Libgen.Unit;
-      Relevant_Units  : TGen.Libgen.Get_Relevant_Units_CB := null)
-      return Translation_Ctx;
-   --  Create a Translation_Context object with adequate default values
+     (Cache           : not null Translation_Cache_Access;
+      Verbose         : Boolean := False;
+      Proxy_Detection : Proxy_Policy := Unit;
+      Relevant_Units  : Get_Relevant_Units_CB := null) return Translation_Ctx;
+   --  Create a Translation_Context object with adequate default values.
+   --  Cache is the (shared) translation cache to associate to this context.
 
    function Translate
      (N : LAL.Type_Expr; Ctx : in out Translation_Ctx)
@@ -71,36 +128,13 @@ package TGen.Types.Translation is
      (N : LAL.Basic_Decl; Ctx : in out Translation_Ctx)
       return Translation_Result;
 
-   package Translation_Maps is new
-     Ada.Containers.Hashed_Maps
-       (Key_Type        => Ada_Qualified_Name,
-        Element_Type    => TGen.Types.Typ_Access,
-        Hash            => TGen.Strings.Hash2,
-        Equivalent_Keys => TGen.Strings.Ada_Identifier_Vectors."=",
-        "="             => TGen.Types."=");
-
-   Translation_Cache : Translation_Maps.Map;
-   --  Cache used for the memoization of Translate.
-
-   package Type_Decl_Maps is new
-     Ada.Containers.Hashed_Maps
-       (Key_Type        => Ada_Qualified_Name,
-        Element_Type    => LAL.Base_Type_Decl,
-        Hash            => TGen.Strings.Hash2,
-        Equivalent_Keys => TGen.Strings.Ada_Identifier_Vectors."=",
-        "="             => Libadalang.Analysis."=");
-
-   Type_Decl_Cache : Type_Decl_Maps.Map;
-   --  Cache to be able to find the LAL base type decl node from the fully
-   --  qualified name.
-
-   procedure Print_Cache_Stats;
+   procedure Print_Cache_Stats (Cache : Translation_Cache_Access);
    --  Print translation cache statistics on the standard output
 
-   procedure PP_Cache;
+   procedure PP_Cache (Cache : Translation_Cache_Access);
    --  Print the content of the translation cache on the standard output
 
-   procedure Clear_Cache;
+   procedure Clear_Cache (Cache : Translation_Cache_Access);
    --  Clear the translation cache
 
 private
@@ -144,22 +178,28 @@ private
       --  To which extend proxy subprograms should be searched for, for
       --  unsupported types.
 
-      Unit_List_CB : TGen.Libgen.Get_Relevant_Units_CB := null;
+      Unit_List_CB : Get_Relevant_Units_CB := null;
+
+      Cache : not null Translation_Cache_Access;
+      --  Cache shared with the long-lived object (e.g. a Libgen_Context)
+      --  that created this Translation_Ctx, used for the memoization of
+      --  Translate.
    end record;
    --  Context for translating type declarations from LAL to TGen's internal
    --  representation. It should be passed down at least to all subprograms
    --  which may call a `Translate*` variant.
 
    function Make_Translation_Context
-     (Verbose         : Boolean := False;
-      Proxy_Detection : Proxy_Policy := TGen.Libgen.Unit;
-      Relevant_Units  : TGen.Libgen.Get_Relevant_Units_CB := null)
-      return Translation_Ctx
+     (Cache           : not null Translation_Cache_Access;
+      Verbose         : Boolean := False;
+      Proxy_Detection : Proxy_Policy := Unit;
+      Relevant_Units  : Get_Relevant_Units_CB := null) return Translation_Ctx
    is ((Verbose           => Verbose,
         Translation_Stack => Ada_Qualified_Name_Stacks.Empty_List,
         Skip_Proxy_Set    => Ada_Qualified_Name_Sets.Empty_Set,
         Proxy_Detection   => Proxy_Detection,
-        Unit_List_CB      => Relevant_Units));
+        Unit_List_CB      => Relevant_Units,
+        Cache             => Cache));
 
    Anonymous_Typ_Index : Positive := 1;
    --  Index incremented each time we create an anonymous type, to uniquely
