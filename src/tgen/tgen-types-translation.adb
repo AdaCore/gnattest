@@ -46,6 +46,7 @@ with TGen.Types.Record_Types;   use TGen.Types.Record_Types;
 with TGen.Marshalling;
 with TGen.Numerics;
 with TGen.Strings;
+with TGen.Wrappers;
 
 package body TGen.Types.Translation is
 
@@ -4681,9 +4682,7 @@ package body TGen.Types.Translation is
                 (To_Unbounded_Text (To_Text ("Pre")))
                 .Value;
          begin
-            F_Typ.Supports_Wrappers :=
-              not TGen.LAL_Utils.Is_Formal_Expression (A)
-              and then not TGen.LAL_Utils.Is_Ghost_Expression (A);
+            F_Typ.Supports_Wrappers := TGen.Wrappers.Is_Expr_Supported (A);
          end;
       end if;
 

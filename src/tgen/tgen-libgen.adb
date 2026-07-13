@@ -2242,7 +2242,7 @@ package body TGen.Libgen is
       A : constant Libadalang.Analysis.Expr'Class :=
         Subp.P_Get_Aspect (To_Unbounded_Text (To_Text ("Pre"))).Value;
    begin
-      return A.Is_Null or else not TGen.LAL_Utils.Is_Formal_Expression (A);
+      return A.Is_Null or else TGen.Wrappers.Is_Expr_Supported (A);
    end Supports_Wrappers;
 
 end TGen.Libgen;

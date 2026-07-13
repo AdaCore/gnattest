@@ -363,4 +363,12 @@ package body TGen.Wrappers is
 
    end Generate_Wrapper_For_Subprogram;
 
+   -----------------------
+   -- Is_Expr_Supported --
+   -----------------------
+
+   function Is_Expr_Supported (E : Expr'Class) return Boolean
+   is (not TGen.LAL_Utils.Is_Formal_Expression (E)
+       and then not TGen.LAL_Utils.Is_Ghost_Expression (E));
+
 end TGen.Wrappers;
