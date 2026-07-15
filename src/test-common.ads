@@ -578,6 +578,11 @@ package Test.Common is
    Instr_Suffix : constant String := "-gnattest-instr";
    --  Suffix for object subdirs containing instrumented sources
 
+   Body_Suffix : GNAT.OS_Lib.String_Access := new String'(".adb");
+   --  Suffix used for the body files of the project.
+   Spec_Suffix : GNAT.OS_Lib.String_Access := new String'(".ads");
+   --  Suffix used for the spec files of the project.
+
    Lang_Version : Ada_Version_Type := Ada_2012;
    --  Language version to be inserted in the pragma in stub helper units.
 

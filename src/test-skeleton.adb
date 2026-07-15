@@ -3713,7 +3713,7 @@ package body Test.Skeleton is
                  (Output_Dir
                   & Directory_Separator
                   & Unit_To_File_Name (S_Pack)
-                  & ".ads");
+                  & Spec_Suffix.all);
 
                S_Put (0, "package " & S_Pack & " is");
                Put_New_Line;
@@ -3738,7 +3738,7 @@ package body Test.Skeleton is
               & (+(GNATCOLL.VFS.Create
                      (+Unit_To_File_Name (Data.Unit_Full_Name.all))
                      .Base_Name))
-              & ".ads";
+              & Spec_Suffix.all;
             F_Type    : File_Type;
 
          begin
@@ -4173,11 +4173,14 @@ package body Test.Skeleton is
                   (Output_Dir
                    & Directory_Separator
                    & Test_File_Name.all
-                   & ".ads")
+                   & Spec_Suffix.all)
          then
 
             Create
-              (Output_Dir & Directory_Separator & Test_File_Name.all & ".ads");
+              (Output_Dir
+               & Directory_Separator
+               & Test_File_Name.all
+               & Spec_Suffix.all);
 
             Put_Test_Data_Header;
 
@@ -4460,11 +4463,14 @@ package body Test.Skeleton is
                           (Output_Dir
                            & Directory_Separator
                            & Test_File_Name.all
-                           & ".adb")
+                           & Body_Suffix.all)
          then
 
             Create
-              (Output_Dir & Directory_Separator & Test_File_Name.all & ".adb");
+              (Output_Dir
+               & Directory_Separator
+               & Test_File_Name.all
+               & Body_Suffix.all);
 
             Put_Test_Data_Header;
 
@@ -4758,8 +4764,10 @@ package body Test.Skeleton is
 
          end if;
 
-         TP_Map.SetUp_Name := new String'(Test_File_Name.all & ".adb");
-         TP_Map.TearDown_Name := new String'(Test_File_Name.all & ".adb");
+         TP_Map.SetUp_Name :=
+           new String'(Test_File_Name.all & Body_Suffix.all);
+         TP_Map.TearDown_Name :=
+           new String'(Test_File_Name.all & Body_Suffix.all);
          TP_Map.SetUp_Line := 9;
          TP_Map.SetUp_Column := 4;
 
@@ -4794,7 +4802,10 @@ package body Test.Skeleton is
          ----------------------------------
 
          Create
-           (Output_Dir & Directory_Separator & Test_File_Name.all & ".ads");
+           (Output_Dir
+            & Directory_Separator
+            & Test_File_Name.all
+            & Spec_Suffix.all);
 
          Put_Harness_Header;
          S_Put (0, GT_Marker_Begin);
@@ -4948,7 +4959,10 @@ package body Test.Skeleton is
             Reset_Line_Counter;
 
             Get_Subprograms_From_Package
-              (Output_Dir & Directory_Separator & Test_File_Name.all & ".adb");
+              (Output_Dir
+               & Directory_Separator
+               & Test_File_Name.all
+               & Body_Suffix.all);
             Create (Tmp_File_Name);
             Put_TP_Header (Test_Data_Package_Name.all);
 
@@ -4997,7 +5011,7 @@ package body Test.Skeleton is
                                        .. Current_Subp.TC_Info.TC_Hash'First
                                           + 5)
                                 else ""))
-                        & ".adb",
+                        & Body_Suffix.all,
                         UH,
                         Current_Subp);
                   end if;
@@ -5383,14 +5397,14 @@ package body Test.Skeleton is
                   if Is_Unimplemented_Test (MD.TR_Text) then
                      TR_SLOC_Buffer.Append
                        ((new String'(Data.Unit_Full_Name.all),
-                         new String'(Test_File_Name.all & ".adb"),
+                         new String'(Test_File_Name.all & Body_Suffix.all),
                          null,
                          Subp_Data_List.Element (Subp_Cur),
                          New_Line_Counter));
                   else
                      TR_SLOC_Buffer.Append
                        ((new String'(Data.Unit_Full_Name.all),
-                         new String'(Test_File_Name.all & ".adb"),
+                         new String'(Test_File_Name.all & Body_Suffix.all),
                          new String'("modified"),
                          Subp_Data_List.Element (Subp_Cur),
                          New_Line_Counter));
@@ -5532,7 +5546,7 @@ package body Test.Skeleton is
                      Add_DT
                        (TP_List,
                         Data.Unit_Full_Name.all,
-                        Test_File_Name.all & ".adb",
+                        Test_File_Name.all & Body_Suffix.all,
                         New_Line_Counter,
                         1);
 
@@ -5581,7 +5595,7 @@ package body Test.Skeleton is
                   else Output_Dir)
                  & Directory_Separator
                  & Test_File_Name.all
-                 & ".adb";
+                 & Body_Suffix.all;
                Success     : Boolean;
             begin
                if Is_Regular_File (Old_Package) then
@@ -5662,10 +5676,13 @@ package body Test.Skeleton is
                   (Output_Dir
                    & Directory_Separator
                    & Test_File_Name.all
-                   & ".ads")
+                   & Spec_Suffix.all)
          then
             Create
-              (Output_Dir & Directory_Separator & Test_File_Name.all & ".ads");
+              (Output_Dir
+               & Directory_Separator
+               & Test_File_Name.all
+               & Spec_Suffix.all);
 
             Put_Test_Data_Header;
 
@@ -5782,10 +5799,13 @@ package body Test.Skeleton is
                   (Output_Dir
                    & Directory_Separator
                    & Test_File_Name.all
-                   & ".adb")
+                   & Body_Suffix.all)
          then
             Create
-              (Output_Dir & Directory_Separator & Test_File_Name.all & ".adb");
+              (Output_Dir
+               & Directory_Separator
+               & Test_File_Name.all
+               & Body_Suffix.all);
 
             Put_Test_Data_Header;
 
@@ -5921,8 +5941,10 @@ package body Test.Skeleton is
             Close_File;
          end if;
 
-         TP_Map.SetUp_Name := new String'(Test_File_Name.all & ".adb");
-         TP_Map.TearDown_Name := new String'(Test_File_Name.all & ".adb");
+         TP_Map.SetUp_Name :=
+           new String'(Test_File_Name.all & Body_Suffix.all);
+         TP_Map.TearDown_Name :=
+           new String'(Test_File_Name.all & Body_Suffix.all);
          TP_Map.SetUp_Line := 8;
          TP_Map.SetUp_Column := 4;
          TP_Map.TearDown_Line := 14;
@@ -5971,7 +5993,10 @@ package body Test.Skeleton is
 
          --  Generating simple test package spec.
          Create
-           (Output_Dir & Directory_Separator & Test_File_Name.all & ".ads");
+           (Output_Dir
+            & Directory_Separator
+            & Test_File_Name.all
+            & Spec_Suffix.all);
 
          Put_Harness_Header;
          S_Put (0, GT_Marker_Begin);
@@ -6085,7 +6110,10 @@ package body Test.Skeleton is
          if Actual_Test then
 
             Get_Subprograms_From_Package
-              (Output_Dir & Directory_Separator & Test_File_Name.all & ".adb");
+              (Output_Dir
+               & Directory_Separator
+               & Test_File_Name.all
+               & Body_Suffix.all);
 
             --  updating hash v2 to v2.1 and change TC hash to TC names
             Subp_Cur := Subp_List.First;
@@ -6173,7 +6201,7 @@ package body Test.Skeleton is
                                        .. Current_Subp.TC_Info.TC_Hash'First
                                           + 5)
                                 else ""))
-                        & ".adb",
+                        & Body_Suffix.all,
                         UH,
                         Current_Subp);
                   end if;
@@ -6530,14 +6558,14 @@ package body Test.Skeleton is
                   if Is_Unimplemented_Test (MD.TR_Text) then
                      TR_SLOC_Buffer.Append
                        ((new String'(Data.Unit_Full_Name.all),
-                         new String'(Test_File_Name.all & ".adb"),
+                         new String'(Test_File_Name.all & Body_Suffix.all),
                          null,
                          Subp_Data_List.Element (Subp_Cur),
                          New_Line_Counter));
                   else
                      TR_SLOC_Buffer.Append
                        ((new String'(Data.Unit_Full_Name.all),
-                         new String'(Test_File_Name.all & ".adb"),
+                         new String'(Test_File_Name.all & Body_Suffix.all),
                          new String'("modified"),
                          Subp_Data_List.Element (Subp_Cur),
                          New_Line_Counter));
@@ -6688,7 +6716,7 @@ package body Test.Skeleton is
                      Add_DT
                        (TP_List,
                         Data.Unit_Full_Name.all,
-                        Test_File_Name.all & ".adb",
+                        Test_File_Name.all & Body_Suffix.all,
                         New_Line_Counter,
                         1);
 
@@ -6737,7 +6765,7 @@ package body Test.Skeleton is
                   else Output_Dir)
                  & Directory_Separator
                  & Test_File_Name.all
-                 & ".adb";
+                 & Body_Suffix.all;
                Success     : Boolean;
             begin
                if Is_Regular_File (Old_Package) then
@@ -6760,7 +6788,8 @@ package body Test.Skeleton is
             Markered_Data_Map.Clear;
 
          else
-            Excluded_Test_Package_Bodies.Include (Test_File_Name.all & ".adb");
+            Excluded_Test_Package_Bodies.Include
+              (Test_File_Name.all & Body_Suffix.all);
          end if;
 
          Short_Names_Used.Clear;
@@ -6947,9 +6976,11 @@ package body Test.Skeleton is
               Unit_To_File_Name (Test_Unit_Name);
 
             Spec_VF : constant Virtual_File :=
-              Create (+Output_Dir) / (+(Test_Unit_File_Name & ".ads"));
+              Create (+Output_Dir)
+              / (+(Test_Unit_File_Name & Spec_Suffix.all));
             Body_VF : constant Virtual_File :=
-              Create (+Output_Dir) / (+(Test_Unit_File_Name & ".adb"));
+              Create (+Output_Dir)
+              / (+(Test_Unit_File_Name & Body_Suffix.all));
 
             Test_Routine_Name : Unbounded_String;
 
@@ -9141,6 +9172,16 @@ package body Test.Skeleton is
       S_Put (3, "end Coverage;");
       Put_New_Line;
       Put_New_Line;
+
+      if Body_Suffix.all /= ".adb" or else Spec_Suffix.all /= ".ads" then
+         S_Put
+           (3,
+            "package Naming renames "
+            & Base_Name (Source_Prj_Name)
+            & ".Naming;");
+         Put_New_Line;
+         Put_New_Line;
+      end if;
 
       S_Put (0, "end " & Test_Prj_Prefix & Base_Name (Source_Prj_Name) & ";");
       Put_New_Line;

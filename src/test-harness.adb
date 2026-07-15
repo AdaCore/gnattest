@@ -370,7 +370,7 @@ package body Test.Harness is
         & Test_Dir.all
         & GNAT.OS_Lib.Directory_Separator
         & Unit_To_File_Name (Test_Unit_Full_Name)
-        & ".ads";
+        & Spec_Suffix.all;
       Idx                : Natural;
    begin
       if Source_Root_Str = null
@@ -708,7 +708,7 @@ package body Test.Harness is
         (Common_File_Subdir
          & Directory_Separator
          & Unit_To_File_Name (Filter_Package_Name)
-         & ".ads");
+         & Spec_Suffix.all);
 
       Put_Harness_Header;
       S_Put (0, GT_Marker_Begin);
@@ -789,7 +789,7 @@ package body Test.Harness is
         (Common_File_Subdir
          & Directory_Separator
          & Unit_To_File_Name (Filter_Package_Name)
-         & ".adb");
+         & Body_Suffix.all);
 
       Put_Harness_Header;
       S_Put (0, GT_Marker_Begin);
@@ -968,7 +968,10 @@ package body Test.Harness is
       end if;
 
       --  creating main suite spec
-      Create (Harness_Dir.all & Unit_To_File_Name (Main_Suite_Name) & ".ads");
+      Create
+        (Harness_Dir.all
+         & Unit_To_File_Name (Main_Suite_Name)
+         & Spec_Suffix.all);
 
       Put_Harness_Header;
       S_Put (0, GT_Marker_Begin);
@@ -990,7 +993,10 @@ package body Test.Harness is
       Close_File;
 
       --  creating main suite body
-      Create (Harness_Dir.all & Unit_To_File_Name (Main_Suite_Name) & ".adb");
+      Create
+        (Harness_Dir.all
+         & Unit_To_File_Name (Main_Suite_Name)
+         & Body_Suffix.all);
 
       Put_Harness_Header;
       S_Put (0, GT_Marker_Begin);
@@ -1035,7 +1041,10 @@ package body Test.Harness is
       Close_File;
 
       --  creating test runner body
-      Create (Harness_Dir.all & Unit_To_File_Name (Test_Runner_Name) & ".adb");
+      Create
+        (Harness_Dir.all
+         & Unit_To_File_Name (Test_Runner_Name)
+         & Body_Suffix.all);
 
       Put_Harness_Header;
       S_Put (0, GT_Marker_Begin);
@@ -1500,7 +1509,7 @@ package body Test.Harness is
       Put_New_Line;
       S_Put (3, "for Languages use (""Ada"");");
       Put_New_Line;
-      S_Put (3, "for Main use (""test_runner.adb"");");
+      S_Put (3, "for Main use (""test_runner" & Body_Suffix.all & """);");
       Put_New_Line;
 
       if Harness_Only and then not Gnattest_Generated_Present then
@@ -1564,6 +1573,20 @@ package body Test.Harness is
          Put_New_Line;
       end if;
 
+      if Body_Suffix.all /= ".adb" or else Spec_Suffix.all /= ".ads" then
+         S_Put (3, "package Naming is");
+         Put_New_Line;
+         S_Put
+           (6, "for Spec_Suffix (""Ada"") use """ & Spec_Suffix.all & """;");
+         Put_New_Line;
+         S_Put
+           (6, "for Body_Suffix (""Ada"") use """ & Body_Suffix.all & """;");
+         Put_New_Line;
+         S_Put (3, "end Naming;");
+         Put_New_Line;
+         Put_New_Line;
+      end if;
+
       S_Put (0, "end Test_Driver;");
 
       Close_File;
@@ -1599,7 +1622,9 @@ package body Test.Harness is
 
       --  Creating test suite spec
       Create
-        (File_Destination & Unit_To_File_Name (New_Unit_Name.all) & ".ads");
+        (File_Destination
+         & Unit_To_File_Name (New_Unit_Name.all)
+         & Spec_Suffix.all);
 
       Put_Harness_Header;
       S_Put (0, GT_Marker_Begin);
@@ -1691,7 +1716,9 @@ package body Test.Harness is
 
       --  Creating test suite body
       Create
-        (File_Destination & Unit_To_File_Name (New_Unit_Name.all) & ".adb");
+        (File_Destination
+         & Unit_To_File_Name (New_Unit_Name.all)
+         & Body_Suffix.all);
 
       Put_Harness_Header;
       S_Put (0, GT_Marker_Begin);
@@ -2126,7 +2153,8 @@ package body Test.Harness is
               & Unit_To_File_Name (TD_Prefix & Current_TR.TR_Text_Name.all)
               & ".gpr");
          SPI.Main_File_Name :=
-           new String'(Unit_To_File_Name (New_Unit_Name.all) & ".adb");
+           new String'
+             (Unit_To_File_Name (New_Unit_Name.all) & Body_Suffix.all);
 
          if not Stub_Mode_ON then
             Trace (Me, "done");
@@ -2273,7 +2301,10 @@ package body Test.Harness is
          end;
 
          --  Creating test driver procedure
-         Create (New_Unit_Dir & Unit_To_File_Name (New_Unit_Name) & ".adb");
+         Create
+           (New_Unit_Dir
+            & Unit_To_File_Name (New_Unit_Name)
+            & Body_Suffix.all);
 
          Put_Harness_Header;
          S_Put (0, GT_Marker_Begin);
@@ -2468,7 +2499,9 @@ package body Test.Harness is
 
          --  Creating test driver procedure
          Create
-           (New_Unit_Dir.all & Unit_To_File_Name (New_Unit_Name.all) & ".adb");
+           (New_Unit_Dir.all
+            & Unit_To_File_Name (New_Unit_Name.all)
+            & Body_Suffix.all);
 
          Put_Harness_Header;
          S_Put (0, GT_Marker_Begin);
@@ -2771,7 +2804,8 @@ package body Test.Harness is
                   (TD_Prefix_Overriden & Current_TR.TR_Text_Name.all)
               & ".gpr");
          SPI.Main_File_Name :=
-           new String'(Unit_To_File_Name (New_Unit_Name.all) & ".adb");
+           new String'
+             (Unit_To_File_Name (New_Unit_Name.all) & Body_Suffix.all);
 
          return SPI;
       end Get_SPI;
@@ -2811,7 +2845,9 @@ package body Test.Harness is
 
          --  Creating test driver procedure
          Create
-           (New_Unit_Dir.all & Unit_To_File_Name (New_Unit_Name.all) & ".adb");
+           (New_Unit_Dir.all
+            & Unit_To_File_Name (New_Unit_Name.all)
+            & Body_Suffix.all);
 
          Put_Harness_Header;
          S_Put (0, GT_Marker_Begin);
@@ -3213,35 +3249,54 @@ package body Test.Harness is
 
          Idx2 := Index (S, ".", Idx);
          if not Excluded_Test_Package_Bodies.Contains
-                  (Unit_To_File_Name (S (S'First .. Idx2 - 1)) & ".adb")
+                  (Unit_To_File_Name (S (S'First .. Idx2 - 1))
+                   & Body_Suffix.all)
          then
             S_Put
               (6,
-               """" & Unit_To_File_Name (S (S'First .. Idx2 - 1)) & ".adb"",");
+               """"
+               & Unit_To_File_Name (S (S'First .. Idx2 - 1))
+               & Body_Suffix.all
+               & """,");
             Put_New_Line;
          end if;
          S_Put
-           (6, """" & Unit_To_File_Name (S (S'First .. Idx2 - 1)) & ".ads"",");
+           (6,
+            """"
+            & Unit_To_File_Name (S (S'First .. Idx2 - 1))
+            & Spec_Suffix.all
+            & """,");
          Put_New_Line;
 
          Idx2 := Index (S, ".", Idx2 + 1);
          if not Excluded_Test_Package_Bodies.Contains
-                  (Unit_To_File_Name (S (S'First .. Idx2 - 1)) & ".adb")
+                  (Unit_To_File_Name (S (S'First .. Idx2 - 1))
+                   & Body_Suffix.all)
          then
             S_Put
               (6,
-               """" & Unit_To_File_Name (S (S'First .. Idx2 - 1)) & ".adb"",");
+               """"
+               & Unit_To_File_Name (S (S'First .. Idx2 - 1))
+               & Body_Suffix.all
+               & """,");
             Put_New_Line;
          end if;
          S_Put
-           (6, """" & Unit_To_File_Name (S (S'First .. Idx2 - 1)) & ".ads"",");
+           (6,
+            """"
+            & Unit_To_File_Name (S (S'First .. Idx2 - 1))
+            & Spec_Suffix.all
+            & """,");
          Put_New_Line;
 
          loop
             Idx2 := Index (S, ".", Idx2 + 1);
             S_Put
               (6,
-               """" & Unit_To_File_Name (S (S'First .. Idx2 - 1)) & ".ads"",");
+               """"
+               & Unit_To_File_Name (S (S'First .. Idx2 - 1))
+               & Spec_Suffix.all
+               & """,");
             Put_New_Line;
 
             if Index (S, ".", Idx2 + 1)
@@ -3593,38 +3648,60 @@ package body Test.Harness is
          if Stub_Mode_ON then
             S_Put (3, "for Source_Files use");
             Put_New_Line;
-            S_Put (5, "(""gnattest_generated.ads"",");
+            S_Put (5, "(""gnattest_generated" & Spec_Suffix.all & """,");
             Put_New_Line;
-            S_Put (6, """gnattest_generated-persistent.ads"",");
+            S_Put
+              (6, """gnattest_generated-persistent" & Spec_Suffix.all & """,");
             Put_New_Line;
-            S_Put (6, """gnattest_generated-persistent.adb"",");
+            S_Put
+              (6, """gnattest_generated-persistent" & Body_Suffix.all & """,");
             Put_New_Line;
             S_Put (6, """" & P.Main_File_Name.all & """,");
             Put_New_Line;
             Add_Nesting_Hierarchy_Dummies (P.Test_Package.all);
             S_Put
-              (6, """" & Unit_To_File_Name (P.Test_Package.all) & ".adb"",");
+              (6,
+               """"
+               & Unit_To_File_Name (P.Test_Package.all)
+               & Body_Suffix.all
+               & """,");
             Put_New_Line;
             S_Put
-              (6, """" & Unit_To_File_Name (P.Test_Package.all) & ".ads"",");
+              (6,
+               """"
+               & Unit_To_File_Name (P.Test_Package.all)
+               & Spec_Suffix.all
+               & """,");
             Put_New_Line;
             if Driver_Per_Unit then
                S_Put
                  (6,
                   """"
                   & Unit_To_File_Name (P.Test_Package.all & ".Suite")
-                  & ".adb"",");
+                  & Body_Suffix.all
+                  & """,");
                Put_New_Line;
                S_Put
                  (6,
                   """"
                   & Unit_To_File_Name (P.Test_Package.all & ".Suite")
-                  & ".ads"",");
+                  & Spec_Suffix.all
+                  & """,");
                Put_New_Line;
             end if;
-            S_Put (6, """" & Unit_To_File_Name (P.Test_Data.all) & ".adb"",");
+            S_Put
+              (6,
+               """"
+               & Unit_To_File_Name (P.Test_Data.all)
+               & Body_Suffix.all
+               & """,");
             Put_New_Line;
-            S_Put (6, """" & Unit_To_File_Name (P.Test_Data.all) & ".ads"");");
+            S_Put
+              (6,
+               """"
+               & Unit_To_File_Name (P.Test_Data.all)
+               & Spec_Suffix.all
+               & """);");
             Put_New_Line;
             Put_New_Line;
          end if;
@@ -3787,7 +3864,7 @@ package body Test.Harness is
             S_Put
               (0,
                Dir_Name (P.Path_TD.all)
-               & Base_Name (P.Main_File_Name.all, ".adb")
+               & Base_Name (P.Main_File_Name.all, Body_Suffix.all)
                & Exe_Suffix.all);
             Put_New_Line;
          end loop;
@@ -5068,7 +5145,10 @@ package body Test.Harness is
    begin
 
       --  Creating overridden test suite spec
-      Create (File_Destination & Unit_To_File_Name (New_Unit_Name) & ".ads");
+      Create
+        (File_Destination
+         & Unit_To_File_Name (New_Unit_Name)
+         & Spec_Suffix.all);
 
       Put_Harness_Header;
       S_Put (0, GT_Marker_Begin);
@@ -5144,7 +5224,10 @@ package body Test.Harness is
       end loop;
 
       --  Creating overridden test suite body
-      Create (File_Destination & Unit_To_File_Name (New_Unit_Name) & ".adb");
+      Create
+        (File_Destination
+         & Unit_To_File_Name (New_Unit_Name)
+         & Body_Suffix.all);
 
       Put_Harness_Header;
       S_Put (0, GT_Marker_Begin);

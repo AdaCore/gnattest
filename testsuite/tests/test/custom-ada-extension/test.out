@@ -1,0 +1,4 @@
+Units remaining: 2     
+Units remaining: 1     
+simple.1.ads:3:4: error: corresponding test FAILED: Test not implemented. (simple-test_data-tests.1.adb:44)
+1 tests run: 0 passed; 1 failed; 0 crashed.
