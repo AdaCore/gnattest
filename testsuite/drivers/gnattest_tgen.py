@@ -121,6 +121,14 @@ class GNATTestTgenDriver(BaseDriver):
         if not self.test_env.get("suppress_test_dump", False):
             gnattest_args.append("--dump-test-inputs")
 
+        # Generate TGen wrappers for gnatfuzz internal testsuite. GNATfuzz benchmarks
+        # and demos being end-to-end tests, we can assume that they will always run at
+        # least the analyze and generate phase.
+        # It is also possible that the test is meant to run using the fuzz-everything
+        # workflow, in this case the test name is prefixed with a "eag".
+        if self.test_name.startswith("ag") or self.test_name.startswith("eag"):
+            gnattest_args.append("--gen-wrappers")
+
         if os.environ.get("GNATTEST_DEBUG", None):
             # Enable debug log and preserve generation harness
             gnattest_args.extend(["-d1", "-dn"])
