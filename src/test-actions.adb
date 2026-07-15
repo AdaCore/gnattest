@@ -35,6 +35,8 @@ with GNAT.OS_Lib; use GNAT.OS_Lib;
 with GNATCOLL.JSON; use GNATCOLL.JSON;
 with GNATCOLL.VFS;  use GNATCOLL.VFS;
 
+with GPR2.Project.Registry;
+with GPR2.Project.Registry.Attribute;
 with Langkit_Support.Diagnostics;
 with Langkit_Support.Errors;
 with Langkit_Support.Text;
@@ -499,6 +501,33 @@ package body Test.Actions is
          for Ignored_Arg of Arg (Cmd, Ignore) loop
             Read_File_Names_From_File (Ignored_Arg.all, Include_One'Access);
          end loop;
+      end;
+
+      declare
+         package Naming_Attr renames GPR2.Project.Registry.Attribute.Naming;
+
+         function Get_String_Attribute
+           (Attr : Q_Attribute_Id; Default_Value : String) return String;
+         --  Get an attribute string value from the root project.
+         --  Return Default value if the searched attribute is not present.
+
+         function Get_String_Attribute
+           (Attr : Q_Attribute_Id; Default_Value : String) return String
+         is
+            Ada_Index : constant GPR2.Project.Attribute_Index.Object :=
+              GPR2.Project.Attribute_Index.Create (GPR2.Ada_Language);
+         begin
+            if Root_Prj.Has_Attribute (Attr, Ada_Index) then
+               return Root_Prj.Attribute (Attr, Ada_Index).Value.Text;
+            end if;
+            return Default_Value;
+         end Get_String_Attribute;
+
+      begin
+         Test.Common.Body_Suffix :=
+           new String'(Get_String_Attribute (Naming_Attr.Body_Suffix, ".adb"));
+         Test.Common.Spec_Suffix :=
+           new String'(Get_String_Attribute (Naming_Attr.Spec_Suffix, ".ads"));
       end;
 
       declare

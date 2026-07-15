@@ -952,7 +952,7 @@ package body Test.Common is
         (Common_File_Subdir
          & Directory_Separator
          & Unit_To_File_Name (Common_Package_Name)
-         & ".ads");
+         & Spec_Suffix.all);
 
       S_Put (0, "package Gnattest_Generated is");
       Put_New_Line;
@@ -974,12 +974,12 @@ package body Test.Common is
            Common_File_Subdir
            & Directory_Separator
            & Unit_To_File_Name (Persistent_Package_Name)
-           & ".ads";
+           & Spec_Suffix.all;
          Persistent_File_Name_Body : constant String :=
            Common_File_Subdir
            & Directory_Separator
            & Unit_To_File_Name (Persistent_Package_Name)
-           & ".adb";
+           & Body_Suffix.all;
       begin
          if not Is_Regular_File (Persistent_File_Name_Spec) then
             Create (Persistent_File_Name_Spec);
