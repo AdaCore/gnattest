@@ -1,0 +1,56 @@
+@@--  Template for the project file to be generated for the support library.
+@@--  USER_PRJ : relative path to the user project
+@@--  LANG_VER_SW : language version switch to be added to the build args
+@@--  PREPROC_CFG : Switches to be added in order for the preprocessor config
+@@--                to be taken into account
+
+with "@_USER_PRJ_@";
+with "tgen_rts.gpr";
+
+library project TGen_Support is
+
+   Lib_Name := "tgen_support";
+
+   type Any_Library_Type is ("static", "static-pic", "relocatable");
+   Library_Type : Any_Library_Type :=
+     external
+       ("TGEN_SUPPORT_LIBRARY_TYPE",
+        external ("LIBRARY_TYPE", "static"));
+   
+   type Build_Mode_Type is ("dev", "prod");
+   Build_Mode : Build_Mode_Type :=
+     external
+       ("TGEN_SUPPORT_BUILD_MODE",
+        external ("BUILD_MODE", "dev"));
+
+   for Library_Name use Lib_Name;
+   for Library_Kind use Library_Type;
+   for Object_Dir use "obj-" & Lib_Name & "-" & Library_Type;
+   for Library_Dir use "lib-" & Lib_Name & "-" & Library_Type;
+
+   for Source_Dirs use (".");
+   
+   Common_Switches := 
+     ("-gnatg", "-gnatyN", "-gnatws");
+   
+@@IF@@ @_LANG_VER_SW_@ /= ""
+   Common_Switches := Common_Switches & (@_LANG_VER_SW_@);
+@@END_IF@@
+@@IF@@ @_PREPROC_CFG_@ /= ""
+   Common_Switches := Common_Switches & (@_PREPROC_CFG_@);
+@@END_IF@@
+
+   package Compiler is
+      case Build_Mode is
+         when "dev" =>
+            for Default_Switches ("Ada") use ("-O0", "-g") & Common_Switches;
+         when "prod" =>
+            for Default_Switches ("Ada") use ("-O1") & Common_Switches;
+      end case;
+   end Compiler;
+
+   package Coverage is
+      for Units use ();
+   end Coverage;
+
+end TGen_Support;

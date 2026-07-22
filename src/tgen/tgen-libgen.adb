@@ -153,7 +153,7 @@ package body TGen.Libgen is
 
    function Lang_Version_To_Attr
      (Version : Ada_Language_Version) return String;
-   --  Return the corresponding string to be added to the
+   --  Return the corresponding switch to be added to the
    --  Compiler.Default_Switches attribute. This will return the empty string
    --  if Version is Unspecified.
 
@@ -1365,6 +1365,7 @@ package body TGen.Libgen is
       --  Generate the project file
 
       declare
+         use Templates_Parser;
          Prj_File    : File_Type;
          Cwd         : constant Virtual_File :=
            Create (+Ada.Directories.Current_Directory);
@@ -1378,79 +1379,26 @@ package body TGen.Libgen is
               (if Support_Prj.Is_Absolute_Path
                then Support_Prj
                else Cwd / Support_Prj));
+
+         Assocs : constant Translate_Table :=
+           [1 => Assoc ("USER_PRJ", +Rel_Path),
+            2 =>
+              Assoc ("LANG_VER_SW", Lang_Version_To_Attr (Ctx.Lang_Version)),
+            3 =>
+              Assoc ("PREPROC_CFG", Write_Preprocessor_Config (Ctx, False))];
       begin
          Create
            (Prj_File,
             Out_File,
             Output_Dir & GNAT.OS_Lib.Directory_Separator & "tgen_support.gpr");
-         Put_Line (Prj_File, "with """ & (+Rel_Path) & """;");
-         Put_Line (Prj_File, "with ""tgen_rts.gpr"";");
-         New_Line (Prj_File);
-         Put_Line (Prj_File, "library project TGen_Support is");
-         New_Line (Prj_File);
-         Put_Line (Prj_File, "   Lib_Name := ""tgen_support"";");
-         New_Line (Prj_File);
          Put_Line
            (Prj_File,
-            "   type Any_Library_Type is (""static"","
-            & " ""relocatable"", ""static-pic"");");
-         Put_Line
-           (Prj_File,
-            "   Library_Type : Any_Library_Type := external"
-            & " (""LIBRARY_TYPE"", ""static"");");
-         Put_Line
-           (Prj_File, "   type Build_Mode_Type is (""dev""," & " ""prod"");");
-         Put_Line
-           (Prj_File,
-            "   Build_Mode : Build_Mode_Type := external"
-            & " (""TGEN_SUPPORT_BUILD_MODE"","
-            & " external (""BUILD_MODE"", ""dev""));");
-         Put_Line (Prj_File, "   for Library_Name use Lib_Name;");
-         Put_Line (Prj_File, "   for Library_Kind use Library_Type;");
-         Put_Line
-           (Prj_File,
-            "   for Object_Dir use ""obj-"" & Lib_Name & "
-            & """-"""
-            & " & Library_Type;");
-         Put_Line
-           (Prj_File,
-            "   for Library_Dir use ""lib-"" & Lib_Name & "
-            & """-"""
-            & " & Library_Type;");
-         New_Line (Prj_File);
-         Put_Line (Prj_File, "   for Source_Dirs use (""."");");
-         New_Line (Prj_File);
-         Put_Line (Prj_File, "   package Compiler is");
-         Put_Line (Prj_File, "      case Build_Mode is");
-         Put_Line (Prj_File, "         when ""dev"" =>");
-         Put
-           (Prj_File,
-            "            for Default_Switches (""Ada"") use"
-            & " (""-g"", ""-gnatg"", ""-gnatyN"", ""-gnatws""");
-         if Ctx.Lang_Version /= Unspecified then
-            Put (Prj_File, ", " & Lang_Version_To_Attr (Ctx.Lang_Version));
-         end if;
-         Write_Preprocessor_Config (Ctx, Prj_File);
-         Put_Line (Prj_File, "         when ""prod"" =>");
-         Put_Line
-           (Prj_File,
-            "            for Default_Switches (""Ada"") use"
-            & " (""-gnatg"", ""-gnatyN"", ""-gnatws""");
-         if Ctx.Lang_Version /= Unspecified then
-            Put (Prj_File, ", " & Lang_Version_To_Attr (Ctx.Lang_Version));
-         end if;
-         Write_Preprocessor_Config (Ctx, Prj_File);
-         Put_Line (Prj_File, "      end case;");
-         Put_Line (Prj_File, "   end Compiler;");
-         New_Line (Prj_File);
-
-         --  Exclude all units from coverage analysis. Only the units from the
-         --  user project are of interest, the rest are testing artifacts.
-
-         Put_Line (Prj_File, "   package Coverage is");
-         Put_Line (Prj_File, "      for Units use ();");
-         Put_Line (Prj_File, "   end Coverage;");
-         Put_Line (Prj_File, "end TGen_support;");
+            Parse
+              (Ada.Directories.Compose
+                 (Ada.Directories.Compose
+                    (+Ctx.Root_Templates_Dir, "support_templates"),
+                  "tgen_support.gpr.tmplt"),
+               Assocs));
          Close (Prj_File);
       end;
 
@@ -1921,32 +1869,28 @@ package body TGen.Libgen is
    -- Write_Preprocessor_Config --
    -------------------------------
 
-   procedure Write_Preprocessor_Config
-     (Ctx          : Libgen_Context;
-      Prj_File     : Ada.Text_IO.File_Type;
-      Append_Flags : Boolean := True)
+   function Write_Preprocessor_Config
+     (Ctx : Libgen_Context; Append_Flags : Boolean := True) return String
    is
       Preprocessor_File : constant String :=
         To_String (Ctx.Output_Dir)
         & GNAT.OS_Lib.Directory_Separator
         & "preprocessor.def";
+      Res               : Unbounded_String;
    begin
       if not Ctx.Has_Preprocessor_Config then
-         Put_Line (Prj_File, ");");
-         return;
+         return "";
       end if;
 
       Libadalang.Preprocessing.Write_Preprocessor_Data_File
         (Ctx.Preprocessor_Definitions,
          Preprocessor_File,
          To_String (Ctx.Output_Dir));
-
       if Append_Flags then
-         Put (Prj_File, ", ");
+         Res := +", ";
       end if;
-      Put (Prj_File, """-gnatep=");
-      Put (Prj_File, Preprocessor_File);
-      Put_Line (Prj_File, """);");
+      Res := Res & """-gnatep=" & Preprocessor_File & """";
+      return +Res;
    end Write_Preprocessor_Config;
 
    ----------------------
@@ -1986,6 +1930,8 @@ package body TGen.Libgen is
             else Cwd / VHarness_Dir));
       Prj_File         : File_Type;
       Main_File        : File_Type;
+
+      Preproc_Flags : GNAT.OS_Lib.String_Access;
    begin
       if not VHarness_Dir.Is_Directory then
          Ada.Directories.Create_Path (Harness_Dir);
@@ -2006,8 +1952,13 @@ package body TGen.Libgen is
       Put_Line (Prj_File, "package Compiler is");
       Put (Prj_File, "   for Default_Switches (""Ada"") use (");
       Put (Prj_File, Lang_Version_To_Attr (Ctx.Lang_Version));
-      Write_Preprocessor_Config
-        (Ctx, Prj_File, Append_Flags => Ctx.Lang_Version /= Unspecified);
+      Preproc_Flags :=
+        new String'
+          (Write_Preprocessor_Config (Ctx, Ctx.Lang_Version /= Unspecified));
+      if Preproc_Flags.all /= "" then
+         Put (Prj_File, Preproc_Flags.all);
+      end if;
+      Put_Line (Prj_File, ");");
       Ada.Text_IO.Put_Line (Prj_File, "end Compiler;");
 
       Put_Line (Prj_File, "end TGen_Generation_Harness;");

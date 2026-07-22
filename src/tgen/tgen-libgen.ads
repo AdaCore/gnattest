@@ -27,7 +27,6 @@
 with Ada.Containers.Ordered_Maps;
 with Ada.Containers.Ordered_Sets;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
-with Ada.Text_IO;
 
 with GNATCOLL.VFS;
 
@@ -197,12 +196,11 @@ package TGen.Libgen is
    --  This returns False when every included subprogram is not supported by
    --  TGen, or when no subprogram was included.
 
-   procedure Write_Preprocessor_Config
-     (Ctx          : Libgen_Context;
-      Prj_File     : Ada.Text_IO.File_Type;
-      Append_Flags : Boolean := True);
-   --  Generate a preprocessor file from the context and enable pre-processing
-   --  in the given Project_File by adding `-gnatep=<file>`.
+   function Write_Preprocessor_Config
+     (Ctx : Libgen_Context; Append_Flags : Boolean := True) return String;
+   --  Generate a preprocessor file from the context and return
+   --  `-gnatep=<file>` to be inserted in compilation flags, or an empty string
+   --  if not needed.
 
    procedure Generate_Harness
      (Ctx              : in out Libgen_Context;
