@@ -156,6 +156,14 @@ package Test.Skeleton.Source_Table is
 
    procedure Initialize_Project_Table;
 
+   function Get_Circular_Dependency_Chain return String;
+   --  If the project import graph (as recorded by Initialize_Project_Table)
+   --  contains a cycle that goes through at least one regular "with", return a
+   --  textual description of the first one found, e.g. "p -> q -> r -> p".
+   --  Otherwise return the empty string. Such cycles are not supported in stub
+   --  mode. Cycles made exclusively of "limited with" edges are handled fine
+   --  and are deliberately not reported.
+
    procedure Mark_Projects_With_Stubbed_Sources;
 
    function Get_Project_Path (Project_Name : String) return String;

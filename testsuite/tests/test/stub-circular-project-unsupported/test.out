@@ -1,0 +1,2 @@
+gnattest: circular project dependencies (through "limited with") are not supported in stub mode: P -> Q -> R -> P
+>>>program returned status code 1

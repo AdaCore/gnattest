@@ -1,0 +1,4 @@
+limited with "p.gpr";
+project R is
+   for Source_Dirs use ("src3");
+end R;

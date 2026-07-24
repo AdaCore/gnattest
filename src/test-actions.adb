@@ -966,6 +966,18 @@ package body Test.Actions is
 
          Test.Skeleton.Source_Table.Initialize_Project_Table;
 
+         declare
+            Cycle : constant String :=
+              Test.Skeleton.Source_Table.Get_Circular_Dependency_Chain;
+         begin
+            if Cycle /= "" then
+               Cmd_Error_No_Help
+                 ("circular project dependencies (through ""limited "
+                  & "with"") are not supported in stub mode: "
+                  & Cycle);
+            end if;
+         end;
+
          for F of Project_Tree.Root_Project.Visible_Sources loop
             if F.Language = Ada_Language
               and then not F.Owning_View.Is_Externally_Built
