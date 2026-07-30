@@ -35,6 +35,9 @@ package body TGen.Random is
      TGen.Logging.Create_Trace
        (Ada.Strings.Unbounded.To_Unbounded_String ("RANDOM"));
 
+   function Get_Default_Seed return Unsigned_32;
+   --  Return the default seed to be used if not overridden by the environment
+
    -----------
    -- Reset --
    -----------
@@ -498,8 +501,16 @@ package body TGen.Random is
    function To_U64 is new
      Ada.Unchecked_Conversion (Duration, Interfaces.Unsigned_64);
 
+   ----------------------
+   -- Get_Default_Seed --
+   ----------------------
+
+   function Get_Default_Seed return Unsigned_32 is separate;
+   --  Separate body so we can replace it with a different implementation if
+   --  needed.
+
 begin
-   Default_Seed := Unsigned_32'Mod (To_U64 (Clock - Y2K));
+   Default_Seed := Get_Default_Seed;
    if TGen.Environment.Exists (Seed_Env_Var) then
       begin
          Default_Seed :=

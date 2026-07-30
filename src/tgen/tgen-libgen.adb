@@ -40,10 +40,12 @@ with Templates_Parser;
 
 with Test.Common;
 with TGen.Dependency_Graph;   use TGen.Dependency_Graph;
+with TGen.Environment;
 with TGen.LAL_Utils;
 with TGen.Marshalling;        use TGen.Marshalling;
 with TGen.Marshalling.Binary_Marshallers;
 with TGen.Marshalling.JSON_Marshallers;
+with TGen.Random;
 with TGen.Templates;
 with TGen.Type_Representation;
 with TGen.Types.Array_Types;  use TGen.Types.Array_Types;
@@ -58,6 +60,27 @@ package body TGen.Libgen is
    --  If True, calls to Set_Array_Limit will raise a Constraint_Error.
    --  Should be set by any call to Include_Subp or Supported_Subprogram.
 
+   Part_Subdirs : constant array (Library_Parts) of String (1 .. 8) :=
+     (Marshalling_Part     => "marshall",
+      Test_Generation_Part => "gen_vals",
+      Wrappers_Part        => "wrappers");
+   --  name of the subdirectories in the support library where each part gets
+   --  generated.
+
+   function Part_Image (Part : Library_Parts) return String
+   is (case Part is
+         when Marshalling_Part     => "MARSHALLING",
+         when Test_Generation_Part => "VALUE_GEN",
+         when Wrappers_Part        => "WRAPPERS");
+   --  Small all caps text representing the given support library part.
+
+   function Output_Dir
+     (Ctx : Libgen_Context; Part : Library_Parts) return String
+   is (Ada.Directories.Compose
+         (To_String (Ctx.Output_Dir), Part_Subdirs (Part)));
+   --  Return the correct directory in which to place a file for the given
+   --  support library part, according to the context.
+
    function Is_In_Top_Level_Generic_Instantiation
      (Subp : Basic_Decl'Class) return Boolean;
    --  Return whether the given subprogram belongs to a top level generic
@@ -65,7 +88,7 @@ package body TGen.Libgen is
    --  generated as child packages of the original package, but as child
    --  packages of a generated wrapper package.
 
-   procedure Generate_Support_Library
+   procedure Generate_Marshalling_Library
      (Ctx                       : Libgen_Context;
       Pkg_Name                  : Ada_Qualified_Name;
       Is_Top_Level_Generic_Inst : Boolean := False)
@@ -96,7 +119,8 @@ package body TGen.Libgen is
       Default_Strat            : Default_Strat_Kind;
       Default_Test_Num         : Natural;
       Bin_Tests                : Boolean;
-      Is_Generic_Instantiation : Boolean := False)
+      Is_Generic_Instantiation : Boolean := False;
+      On_Target                : Boolean := False)
    with Pre => Ctx.Generation_Map.Contains (Pkg_Name);
    --  Generate one harness unit (spec and body) for the subprograms registered
    --  in Pack_Name.
@@ -331,11 +355,11 @@ package body TGen.Libgen is
       Close (Body_File);
    end Render_Support_Templates;
 
-   ------------------------------
-   -- Generate_Support_Library --
-   ------------------------------
+   ----------------------------------
+   -- Generate_Marshalling_Library --
+   ----------------------------------
 
-   procedure Generate_Support_Library
+   procedure Generate_Marshalling_Library
      (Ctx                       : Libgen_Context;
       Pkg_Name                  : Ada_Qualified_Name;
       Is_Top_Level_Generic_Inst : Boolean := False)
@@ -356,7 +380,7 @@ package body TGen.Libgen is
       Typ_Dependencies         : Typ_Set;
       File_Name                : constant String :=
         Ada.Directories.Compose
-          (Containing_Directory => To_String (Ctx.Output_Dir),
+          (Containing_Directory => Output_Dir (Ctx, Marshalling_Part),
            Name                 => To_Filename (Support_Lib_Name));
 
       Types : constant Types_Per_Package_Maps.Constant_Reference_Type :=
@@ -616,7 +640,7 @@ package body TGen.Libgen is
          end loop;
       end;
 
-   end Generate_Support_Library;
+   end Generate_Marshalling_Library;
 
    --------------------------------
    -- Generate_Value_Gen_Library --
@@ -642,7 +666,7 @@ package body TGen.Libgen is
       Typ_Dependencies  : Typ_Set;
       File_Name         : constant String :=
         Ada.Directories.Compose
-          (Containing_Directory => To_String (Ctx.Output_Dir),
+          (Containing_Directory => Output_Dir (Ctx, Test_Generation_Part),
            Name                 => To_Filename (Resolved_Pkg_Name));
 
       Types : constant Types_Per_Package_Maps.Constant_Reference_Type :=
@@ -825,7 +849,7 @@ package body TGen.Libgen is
       Ada_Wrapper_Name : constant String := To_Ada (Wrapper_Pkg);
       File_Name        : constant String :=
         Ada.Directories.Compose
-          (Containing_Directory => To_String (Ctx.Output_Dir),
+          (Containing_Directory => Output_Dir (Ctx, Wrappers_Part),
            Name                 => To_Filename (Wrapper_Pkg));
 
    begin
@@ -1361,6 +1385,12 @@ package body TGen.Libgen is
          Ada.Directories.Delete_Tree (Output_Dir);
       end if;
       Ada.Directories.Create_Path (Output_Dir);
+      for Part_Kind in Library_Parts loop
+         if Part (Part_Kind) then
+            Ada.Directories.Create_Directory
+              (Ada.Directories.Compose (Output_Dir, Part_Subdirs (Part_Kind)));
+         end if;
+      end loop;
 
       --  Generate the project file
 
@@ -1380,13 +1410,29 @@ package body TGen.Libgen is
                then Support_Prj
                else Cwd / Support_Prj));
 
-         Assocs : constant Translate_Table :=
-           [1 => Assoc ("USER_PRJ", +Rel_Path),
-            2 =>
-              Assoc ("LANG_VER_SW", Lang_Version_To_Attr (Ctx.Lang_Version)),
-            3 =>
-              Assoc ("PREPROC_CFG", Write_Preprocessor_Config (Ctx, False))];
+         Assocs           : Translate_Set;
+         Part_Vec         : Vector_Tag;
+         Part_Dir_Vec     : Vector_Tag;
+         Part_Default_Vec : Vector_Tag;
       begin
+         Assocs.Insert (Assoc ("USER_PRJ", +Rel_Path));
+         Assocs.Insert
+           (Assoc ("LANG_VER_SW", Lang_Version_To_Attr (Ctx.Lang_Version)));
+         Assocs.Insert
+           (Assoc ("PREPROC_CFG", Write_Preprocessor_Config (Ctx, False)));
+         for Part_Kind in Library_Parts loop
+            if Part (Part_Kind) then
+               Part_Vec.Append (Part_Image (Part_Kind));
+               Part_Dir_Vec.Append (Part_Subdirs (Part_Kind));
+               Part_Default_Vec.Append
+                 ((if Part_Kind = Test_Generation_Part
+                   then "TGEN_RTS_PROFILE"
+                   else "True"));
+            end if;
+         end loop;
+         Assocs.Insert (Assoc ("PART", Part_Vec));
+         Assocs.Insert (Assoc ("PART_DIR", Part_Dir_Vec));
+         Assocs.Insert (Assoc ("PART_DEFAULT", Part_Default_Vec));
          Create
            (Prj_File,
             Out_File,
@@ -1420,7 +1466,7 @@ package body TGen.Libgen is
                      Create_Generic_Wrapper_Package_If_Not_Exists
                        (Ctx, Key (Cur), Output_Dir);
                   end if;
-                  Generate_Support_Library
+                  Generate_Marshalling_Library
                     (Ctx,
                      Pkg_Name,
                      Is_Top_Level_Generic_Inst => Is_Generic_Inst);
@@ -1518,7 +1564,8 @@ package body TGen.Libgen is
       Default_Strat            : Default_Strat_Kind;
       Default_Test_Num         : Natural;
       Bin_Tests                : Boolean;
-      Is_Generic_Instantiation : Boolean := False)
+      Is_Generic_Instantiation : Boolean := False;
+      On_Target                : Boolean := False)
    is
       use GNATCOLL.VFS;
       use Templates_Parser;
@@ -1579,12 +1626,21 @@ package body TGen.Libgen is
          Put_Line (F_Body, "with Ada.Streams.Stream_IO;");
          Put_Line (F_Body, "with Ada.Strings.Fixed;");
          Put_Line (F_Body, "with GNAT.OS_Lib;");
+         Put_Line (F_Body, "with Ada.Environment_Variables;");
+      elsif On_Target then
+
+         --  On target there is no filesystem: TGen.JSON.Utils (file I/O) and
+         --  Ada.Environment_Variables are unavailable. The JSON is streamed to
+         --  the standard output instead.
+
+         Put_Line (F_Body, "with TGen.JSON.Test_Cases;");
+         Put_Line (F_Body, "with Ada.Text_IO;");
       else
          Put_Line (F_Body, "with TGen.JSON.Test_Cases;");
          Put_Line (F_Body, "with TGen.JSON.Utils;");
+         Put_Line (F_Body, "with Ada.Environment_Variables;");
       end if;
 
-      Put_Line (F_Body, "with Ada.Environment_Variables;");
       Put_Line (F_Body, "with TGen;");
       Put_Line (F_Body, "with TGen.JSON;");
       Put_Line (F_Body, "with TGen.Types;");
@@ -1786,52 +1842,71 @@ package body TGen.Libgen is
       --  Generate the body of the global generation routine
 
       Put_Line (F_Body, "   procedure Generate is");
-      Put_Line
-        (F_Body,
-         "      Output_Dir : constant String := "
-         & "Ada.Environment_Variables.Value "
-         & "(""TGEN_GENERATION_OUTPUT_DIR"", """
-         & Test_Output_Dir
-         & """);");
 
-      if not Bin_Tests then
+      if On_Target then
+
+         --  On target the JSON is built in memory and streamed to the standard
+         --  output (there is no filesystem). Bind the test cases to a local
+         --  JSON object so it can be serialized after generation.
+
          Put_Line
            (F_Body,
-            "      Dumper : constant TGen.JSON.Utils" & ".JSON_Auto_IO :=");
-
-         --  TODO??? there is probably something to fix here
-
-         if Ctx.Generic_Package_Instantiations.Contains (Pkg_Name) then
-            Put_Line
-              (F_Body,
-               "        TGen.JSON.Utils.Create ("
-               & "Output_Dir & '"
-               & GNAT.OS_Lib.Directory_Separator
-               & "' & """
-               & Ada.Characters.Handling.To_Lower
-                   (To_Symbol (Pkg_Name_With_Generic, Sep => '_'))
-               & ".json"");");
-         else
-            Put_Line
-              (F_Body,
-               "        TGen.JSON.Utils.Create ("
-               & "Output_Dir & '"
-               & GNAT.OS_Lib.Directory_Separator
-               & "' & """
-               & To_Filename (Pkg_Name)
-               & """ & "
-               & """.json"");");
-         end if;
+            "      Root : TGen.JSON.JSON_Value := TGen.JSON.Create_Object;");
          Put_Line
            (F_Body,
             "      Unit_Tests : TGen.JSON.Test_Cases.JSON_Test_Cases;");
          Put_Line (F_Body, "   begin");
          Put_Line
            (F_Body,
-            "      TGen.JSON.Test_Cases.Bind_JSON"
-            & " (Unit_Tests, Dumper.Get_JSON_Ref);");
+            "      TGen.JSON.Test_Cases.Bind_JSON (Unit_Tests, Root);");
       else
-         Put_Line (F_Body, "   begin");
+         Put_Line
+           (F_Body,
+            "      Output_Dir : constant String := "
+            & "Ada.Environment_Variables.Value "
+            & "(""TGEN_GENERATION_OUTPUT_DIR"", """
+            & Test_Output_Dir
+            & """);");
+
+         if not Bin_Tests then
+            Put_Line
+              (F_Body,
+               "      Dumper : constant TGen.JSON.Utils" & ".JSON_Auto_IO :=");
+
+            --  TODO??? there is probably something to fix here
+
+            if Ctx.Generic_Package_Instantiations.Contains (Pkg_Name) then
+               Put_Line
+                 (F_Body,
+                  "        TGen.JSON.Utils.Create ("
+                  & "Output_Dir & '"
+                  & GNAT.OS_Lib.Directory_Separator
+                  & "' & """
+                  & Ada.Characters.Handling.To_Lower
+                      (To_Symbol (Pkg_Name_With_Generic, Sep => '_'))
+                  & ".json"");");
+            else
+               Put_Line
+                 (F_Body,
+                  "        TGen.JSON.Utils.Create ("
+                  & "Output_Dir & '"
+                  & GNAT.OS_Lib.Directory_Separator
+                  & "' & """
+                  & To_Filename (Pkg_Name)
+                  & """ & "
+                  & """.json"");");
+            end if;
+            Put_Line
+              (F_Body,
+               "      Unit_Tests : TGen.JSON.Test_Cases.JSON_Test_Cases;");
+            Put_Line (F_Body, "   begin");
+            Put_Line
+              (F_Body,
+               "      TGen.JSON.Test_Cases.Bind_JSON"
+               & " (Unit_Tests, Dumper.Get_JSON_Ref);");
+         else
+            Put_Line (F_Body, "   begin");
+         end if;
       end if;
       for Subp of Subps loop
          declare
@@ -1849,6 +1924,36 @@ package body TGen.Libgen is
       if Ada.Containers."=" (Subps.Length, 0) then
          Put_Line (F_Body, "      null;");
       end if;
+
+      if On_Target then
+
+         --  Stream the generated JSON to the standard output, framed with
+         --  markers carrying the destination file name so the host can demux
+         --  one JSON file per package from the gnatemu serial capture. These
+         --  markers must stay in sync with Test.Generation (host side).
+
+         declare
+            TC_Filename : constant String :=
+              (if Ctx.Generic_Package_Instantiations.Contains (Pkg_Name)
+               then
+                 Ada.Characters.Handling.To_Lower
+                   (To_Symbol (Pkg_Name_With_Generic, Sep => '_'))
+                 & ".json"
+               else To_Filename (Pkg_Name) & ".json");
+         begin
+            Put_Line
+              (F_Body,
+               "      Ada.Text_IO.Put_Line ("""
+               & JSON_Start_Prefix
+               & TC_Filename
+               & """);");
+            Put_Line (F_Body, "      Root.Print (Compact => True);");
+            Put_Line
+              (F_Body,
+               "      Ada.Text_IO.Put_Line (""" & JSON_End_Marker & """);");
+         end;
+      end if;
+
       Put_Line (F_Body, "   end Generate;");
 
       Put_Line (F_Body, "end " & To_Ada (Harness_Pkg_Name) & ";");
@@ -1903,7 +2008,8 @@ package body TGen.Libgen is
       Test_Output_Dir  : String;
       Default_Strat    : Default_Strat_Kind := Stateless;
       Default_Test_Num : Natural := 5;
-      Bin_Tests        : Boolean := False)
+      Bin_Tests        : Boolean := False;
+      On_Target        : Boolean := False)
    is
       use GNATCOLL.VFS;
       use Types_Per_Package_Maps;
@@ -1932,6 +2038,16 @@ package body TGen.Libgen is
       Main_File        : File_Type;
 
       Preproc_Flags : GNAT.OS_Lib.String_Access;
+
+      --  On-target generation related variables & constants
+
+      Prefix         : constant Virtual_File :=
+        Create (+(+Ctx.Root_Templates_Dir)).Get_Parent;
+      Source_RTS_Dir : constant Virtual_File := Prefix / (+"tgen_rts");
+      Staged_RTS_Dir : constant Virtual_File := VHarness_Dir / (+"tgen_rts");
+      Rand_VF        : constant Virtual_File :=
+        Staged_RTS_Dir / (+"tgen-random-get_default_seed.adb");
+      Rand_File      : File_Type;
    begin
       if not VHarness_Dir.Is_Directory then
          Ada.Directories.Create_Path (Harness_Dir);
@@ -1949,6 +2065,11 @@ package body TGen.Libgen is
       Put_Line (Prj_File, "project TGen_Generation_Harness is");
       Put_Line (Prj_File, "   for Main use (""generation_main.adb"");");
       Put_Line (Prj_File, "   for Object_Dir use ""obj"";");
+
+      --  The target and runtime are not embedded here: they are passed on the
+      --  gprbuild command line (--target/--RTS) when building for target, so
+      --  the harness project stays configuration-agnostic.
+
       Put_Line (Prj_File, "package Compiler is");
       Put (Prj_File, "   for Default_Switches (""Ada"") use (");
       Put (Prj_File, Lang_Version_To_Attr (Ctx.Lang_Version));
@@ -1989,7 +2110,9 @@ package body TGen.Libgen is
          end;
       end loop;
 
-      Put_Line (Main_File, "with GNAT.OS_Lib;");
+      if not On_Target then
+         Put_Line (Main_File, "with GNAT.OS_Lib;");
+      end if;
 
       New_Line (Main_File);
       Put_Line (Main_File, "procedure Generation_Main is");
@@ -2014,7 +2137,8 @@ package body TGen.Libgen is
                Default_Strat,
                Default_Test_Num,
                Bin_Tests,
-               Is_Generic);
+               Is_Generic,
+               On_Target);
             if Is_Generic then
                Create_Generic_Wrapper_Package_If_Not_Exists
                  (Ctx, Pkg_Name, Ctx.Get_Output_Dir);
@@ -2022,12 +2146,58 @@ package body TGen.Libgen is
          end;
       end loop;
 
-      --  Call `exit(2)` explicitly to avoid hanging forever if the user
+      --  Call `exit(0)` explicitly to avoid hanging forever if the user
       --  spawned some tasks that doesn't terminate during the elaboration.
+      --  On target GNAT.OS_Lib is not available (host-only): let the main
+      --  procedure return normally instead, which terminates the emulated
+      --  program.
 
-      Put_Line (Main_File, "   GNAT.OS_Lib.Os_Exit (0);");
+      if not On_Target then
+         Put_Line (Main_File, "   GNAT.OS_Lib.Os_Exit (0);");
+      end if;
       Put_Line (Main_File, "end Generation_Main;");
       Close (Main_File);
+
+      if not On_Target then
+         return;
+      end if;
+
+      --  Stage the TGen runtime sources (shipped next to the templates dir
+      --  into the harness build directory and build against that copy.
+      --  This avoids depending on tgen_rts.gpr being on the GPR project path.
+
+      declare
+         Success : Boolean;
+      begin
+         if Ada.Directories.Exists (Staged_RTS_Dir.Display_Full_Name) then
+            Ada.Directories.Delete_Tree (Staged_RTS_Dir.Display_Full_Name);
+         end if;
+         Source_RTS_Dir.Copy (Staged_RTS_Dir.Full_Name, Success);
+         if not Success then
+            raise Program_Error
+              with
+                "could not stage the TGen runtime sources for on-target"
+                & " generation from "
+                & Source_RTS_Dir.Display_Full_Name;
+         end if;
+      end;
+
+      --  Patch tgen-random-get_default_seed.adb if the environment specifies
+      --  an alternate seed.
+
+      if not TGen.Environment.Exists (TGen.Random.Seed_Env_Var) then
+         return;
+      end if;
+      Open (Rand_File, Out_File, Rand_VF.Display_Full_Name);
+      Put_Line (Rand_File, "separate (TGen.Random)");
+      New_Line (Rand_File);
+      Put_Line (Rand_File, "--  Custom default seed, generated by TGen");
+      New_Line (Rand_File);
+      Put_Line (Rand_File, "function Get_Default_Seed return Unsigned_32 is");
+      Put_Line (Rand_File, "begin");
+      Put_Line (Rand_File, "   return" & TGen.Random.Default_Seed'Image & ";");
+      Put_Line (Rand_File, "end Get_Default_Seed;");
+      Close (Rand_File);
    exception
       when others =>
          if Is_Open (Prj_File) then
@@ -2035,6 +2205,9 @@ package body TGen.Libgen is
          end if;
          if Is_Open (Main_File) then
             Close (Main_File);
+         end if;
+         if Is_Open (Rand_File) then
+            Close (Rand_File);
          end if;
          raise;
    end Generate_Harness;

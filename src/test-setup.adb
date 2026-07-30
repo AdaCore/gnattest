@@ -102,6 +102,10 @@ package body Test.Setup is
    --  Infer the runtime profile according to the command line RTS option. This
    --  influences the AUnit build.
 
+   function TGen_Supports_Profile (Profile : Setup_Profile_Type) return Boolean
+   is (Profile in Profile_Full | Profile_Ravenscar);
+   --  Determine if TGen can be built against the given runtime profile
+
    function Gnattest_Prefix return String;
    --  Return the install prefix of gnattest
 
@@ -795,12 +799,6 @@ package body Test.Setup is
             then Tgen_Build
             else Tgen_Skip);
 
-         if Opts.Tgen_Mode = Tgen_Build and then not Is_Native (Opts) then
-            Fail
-              ("--tgen: the TGen runtime supports native configurations"
-               & " only");
-         end if;
-
          --  Resolve --compiler-prefix into an explicit install prefix
 
          if Opts.Compiler_Prefix then
@@ -812,6 +810,14 @@ package body Test.Setup is
            (if Opts.Profile = Auto
             then Infer_Profile (Opts)
             else Opts.Profile);
+
+         if Opts.Tgen_Mode = Tgen_Build
+           and then not TGen_Supports_Profile (Profile)
+         then
+            Fail
+              ("--tgen: the TGen runtime only supports full and embedded Ada"
+               & " runtime profiles");
+         end if;
 
          --  Stage sources into the temp build directory. We never build in
          --  place: the install tree must stay clean of object and library
@@ -866,7 +872,8 @@ package body Test.Setup is
                Build_TGen : Boolean :=
                  Opts.Tgen_Mode = Tgen_Build
                  or else
-                   (Opts.Tgen_Mode = Tgen_Auto and then Is_Native (Opts));
+                   (Opts.Tgen_Mode = Tgen_Auto
+                    and then TGen_Supports_Profile (Profile));
             begin
                if Build_TGen
                  and then Opts.Tgen_Mode = Tgen_Auto

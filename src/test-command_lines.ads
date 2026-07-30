@@ -136,6 +136,7 @@ package Test.Command_Lines is
       Minimization_Filter,
       Dump_Subp_Hash,
       Detect_TGen_Proxies,
+      TGen_Target_Config,
 
       --  `gnattest setup` mode
 

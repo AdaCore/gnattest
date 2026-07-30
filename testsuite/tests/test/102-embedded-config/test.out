@@ -1,0 +1,2 @@
+gnattest: Error loading configuration for on-targe value generation from invalid.json
+gnattest: Could not determine substitution runtime to use for on-target value generation from the file passed to --tgen-target-config.

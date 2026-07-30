@@ -487,6 +487,7 @@ package body Test.Actions is
       Test.Common.Target_Val := new String'(String (Project_Tree.Target));
       Test.Common.RTS_Attribute_Val :=
         new String'(String (Project_Tree.Runtime (Ada_Language)));
+      Test.Common.Is_Cross_Target := Project_Tree.Is_Cross_Target;
 
       Root_Prj := Project_Tree.Root_Project;
       Test.Common.Object_Directory :=
@@ -1666,6 +1667,8 @@ package body Test.Actions is
         (" --gen-test-binary                                    - Generate test inputs in binary format (experimental, requires --gen-test-vectors)\n");
       Put
         (" --gen-test-num=n                                     - Specify the number of test inputs to be generated (experimental, defaults to 5)\n");
+      Put
+        (" --tgen-target-config=file                            - Override the target-to-runtime/board mapping used to generate test inputs on target (experimental)\n");
       Put
         (" --gen-test-subprograms=file:line                     - Specify a comma separated list of subprograms declared at file:line to generate test cases for\n");
       Put

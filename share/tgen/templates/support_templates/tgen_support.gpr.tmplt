@@ -3,6 +3,12 @@
 @@--  LANG_VER_SW : language version switch to be added to the build args
 @@--  PREPROC_CFG : Switches to be added in order for the preprocessor config
 @@--                to be taken into account
+@@--  PART : vector of support library parts that are being generated
+@@--  PART_DIR : vector of directories for the corresponding PART
+@@--  PART_DEFAULT : Vector of default expressions controlling whether each
+@@--                 part is included or not. If set to TGEN_RTS_PROFILE, the
+@@--                 part will by default only be included when the full
+@@--                 runtime is present.
 
 with "@_USER_PRJ_@";
 with "tgen_rts.gpr";
@@ -28,7 +34,27 @@ library project TGen_Support is
    for Object_Dir use "obj-" & Lib_Name & "-" & Library_Type;
    for Library_Dir use "lib-" & Lib_Name & "-" & Library_Type;
 
-   for Source_Dirs use (".");
+   type Boolean is ("True", "False");
+
+   Src_Dirs := (".");
+@@TABLE@@
+   @@IF@@ @_PART_DEFAULT_@ = "TGEN_RTS_PROFILE"
+   @_PART_@_Default := "";
+   case TGen_RTS.Profile is
+      when "full" => @_PART_@_Default := "True";
+      when "marshalling" => @_PART_@_Default := "False";
+   end case;
+   Include_@_PART_@ : Boolean := external ("TGEN_USE_@_PART_@", @_PART_@_Default);
+   @@ELSE@@
+   Include_@_PART_@ : Boolean := external ("TGEN_USE_@_PART_@", "@_PART_DEFAULT_@");
+   @@END_IF@@
+   case Include_@_PART_@ is
+      when "True" => Src_Dirs := Src_Dirs & ("@_PART_DIR_@");
+      when "False" => null;
+   end case;
+@@END_TABLE@@
+
+   for Source_Dirs use Src_Dirs;
    
    Common_Switches := 
      ("-gnatg", "-gnatyN", "-gnatws");

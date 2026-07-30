@@ -71,7 +71,7 @@ library project TGen_RTS is
       when "" =>
          --  Native: build everything but the alternate embedded env & runtime info body.
          for Excluded_Source_Files use
-           ("tgen-environment-embedded.adb", "tgen-runtime_info_embedded.ads");
+           ("tgen-environment-embedded.adb", "tgen-runtime_properties_embedded.ads");
       when others =>
          case Profile is
             when "full" =>
