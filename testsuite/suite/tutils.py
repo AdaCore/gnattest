@@ -89,10 +89,19 @@ def run_gnattest(
 
     Add additional arguments that must be present regardless of the
     current test, to handle cross generation for example.
+
+    If the GNATTEST_DEBUG env variable is set, -d1 and -dn are added to the
+    command line in order to aid debugging (preserve temp dir, compile TGen
+    harness with debug info)
     """
     thistest.log(f"Gnattest command:{os.linesep}\t", False)
     return run_command(
-        "gnattest", gpr, args, output_in_baseline, allow_failure, **run_args
+        "gnattest",
+        gpr,
+        args + (["-d1", "-dn"] if os.environ.get("GNATTEST_DEBUG", None) else []),
+        output_in_baseline,
+        allow_failure,
+        **run_args,
     )
 
 

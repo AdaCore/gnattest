@@ -129,7 +129,6 @@ class _ReportOutput(object):
 
 class Test(object):
     def __init__(self):
-        self.env = Env()
 
         self.start_time = time.time()
         # Compute this test's home directory, absolute dir where test.py
@@ -155,6 +154,7 @@ class Test(object):
         self.report = _ReportOutput(
             self.options.report_file, self.options.test_log_file, self.options.error_file
         )
+        self.env = Env()
 
     def __cmdline_options(self):
         """Return an options object to represent the command line options"""
