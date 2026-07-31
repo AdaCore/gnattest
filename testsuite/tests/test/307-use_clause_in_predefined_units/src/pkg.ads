@@ -1,8 +1,8 @@
-with System.Tasking;
+with Ada.Real_Time;
 
 package Pkg is
    function Do_Stuff
-     (X : System.Tasking.Accept_Alternative)
-      return System.Tasking.Accept_Alternative
+     (X : Ada.Real_Time.Seconds_Count)
+      return Ada.Real_Time.Seconds_Count
    is (X);
 end Pkg;

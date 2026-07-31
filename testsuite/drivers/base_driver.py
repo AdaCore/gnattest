@@ -1,9 +1,9 @@
 import os
 
-from typing import Any, Union
+from typing import Union
 
 from e3.fs import sync_tree
-from e3.testsuite.control import YAMLTestControlCreator
+from e3.testsuite.control import YAMLTestControlCreator, TestControlCreator
 from e3.testsuite.driver.classic import TestAbortWithError, TestSkip
 from e3.testsuite.driver.diff import (
     DiffTestDriver,
@@ -79,7 +79,7 @@ class BaseDriver(DiffTestDriver):
         return (filename, baseline, is_regexp)
 
     @property
-    def test_control_creator(self):
+    def test_control_creator(self) -> TestControlCreator:
         assert self.env.main_options
         return YAMLTestControlCreator(
             {

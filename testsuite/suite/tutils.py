@@ -123,6 +123,7 @@ def build_harness(
         "gprbuild", gpr, args, output_in_baseline, allow_failure, **run_args
     )
 
+
 def run_harness(
     executable: str,
     args: list[str] = [],

@@ -1,20 +1,26 @@
-from glob import glob
-
 from re import Match
 
 import os
-from pathlib import Path
 
-from typing import AnyStr
-
-from e3.testsuite.driver.classic import TestAbortWithError, TestSkip
+from e3.testsuite.driver import TestDriver
 from e3.testsuite.driver.diff import PatternSubstitute
+from e3.testsuite.control import TestControlCreator, TestControl
 from e3.fs import cp
 
-from drivers.base_driver import BaseDriver
+from drivers.python_script import PythonScriptDriver
+
+from typing import override
+
+class LoadAddressHider(PatternSubstitute):
+    """
+    Remove the "load address:" message from backtraces, as not all targets
+    have address space randomization support.
+    """
+    def __init__(self):
+        super().__init__(pattern=r"\nLoad address: 0x[a-f0-9]+")
 
 
-class Address_Hider(PatternSubstitute):
+class AddressHider(PatternSubstitute):
     """
     Refiner that identifies addresses from a symbolic Ada traceback and hides
     the addresses, to stabilize the output. All consecutive addresses separated
@@ -24,7 +30,7 @@ class Address_Hider(PatternSubstitute):
 
     def __init__(self):
         super().__init__(
-            pattern=r"(0x[0-9a-f]{6,} ?)+",
+            pattern=r"(0x[0-9a-f]{3,} ?)+",
             replacement="<addr_or_backtrace>",
         )
 
@@ -47,12 +53,35 @@ class LineHider(PatternSubstitute):
 
     def __init__(self):
         super().__init__(
-            pattern=r" \((.*-test_data-test_.*[0-9a-f]*.adb):[0-9]*\)",
+            pattern=r" \((.*-test_data-test(s|_.*[0-9a-f]*).adb):\d+\)",
             replacement=build_lineno_replacement,
         )
 
 
-class GNATTestTgenDriver(BaseDriver):
+class DumpedTestDeleter(PatternSubstitute):
+    """
+    Refiner that identifies the output of the common gnattest_tgen driver
+    generated when counting how many tests we dumped by --dump-test-inputs
+    and removes it from the baseline comparison. This is used to not check this
+    specific part of the test when running on cross targets, where test input
+    dumping does not exist.
+    """
+
+    def __init__(self):
+        super().__init__(pattern=r"Test runner dumped \d+ tests\n")
+
+
+class SkipCreator(TestControlCreator):
+    """
+    Creates a control creator that always skips
+    """
+
+    @override
+    def create(self, driver: TestDriver) -> TestControl:
+        return TestControl(message="tgen not supported on light runtimes", skip=True)
+
+
+class GNATTestTgenDriver(PythonScriptDriver):
     """
     Test driver to execute gnattest in test generation mode (with TGen)
     The driver will attempt to run "gnattest --gen-test-vectors
@@ -60,6 +89,27 @@ class GNATTestTgenDriver(BaseDriver):
     directory, and log the output, then build and run the generated test
     harness. The test harness execution log is also recorded in the output.
     """
+
+    @property
+    def has_light_rts(self) -> bool:
+        """
+        Returns wether the current test driver has a light runtime configured.
+        """
+        return (
+            self.env.main_options is not None
+            and self.env.main_options.RTS
+            and "light" in self.env.main_options.RTS
+        )
+
+    @property
+    def test_control_creator(self):
+        """
+        If the configured runtime is light, always skip the test, otherwise
+        process the test.yaml contents.
+        """
+        if self.has_light_rts:
+            return SkipCreator()
+        return super().test_control_creator
 
     @property
     def baseline_file(self):
@@ -77,115 +127,28 @@ class GNATTestTgenDriver(BaseDriver):
 
     @property
     def output_refiners(self):
-        return super().output_refiners + [Address_Hider(), LineHider()]
+        return (
+            super().output_refiners
+            + [LoadAddressHider(), AddressHider(), LineHider()]
+            + ([DumpedTestDeleter()] if self.env.is_cross else [])
+        )
 
     def set_up(self):
         super().set_up()
 
-        # gnattest_tgen should not be run in cross configs for now
-        if self.env.main_options and self.env.main_options.target:
-            raise TestSkip("TGen does not run for cross targets yet")
-
-    def run(self):
         # generate a default gpr file if the test asks for one
         if self.test_env.get("default-gpr", False):
-            gpr_file = os.path.join(self.working_dir(), "user_project.gpr")
             cp(
                 os.path.join(
                     self.shared_dir(),
                     "gnatfuzz_default_resources",
                     "user_project.gpr",
                 ),
-                gpr_file,
+                os.path.join(self.working_dir(), "user_project.gpr"),
             )
 
-        # Try to locate one in the test dir otherwise
-        else:
-            gpr_file = glob(os.path.join(self.working_dir(), "*.gpr"), recursive=False)
-            if len(gpr_file) == 0:
-                raise TestAbortWithError(
-                    "Could not find gpr project file on which to run gnattest:"
-                    f" {gpr_file} (cwd: {self.working_dir()})"
-                )
-
-            gpr_file = gpr_file[0]
-
-        gnattest_args = [
-            "gnattest",
-            f"-P{gpr_file}",
-            "--gen-test-vectors",
-            "-gnat2022",
-        ]
-
-        # Suppress test input dumping if specified in the test.yaml file
-        if not self.test_env.get("suppress_test_dump", False):
-            gnattest_args.append("--dump-test-inputs")
-
-        # Generate TGen wrappers for gnatfuzz internal testsuite. GNATfuzz benchmarks
-        # and demos being end-to-end tests, we can assume that they will always run at
-        # least the analyze and generate phase.
-        # It is also possible that the test is meant to run using the fuzz-everything
-        # workflow, in this case the test name is prefixed with a "eag".
-        if self.test_name.startswith("ag") or self.test_name.startswith("eag"):
-            gnattest_args.append("--gen-wrappers")
-
-        if os.environ.get("GNATTEST_DEBUG", None):
-            # Enable debug log and preserve generation harness
-            gnattest_args.extend(["-d1", "-dn"])
-        else:
-            # Silence execution
-            gnattest_args.append("-q")
-
-        # Append extra arguments specified in the test.yaml file
-        gnattest_args += self.test_env.get("extra_gnattest_args", [])
-
-        # Generate a test harness with tests generated by TGen
-        self.shell(gnattest_args)
-
-        # Get the object directory to be able to build the harness. This assumes
-        # there is no Harness_Dir attribute in the project file.
-        harness_dir = self.test_env.get(
-            "harness_dir",
-            os.path.join(self.working_dir(), "obj", "gnattest", "harness"),
+        # Copy the common test script in the test directory
+        cp(
+            os.path.join(self.shared_dir(), "gnattest_tgen_common", "test.py"),
+            os.path.join(self.working_dir(), self.testfile_name)
         )
-        harness_dir = ""
-        for path in Path(self.working_dir()).rglob('harness'):
-            harness_dir = path
-
-        td_prj = os.path.join(harness_dir, "test_driver.gpr")
-        support_lib_prj = os.path.join(harness_dir, "tgen_support", "tgen_support.gpr")
-        if not os.path.exists(td_prj):
-            raise TestAbortWithError("Could not locate test harness project")
-
-        gprbuild_args = ["gprbuild", f"-P{td_prj}", "-q"]
-
-        # Determine if the test harness needs to be compiled for test dumping mode
-        has_test_dump = "--dump-test-inputs" in gnattest_args
-        if has_test_dump:
-            gprbuild_args += [
-                "--src-subdirs=gnattest-instr",
-                f"--implicit-with={support_lib_prj}",
-            ]
-
-        # Append extra gpbuild args if specified in the test.yaml file
-        gprbuild_args += self.test_env.get("extra_gprbuild_args", [])
-
-        self.shell(gprbuild_args)
-
-        if self.test_env.get("suppress_test_runner_execution", False):
-            return
-
-        # Finally, run the test harness. Do not register failure exit codes as
-        # it is likely that some tests may crash the subprogram under test.
-        td_runner = os.path.join(os.path.dirname(td_prj), "test_runner")
-        self.shell(
-            [td_runner] + self.test_env.get("extra_run_args", []), catch_error=False
-        )
-
-        # Log the number of test files that were created by the test runner, if
-        # test input dumping was enabled.
-        if has_test_dump:
-            num_tests = len(
-                glob(os.path.join(self.working_dir(), "tgen_test_inputs", "*"))
-            )
-            self.output.log += f"Test runner dumped {num_tests} tests\n"
