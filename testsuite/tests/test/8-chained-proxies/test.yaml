@@ -1,3 +1,5 @@
 description: Check that proxy chains are detected by TGen
 
-driver: shell_script
+driver: gnattest_tgen
+
+suppress_test_dump: true

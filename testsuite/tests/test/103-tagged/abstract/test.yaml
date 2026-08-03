@@ -2,4 +2,6 @@ description:
     Test that TGen is able to generate test for an abstract tagged record.
     Currently unsupported.
 
-driver: shell_script
+driver: gnattest_tgen
+
+suppress_test_dump: true
