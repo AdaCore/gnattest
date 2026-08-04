@@ -644,9 +644,8 @@ package body Test.Harness is
          & " is");
       Put_New_Line;
       Add_Switches_And_Default_Switches_From_Source_Prj
-        (Prepend_Switches =>
-           "(""-g"", ""-gnatyM0"", ""-gnatwA"") & Contract_Switches",
-         Append_Switches  => "(""-gnatyN"")",
+        (Prepend_Switches => "(""-g"") & Contract_Switches",
+         Append_Switches  => "(""-gnatyN"", ""-gnatyM0"", ""-gnatwA"")",
          Pkg_Name         => "Compiler",
          Pkg_In_User_Prj  => Compiler_Package_Present);
       S_Put (3, "end Compiler;");
