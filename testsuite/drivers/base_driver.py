@@ -1,6 +1,6 @@
 import os
 
-from typing import Union
+from typing import Any, Union
 
 from e3.fs import sync_tree
 from e3.testsuite.control import YAMLTestControlCreator
@@ -10,6 +10,7 @@ from e3.testsuite.driver.diff import (
     OutputRefiner,
     ReplacePath,
     Substitute,
+    PatternSubstitute
 )
 
 
@@ -18,6 +19,16 @@ class ToLower(OutputRefiner):
 
     def refine(self, output):
         return output.lower()
+
+
+class SuppressTGenLibCheck (PatternSubstitute):
+
+    def __init__(self):
+        super().__init__(
+            pattern="test_driver.gpr: warning: circular library dependency detected"
+            r"((\ntgen_support.gpr: warning: libtgen_support.a depends on \w+.a)"
+            r"|(\n\w+.gpr: warning: \w+.a depends on libtgen_support.a))+\n"
+        )
 
 
 class BaseDriver(DiffTestDriver):
@@ -137,6 +148,10 @@ class BaseDriver(DiffTestDriver):
     @property
     def output_refiners(self):
         result = super().output_refiners + [ReplacePath(self.working_dir())]
+
+        # TODO remove this refiner once gpr_issues#894 is resolved
+        result.append(SuppressTGenLibCheck())
+
         if self.env.fold_casing:
             result.append(ToLower())
         if self.test_env.get("canonicalize_backslashes", False):
