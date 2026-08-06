@@ -1,10 +1,5 @@
-tgen_support.gpr:4:17: warning: there are no sources of language "Ada" in this project
-gprlib: no object files specified
-gprbuild: could not build library for project tgen_support
-Units remaining: 4     
-Units remaining: 3     
-Units remaining: 2     
-Units remaining: 1     
+tgen_support.gpr: warning: there are no sources of language "Ada" in this project
+Units remaining: 4     Units remaining: 3     Units remaining: 2     Units remaining: 1     
 pkh.ads:6:4: info: corresponding test PASSED
 pkh.ads:6:4: info: corresponding test PASSED
 pkh.ads:6:4: info: corresponding test PASSED

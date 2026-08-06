@@ -30,7 +30,7 @@ def print_config_lines(gpr):
 run_gnattest("prj.gpr", ["-q"])
 print_config_lines("obj/gnattest/harness/gnattest_common.gpr")
 
-build_harness("obj/gnattest/harness/test_driver.gpr")
+build_harness("obj/gnattest/harness/test_driver.gpr", ["-q"])
 run_harness("obj/gnattest/harness/test_runner")
 
 # In stub mode the argument project is extended by the generated stub

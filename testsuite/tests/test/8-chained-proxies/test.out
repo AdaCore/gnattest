@@ -1,3 +1,5 @@
+pkg.ads:2:32: warning: "TGen_Proxy" is not a valid aspect identifier [enabled by default]
+pkg.ads:3:32: warning: "TGen_Proxy" is not a valid aspect identifier [enabled by default]
 implicit.ads:6:4: info: corresponding test PASSED
 implicit.ads:6:4: info: corresponding test PASSED
 implicit.ads:6:4: info: corresponding test PASSED

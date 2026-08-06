@@ -1,3 +1,4 @@
+pkg.ads:1:30: warning: "Ada.Strings.Text_Buffers.Utils" is an Ada 2022 unit [-gnatwi]
 pkg.ads:7:4: info: corresponding test PASSED
 pkg.ads:7:4: info: corresponding test PASSED
 pkg.ads:7:4: info: corresponding test PASSED

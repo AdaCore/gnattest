@@ -4,6 +4,6 @@ project User_Project is
    for Object_Dir use "obj";
    package Compiler is
       for Switches ("Ada") use
-        ("-gnatwI", "-g", "-gnat2022", "-gnatf", "-gnatwa");
+        ("-gnatwA", "-g", "-gnat2022", "-gnatf");
    end Compiler;
 end User_Project;
