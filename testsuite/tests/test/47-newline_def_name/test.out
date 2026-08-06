@@ -1,43 +1,4 @@
 Units remaining: 6     Units remaining: 5     Units remaining: 4     Units remaining: 3     Units remaining: 2     Units remaining: 1     
-Compile
-   [Ada]          stubbed-test_data-tests-suite-test_runner.adb
-   [Ada]          stubbed-child-test_data-tests-suite-test_runner.adb
-   [Ada]          pkg-test_data-tests-suite-test_runner.adb
-   [Ada]          gnattest_generated.ads
-   [Ada]          gnattest_generated-persistent.adb
-   [Ada]          stubbed-test_data-tests-suite.adb
-   [Ada]          gnattest_generated.ads
-   [Ada]          gnattest_generated-persistent.adb
-   [Ada]          stubbed-child-test_data-tests-suite.adb
-   [Ada]          gnattest_generated.ads
-   [Ada]          gnattest_generated-persistent.adb
-   [Ada]          pkg-test_data-tests-suite.adb
-   [Ada]          stubbed-test_data-tests.adb
-   [Ada]          stubbed-child-test_data-tests.adb
-   [Ada]          pkg-test_data-tests.adb
-   [Ada]          stubbed-test_data.adb
-   [Ada]          stubbed.adb
-   [Ada]          stubbed-child-test_data.adb
-   [Ada]          stubbed-stub_data.adb
-   [Ada]          pkg-test_data.adb
-   [Ada]          stubbed.adb
-   [Ada]          stubbed-child.adb
-   [Ada]          stubbed-child-stub_data.adb
-   [Ada]          stubbed-stub_data.adb
-   [Ada]          stubbed.adb
-   [Ada]          stubbed-child.adb
-   [Ada]          pkg.adb
-Bind
-   [gprbind]      stubbed-test_data-tests-suite-test_runner.bexch
-   [Ada]          stubbed-test_data-tests-suite-test_runner.ali
-   [gprbind]      stubbed-child-test_data-tests-suite-test_runner.bexch
-   [Ada]          stubbed-child-test_data-tests-suite-test_runner.ali
-   [gprbind]      pkg-test_data-tests-suite-test_runner.bexch
-   [Ada]          pkg-test_data-tests-suite-test_runner.ali
-Link
-   [link]         stubbed-test_data-tests-suite-test_runner.adb
-   [link]         stubbed-child-test_data-tests-suite-test_runner.adb
-   [link]         pkg-test_data-tests-suite-test_runner.adb
 pkg.ads:3:4: error: corresponding test FAILED: Test not implemented. (pkg-test_data-tests.adb:49)
 stubbed-child.ads:5:4: error: corresponding test FAILED: Test not implemented. (stubbed-child-test_data-tests.adb:45)
 stubbed.ads:3:4: error: corresponding test FAILED: Test not implemented. (stubbed-test_data-tests.adb:44)

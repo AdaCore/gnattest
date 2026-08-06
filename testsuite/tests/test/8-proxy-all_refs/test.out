@@ -3,27 +3,6 @@ pkg.print_int_acc.Acc: pkg.int_acc is not supported (Access types are not suppor
 
 Units remaining: 4     Units remaining: 3     Units remaining: 2     Units remaining: 1     
 Units remaining: 4     Units remaining: 3     Units remaining: 2     Units remaining: 1     
-Compile
-   [Ada]          test_runner.adb
-   [Ada]          gnattest_generated.ads
-   [Ada]          gnattest_generated-mapping.adb
-   [Ada]          gnattest_generated-persistent.adb
-   [Ada]          gnattest_main_suite.adb
-   [Ada]          pkg-test_data.adb
-   [Ada]          pkg-test_data-test_print_int_acc_0d0978.adb
-   [Ada]          pkg-test_data-test_print_int_acc_0d0978-suite.adb
-   [Ada]          pkg-test_data-tests.adb
-   [Ada]          pkg-test_data-tests-suite.adb
-   [Ada]          pkh-test_data.adb
-   [Ada]          pkh-test_data-test_access_it_c88918.adb
-   [Ada]          pkh-test_data-test_access_it_c88918-suite.adb
-   [Ada]          pkh-test_data-tests.adb
-   [Ada]          pkh-test_data-tests-suite.adb
-Bind
-   [gprbind]      test_runner.bexch
-   [Ada]          test_runner.ali
-Link
-   [link]         test_runner.adb
 pkg.ads:7:4: info: corresponding test PASSED
 pkg.ads:7:4: info: corresponding test PASSED
 pkg.ads:7:4: info: corresponding test PASSED

@@ -3,24 +3,6 @@ with "../../../prj.gpr";
    package Linker extends prj.Linker is
    package Binder extends prj.Binder is
    package Compiler extends prj.Compiler is
-Compile
-   [Ada]          test_runner.adb
-   [Ada]          gnattest_generated.ads
-   [Ada]          gnattest_generated-mapping.adb
-gnattest_generated-mapping.ads:29:37: warning: array aggregate using () is an obsolescent syntax, use [] instead [-gnatwj]
-   [Ada]          gnattest_generated-persistent.adb
-   [Ada]          gnattest_main_suite.adb
-   [Ada]          pkg.adb
-   [Ada]          pkg-test_data.adb
-   [Ada]          pkg-test_data-tests.adb
-pkg-test_data-tests.adb:9:12: warning: unit "System.Assertions" is not referenced [-gnatwu]
-   [Ada]          pkg-test_data-tests-suite.adb
-pkg-test_data-tests-suite.adb:8:11: warning: no entities of "AUnit.Test_Info" are referenced [-gnatwu]
-Bind
-   [gprbind]      test_runner.bexch
-   [Ada]          test_runner.ali
-Link
-   [link]         test_runner.adb
 pkg.ads:11:4: error: corresponding test FAILED: Test not implemented. (pkg-test_data-tests.adb:44)
 1 tests run: 0 passed; 1 failed; 0 crashed.
 === stub mode ===

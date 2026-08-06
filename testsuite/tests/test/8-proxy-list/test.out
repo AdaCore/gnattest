@@ -1,3 +1,4 @@
+lists.ads:6:11: warning: "TGen_Proxy" is not a valid aspect identifier [enabled by default]
 lists.ads:17:4: info: corresponding test PASSED
 lists.ads:17:4: info: corresponding test PASSED
 lists.ads:17:4: info: corresponding test PASSED
