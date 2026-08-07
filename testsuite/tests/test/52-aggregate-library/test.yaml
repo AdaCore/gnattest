@@ -1,0 +1,6 @@
+description: Check that gnattest processes an aggregate library root project as
+  a regular project, generating a single harness in its object directory.
+
+driver: python_script
+control:
+  - [SKIP, 'not native', 'Test not designed for cross applications']
