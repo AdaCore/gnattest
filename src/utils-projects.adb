@@ -231,6 +231,27 @@ package body Utils.Projects is
       return Result;
    end To_File_Array;
 
+   ----------------------
+   -- Console_Reporter --
+   ----------------------
+
+   function Console_Reporter
+     (Quiet, Verbose : Boolean) return GPR2.Reporter.Console.Object is
+   begin
+      return
+        GPR2.Reporter.Console.Create
+          (Verbosity      =>
+             (if Verbose
+              then GPR2.Reporter.Verbose
+              else GPR2.Reporter.Regular),
+           User_Verbosity =>
+             (if Quiet
+              then GPR2.Reporter.Important_Only
+              elsif Verbose
+              then GPR2.Reporter.Verbose
+              else GPR2.Reporter.Unset));
+   end Console_Reporter;
+
    -----------------------
    -- Load_Project_File --
    -----------------------
@@ -295,6 +316,9 @@ package body Utils.Projects is
       if not Tree.Load
                (Opts,
                 With_Runtime         => True,
+                Reporter             =>
+                  Console_Reporter
+                    (Quiet => Arg (Cmd, Quiet), Verbose => Arg (Cmd, Verbose)),
                 Artifacts_Info_Level => GPR2.Sources_Units,
                 Absent_Dir_Error     => GPR2.No_Error,
                 Check_Drivers        => False)

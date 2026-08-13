@@ -36,6 +36,7 @@ with GPR2.Project.Attribute_Index;
 with GPR2.Project.Registry.Attribute;
 with GPR2.Project.Tree;
 with GPR2.Project.View;
+with GPR2.Reporter.Console;
 
 with Test.Common;
 with Utils.Command_Lines; use Utils.Command_Lines;
@@ -144,6 +145,12 @@ package Utils.Projects is
 
    function Project_Tree return GPR2.Project.Tree.Object;
    --  Return the loaded project tree.
+
+   function Console_Reporter
+     (Quiet, Verbose : Boolean) return GPR2.Reporter.Console.Object;
+   --  Console reporter mapping gnattest's -q and -v onto GPR2 verbosity.
+   --  Only the end-user message level follows -q: GPR2 errors and warnings
+   --  must stay visible in quiet mode.
 
    function Load_Project_File
      (Cmd : Command_Line; Project_File : String)

@@ -53,6 +53,7 @@ with Test.Subprocess;
 
 with Utils.Command_Lines;    use Utils.Command_Lines;
 with Utils.Environment;
+with Utils.Projects;
 with Utils.String_Utilities; use Utils.String_Utilities;
 with Utils.Tool_Names;
 with Utils_Debug;
@@ -349,6 +350,9 @@ package body Test.Setup is
       if not Tree.Load
                (Opt,
                 With_Runtime     => True,
+                Reporter         =>
+                  Utils.Projects.Console_Reporter
+                    (Quiet => Opts.Quiet, Verbose => Opts.Verbose),
                 Absent_Dir_Error => GPR2.No_Error,
                 Check_Drivers    => False)
         or else not Tree.Has_Configuration
