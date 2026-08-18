@@ -6,6 +6,9 @@ stages:
 
 variables:
   GNATFORMAT_DATE: 20251130
+  # Set to --build-date=YYYYMMDD on a day where there is a QA incident so that
+  # the CI works with components from a previous date
+  ANOD_BUILD_DATE_ARG: "--build-date=20260813"
 
 include:
   # Issue check
@@ -25,7 +28,8 @@ include:
     inputs:
       stage: build
       job-name: instrumented-build
-      anod-args: run build
+      anod-args: run build $ANOD_BUILD_DATE_ARG
+      anod-latest: false
       cpus: 16
       image: pe-base
       save-component: true
@@ -36,7 +40,8 @@ include:
     inputs:
       needs: ["instrumented-build:linux"]
       job-name: gnattest
-      anod-args: run test_native
+      anod-args: run test_native $ANOD_BUILD_DATE_ARG
+      anod-latest: false
       image: pe-base
       cpus: 16
       disk: 80
@@ -46,7 +51,8 @@ include:
     inputs:
       needs: ["instrumented-build:linux"]
       job-name: gnattest-cross-light
-      anod-args: run test_cross_light
+      anod-args: run test_cross_light $ANOD_BUILD_DATE_ARG
+      anod-latest: false
       image: pe-base
       cpus: 16
       disk: 80
@@ -56,7 +62,8 @@ include:
     inputs:
       needs: ["instrumented-build:linux"]
       job-name: gnattest-cross-embedded
-      anod-args: run test_cross_embedded
+      anod-args: run test_cross_embedded $ANOD_BUILD_DATE_ARG
+      anod-latest: false
       image: pe-base
       cpus: 16
       disk: 80
@@ -68,7 +75,8 @@ include:
   - component: $CI_SERVER_FQDN/eng/gitlab-templates/build@~latest
     inputs:
       stage: test
-      anod-args: build gnattest
+      anod-args: build gnattest $ANOD_BUILD_DATE_ARG
+      anod-latest: false
       linux: true
       cpus: 8
       disk: 80
@@ -81,7 +89,8 @@ include:
     inputs:
       needs: ["instrumented-build:linux"]
       job-name: gnattest-gnatfuzz
-      anod-args: run test_gnatfuzz_tests
+      anod-args: run test_gnatfuzz_tests $ANOD_BUILD_DATE_ARG
+      anod-latest: false
       image: pe-base
       cpus: 8
       disk: 80
