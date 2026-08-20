@@ -72,6 +72,8 @@ with Utils.Projects;             use Utils.Projects;
 with Utils.String_Utilities;
 
 package body Test.Skeleton is
+   Dir_Sep : Character renames GNAT.OS_Lib.Directory_Separator;
+
    Me                : constant Trace_Handle :=
      Create ("Skeletons", Default => Off);
    Me_Direct_Callees : constant Trace_Handle :=
@@ -3686,7 +3688,6 @@ package body Test.Skeleton is
    -------------------------------
 
    procedure Generate_Nested_Hierarchy (Data : Data_Holder) is
-      use GNAT.OS_Lib;
       Cur        : Package_Info_List.Cursor := Data.Package_Data_List.First;
       Output_Dir : constant String :=
         Get_Source_Output_Dir
@@ -3711,7 +3712,7 @@ package body Test.Skeleton is
             if Data.Unit_Full_Name.all /= S then
                Create
                  (Output_Dir
-                  & Directory_Separator
+                  & Dir_Sep
                   & Unit_To_File_Name (S_Pack)
                   & Spec_Suffix.all);
 
@@ -3734,7 +3735,7 @@ package body Test.Skeleton is
          declare
             File_Name : constant String :=
               Output_Dir
-              & GNAT.OS_Lib.Directory_Separator
+              & Dir_Sep
               & (+(GNATCOLL.VFS.Create
                      (+Unit_To_File_Name (Data.Unit_Full_Name.all))
                      .Base_Name))
@@ -4170,17 +4171,11 @@ package body Test.Skeleton is
          Test_Data_Package_Name := new String'(Data_Unit_Name.all);
 
          if not Is_Regular_File
-                  (Output_Dir
-                   & Directory_Separator
-                   & Test_File_Name.all
-                   & Spec_Suffix.all)
+                  (Output_Dir & Dir_Sep & Test_File_Name.all & Spec_Suffix.all)
          then
 
             Create
-              (Output_Dir
-               & Directory_Separator
-               & Test_File_Name.all
-               & Spec_Suffix.all);
+              (Output_Dir & Dir_Sep & Test_File_Name.all & Spec_Suffix.all);
 
             Put_Test_Data_Header;
 
@@ -4461,16 +4456,13 @@ package body Test.Skeleton is
          if not Current_Type.Main_Type_Abstract
            and then not Is_Regular_File
                           (Output_Dir
-                           & Directory_Separator
+                           & Dir_Sep
                            & Test_File_Name.all
                            & Body_Suffix.all)
          then
 
             Create
-              (Output_Dir
-               & Directory_Separator
-               & Test_File_Name.all
-               & Body_Suffix.all);
+              (Output_Dir & Dir_Sep & Test_File_Name.all & Body_Suffix.all);
 
             Put_Test_Data_Header;
 
@@ -4801,11 +4793,7 @@ package body Test.Skeleton is
          --  Creating test package spec  --
          ----------------------------------
 
-         Create
-           (Output_Dir
-            & Directory_Separator
-            & Test_File_Name.all
-            & Spec_Suffix.all);
+         Create (Output_Dir & Dir_Sep & Test_File_Name.all & Spec_Suffix.all);
 
          Put_Harness_Header;
          S_Put (0, GT_Marker_Begin);
@@ -4959,10 +4947,7 @@ package body Test.Skeleton is
             Reset_Line_Counter;
 
             Get_Subprograms_From_Package
-              (Output_Dir
-               & Directory_Separator
-               & Test_File_Name.all
-               & Body_Suffix.all);
+              (Output_Dir & Dir_Sep & Test_File_Name.all & Body_Suffix.all);
             Create (Tmp_File_Name);
             Put_TP_Header (Test_Data_Package_Name.all);
 
@@ -4993,7 +4978,7 @@ package body Test.Skeleton is
 
                      Get_Subprogram_From_Separate
                        (Output_Dir
-                        & Directory_Separator
+                        & Dir_Sep
                         & Unit_To_File_Name
                             (Unit_Name.all
                              & "."
@@ -5586,14 +5571,14 @@ package body Test.Skeleton is
                  (if Test.Common.Instrument
                   then
                     Harness_Dir_Str.all
-                    & Directory_Separator
+                    & Dir_Sep
                     & "test_obj"
-                    & Directory_Separator
+                    & Dir_Sep
                     & Test_Prj_Prefix
                     & To_Lower (String (Project_Tree.Root_Project.Name))
                     & Instr_Suffix
                   else Output_Dir)
-                 & Directory_Separator
+                 & Dir_Sep
                  & Test_File_Name.all
                  & Body_Suffix.all;
                Success     : Boolean;
@@ -5673,16 +5658,10 @@ package body Test.Skeleton is
 
          --  Generating simple test data package spec
          if not Is_Regular_File
-                  (Output_Dir
-                   & Directory_Separator
-                   & Test_File_Name.all
-                   & Spec_Suffix.all)
+                  (Output_Dir & Dir_Sep & Test_File_Name.all & Spec_Suffix.all)
          then
             Create
-              (Output_Dir
-               & Directory_Separator
-               & Test_File_Name.all
-               & Spec_Suffix.all);
+              (Output_Dir & Dir_Sep & Test_File_Name.all & Spec_Suffix.all);
 
             Put_Test_Data_Header;
 
@@ -5796,16 +5775,10 @@ package body Test.Skeleton is
          end if;
 
          if not Is_Regular_File
-                  (Output_Dir
-                   & Directory_Separator
-                   & Test_File_Name.all
-                   & Body_Suffix.all)
+                  (Output_Dir & Dir_Sep & Test_File_Name.all & Body_Suffix.all)
          then
             Create
-              (Output_Dir
-               & Directory_Separator
-               & Test_File_Name.all
-               & Body_Suffix.all);
+              (Output_Dir & Dir_Sep & Test_File_Name.all & Body_Suffix.all);
 
             Put_Test_Data_Header;
 
@@ -5992,11 +5965,7 @@ package body Test.Skeleton is
          Actual_Test := False;
 
          --  Generating simple test package spec.
-         Create
-           (Output_Dir
-            & Directory_Separator
-            & Test_File_Name.all
-            & Spec_Suffix.all);
+         Create (Output_Dir & Dir_Sep & Test_File_Name.all & Spec_Suffix.all);
 
          Put_Harness_Header;
          S_Put (0, GT_Marker_Begin);
@@ -6110,10 +6079,7 @@ package body Test.Skeleton is
          if Actual_Test then
 
             Get_Subprograms_From_Package
-              (Output_Dir
-               & Directory_Separator
-               & Test_File_Name.all
-               & Body_Suffix.all);
+              (Output_Dir & Dir_Sep & Test_File_Name.all & Body_Suffix.all);
 
             --  updating hash v2 to v2.1 and change TC hash to TC names
             Subp_Cur := Subp_List.First;
@@ -6183,7 +6149,7 @@ package body Test.Skeleton is
 
                      Get_Subprogram_From_Separate
                        (Output_Dir
-                        & Directory_Separator
+                        & Dir_Sep
                         & Unit_To_File_Name
                             (Unit_Name.all
                              & "."
@@ -6756,14 +6722,14 @@ package body Test.Skeleton is
                  (if Test.Common.Instrument
                   then
                     Harness_Dir_Str.all
-                    & Directory_Separator
+                    & Dir_Sep
                     & "test_obj"
-                    & Directory_Separator
+                    & Dir_Sep
                     & Test_Prj_Prefix
                     & To_Lower (String (Project_Tree.Root_Project.Name))
                     & Instr_Suffix
                   else Output_Dir)
-                 & Directory_Separator
+                 & Dir_Sep
                  & Test_File_Name.all
                  & Body_Suffix.all;
                Success     : Boolean;
@@ -9051,7 +9017,7 @@ package body Test.Skeleton is
       Output_Prj :=
         new String'
           (Harness_Dir_Str.all
-           & Directory_Separator
+           & Dir_Sep
            & Test_Prj_Prefix
            & Source_Prj_Name
            & ".gpr");
@@ -9064,11 +9030,7 @@ package body Test.Skeleton is
       S_Put (0, "with ""gnattest_common.gpr"";");
       Put_New_Line;
       if Get_Lib_Support_Status in Needed | Generated then
-         S_Put
-           (0,
-            "with ""tgen_support"
-            & GNAT.OS_Lib.Directory_Separator
-            & "tgen_support.gpr"";");
+         S_Put (0, "with ""tgen_support" & Dir_Sep & "tgen_support.gpr"";");
          Put_New_Line;
          S_Put (0, "with ""tgen_rts.gpr"";");
       end if;
@@ -9128,7 +9090,7 @@ package body Test.Skeleton is
       Put_New_Line;
       declare
          Obj_Dir : constant String :=
-           Harness_Dir_Str.all & Directory_Separator & "test_obj";
+           Harness_Dir_Str.all & Dir_Sep & "test_obj";
          Dir     : File_Array_Access;
       begin
          Append (Dir, GNATCOLL.VFS.Create (+Obj_Dir));
@@ -9215,13 +9177,13 @@ package body Test.Skeleton is
                   Test.Stub.Process_Unit
                     (Node,
                      Get_Source_Stub_Dir (Str.all)
-                     & GNAT.OS_Lib.Directory_Separator
+                     & Dir_Sep
                      & Base_Name (Get_Source_Body (Str.all)),
                      Get_Source_Stub_Dir (Str.all)
-                     & GNAT.OS_Lib.Directory_Separator
+                     & Dir_Sep
                      & Get_Source_Stub_Data_Spec (Str.all),
                      Get_Source_Stub_Dir (Str.all)
-                     & GNAT.OS_Lib.Directory_Separator
+                     & Dir_Sep
                      & Get_Source_Stub_Data_Body (Str.all));
                   Stub_Success := True;
 

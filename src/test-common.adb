@@ -42,6 +42,9 @@ with Utils.Tool_Names;
 with Utils.String_Utilities;
 
 package body Test.Common is
+   package GOL renames GNAT.OS_Lib;
+
+   Dir_Sep : Character renames GOL.Directory_Separator;
 
    Me_Hash : constant Trace_Handle := Create ("Hash", Default => Off);
    Me_Stub : constant Trace_Handle := Create ("Stubs", Default => Off);
@@ -56,7 +59,6 @@ package body Test.Common is
 
    procedure Create_Dirs (Target_Dirs : File_Array_Access) is
       First : Integer;
-      use GNAT.OS_Lib;
    begin
       for J in Target_Dirs'Range loop
          declare
@@ -65,15 +67,13 @@ package body Test.Common is
          begin
             First := Target_Dir'First;
 
-            if Is_Regular_File (Target_Dir) then
+            if GOL.Is_Regular_File (Target_Dir) then
                Cmd_Error_No_Help ("gnattest: cannot create dir " & Target_Dir);
             end if;
 
             for Idx in Target_Dir'Range loop
-               if Target_Dir (Idx) = Directory_Separator
-                 or else Idx = Target_Dir'Last
-               then
-                  if not Is_Directory (Target_Dir (First .. Idx)) then
+               if Target_Dir (Idx) = Dir_Sep or else Idx = Target_Dir'Last then
+                  if not GOL.Is_Directory (Target_Dir (First .. Idx)) then
                      begin
                         Make_Dir (Target_Dir (First .. Idx));
                      exception
@@ -940,17 +940,16 @@ package body Test.Common is
       Persistent_Package_Name : constant String :=
         Common_Package_Name & ".Persistent";
       Common_File_Subdir      : constant String :=
-        Harness_Dir.all & GNAT.OS_Lib.Directory_Separator & "common";
+        Harness_Dir.all & Dir_Sep & "common";
 
-      use GNAT.OS_Lib;
    begin
-      if not Is_Directory (Common_File_Subdir) then
+      if not GOL.Is_Directory (Common_File_Subdir) then
          Make_Dir (Common_File_Subdir);
       end if;
 
       Create
         (Common_File_Subdir
-         & Directory_Separator
+         & Dir_Sep
          & Unit_To_File_Name (Common_Package_Name)
          & Spec_Suffix.all);
 
@@ -972,16 +971,16 @@ package body Test.Common is
       declare
          Persistent_File_Name_Spec : constant String :=
            Common_File_Subdir
-           & Directory_Separator
+           & Dir_Sep
            & Unit_To_File_Name (Persistent_Package_Name)
            & Spec_Suffix.all;
          Persistent_File_Name_Body : constant String :=
            Common_File_Subdir
-           & Directory_Separator
+           & Dir_Sep
            & Unit_To_File_Name (Persistent_Package_Name)
            & Body_Suffix.all;
       begin
-         if not Is_Regular_File (Persistent_File_Name_Spec) then
+         if not GOL.Is_Regular_File (Persistent_File_Name_Spec) then
             Create (Persistent_File_Name_Spec);
             S_Put (0, "package " & Persistent_Package_Name & " is");
             Put_New_Line;
@@ -993,7 +992,7 @@ package body Test.Common is
             Put_New_Line;
             Close_File;
          end if;
-         if not Is_Regular_File (Persistent_File_Name_Body) then
+         if not GOL.Is_Regular_File (Persistent_File_Name_Body) then
             Create (Persistent_File_Name_Body);
             S_Put (0, "package body " & Persistent_Package_Name & " is");
             Put_New_Line;
@@ -1414,9 +1413,7 @@ package body Test.Common is
    is
    begin
       Preprocessor_Config.Write_Preprocessor_Data_File
-        (Preprocessor_Config_Dir
-         & GNAT.OS_Lib.Directory_Separator
-         & Preprocessor_File_Name,
+        (Preprocessor_Config_Dir & Dir_Sep & Preprocessor_File_Name,
          Preprocessor_Config_Dir);
 
       S_Put (3, "package Compiler extends Gnattest_Common.Compiler is");
@@ -1431,7 +1428,7 @@ package body Test.Common is
            (12,
             "& (""-gnatep="
             & Preprocessor_Config_Dir
-            & GNAT.OS_Lib.Directory_Separator
+            & Dir_Sep
             & Test.Common.Preprocessor_File_Name
             & """)");
       end if;

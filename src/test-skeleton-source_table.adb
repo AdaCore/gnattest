@@ -42,6 +42,7 @@ with GPR2.Project.View;
 with Utils.Projects; use Utils.Projects;
 
 package body Test.Skeleton.Source_Table is
+   Dir_Sep : Character renames GNAT.OS_Lib.Directory_Separator;
 
    Me         : constant Trace_Handle :=
      Create ("Skeletons.Sources", Default => Off);
@@ -390,7 +391,7 @@ package body Test.Skeleton.Source_Table is
             New_SF_Record.Inst_Dir :=
               new String'
                 (P.Object_Directory.String_Value
-                 & Directory_Separator
+                 & Dir_Sep
                  & To_Lower (String (P.Name))
                  & Instr_Suffix);
 
@@ -554,7 +555,7 @@ package body Test.Skeleton.Source_Table is
          New_SF_Record.Inst_Dir :=
            new String'
              (P.Object_Directory.String_Value
-              & Directory_Separator
+              & Dir_Sep
               & To_Lower (String (P.Name))
               & Instr_Suffix);
       end;
@@ -785,18 +786,15 @@ package body Test.Skeleton.Source_Table is
             PR.Path := new String'(View.Path_Name.String_Value);
             if Is_Absolute_Path (Stub_Dir_Name.all) then
                PR.Stub_Dir :=
-                 new String'
-                   (Stub_Dir_Name.all
-                    & Directory_Separator
-                    & String (View.Name));
+                 new String'(Stub_Dir_Name.all & Dir_Sep & String (View.Name));
             elsif View.Kind in With_Object_Dir_Kind then
                PR.Stub_Dir :=
                  new String'
                    (Normalize_Pathname
                       (View.Object_Directory.String_Value
-                       & Directory_Separator
+                       & Dir_Sep
                        & Stub_Dir_Name.all
-                       & Directory_Separator
+                       & Dir_Sep
                        & String (View.Name),
                        Resolve_Links  => False,
                        Case_Sensitive => False));
@@ -1206,8 +1204,7 @@ package body Test.Skeleton.Source_Table is
          Tmp_Str := new String'(Dir_Name (SF_Rec.Full_Source_Name.all));
 
          SF_Rec.Test_Destination :=
-           new String'
-             (Tmp_Str.all & Test_Subdir_Name.all & Directory_Separator);
+           new String'(Tmp_Str.all & Test_Subdir_Name.all & Dir_Sep);
 
          Replace (SF_Table, SF_Rec_Key.all, SF_Rec);
          Free (SF_Rec_Key);
@@ -1244,7 +1241,7 @@ package body Test.Skeleton.Source_Table is
          SF_Rec.Test_Destination :=
            new String'
              (Separate_Root_Dir.all
-              & Directory_Separator
+              & Dir_Sep
               & Tmp_Str.all (Idx .. Tmp_Str.all'Last));
 
          Replace (SF_Table, SF_Rec_Key.all, SF_Rec);
@@ -1279,7 +1276,7 @@ package body Test.Skeleton.Source_Table is
             SF_Rec.Test_Destination :=
               new String'
                 (View.Object_Directory.String_Value
-                 & Directory_Separator
+                 & Dir_Sep
                  & Test_Dir_Name.all);
          end if;
 
@@ -1309,16 +1306,15 @@ package body Test.Skeleton.Source_Table is
 
          if TD_Name.Is_Absolute_Path then
             SF_Rec.Stub_Destination :=
-              new String'
-                (Stub_Dir_Name.all & Directory_Separator & String (View.Name));
+              new String'(Stub_Dir_Name.all & Dir_Sep & String (View.Name));
          else
             SF_Rec.Stub_Destination :=
               new String'
                 (Normalize_Pathname
                    (View.Object_Directory.String_Value
-                    & Directory_Separator
+                    & Dir_Sep
                     & Stub_Dir_Name.all
-                    & Directory_Separator
+                    & Dir_Sep
                     & String (View.Name),
                     Resolve_Links  => False,
                     Case_Sensitive => False));
@@ -1426,7 +1422,7 @@ package body Test.Skeleton.Source_Table is
                  (F,
                   GNATCOLL.VFS.Create
                     (+(Arg_Proj.Stub_Dir.all
-                       & Directory_Separator
+                       & Dir_Sep
                        & Unit_To_File_Name
                            (Stub_Project_Prefix & Current_Infix & Proj))));
 
@@ -1435,7 +1431,7 @@ package body Test.Skeleton.Source_Table is
                     (F,
                      GNATCOLL.VFS.Create
                        (+(Arg_Proj.Stub_Dir.all
-                          & Directory_Separator
+                          & Dir_Sep
                           & Unit_To_File_Name
                               (Stub_Project_Prefix
                                & Current_Infix
@@ -1455,12 +1451,12 @@ package body Test.Skeleton.Source_Table is
               (Me,
                "Creating "
                & Arg_Proj.Stub_Dir.all
-               & Directory_Separator
+               & Dir_Sep
                & Unit_To_File_Name (Stub_Project_Prefix & Current_Infix & Proj)
                & ".gpr");
             Create
               (Arg_Proj.Stub_Dir.all
-               & Directory_Separator
+               & Dir_Sep
                & Unit_To_File_Name (Stub_Project_Prefix & Current_Infix & Proj)
                & ".gpr");
 
@@ -1476,7 +1472,7 @@ package body Test.Skeleton.Source_Table is
                   declare
                      Imported_Sub_Project : constant String :=
                        PF_Table.Constant_Reference (P).Stub_Dir.all
-                       & Directory_Separator
+                       & Dir_Sep
                        & To_Lower (Stub_Project_Prefix & Current_Infix & P)
                        & ".gpr";
                   begin

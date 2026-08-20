@@ -82,6 +82,8 @@ with Utils_Debug;
 
 package body Test.Actions is
 
+   Dir_Sep : Character renames GNAT.OS_Lib.Directory_Separator;
+
    procedure Process_Stub_List
      (Value        : String;
       Status       : Test.Common.Stub_Status_Type;
@@ -950,19 +952,19 @@ package body Test.Actions is
          if not Tests_Dir_Set then
             Free (Test.Common.Test_Dir_Name);
             Test.Common.Test_Dir_Name :=
-              new String'("gnattest_stub" & Directory_Separator & "tests");
+              new String'("gnattest_stub" & Dir_Sep & "tests");
          end if;
 
          if not Stub_Dir_Set then
             Free (Test.Common.Stub_Dir_Name);
             Test.Common.Stub_Dir_Name :=
-              new String'("gnattest_stub" & Directory_Separator & "stubs");
+              new String'("gnattest_stub" & Dir_Sep & "stubs");
          end if;
 
          if not Harness_Dir_Set then
             Free (Test.Common.Harness_Dir_Str);
             Test.Common.Harness_Dir_Str :=
-              new String'("gnattest_stub" & Directory_Separator & "harness");
+              new String'("gnattest_stub" & Dir_Sep & "harness");
          end if;
 
          Test.Skeleton.Source_Table.Initialize_Project_Table;
@@ -1024,19 +1026,17 @@ package body Test.Actions is
            new String'
              (Normalize_Pathname
                 (Tmp.all, Resolve_Links => False, Case_Sensitive => False)
-              & Directory_Separator);
+              & Dir_Sep);
          Free (Tmp);
       else
          Tmp := Test.Common.Harness_Dir_Str;
          Test.Common.Harness_Dir_Str :=
            new String'
              (Normalize_Pathname
-                (Root_Prj.Object_Directory.String_Value
-                 & Directory_Separator
-                 & Tmp.all,
+                (Root_Prj.Object_Directory.String_Value & Dir_Sep & Tmp.all,
                  Resolve_Links  => False,
                  Case_Sensitive => False)
-              & Directory_Separator);
+              & Dir_Sep);
          Free (Tmp);
       end if;
 
@@ -1046,7 +1046,7 @@ package body Test.Actions is
                (Dir.String_Value,
                 Resolve_Links  => False,
                 Case_Sensitive => False)
-             & Directory_Separator
+             & Dir_Sep
          then
             Cmd_Error_No_Help
               ("invalid harness directory, cannot mix up "
@@ -1104,9 +1104,9 @@ package body Test.Actions is
               (F,
                GNATCOLL.VFS.Create
                  (+(Test.Common.Harness_Dir_Str.all
-                    & Directory_Separator
+                    & Dir_Sep
                     & "test_obj"
-                    & Directory_Separator
+                    & Dir_Sep
                     & Test.Common.Test_Prj_Prefix
                     & To_Lower (Project_Tree.Root_Project.Name)
                     & Test.Common.Instr_Suffix)));
@@ -1129,7 +1129,7 @@ package body Test.Actions is
             Test.Common.JSON_Test_Dir :=
               new String'
                 (Ada.Directories.Current_Directory
-                 & GNAT.OS_Lib.Directory_Separator
+                 & Dir_Sep
                  & Arg (Cmd, Serialized_Test_Dir).all);
          else
             Test.Common.JSON_Test_Dir :=
@@ -1140,9 +1140,7 @@ package body Test.Actions is
             Test.Common.JSON_Test_Dir :=
               new String'
                 (Normalize_Pathname
-                   (Test.Common.Test_Dir_Name.all
-                    & Directory_Separator
-                    & "JSON_Tests",
+                   (Test.Common.Test_Dir_Name.all & Dir_Sep & "JSON_Tests",
                     Resolve_Links  => False,
                     Case_Sensitive => False));
          else
@@ -1150,9 +1148,9 @@ package body Test.Actions is
               new String'
                 (Normalize_Pathname
                    (Root_Prj.Object_Directory.String_Value
-                    & Directory_Separator
+                    & Dir_Sep
                     & Test.Common.Test_Dir_Name.all
-                    & Directory_Separator
+                    & Dir_Sep
                     & "JSON_Tests",
                     Resolve_Links  => False,
                     Case_Sensitive => False));
@@ -1201,11 +1199,11 @@ package body Test.Actions is
              (Containing_Directory
                 (Containing_Directory
                    (GNAT.OS_Lib.Locate_Exec_On_Path ("gnattest").all))
-              & GNAT.OS_Lib.Directory_Separator
+              & Dir_Sep
               & "share"
-              & GNAT.OS_Lib.Directory_Separator
+              & Dir_Sep
               & "tgen"
-              & GNAT.OS_Lib.Directory_Separator
+              & Dir_Sep
               & "templates"),
            Proxy_Detection    => Test.Common.TGen_Proxy_Search,
            Relevant_Units     => Get_All_Units'Access);
@@ -1949,7 +1947,7 @@ package body Test.Actions is
                   GNATCOLL.VFS.Create
                     (GNATCOLL.VFS."+"
                        (View.Object_Directory.String_Value
-                        & Directory_Separator
+                        & Dir_Sep
                         & Test_Dir_Name.all)));
             end if;
          end loop;
@@ -2068,9 +2066,7 @@ package body Test.Actions is
          end if;
 
          loop
-            if Left (Idxl) = Directory_Separator
-              and then Right (Idxr) = Directory_Separator
-            then
+            if Left (Idxl) = Dir_Sep and then Right (Idxr) = Dir_Sep then
                Last_Dir_Sep_Index := Idxl;
             end if;
 
@@ -2148,7 +2144,7 @@ package body Test.Actions is
               (Future_Dirs,
                GNATCOLL.VFS.Create
                  (+(Separate_Root_Dir.all
-                    & Directory_Separator
+                    & Dir_Sep
                     & Tmp.all (Root_Length + 1 .. Tmp.all'Last))));
 
             Free (Tmp);
@@ -2258,7 +2254,7 @@ package body Test.Actions is
                 (Normalize_Pathname
                    (Name           =>
                       View.Object_Directory.String_Value
-                      & Directory_Separator
+                      & Dir_Sep
                       & Separate_Root_Dir.all,
                     Case_Sensitive => False));
 
@@ -2274,13 +2270,13 @@ package body Test.Actions is
                     (Future_Dirs,
                      GNATCOLL.VFS.Create
                        (+(Local_Separate_Root_Dir.all
-                          & Directory_Separator
+                          & Dir_Sep
                           & Tmp.all (Root_Length + 1 .. Tmp.all'Last))));
 
                   Test.Skeleton.Source_Table.Set_Output_Dir
                     (F.Path_Name.String_Value,
                      Local_Separate_Root_Dir.all
-                     & Directory_Separator
+                     & Dir_Sep
                      & Tmp.all (Root_Length + 1 .. Tmp.all'Last));
                end if;
             end loop;
@@ -2331,7 +2327,7 @@ package body Test.Actions is
                   GNATCOLL.VFS.Create
                     (+Normalize_Pathname
                         (View.Object_Directory.String_Value
-                         & Directory_Separator
+                         & Dir_Sep
                          & Stub_Dir_Name.all,
                          Resolve_Links  => False,
                          Case_Sensitive => False)));

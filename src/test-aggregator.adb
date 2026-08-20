@@ -40,6 +40,7 @@ with Utils.Command_Lines; use Utils.Command_Lines;
 with Utils.Environment;   use Utils.Environment;
 
 package body Test.Aggregator is
+   Dir_Sep : Character renames GNAT.OS_Lib.Directory_Separator;
 
    Me : constant Trace_Handle := Create ("Aggregator", Default => Off);
 
@@ -371,9 +372,7 @@ package body Test.Aggregator is
       Open
         (TD_Output,
          In_File,
-         Get_Corresponding_Dir (For_Analysis)
-         & Directory_Separator
-         & Test_Out_File);
+         Get_Corresponding_Dir (For_Analysis) & Dir_Sep & Test_Out_File);
 
       while not End_Of_File (TD_Output) loop
          declare
@@ -479,7 +478,7 @@ package body Test.Aggregator is
            (Target_Dirs,
             Create
               (+(Tool_Temp_Dir.all
-                 & Directory_Separator
+                 & Dir_Sep
                  & "dir"
                  & Trim (Positive'Image (I), Both))));
       end loop;
@@ -587,9 +586,7 @@ package body Test.Aggregator is
            Non_Blocking_Spawn
              (Tmp.all,
               Empty_Arg_List.all,
-              Get_Corresponding_Dir (Idx)
-              & Directory_Separator
-              & Test_Out_File,
+              Get_Corresponding_Dir (Idx) & Dir_Sep & Test_Out_File,
               True);
 
          Trace
@@ -695,18 +692,17 @@ package body Test.Aggregator is
          Tmp := new String'(Get_Line (TD_List_File));
          if Not_A_Comment (Tmp.all) and then Tmp.all /= "" then
             if Aggregate_Subdir_Name.all /= "" then
-               Idx := Index (Tmp.all, [1 => Directory_Separator], Backward);
+               Idx := Index (Tmp.all, [1 => Dir_Sep], Backward);
                if Idx /= 0 then
                   TD_Table.Include
                     (Tmp (Tmp.all'First .. Idx)
                      & Aggregate_Subdir_Name.all
-                     & Directory_Separator
+                     & Dir_Sep
                      & Tmp (Idx + 1 .. Tmp.all'Last),
                      Waiting);
                else
                   TD_Table.Include
-                    (Aggregate_Subdir_Name.all & Directory_Separator & Tmp.all,
-                     Waiting);
+                    (Aggregate_Subdir_Name.all & Dir_Sep & Tmp.all, Waiting);
                end if;
             else
                TD_Table.Include (Tmp.all, Waiting);
