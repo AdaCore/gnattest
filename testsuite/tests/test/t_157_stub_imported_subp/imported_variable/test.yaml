@@ -1,0 +1,5 @@
+description: |
+  Check that gnattest stubbing avoid removing Import pragmas/aspects on
+  non-subprogram declarations.
+
+driver: python_script
