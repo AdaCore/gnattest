@@ -90,6 +90,8 @@ class Testsuite(e3.testsuite.Testsuite):
             cmd.append(f"--target={args.target.split(',')[0]}")
         if args.RTS:
             cmd.append(f"--RTS={args.RTS}")
+        if "GNATTEST_DEBUG" in os.environ:
+            cmd.extend(["-d1", "--save-temps"])
         p_setup = Run(cmd)
         if p_setup.status != 0:
             e3.testsuite.logger.fatal(f"Failed to run gnattest setup: {p_setup.out}")
