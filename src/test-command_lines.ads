@@ -52,6 +52,7 @@ package Test.Command_Lines is
       Harness_Only,
       Stub,
       Recursive_Stub,
+      External_Stub,
       Validate_Type_Extensions,
       Inheritance_Check,
       Test_Case_Only,
@@ -108,7 +109,8 @@ package Test.Command_Lines is
 
    package Test_Boolean_Defaults is new
      Test_Boolean_Switches.Set_Defaults
-       ([Inheritance_Check      => True,
+       ([External_Stub          => True,
+         Inheritance_Check      => True,
          Command_Line_Support   => True,
          Harness_Only           => False,
          Test_Filtering         => True,

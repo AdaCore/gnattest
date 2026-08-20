@@ -777,6 +777,7 @@ package body Test.Actions is
 
       begin
          Test.Common.Recursive_Stubbing_ON := Arg (Cmd, Recursive_Stub);
+         Test.Common.External_Stubbing_ON := Arg (Cmd, External_Stub);
          Test.Common.Stub_Mode_ON :=
            Arg (Cmd, Stub) or else Test.Common.Recursive_Stubbing_ON;
 
