@@ -9204,7 +9204,8 @@ package body Test.Skeleton is
                   & Get_Source_Stub_Data_Spec (Str.all),
                   Get_Source_Stub_Dir (Str.all)
                   & Dir_Sep
-                  & Get_Source_Stub_Data_Body (Str.all));
+                  & Get_Source_Stub_Data_Body (Str.all),
+                  Theoritical_Body => Get_Source_Existing_Body (Str.all) = "");
                Stub_Success := True;
 
             exception

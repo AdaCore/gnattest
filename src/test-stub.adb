@@ -68,7 +68,8 @@ package body Test.Stub is
      (Pack                : Base_Package_Decl;
       Body_File_Name      : String;
       Stub_Data_File_Spec : String;
-      Stub_Data_File_Body : String)
+      Stub_Data_File_Body : String;
+      Theoritical_Body    : Boolean)
    is
       Data          : Stubbing_Data;
       Markered_Data : MD_Map;
