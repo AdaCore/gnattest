@@ -9192,33 +9192,31 @@ package body Test.Skeleton is
       for Node of Units_To_Stub loop
          Str := new String'(Node.Unit.Get_Filename);
 
-         if Get_Source_Body (Str.all) /= "" then
-            if not Source_Stubbed (Str.all) then
-               begin
-                  Test.Stub.Process_Unit
-                    (Node,
-                     Get_Source_Stub_Dir (Str.all)
-                     & Dir_Sep
-                     & Base_Name (Get_Source_Body (Str.all)),
-                     Get_Source_Stub_Dir (Str.all)
-                     & Dir_Sep
-                     & Get_Source_Stub_Data_Spec (Str.all),
-                     Get_Source_Stub_Dir (Str.all)
-                     & Dir_Sep
-                     & Get_Source_Stub_Data_Body (Str.all));
-                  Stub_Success := True;
+         if not Source_Stubbed (Str.all) then
+            begin
+               Test.Stub.Process_Unit
+                 (Node,
+                  Get_Source_Stub_Dir (Str.all)
+                  & Dir_Sep
+                  & Base_Name (Get_Source_Body (Str.all)),
+                  Get_Source_Stub_Dir (Str.all)
+                  & Dir_Sep
+                  & Get_Source_Stub_Data_Spec (Str.all),
+                  Get_Source_Stub_Dir (Str.all)
+                  & Dir_Sep
+                  & Get_Source_Stub_Data_Body (Str.all));
+               Stub_Success := True;
 
-               exception
-                  when Test.Stub.Stub_Processing_Error =>
-                     --  Error message has been printed already
-                     Stub_Success := False;
-               end;
+            exception
+               when Test.Stub.Stub_Processing_Error =>
+                  --  Error message has been printed already
+                  Stub_Success := False;
+            end;
 
-               if Stub_Success then
-                  Mark_Sourse_Stubbed (Str.all);
-               end if;
-
+            if Stub_Success then
+               Mark_Sourse_Stubbed (Str.all);
             end if;
+
          end if;
 
          Free (Str);

@@ -359,6 +359,13 @@ package body Test.Skeleton.Source_Table is
             if Unit.Has_Part (S_Body) then
                New_SF_Record.Corresponding_Body :=
                  new String'(Unit.Main_Body.Source.String_Value);
+            else
+
+               --  Add a theoritical body name in case it is required for
+               --  stubbing
+
+               New_SF_Record.Theoretical_Body :=
+                 new String'(String (P.Filename_For_Unit (Unit_Name, S_Body)));
             end if;
 
             New_SF_Record.Stub_Data_Base_Spec :=
@@ -505,6 +512,13 @@ package body Test.Skeleton.Source_Table is
          if Unit.Has_Part (S_Body) then
             New_SF_Record.Corresponding_Body :=
               new String'(Unit.Main_Body.Source.String_Value);
+         else
+
+            --  Add a theoritical body name in case it is required for
+            --  stubbing
+
+            New_SF_Record.Theoretical_Body :=
+              new String'(String (P.Filename_For_Unit (Unit_Name, S_Body)));
          end if;
 
          New_SF_Record.Stub_Data_Base_Spec :=
@@ -633,11 +647,37 @@ package body Test.Skeleton.Source_Table is
       end if;
 
       if SFR.Corresponding_Body = null then
-         return "";
+         return SFR.Theoretical_Body.all;
       else
          return SFR.Corresponding_Body.all;
       end if;
    end Get_Source_Body;
+
+   ------------------------------
+   -- Get_Source_Existing_Body --
+   ------------------------------
+
+   function Get_Source_Existing_Body (Source_Name : String) return String is
+      SN  : constant String := Normalize_Source_Name (Source_Name);
+      SFR : SF_Record;
+   begin
+      if Source_Present (SN) then
+         SFR := Source_File_Table.Element (SF_Table, SN);
+      else
+         Report_Std
+           ("warning: (gnattest) "
+            & Source_Name
+            & " is not a source of argument project, cannot create stub");
+
+         return "";
+      end if;
+
+      if SFR.Corresponding_Body = null then
+         return "";
+      else
+         return SFR.Corresponding_Body.all;
+      end if;
+   end Get_Source_Existing_Body;
 
    ---------------------------
    -- Get_Source_Instr_Body --
@@ -1571,7 +1611,10 @@ package body Test.Skeleton.Source_Table is
                      end if;
 
                      S_Put
-                       (6, """" & Base_Name (Get_Source_Body (Source)) & """");
+                       (6,
+                        """"
+                        & Base_Name (Get_Source_Existing_Body (Source))
+                        & """");
                      Sources_Names.Include (Base_Name (Source));
 
                      S_Put
@@ -1641,7 +1684,7 @@ package body Test.Skeleton.Source_Table is
                        (9,
                         """"
                         & Get_Source_Unit_Name
-                            (Get_Source_Body
+                            (Get_Source_Existing_Body
                                (Current_Proj_Present_Sources.Constant_Reference
                                   (Cur)))
                         & """");

@@ -2216,7 +2216,7 @@ package body Test.Harness is
 
          declare
             Corresponding_Body : constant String :=
-              Test.Skeleton.Source_Table.Get_Source_Body (UUT);
+              Test.Skeleton.Source_Table.Get_Source_Existing_Body (UUT);
             Project_Name       : constant String :=
               (if Corresponding_Body = ""
                then Test.Skeleton.Source_Table.Get_Source_Project_Name (UUT)
@@ -2267,7 +2267,10 @@ package body Test.Harness is
                      if S /= UUT then
                         declare
                            App : constant String :=
-                             Test.Skeleton.Source_Table.Get_Source_Body (S);
+                             Test
+                               .Skeleton
+                               .Source_Table
+                               .Get_Source_Existing_Body (S);
                         begin
                            if App /= "" then
                               SPI.Sources_List.Append (App);

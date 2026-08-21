@@ -112,6 +112,7 @@ package Test.Skeleton.Source_Table is
    function Get_Source_Stub_Data_Spec (Source_Name : String) return String;
    function Get_Source_Stub_Data_Body (Source_Name : String) return String;
    function Get_Source_Body (Source_Name : String) return String;
+   function Get_Source_Existing_Body (Source_Name : String) return String;
    function Get_Source_Project_Name (Source_Name : String) return String;
    function Get_Source_Unit_Name (Source_Name : String) return String;
    function Get_Source_Instr_Dir (Source_Name : String) return String;

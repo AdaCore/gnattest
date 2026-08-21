@@ -133,7 +133,7 @@ package body Test.Stub is
         new String'(Stub_Data_File_Body);
       Local_Stub_Unit_Mapping.Orig_Body_File_Name :=
         new String'
-          (Test.Skeleton.Source_Table.Get_Source_Body
+          (Test.Skeleton.Source_Table.Get_Source_Existing_Body
              (Pack.Unit.Get_Filename));
       Local_Stub_Unit_Mapping.Stub_Body_File_Name :=
         new String'(Body_File_Name);
