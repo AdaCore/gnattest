@@ -206,12 +206,12 @@ package body Test.Generation is
 
    procedure Generate_Build_And_Run (Cmd : Command_Line) is
       use GNATCOLL.OS.Process;
-      Directory_Separator : Character renames GNAT.OS_Lib.Directory_Separator;
+      Dir_Sep : Character renames GNAT.OS_Lib.Directory_Separator;
 
       Build_Args  : Argument_List;
       Run_Args    : Argument_List;
       Harness_Dir : constant String :=
-        Tool_Temp_Dir.all & Directory_Separator & "tgen_Harness";
+        Tool_Temp_Dir.all & Dir_Sep & "tgen_Harness";
       Ext_Acc     : GNAT.OS_Lib.String_Access :=
         GNAT.OS_Lib.Get_Executable_Suffix;
       Ext         : constant String := Ext_Acc.all;
@@ -246,7 +246,7 @@ package body Test.Generation is
       end if;
       Build_Args.Append ("-P");
       Build_Args.Append
-        (Harness_Dir & Directory_Separator & "tgen_generation_harness.gpr");
+        (Harness_Dir & Dir_Sep & "tgen_generation_harness.gpr");
       Populate_X_Vars (Build_Args, Cmd);
 
       --  Suppress all warning/info messages and style checks
@@ -264,12 +264,7 @@ package body Test.Generation is
       Run (Build_Args, "Build of the test generation harness");
 
       Run_Args.Append
-        (Harness_Dir
-         & Directory_Separator
-         & "obj"
-         & Directory_Separator
-         & "generation_main"
-         & Ext);
+        (Harness_Dir & Dir_Sep & "obj" & Dir_Sep & "generation_main" & Ext);
       Run (Run_Args, "Execution of the test generation harness");
    end Generate_Build_And_Run;
 

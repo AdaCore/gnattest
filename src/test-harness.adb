@@ -50,6 +50,7 @@ with Utils.Projects;            use Utils.Projects;
 with Utils.String_Utilities;
 
 package body Test.Harness is
+   Dir_Sep : Character renames GNAT.OS_Lib.Directory_Separator;
 
    Me : constant Trace_Handle := Create ("Harness", Default => Off);
 
@@ -144,7 +145,7 @@ package body Test.Harness is
    --  of corresponding subprograms under test.
 
    function Gnattest_Common_Prj_Name return String
-   is (Harness_Dir.all & Directory_Separator & "gnattest_common.gpr");
+   is (Harness_Dir.all & Dir_Sep & "gnattest_common.gpr");
 
    function Positive_Image (P : Positive) return String
    is (Trim (Positive'Image (P), Both));
@@ -366,9 +367,9 @@ package body Test.Harness is
    function Get_Test_File (Test_Unit_Full_Name : String) return String is
       Test_Absolute_Path : constant String :=
         Object_Directory.all
-        & GNAT.OS_Lib.Directory_Separator
+        & Dir_Sep
         & Test_Dir.all
-        & GNAT.OS_Lib.Directory_Separator
+        & Dir_Sep
         & Unit_To_File_Name (Test_Unit_Full_Name)
         & Spec_Suffix.all;
       Idx                : Natural;
@@ -380,8 +381,7 @@ package body Test.Harness is
       end if;
       Idx := Index (Test_Absolute_Path, Source_Root_Str.all);
       if Idx = 1
-        and then Test_Absolute_Path (Source_Root_Str.all'Length + 1)
-                 = GNAT.OS_Lib.Directory_Separator
+        and then Test_Absolute_Path (Source_Root_Str.all'Length + 1) = Dir_Sep
         --  Check that removing the source root from test absolute path
         --  doesnt cut a directory name in half.
         --  For example if source root is gnat, the directory gnattest should
@@ -674,7 +674,7 @@ package body Test.Harness is
 
    procedure Generate_Filtering_Map is
       Common_File_Subdir : constant String :=
-        Harness_Dir.all & GNAT.OS_Lib.Directory_Separator & "common";
+        Harness_Dir.all & Dir_Sep & "common";
 
       Filter_Package_Name : constant String :=
         Common_Package_Name & ".Mapping";
@@ -705,7 +705,7 @@ package body Test.Harness is
       --  Spec
       Create
         (Common_File_Subdir
-         & Directory_Separator
+         & Dir_Sep
          & Unit_To_File_Name (Filter_Package_Name)
          & Spec_Suffix.all);
 
@@ -786,7 +786,7 @@ package body Test.Harness is
       --  Body
       Create
         (Common_File_Subdir
-         & Directory_Separator
+         & Dir_Sep
          & Unit_To_File_Name (Filter_Package_Name)
          & Body_Suffix.all);
 
@@ -2279,9 +2279,7 @@ package body Test.Harness is
 
       procedure Process_Test_Package is
          New_Unit_Dir : constant String :=
-           Harness_Dir.all
-           & Data.Test_Unit_Full_Name.all
-           & Directory_Separator;
+           Harness_Dir.all & Data.Test_Unit_Full_Name.all & Dir_Sep;
 
          New_Unit_Name : constant String :=
            (Data.Test_Unit_Full_Name.all & ".Suite.Test_Runner");
@@ -2481,9 +2479,7 @@ package body Test.Harness is
          --  with names corresponding to UUTs.
          New_Unit_Dir :=
            new String'
-             (Harness_Dir.all
-              & Data.Test_Unit_Full_Name.all
-              & Directory_Separator);
+             (Harness_Dir.all & Data.Test_Unit_Full_Name.all & Dir_Sep);
 
          declare
             Dir : File_Array_Access;
@@ -2679,23 +2675,17 @@ package body Test.Harness is
          end if;
          Generate_Suite
            (Local_Data_Holder,
-            Harness_Dir.all
-            & Data.Test_Unit_Full_Name.all
-            & Directory_Separator);
+            Harness_Dir.all & Data.Test_Unit_Full_Name.all & Dir_Sep);
          if not Stub_Mode_ON and then Data.Good_For_Substitution then
             Generate_Substitution_Suite_From_Tested
               (Local_Data_Holder,
-               Harness_Dir.all
-               & Data.Test_Unit_Full_Name.all
-               & Directory_Separator);
+               Harness_Dir.all & Data.Test_Unit_Full_Name.all & Dir_Sep);
          end if;
 
          declare
             S1 : constant String_Access :=
               new String'
-                (Harness_Dir.all
-                 & Data.Test_Unit_Full_Name.all
-                 & Directory_Separator);
+                (Harness_Dir.all & Data.Test_Unit_Full_Name.all & Dir_Sep);
             S2 : constant String_Access :=
               new String'(Data.Test_Unit_Full_Name.all & ".Suite.Test_Runner");
          begin
@@ -2731,7 +2721,7 @@ package body Test.Harness is
          Create
            (Harness_Dir.all
             & Data.Test_Unit_Full_Name.all
-            & Directory_Separator
+            & Dir_Sep
             & "units.list");
          S_Put (0, Unit_Name);
          Close_File;
@@ -2758,7 +2748,7 @@ package body Test.Harness is
       Create
         (Harness_Dir.all
          & Data.Test_Unit_Full_Name.all
-         & Directory_Separator
+         & Dir_Sep
          & "units.list");
       S_Put (0, Unit_Name);
       Close_File;
@@ -2827,9 +2817,7 @@ package body Test.Harness is
          --  with names corresponding to UUTs.
          New_Unit_Dir :=
            new String'
-             (Harness_Dir.all
-              & Data.Test_Unit_Full_Name.all
-              & Directory_Separator);
+             (Harness_Dir.all & Data.Test_Unit_Full_Name.all & Dir_Sep);
 
          declare
             Dir : File_Array_Access;
@@ -3104,7 +3092,7 @@ package body Test.Harness is
               (Dir,
                GNATCOLL.VFS.Create
                  (+(Dir_Name (P.Path_TD.all)
-                    & Directory_Separator
+                    & Dir_Sep
                     & P.Name_TD.all
                     & "_obj")));
             Create_Dirs (Dir);
@@ -3351,7 +3339,7 @@ package body Test.Harness is
                declare
                   Imported_Stubbed_Path : constant String :=
                     Test.Skeleton.Source_Table.Get_Project_Stub_Dir (I_P)
-                    & Directory_Separator
+                    & Dir_Sep
                     & Unit_To_File_Name
                         (Stub_Project_Prefix & Current_Infix.all & I_P)
                     & ".gpr";
@@ -3412,14 +3400,14 @@ package body Test.Harness is
               (Dir,
                GNATCOLL.VFS.Create
                  (+(Dir_Name (P.Path_Extending.all)
-                    & Directory_Separator
+                    & Dir_Sep
                     & P.Name_Extending.all
                     & "_lib")));
             Append
               (Dir,
                GNATCOLL.VFS.Create
                  (+(Dir_Name (P.Path_Extending.all)
-                    & Directory_Separator
+                    & Dir_Sep
                     & P.Name_Extending.all
                     & "_obj")));
             Create_Dirs (Dir);
@@ -3590,7 +3578,7 @@ package body Test.Harness is
               (Dir,
                GNATCOLL.VFS.Create
                  (+(Dir_Name (P.Path_TD.all)
-                    & Directory_Separator
+                    & Dir_Sep
                     & P.Name_TD.all
                     & "_obj")));
             Create_Dirs (Dir);
@@ -4336,7 +4324,7 @@ package body Test.Harness is
             & " --src-subdirs=gnattest-instr"
             & " --implicit-with="
             & "tgen_support"
-            & GNAT.OS_Lib.Directory_Separator
+            & Dir_Sep
             & "tgen_support.gpr"
             & " -gargs -j$(NUMPROC)");
          Put_New_Line;
