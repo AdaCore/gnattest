@@ -471,27 +471,34 @@ package body Test.Stub is
 
          Inside_Protected : Boolean := False;
       begin
-         if Element.Kind in Ada_Base_Package_Decl then
-            Pub_Part := Element.As_Base_Package_Decl.F_Public_Part;
-            Priv_Part := Element.As_Base_Package_Decl.F_Private_Part;
-         elsif Element.Kind = Ada_Generic_Package_Decl then
-            Pub_Part :=
-              Element.As_Generic_Package_Decl.F_Package_Decl.F_Public_Part;
-            Priv_Part :=
-              Element.As_Generic_Package_Decl.F_Package_Decl.F_Private_Part;
-         elsif Element.Kind = Ada_Protected_Type_Decl then
-            Pub_Part :=
-              Element.As_Protected_Type_Decl.F_Definition.F_Public_Part;
-            Priv_Part :=
-              Element.As_Protected_Type_Decl.F_Definition.F_Private_Part;
-            Inside_Protected := True;
-         elsif Element.Kind = Ada_Single_Protected_Decl then
-            Pub_Part :=
-              Element.As_Single_Protected_Decl.F_Definition.F_Public_Part;
-            Priv_Part :=
-              Element.As_Single_Protected_Decl.F_Definition.F_Private_Part;
-            Inside_Protected := True;
-         end if;
+         case Element.Kind is
+            when Ada_Base_Package_Decl     =>
+               Pub_Part := Element.As_Base_Package_Decl.F_Public_Part;
+               Priv_Part := Element.As_Base_Package_Decl.F_Private_Part;
+
+            when Ada_Generic_Package_Decl  =>
+               Pub_Part :=
+                 Element.As_Generic_Package_Decl.F_Package_Decl.F_Public_Part;
+               Priv_Part :=
+                 Element.As_Generic_Package_Decl.F_Package_Decl.F_Private_Part;
+
+            when Ada_Protected_Type_Decl   =>
+               Pub_Part :=
+                 Element.As_Protected_Type_Decl.F_Definition.F_Public_Part;
+               Priv_Part :=
+                 Element.As_Protected_Type_Decl.F_Definition.F_Private_Part;
+               Inside_Protected := True;
+
+            when Ada_Single_Protected_Decl =>
+               Pub_Part :=
+                 Element.As_Single_Protected_Decl.F_Definition.F_Public_Part;
+               Priv_Part :=
+                 Element.As_Single_Protected_Decl.F_Definition.F_Private_Part;
+               Inside_Protected := True;
+
+            when others                    =>
+               null;
+         end case;
 
          if not Pub_Part.Is_Null then
             for El of Pub_Part.As_Declarative_Part.F_Decls loop
@@ -553,11 +560,7 @@ package body Test.Stub is
                    (Node_Image (Element.As_Basic_Decl.P_Defining_Name));
             end if;
 
-            if Generic_Layers_Counter > 0 then
-               Elem_Node.Inside_Generic := True;
-            else
-               Elem_Node.Inside_Generic := False;
-            end if;
+            Elem_Node.Inside_Generic := Generic_Layers_Counter > 0;
 
             Data.Elem_Tree.Insert_Child
               (State_Cur, Element_Node_Trees.No_Element, Elem_Node, Cur);
@@ -1505,17 +1508,18 @@ package body Test.Stub is
       Add_Entity_To_Local_List (Node, New_Line_Counter, Level * Indent_Level);
 
       if Arg_Kind = Ada_Subp_Decl then
-         if Node.Spec.As_Classic_Subp_Decl.F_Overriding.Kind
-           = Ada_Overriding_Overriding
-         then
-            S_Put (Level * Indent_Level, "overriding");
-            New_Line_Count;
-         elsif Node.Spec.As_Classic_Subp_Decl.F_Overriding.Kind
-           = Ada_Overriding_Not_Overriding
-         then
-            S_Put (Level * Indent_Level, "not overriding");
-            New_Line_Count;
-         end if;
+         case Node.Spec.As_Classic_Subp_Decl.F_Overriding.Kind is
+            when Ada_Overriding_Overriding     =>
+               S_Put (Level * Indent_Level, "overriding");
+               New_Line_Count;
+
+            when Ada_Overriding_Not_Overriding =>
+               S_Put (Level * Indent_Level, "not overriding");
+               New_Line_Count;
+
+            when others                        =>
+               null;
+         end case;
       end if;
 
       S_Put (Level * Indent_Level, "procedure " & Node.Spec_Name.all);
@@ -1801,17 +1805,18 @@ package body Test.Stub is
       Add_Entity_To_Local_List (Node, New_Line_Counter, Level * Indent_Level);
 
       if Arg_Kind = Ada_Subp_Decl then
-         if Node.Spec.As_Classic_Subp_Decl.F_Overriding.Kind
-           = Ada_Overriding_Overriding
-         then
-            S_Put (Level * Indent_Level, "overriding");
-            New_Line_Count;
-         elsif Node.Spec.As_Classic_Subp_Decl.F_Overriding.Kind
-           = Ada_Overriding_Not_Overriding
-         then
-            S_Put (Level * Indent_Level, "not overriding");
-            New_Line_Count;
-         end if;
+         case Node.Spec.As_Classic_Subp_Decl.F_Overriding.Kind is
+            when Ada_Overriding_Overriding     =>
+               S_Put (Level * Indent_Level, "overriding");
+               New_Line_Count;
+
+            when Ada_Overriding_Not_Overriding =>
+               S_Put (Level * Indent_Level, "not overriding");
+               New_Line_Count;
+
+            when others                        =>
+               null;
+         end case;
       end if;
 
       S_Put
