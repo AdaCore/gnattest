@@ -555,7 +555,7 @@ package body Test.Skeleton is
      (The_Unit : Compilation_Unit; Data : in out Data_Holder);
    --  Populates the list of units that should be stubbed.
 
-   procedure Process_Stubs (List : Pkg_Decl_List);
+   procedure Process_Stubs (Units_To_Stub : Pkg_Decl_List);
 
    function Is_Declared_In_Regular_Package
      (Elem : Ada_Node'Class) return Boolean;
@@ -9182,14 +9182,14 @@ package body Test.Skeleton is
    -- Process_Stubs --
    -------------------
 
-   procedure Process_Stubs (List : Pkg_Decl_List) is
+   procedure Process_Stubs (Units_To_Stub : Pkg_Decl_List) is
       Str : String_Access;
 
       Stub_Success : Boolean;
    begin
       --  Once we change the context, contents of List won't make sense.
 
-      for Node of List loop
+      for Node of Units_To_Stub loop
          Str := new String'(Node.Unit.Get_Filename);
 
          if Get_Source_Body (Str.all) /= "" then
