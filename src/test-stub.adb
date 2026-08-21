@@ -89,7 +89,7 @@ package body Test.Stub is
       Inside_Generic   => False,
       Inside_Protected => False);
 
-   type Data_Holder is record
+   type Stubbing_Data is record
       Elem_Tree : Element_Node_Trees.Tree;
       Flat_List : Element_Node_Lists.List;
 
@@ -98,7 +98,7 @@ package body Test.Stub is
       --  regular with clause in the body.
    end record;
 
-   procedure Gather_Data (The_Unit : Ada_Node; Data : out Data_Holder);
+   procedure Gather_Data (The_Unit : Ada_Node; Data : out Stubbing_Data);
    --  Gathers all LAL info for stub generation
 
    --  Arguments & result profile analysis
@@ -266,13 +266,14 @@ package body Test.Stub is
    Indent_Level : constant Natural := 3;
    --  Indentation level
 
-   procedure Generate_Body_Stub (Body_File_Name : String; Data : Data_Holder);
+   procedure Generate_Body_Stub
+     (Body_File_Name : String; Data : Stubbing_Data);
    --  Generates stub body
 
    procedure Generate_Stub_Data
      (Stub_Data_File_Spec : String;
       Stub_Data_File_Body : String;
-      Data                : Data_Holder);
+      Data                : Stubbing_Data);
    --  Generates Stub_Data package which contains setters
 
    procedure Put_Stub_Header
@@ -339,7 +340,7 @@ package body Test.Stub is
       Stub_Data_File_Spec : String;
       Stub_Data_File_Body : String)
    is
-      Data : Data_Holder;
+      Data : Stubbing_Data;
 
       procedure Cleanup;
       --  Frees global and temporary variables
@@ -445,7 +446,7 @@ package body Test.Stub is
    -- Gather_Data --
    -----------------
 
-   procedure Gather_Data (The_Unit : Ada_Node; Data : out Data_Holder) is
+   procedure Gather_Data (The_Unit : Ada_Node; Data : out Stubbing_Data) is
       Spec_Base_File_Name : constant String := The_Unit.Unit.Get_Filename;
 
       Generic_Layers_Counter : Natural := 0;
@@ -661,7 +662,7 @@ package body Test.Stub is
    -- Generate_Body_Stub --
    ------------------------
 
-   procedure Generate_Body_Stub (Body_File_Name : String; Data : Data_Holder)
+   procedure Generate_Body_Stub (Body_File_Name : String; Data : Stubbing_Data)
    is
 
       Tmp_File_Name : constant String :=
@@ -3466,7 +3467,7 @@ package body Test.Stub is
    procedure Generate_Stub_Data
      (Stub_Data_File_Spec : String;
       Stub_Data_File_Body : String;
-      Data                : Data_Holder)
+      Data                : Stubbing_Data)
    is
       Root_Node : constant Element_Node :=
         Element_Node_Trees.Element (First_Child (Data.Elem_Tree.Root));
