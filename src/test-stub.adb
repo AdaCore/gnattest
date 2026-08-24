@@ -69,7 +69,8 @@ package body Test.Stub is
       Stub_Data_File_Spec : String;
       Stub_Data_File_Body : String)
    is
-      Data : Stubbing_Data;
+      Data          : Stubbing_Data;
+      Markered_Data : MD_Map;
 
       procedure Cleanup;
       --  Frees global and temporary variables
@@ -136,7 +137,7 @@ package body Test.Stub is
       Local_Stub_Unit_Mapping.Stub_Body_File_Name :=
         new String'(Body_File_Name);
 
-      Generate_Body_Stub (Body_File_Name, Data);
+      Generate_Body_Stub (Body_File_Name, Data, Markered_Data);
 
       --  FIXME: Understand why we call Generate_Stub_Data only when Flat_List
       --  is not Empty.

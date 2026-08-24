@@ -90,11 +90,9 @@ package Test.Stub is
       --  import the tasking runtime in the stub files.
    end record;
 
-private
-
-   ------------------------------
-   -- Markered Mata processing --
-   ------------------------------
+   -------------------
+   -- Markered Data --
+   -------------------
 
    type Markered_Data_Kinds is
      (
@@ -115,11 +113,6 @@ private
       --  used in attempts to partially recover corrupted packages, code 99
       Unknown_MD);
 
-   function MD_Kind_To_String (MD : Markered_Data_Kinds) return String;
-   --  Returns string with corresponding code
-   function MD_Kind_From_String (Str : String) return Markered_Data_Kinds;
-   --  And back (Unknown for "99" and any illegal argument)
-
    type Markered_Data_Id is record
       Kind         : Markered_Data_Kinds;
       Self_Hash    : String_Access;
@@ -127,24 +120,23 @@ private
       Hash_Version : String_Access;
       Name         : String_Access;
    end record;
-   function "<" (L, R : Markered_Data_Id) return Boolean;
+   --  Markered Datas are identified using hashes.
 
-   function Hash_Suffix (ID : Markered_Data_Id) return String;
-   --  Returns hash suffix from given ID
+   function "<" (L, R : Markered_Data_Id) return Boolean;
 
    package String_Vectors is new
      Ada.Containers.Indefinite_Vectors (Natural, String);
+   --  List of strings representing the lines the user wrote which we are
+   --  keeping track of.
 
    type Markered_Data_Type is record
       Commented_Out : Boolean := False;
       Lines         : String_Vectors.Vector := String_Vectors.Empty_Vector;
    end record;
-
-   function Generate_MD_Id_String
-     (Element : Ada_Node; Commented_Out : Boolean := False) return String;
-   function Generate_MD_Id_String
-     (Id : Markered_Data_Id; Commented_Out : Boolean := False) return String;
-   function Generate_MD_Id (Element : Ada_Node) return Markered_Data_Id;
+   --  Markered data is essentially lines of code. The Commented_Out
+   --  parameter is used if the generated data it is attached to disappears
+   --  when regenerating the stubs, to comment out the user code instead of
+   --  removing it.
 
    package Markered_Data_Maps is new
      Ada.Containers.Indefinite_Ordered_Maps
@@ -154,10 +146,27 @@ private
    use Markered_Data_Maps;
    subtype MD_Map is Markered_Data_Maps.Map;
 
-   procedure Gather_Markered_Data (File : String; Map : in out MD_Map);
+private
 
-   Markered_Data : MD_Map;
-   --  Main MD storage for stub body
+   ------------------------------
+   -- Markered Data processing --
+   ------------------------------
+
+   function MD_Kind_To_String (MD : Markered_Data_Kinds) return String;
+   --  Returns string with corresponding code
+   function MD_Kind_From_String (Str : String) return Markered_Data_Kinds;
+   --  And back (Unknown for "99" and any illegal argument)
+
+   function Hash_Suffix (ID : Markered_Data_Id) return String;
+   --  Returns hash suffix from given ID
+
+   function Generate_MD_Id_String
+     (Element : Ada_Node; Commented_Out : Boolean := False) return String;
+   function Generate_MD_Id_String
+     (Id : Markered_Data_Id; Commented_Out : Boolean := False) return String;
+   function Generate_MD_Id (Element : Ada_Node) return Markered_Data_Id;
+
+   procedure Gather_Markered_Data (File : String; Map : in out MD_Map);
 
    ------------------------------------------
    --  Arguments & result profile analysis --

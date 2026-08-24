@@ -50,33 +50,47 @@ package body Test.Stub.Write is
    --  of the corresponding Markered_Data_Type, remove the entry from
    --  Map, and return True. Otherwise, do nothing and return False.
 
-   procedure Process_Siblings (Cursor : Element_Node_Trees.Cursor);
+   procedure Process_Siblings
+     (Cursor : Element_Node_Trees.Cursor; Markered_Data : in out MD_Map);
 
-   procedure Process_Node (Cursor : Element_Node_Trees.Cursor);
+   procedure Process_Node
+     (Cursor : Element_Node_Trees.Cursor; Markered_Data : in out MD_Map);
 
    procedure Generate_Package_Body
-     (Node : Element_Node; Cursor : Element_Node_Trees.Cursor);
+     (Node          : Element_Node;
+      Cursor        : Element_Node_Trees.Cursor;
+      Markered_Data : in out MD_Map);
 
    procedure Generate_Protected_Body
-     (Node : Element_Node; Cursor : Element_Node_Trees.Cursor);
+     (Node          : Element_Node;
+      Cursor        : Element_Node_Trees.Cursor;
+      Markered_Data : in out MD_Map);
 
-   procedure Generate_Procedure_Body (Node : Element_Node);
+   procedure Generate_Procedure_Body
+     (Node : Element_Node; Markered_Data : in out MD_Map);
 
-   procedure Generate_Function_Body (Node : Element_Node);
+   procedure Generate_Function_Body
+     (Node : Element_Node; Markered_Data : in out MD_Map);
 
-   procedure Generate_Entry_Body (Node : Element_Node);
+   procedure Generate_Entry_Body
+     (Node : Element_Node; Markered_Data : in out MD_Map);
 
-   procedure Generate_Task_Body (Node : Element_Node);
+   procedure Generate_Task_Body
+     (Node : Element_Node; Markered_Data : in out MD_Map);
 
-   procedure Generate_Full_Type_Declaration (Node : Element_Node);
+   procedure Generate_Full_Type_Declaration
+     (Node : Element_Node; Markered_Data : in out MD_Map);
 
-   procedure Put_Dangling_Elements;
+   procedure Put_Dangling_Elements (Markered_Data : in out MD_Map);
 
    ------------------------
    -- Generate_Body_Stub --
    ------------------------
 
-   procedure Generate_Body_Stub (Body_File_Name : String; Data : Stubbing_Data)
+   procedure Generate_Body_Stub
+     (Body_File_Name : String;
+      Data           : Stubbing_Data;
+      Markered_Data  : in out MD_Map)
    is
 
       Tmp_File_Name : constant String :=
@@ -100,7 +114,7 @@ package body Test.Stub.Write is
          Add_Import    => True,
          Tasks_Present => Data.Tasks_Present);
 
-      Process_Siblings (First_Child (Data.Elem_Tree.Root));
+      Process_Siblings (First_Child (Data.Elem_Tree.Root), Markered_Data);
 
       Close_File;
 
@@ -592,11 +606,13 @@ package body Test.Stub.Write is
    -- Process_Siblings --
    ----------------------
 
-   procedure Process_Siblings (Cursor : Element_Node_Trees.Cursor) is
+   procedure Process_Siblings
+     (Cursor : Element_Node_Trees.Cursor; Markered_Data : in out MD_Map)
+   is
       Cur : Element_Node_Trees.Cursor := Cursor;
    begin
       while Cur /= Element_Node_Trees.No_Element loop
-         Process_Node (Cur);
+         Process_Node (Cur, Markered_Data);
          Next_Sibling (Cur);
       end loop;
    end Process_Siblings;
@@ -605,14 +621,16 @@ package body Test.Stub.Write is
    -- Process_Node --
    ------------------
 
-   procedure Process_Node (Cursor : Element_Node_Trees.Cursor) is
+   procedure Process_Node
+     (Cursor : Element_Node_Trees.Cursor; Markered_Data : in out MD_Map)
+   is
       Node      : constant Element_Node := Element_Node_Trees.Element (Cursor);
       Node_Kind : constant Ada_Node_Kind_Type := Node.Spec.Kind;
    begin
 
       case Node_Kind is
          when Ada_Package_Decl | Ada_Generic_Package_Decl                =>
-            Generate_Package_Body (Node, Cursor);
+            Generate_Package_Body (Node, Cursor, Markered_Data);
 
          when Ada_Subp_Decl                                              =>
             if Node
@@ -623,9 +641,9 @@ package body Test.Stub.Write is
                  .F_Subp_Kind
               = Ada_Subp_Kind_Function
             then
-               Generate_Function_Body (Node);
+               Generate_Function_Body (Node, Markered_Data);
             else
-               Generate_Procedure_Body (Node);
+               Generate_Procedure_Body (Node, Markered_Data);
             end if;
 
          when Ada_Generic_Subp_Decl                                      =>
@@ -639,22 +657,22 @@ package body Test.Stub.Write is
                  .F_Subp_Kind
               = Ada_Subp_Kind_Function
             then
-               Generate_Function_Body (Node);
+               Generate_Function_Body (Node, Markered_Data);
             else
-               Generate_Procedure_Body (Node);
+               Generate_Procedure_Body (Node, Markered_Data);
             end if;
 
          when Ada_Entry_Decl                                             =>
-            Generate_Entry_Body (Node);
+            Generate_Entry_Body (Node, Markered_Data);
 
          when Ada_Single_Protected_Decl | Ada_Protected_Type_Decl        =>
-            Generate_Protected_Body (Node, Cursor);
+            Generate_Protected_Body (Node, Cursor, Markered_Data);
 
          when Ada_Single_Task_Decl | Ada_Task_Type_Decl                  =>
-            Generate_Task_Body (Node);
+            Generate_Task_Body (Node, Markered_Data);
 
          when Ada_Incomplete_Type_Decl | Ada_Incomplete_Tagged_Type_Decl =>
-            Generate_Full_Type_Declaration (Node);
+            Generate_Full_Type_Declaration (Node, Markered_Data);
 
          when others                                                     =>
             null;
@@ -666,7 +684,9 @@ package body Test.Stub.Write is
    ---------------------------
 
    procedure Generate_Package_Body
-     (Node : Element_Node; Cursor : Element_Node_Trees.Cursor)
+     (Node          : Element_Node;
+      Cursor        : Element_Node_Trees.Cursor;
+      Markered_Data : in out MD_Map)
    is
       Cur : constant Element_Node_Trees.Cursor := Cursor;
       ID  : Markered_Data_Id := Generate_MD_Id (Node.Spec);
@@ -717,7 +737,7 @@ package body Test.Stub.Write is
       New_Line_Count;
 
       if not Is_Leaf (Cur) then
-         Process_Siblings (First_Child (Cur));
+         Process_Siblings (First_Child (Cur), Markered_Data);
       end if;
 
       --  Put possible Elab sections
@@ -761,7 +781,7 @@ package body Test.Stub.Write is
                & Node.Spec_Name.all
                & " has dangling element(s)");
 
-            Put_Dangling_Elements;
+            Put_Dangling_Elements (Markered_Data);
          end if;
       end if;
 
@@ -772,7 +792,9 @@ package body Test.Stub.Write is
    -----------------------------
 
    procedure Generate_Protected_Body
-     (Node : Element_Node; Cursor : Element_Node_Trees.Cursor)
+     (Node          : Element_Node;
+      Cursor        : Element_Node_Trees.Cursor;
+      Markered_Data : in out MD_Map)
    is
       Cur : constant Element_Node_Trees.Cursor := Cursor;
    begin
@@ -792,7 +814,7 @@ package body Test.Stub.Write is
 
       Level := Level + 1;
       if not Is_Leaf (Cur) then
-         Process_Siblings (First_Child (Cur));
+         Process_Siblings (First_Child (Cur), Markered_Data);
       end if;
 
       Level := Level - 1;
@@ -810,7 +832,9 @@ package body Test.Stub.Write is
    -- Generate_Procedure_Body --
    -----------------------------
 
-   procedure Generate_Procedure_Body (Node : Element_Node) is
+   procedure Generate_Procedure_Body
+     (Node : Element_Node; Markered_Data : in out MD_Map)
+   is
       ID : constant Markered_Data_Id := Generate_MD_Id (Node.Spec);
 
       Arg_Kind   : constant Ada_Node_Kind_Type := Node.Spec.Kind;
@@ -1052,7 +1076,9 @@ package body Test.Stub.Write is
    -- Generate_Function_Body --
    ----------------------------
 
-   procedure Generate_Function_Body (Node : Element_Node) is
+   procedure Generate_Function_Body
+     (Node : Element_Node; Markered_Data : in out MD_Map)
+   is
       ID : constant Markered_Data_Id := Generate_MD_Id (Node.Spec);
 
       Arg_Kind : constant Ada_Node_Kind_Type := Node.Spec.Kind;
@@ -1430,7 +1456,9 @@ package body Test.Stub.Write is
    -- Generate_Entry_Body --
    -------------------------
 
-   procedure Generate_Entry_Body (Node : Element_Node) is
+   procedure Generate_Entry_Body
+     (Node : Element_Node; Markered_Data : in out MD_Map)
+   is
       ID : constant Markered_Data_Id := Generate_MD_Id (Node.Spec);
 
       Parameters : constant Param_Spec_Array :=
@@ -1514,7 +1542,9 @@ package body Test.Stub.Write is
    -- Generate_Task_Body --
    ------------------------
 
-   procedure Generate_Task_Body (Node : Element_Node) is
+   procedure Generate_Task_Body
+     (Node : Element_Node; Markered_Data : in out MD_Map)
+   is
       ID : constant Markered_Data_Id := Generate_MD_Id (Node.Spec);
    begin
       Trace (Me, "Generating task body for " & Node.Spec_Name.all);
@@ -1566,7 +1596,9 @@ package body Test.Stub.Write is
    -- Generate_Full_Type_Declaration --
    ------------------------------------
 
-   procedure Generate_Full_Type_Declaration (Node : Element_Node) is
+   procedure Generate_Full_Type_Declaration
+     (Node : Element_Node; Markered_Data : in out MD_Map)
+   is
       Discr_Part : constant Discriminant_Part :=
         Node.Spec.As_Incomplete_Type_Decl.F_Discriminants;
       Is_Tagged  : constant Boolean :=
@@ -1627,7 +1659,7 @@ package body Test.Stub.Write is
    -- Put_Dangling_Elements --
    ---------------------------
 
-   procedure Put_Dangling_Elements is
+   procedure Put_Dangling_Elements (Markered_Data : in out MD_Map) is
       ID : Markered_Data_Id;
       MD : Markered_Data_Type;
    begin

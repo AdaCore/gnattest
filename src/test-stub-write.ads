@@ -4,7 +4,9 @@ package Test.Stub.Write is
    --  the stubbing files.
 
    procedure Generate_Body_Stub
-     (Body_File_Name : String; Data : Stubbing_Data);
+     (Body_File_Name : String;
+      Data           : Stubbing_Data;
+      Markered_Data  : in out MD_Map);
    --  Generates stub body
 
    procedure Generate_Stub_Data
