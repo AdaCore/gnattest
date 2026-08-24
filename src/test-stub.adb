@@ -94,7 +94,7 @@ package body Test.Stub is
       Flat_List : Element_Node_Lists.List;
 
       Limited_Withed_Units : String_Set.Set;
-      --  All limited withed units from the spec should have a cooresponding
+      --  All limited withed units from the spec should have a corresponding
       --  regular with clause in the body.
    end record;
 
