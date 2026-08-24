@@ -9194,19 +9194,20 @@ package body Test.Skeleton is
 
          if not Source_Stubbed (Str.all) then
             begin
-               Test.Stub.Process_Unit
-                 (Node,
-                  Get_Source_Stub_Dir (Str.all)
-                  & Dir_Sep
-                  & Base_Name (Get_Source_Body (Str.all)),
-                  Get_Source_Stub_Dir (Str.all)
-                  & Dir_Sep
-                  & Get_Source_Stub_Data_Spec (Str.all),
-                  Get_Source_Stub_Dir (Str.all)
-                  & Dir_Sep
-                  & Get_Source_Stub_Data_Body (Str.all),
-                  Theoritical_Body => Get_Source_Existing_Body (Str.all) = "");
-               Stub_Success := True;
+               Stub_Success :=
+                 Test.Stub.Process_Unit
+                   (Node,
+                    Get_Source_Stub_Dir (Str.all)
+                    & Dir_Sep
+                    & Base_Name (Get_Source_Body (Str.all)),
+                    Get_Source_Stub_Dir (Str.all)
+                    & Dir_Sep
+                    & Get_Source_Stub_Data_Spec (Str.all),
+                    Get_Source_Stub_Dir (Str.all)
+                    & Dir_Sep
+                    & Get_Source_Stub_Data_Body (Str.all),
+                    Theoritical_Body =>
+                      Get_Source_Existing_Body (Str.all) = "");
 
             exception
                when Test.Stub.Stub_Processing_Error =>

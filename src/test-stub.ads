@@ -38,12 +38,12 @@ with Test.Mapping; use Test.Mapping;
 
 package Test.Stub is
 
-   procedure Process_Unit
+   function Process_Unit
      (Pack                : Base_Package_Decl;
       Body_File_Name      : String;
       Stub_Data_File_Spec : String;
       Stub_Data_File_Body : String;
-      Theoritical_Body    : Boolean);
+      Theoritical_Body    : Boolean) return Boolean;
    --  Processes corresponding spec and body,
    --  (re)creates stub body and stub data package.
    --
@@ -51,6 +51,8 @@ package Test.Stub is
    --  in the project and is the name it should have if it did.
    --  When set, avoid creating the body stub file if empty, and rewrite the
    --  spec to avoid "spec does not allow for a body" errors.
+   --
+   --  If the stubbed unit was not generated, return False.
 
    Stub_Processing_Error : exception;
    --  Indicates that an unhandled error occured during the processing of given

@@ -64,12 +64,12 @@ package body Test.Stub is
    -- Process_Unit --
    ------------------
 
-   procedure Process_Unit
+   function Process_Unit
      (Pack                : Base_Package_Decl;
       Body_File_Name      : String;
       Stub_Data_File_Spec : String;
       Stub_Data_File_Body : String;
-      Theoritical_Body    : Boolean)
+      Theoritical_Body    : Boolean) return Boolean
    is
       Data          : Stubbing_Data;
       Markered_Data : MD_Map;
@@ -125,10 +125,35 @@ package body Test.Stub is
            (Base_Name (Pack.Unit.Get_Filename), Excluded, Error_Out => False);
       end Report_And_Exclude;
 
+      use Ada.Containers;
    begin
 
       Gather_Data (Pack, Data);
       Gather_Markered_Data (Body_File_Name, Markered_Data);
+
+      --  If Theoritical_Body is True and data gathering didn't
+      --  find anything to stub, do not create the file.
+      --
+      --  If the element tree in Data only contains the package declaration
+      --  and nothing underneath, it means there's nothing to stub.
+
+      if Theoritical_Body
+        and then
+          (Data.Elem_Tree.Is_Empty -- Shouldn't happen ? but for soundness
+           or else
+             --  only one child ...
+             (Data.Elem_Tree.Root.Child_Count = 1
+              --  ... which is not empty ...
+              and then Data.Elem_Tree.Root.First_Child.Has_Element
+              --  ... and is a package decl ...
+              and then
+                Data.Elem_Tree.Root.First_Child.Element.Spec.Kind
+                = Ada_Package_Decl
+              --  ... and has no child itself
+              and then Data.Elem_Tree.Root.First_Child.Is_Leaf))
+      then
+         return False;
+      end if;
 
       Local_Stub_Unit_Mapping.Stub_Data_File_Name :=
         new String'(Stub_Data_File_Body);
@@ -153,6 +178,7 @@ package body Test.Stub is
       Add_Stub_List (Pack.Unit.Get_Filename, Local_Stub_Unit_Mapping);
 
       Cleanup;
+      return True;
 
    exception
       when Ex : Langkit_Support.Errors.Property_Error =>
