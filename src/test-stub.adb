@@ -1612,31 +1612,17 @@ package body Test.Stub is
 
          Count := 1;
          for SP of Param_List loop
-            if Count = 1 then
-               S_Put
-                 (0,
-                  SP.Name.all
-                  & " : "
-                  & SP.Type_Full_Name_Image.all
-                  & " := "
-                  & Stub_Object_Prefix
-                  & Node.Spec_Name.all
-                  & Suffix
-                  & "."
-                  & SP.Name.all);
-            else
-               S_Put
-                 (6,
-                  SP.Name.all
-                  & " : "
-                  & SP.Type_Full_Name_Image.all
-                  & " := "
-                  & Stub_Object_Prefix
-                  & Node.Spec_Name.all
-                  & Suffix
-                  & "."
-                  & SP.Name.all);
-            end if;
+            S_Put
+              ((if Count = 1 then 0 else 6),
+               SP.Name.all
+               & " : "
+               & SP.Type_Full_Name_Image.all
+               & " := "
+               & Stub_Object_Prefix
+               & Node.Spec_Name.all
+               & Suffix
+               & "."
+               & SP.Name.all);
 
             if Count = Natural (Param_List.Length) then
                S_Put (0, ");");
@@ -1702,31 +1688,17 @@ package body Test.Stub is
 
          Count := 1;
          for SP of Param_List loop
-            if Count = 1 then
-               S_Put
-                 (0,
-                  SP.Name.all
-                  & " : "
-                  & SP.Type_Full_Name_Image.all
-                  & " := "
-                  & Stub_Object_Prefix
-                  & Node.Spec_Name.all
-                  & Suffix
-                  & "."
-                  & SP.Name.all);
-            else
-               S_Put
-                 (6,
-                  SP.Name.all
-                  & " : "
-                  & SP.Type_Full_Name_Image.all
-                  & " := "
-                  & Stub_Object_Prefix
-                  & Node.Spec_Name.all
-                  & Suffix
-                  & "."
-                  & SP.Name.all);
-            end if;
+            S_Put
+              ((if Count = 1 then 0 else 6),
+               SP.Name.all
+               & " : "
+               & SP.Type_Full_Name_Image.all
+               & " := "
+               & Stub_Object_Prefix
+               & Node.Spec_Name.all
+               & Suffix
+               & "."
+               & SP.Name.all);
 
             if Count = Natural (Param_List.Length) then
                S_Put (0, ") is");
