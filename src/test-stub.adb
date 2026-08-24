@@ -137,7 +137,15 @@ package body Test.Stub is
         new String'(Body_File_Name);
 
       Generate_Body_Stub (Body_File_Name, Data);
-      Generate_Stub_Data (Stub_Data_File_Spec, Stub_Data_File_Body, Data);
+
+      --  FIXME: Understand why we call Generate_Stub_Data only when Flat_List
+      --  is not Empty.
+      if Data.Flat_List.Is_Empty then
+         Excluded_Test_Data_Files.Include (Base_Name (Stub_Data_File_Spec));
+         Excluded_Test_Data_Files.Include (Base_Name (Stub_Data_File_Body));
+      else
+         Generate_Stub_Data (Stub_Data_File_Spec, Stub_Data_File_Body, Data);
+      end if;
 
       Add_Stub_List (Pack.Unit.Get_Filename, Local_Stub_Unit_Mapping);
 
@@ -394,9 +402,7 @@ package body Test.Stub is
    -- Gather_Markered_Data --
    --------------------------
 
-   procedure Gather_Markered_Data
-     (File : String; Map : in out Markered_Data_Maps.Map)
-   is
+   procedure Gather_Markered_Data (File : String; Map : in out MD_Map) is
       Line : String_Access;
 
       Line_Counter : Natural := 0;

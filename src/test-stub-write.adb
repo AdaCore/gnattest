@@ -140,13 +140,10 @@ package body Test.Stub.Write is
 
       ID : Markered_Data_Id;
       MD : Markered_Data_Type;
-   begin
-      if Data.Flat_List.Is_Empty then
-         Excluded_Test_Data_Files.Include (Base_Name (Stub_Data_File_Spec));
-         Excluded_Test_Data_Files.Include (Base_Name (Stub_Data_File_Body));
-         return;
-      end if;
 
+      Markered_Subp_Data : MD_Map;
+
+   begin
       --  Spec
       Gather_Markered_Data (Stub_Data_File_Spec, Markered_Subp_Data);
       Trace
@@ -368,7 +365,6 @@ package body Test.Stub.Write is
       New_Line_Count;
 
       Close_File;
-      Markered_Subp_Data.Clear;
 
       --  At this point temp package is coplete and it is safe
       --  to replace the old one with it.

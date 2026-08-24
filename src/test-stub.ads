@@ -150,16 +150,12 @@ private
         Markered_Data_Type,
         "<");
    use Markered_Data_Maps;
+   subtype MD_Map is Markered_Data_Maps.Map;
 
-   procedure Gather_Markered_Data
-     (File : String; Map : in out Markered_Data_Maps.Map);
+   procedure Gather_Markered_Data (File : String; Map : in out MD_Map);
 
-   Markered_Data : Markered_Data_Maps.Map;
+   Markered_Data : MD_Map;
    --  Main MD storage for stub body
-
-   Markered_Subp_Data : Markered_Data_Maps.Map;
-   --  Used to keep MD for subprograms that are actually present in the spec
-   --  so that unused setters could be reported.
 
    ------------------------------------------
    --  Arguments & result profile analysis --
