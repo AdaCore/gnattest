@@ -310,7 +310,7 @@ package body Test.Stub is
             end if;
 
             if Element.Kind in Ada_Task_Type_Decl | Ada_Single_Task_Decl then
-               Tasks_Present := True;
+               Data.Tasks_Present := True;
             end if;
 
             if Element.Kind
@@ -346,7 +346,7 @@ package body Test.Stub is
          end if;
       end loop;
 
-      Tasks_Present := False;
+      Data.Tasks_Present := False;
       State_Cur := Data.Elem_Tree.Root;
 
       Create_Element_Node (The_Unit);

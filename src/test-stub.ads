@@ -63,8 +63,6 @@ package Test.Stub is
       Inside_Protected : Boolean := False;
    end record;
 
-   Tasks_Present : Boolean;
-
    package Element_Node_Trees is new
      Ada.Containers.Multiway_Trees (Element_Node);
    use Element_Node_Trees;
@@ -86,6 +84,10 @@ package Test.Stub is
       Limited_Withed_Units : String_Set.Set;
       --  All limited withed units from the spec should have a corresponding
       --  regular with clause in the body.
+
+      Tasks_Present : Boolean;
+      --  Whether tasking subprogram were encountered. If True, we should
+      --  import the tasking runtime in the stub files.
    end record;
 
 private

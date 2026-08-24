@@ -37,7 +37,8 @@ package body Test.Stub.Write is
    procedure Put_Import_Section
      (Markered_Data        : in out Markered_Data_Maps.Map;
       Add_Import           : Boolean := False;
-      Add_Language_Version : Boolean := False);
+      Add_Language_Version : Boolean := False;
+      Tasks_Present        : Boolean := False);
    --  Puts or regenerates markered section for with clauses
    --
    --  The included version is the one defined through the Ada_Version_Switch
@@ -88,7 +89,10 @@ package body Test.Stub.Write is
            .Spec_Name.all,
          not Data.Flat_List.Is_Empty,
          Data.Limited_Withed_Units);
-      Put_Import_Section (Markered_Data, Add_Import => True);
+      Put_Import_Section
+        (Markered_Data,
+         Add_Import    => True,
+         Tasks_Present => Data.Tasks_Present);
 
       Process_Siblings (First_Child (Data.Elem_Tree.Root));
 
@@ -510,7 +514,8 @@ package body Test.Stub.Write is
    procedure Put_Import_Section
      (Markered_Data        : in out Markered_Data_Maps.Map;
       Add_Import           : Boolean := False;
-      Add_Language_Version : Boolean := False)
+      Add_Language_Version : Boolean := False;
+      Tasks_Present        : Boolean := False)
    is
       use Test.Command_Lines;
 
