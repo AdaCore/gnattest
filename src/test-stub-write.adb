@@ -44,6 +44,12 @@ package body Test.Stub.Write is
    --  The included version is the one defined through the Ada_Version_Switch
    --  argument, if defined, or Ada_2012 otherwise.
 
+   function Contains_Then_Emit
+     (MD_Id : Markered_Data_Id; Map : in out MD_Map) return Boolean;
+   --  Check if Markered_Data contains MD_Id. If True, emit the lines
+   --  of the corresponding Markered_Data_Type, remove the entry from
+   --  Map, and return True. Otherwise, do nothing and return False.
+
    procedure Process_Siblings (Cursor : Element_Node_Trees.Cursor);
 
    procedure Process_Node (Cursor : Element_Node_Trees.Cursor);
@@ -187,13 +193,7 @@ package body Test.Stub.Write is
          New_Line_Count;
 
          ID := Generate_MD_Id (Node.Spec);
-         if Markered_Subp_Data.Contains (ID) then
-
-            MD := Markered_Subp_Data.Element (ID);
-            Put_Lines (MD, Comment_Out => False);
-
-            Markered_Subp_Data.Delete (ID);
-         else
+         if not Contains_Then_Emit (ID, Markered_Subp_Data) then
             Generate_Default_Setter_Spec (Node);
          end if;
 
@@ -305,13 +305,7 @@ package body Test.Stub.Write is
          Update_Local_Entity_With_Setter (Node, New_Line_Counter, 4);
 
          ID := Generate_MD_Id (Node.Spec);
-         if Markered_Subp_Data.Contains (ID) then
-
-            MD := Markered_Subp_Data.Element (ID);
-            Put_Lines (MD, Comment_Out => False);
-
-            Markered_Subp_Data.Delete (ID);
-         else
+         if not Contains_Then_Emit (ID, Markered_Subp_Data) then
             Generate_Default_Setter_Body (Node);
          end if;
 
@@ -580,6 +574,20 @@ package body Test.Stub.Write is
 
    end Put_Import_Section;
 
+   function Contains_Then_Emit
+     (MD_Id : Markered_Data_Id; Map : in out MD_Map) return Boolean
+   is
+      MD : Markered_Data_Type;
+   begin
+      if Map.Contains (MD_Id) then
+         MD := Map.Element (MD_Id);
+         Put_Lines (MD, Comment_Out => False);
+         Map.Delete (MD_Id);
+         return True;
+      end if;
+      return False;
+   end Contains_Then_Emit;
+
    ----------------------
    -- Process_Siblings --
    ----------------------
@@ -662,7 +670,6 @@ package body Test.Stub.Write is
    is
       Cur : constant Element_Node_Trees.Cursor := Cursor;
       ID  : Markered_Data_Id := Generate_MD_Id (Node.Spec);
-      MD  : Markered_Data_Type;
    begin
       if Is_Leaf (Cur) and then not Is_Root (Parent (Cur)) then
          --  Nothing to worry about
@@ -697,13 +704,7 @@ package body Test.Stub.Write is
 
       --  Put bodies
 
-      if Markered_Data.Contains (ID) then
-         --  Extract importing MD
-         MD := Markered_Data.Element (ID);
-         Put_Lines (MD, Comment_Out => False);
-
-         Markered_Data.Delete (ID);
-      else
+      if not Contains_Then_Emit (ID, Markered_Data) then
          New_Line_Count;
          S_Put ((Level - 1) * Indent_Level, "is");
          New_Line_Count;
@@ -737,13 +738,7 @@ package body Test.Stub.Write is
       S_Put (0, GT_Marker_End);
       New_Line_Count;
 
-      if Markered_Data.Contains (ID) then
-         --  Extract importing MD
-         MD := Markered_Data.Element (ID);
-         Put_Lines (MD, Comment_Out => False);
-
-         Markered_Data.Delete (ID);
-      else
+      if not Contains_Then_Emit (ID, Markered_Data) then
          New_Line_Count;
       end if;
 
@@ -817,7 +812,6 @@ package body Test.Stub.Write is
 
    procedure Generate_Procedure_Body (Node : Element_Node) is
       ID : constant Markered_Data_Id := Generate_MD_Id (Node.Spec);
-      MD : Markered_Data_Type;
 
       Arg_Kind   : constant Ada_Node_Kind_Type := Node.Spec.Kind;
       Spec       : constant Base_Subp_Spec'Class :=
@@ -903,13 +897,7 @@ package body Test.Stub.Write is
       New_Line_Count;
 
       --  Put body
-      if Markered_Data.Contains (ID) then
-         --  Extract importing MD
-         MD := Markered_Data.Element (ID);
-         Put_Lines (MD, Comment_Out => False);
-
-         Markered_Data.Delete (ID);
-      else
+      if not Contains_Then_Emit (ID, Markered_Data) then
          New_Line_Count;
          S_Put ((Level) * Indent_Level, "begin");
          New_Line_Count;
@@ -1066,7 +1054,6 @@ package body Test.Stub.Write is
 
    procedure Generate_Function_Body (Node : Element_Node) is
       ID : constant Markered_Data_Id := Generate_MD_Id (Node.Spec);
-      MD : Markered_Data_Type;
 
       Arg_Kind : constant Ada_Node_Kind_Type := Node.Spec.Kind;
 
@@ -1202,13 +1189,7 @@ package body Test.Stub.Write is
       New_Line_Count;
 
       --  Put body
-      if Markered_Data.Contains (ID) then
-         --  Extract importing MD
-         MD := Markered_Data.Element (ID);
-         Put_Lines (MD, Comment_Out => False);
-
-         Markered_Data.Delete (ID);
-      else
+      if not Contains_Then_Emit (ID, Markered_Data) then
          New_Line_Count;
          S_Put ((Level) * Indent_Level, "begin");
          New_Line_Count;
@@ -1451,7 +1432,6 @@ package body Test.Stub.Write is
 
    procedure Generate_Entry_Body (Node : Element_Node) is
       ID : constant Markered_Data_Id := Generate_MD_Id (Node.Spec);
-      MD : Markered_Data_Type;
 
       Parameters : constant Param_Spec_Array :=
         Node.Spec.As_Basic_Subp_Decl.P_Subp_Decl_Spec.P_Params;
@@ -1508,13 +1488,7 @@ package body Test.Stub.Write is
       New_Line_Count;
 
       --  Put body
-      if Markered_Data.Contains (ID) then
-         --  Extract importing MD
-         MD := Markered_Data.Element (ID);
-         Put_Lines (MD, Comment_Out => False);
-
-         Markered_Data.Delete (ID);
-      else
+      if not Contains_Then_Emit (ID, Markered_Data) then
          New_Line_Count;
          S_Put (Level * Indent_Level + 2, " Standard.True");
          New_Line_Count;
@@ -1542,7 +1516,6 @@ package body Test.Stub.Write is
 
    procedure Generate_Task_Body (Node : Element_Node) is
       ID : constant Markered_Data_Id := Generate_MD_Id (Node.Spec);
-      MD : Markered_Data_Type;
    begin
       Trace (Me, "Generating task body for " & Node.Spec_Name.all);
 
@@ -1569,13 +1542,7 @@ package body Test.Stub.Write is
       New_Line_Count;
 
       --  Put body
-      if Markered_Data.Contains (ID) then
-         --  Extract importing MD
-         MD := Markered_Data.Element (ID);
-         Put_Lines (MD, Comment_Out => False);
-
-         Markered_Data.Delete (ID);
-      else
+      if not Contains_Then_Emit (ID, Markered_Data) then
          New_Line_Count;
          S_Put ((Level) * Indent_Level, "begin");
          New_Line_Count;
@@ -1606,7 +1573,6 @@ package body Test.Stub.Write is
         Node.Spec.Kind = Ada_Incomplete_Tagged_Type_Decl;
 
       ID : constant Markered_Data_Id := Generate_MD_Id (Node.Spec);
-      MD : Markered_Data_Type;
    begin
       Trace (Me, "Generating full type declaration for " & Node.Spec_Name.all);
 
@@ -1643,13 +1609,7 @@ package body Test.Stub.Write is
 
       --  Put bodies
 
-      if Markered_Data.Contains (ID) then
-         --  Extract importing MD
-         MD := Markered_Data.Element (ID);
-         Put_Lines (MD, Comment_Out => False);
-
-         Markered_Data.Delete (ID);
-      else
+      if not Contains_Then_Emit (ID, Markered_Data) then
          New_Line_Count;
          S_Put ((Level) * Indent_Level + 2, "null record;");
          New_Line_Count;
