@@ -57,8 +57,11 @@ package body Test.Stub is
       return Stubbed_Parameter_Lists.List;
    --  Filer out parameters of private types.
 
-   function Requires_Body (N : Ada_Node) return Boolean;
-   --  Checks if a body sample should be created for an element
+   function Requires_Body
+     (N : Ada_Node; Rewrite_Spec : out Boolean) return Boolean;
+   --  Checks if a body sample should be created for an element.
+   --  Additionally set Rewrite_Spec to True if we should remove
+   --  some "Import" pragmas or aspects.
 
    ------------------
    -- Process_Unit --
@@ -287,6 +290,8 @@ package body Test.Stub is
       is
          Elem_Node : Element_Node := Nil_Element_Node;
          Cur       : Element_Node_Trees.Cursor;
+
+         Spec_Rewrite : Boolean;
       begin
 
          if Element.Kind = Ada_Generic_Package_Decl then
@@ -317,7 +322,9 @@ package body Test.Stub is
 
          Elem_Node.Inside_Protected := Inside_Protected;
 
-         if Requires_Body (Element.As_Ada_Node) then
+         if Requires_Body (Element.As_Ada_Node, Spec_Rewrite) then
+            Data.Need_Spec_Rewrite := @ or else Spec_Rewrite;
+
             Elem_Node.Spec := Element.As_Ada_Node;
 
             if Element.Kind = Ada_Subp_Decl then
@@ -387,8 +394,10 @@ package body Test.Stub is
    -- Requires_Body --
    -------------------
 
-   function Requires_Body (N : Ada_Node) return Boolean is
+   function Requires_Body
+     (N : Ada_Node; Rewrite_Spec : out Boolean) return Boolean is
    begin
+      Rewrite_Spec := False;
       case N.Kind is
          when Ada_Package_Decl
             | Ada_Generic_Package_Decl
@@ -407,21 +416,33 @@ package body Test.Stub is
             then
                return False;
             end if;
-            return not N.As_Basic_Subp_Decl.P_Is_Imported;
+
+            --  If the subp decl has a "pragma Import", only require a body if
+            --  external stubbing is enabled.
+            --
+            --  Additionally, in this case, ask for a rewrite of the spec to
+            --  remove the "pragma Import".
+
+            if N.As_Basic_Subp_Decl.P_Is_Imported then
+               if External_Stubbing_ON then
+                  Rewrite_Spec := True;
+                  return True;
+               else
+                  return False;
+               end if;
+            end if;
+
+            return True;
 
          when Ada_Generic_Subp_Decl                                      =>
-            return not N.As_Generic_Subp_Decl.P_Is_Imported;
+            return True;
 
          when Ada_Incomplete_Type_Decl | Ada_Incomplete_Tagged_Type_Decl =>
             declare
                Next_Part : constant Base_Type_Decl :=
                  N.As_Base_Type_Decl.P_Next_Part;
             begin
-               if Next_Part.Is_Null then
-                  return True;
-               else
-                  return N.Unit /= Next_Part.Unit;
-               end if;
+               return Next_Part.Is_Null or else N.Unit /= Next_Part.Unit;
             end;
 
          when others                                                     =>

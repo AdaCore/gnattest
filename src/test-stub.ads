@@ -96,6 +96,10 @@ package Test.Stub is
       Tasks_Present : Boolean;
       --  Whether tasking subprogram were encountered. If True, we should
       --  import the tasking runtime in the stub files.
+
+      Need_Spec_Rewrite : Boolean := False;
+      --  If True, the spec of the stubbed unit should be rewritten to:
+      --    - Remove pragma imports
    end record;
 
    -------------------
