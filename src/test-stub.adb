@@ -169,6 +169,17 @@ package body Test.Stub is
 
       Generate_Body_Stub (Body_File_Name, Data, Markered_Data);
 
+      if Data.Need_Spec_Rewrite then
+         declare
+            Stubbed_Spec_Filename : constant String :=
+              Body_File_Name (Body_File_Name'First .. Body_File_Name'Last - 1)
+              & "s";
+            --  FIXME: Maybe refine this name generation ?
+         begin
+            Rewrite_Spec (Pack, Stubbed_Spec_Filename);
+         end;
+      end if;
+
       --  FIXME: Understand why we call Generate_Stub_Data only when Flat_List
       --  is not Empty.
       if Data.Flat_List.Is_Empty then

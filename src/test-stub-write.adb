@@ -1747,4 +1747,25 @@ package body Test.Stub.Write is
          <<END_DANGLING>>
       end loop;
    end Put_Dangling_Elements;
+
+   ------------------
+   -- Rewrite_Spec --
+   ------------------
+
+   procedure Rewrite_Spec
+     (Unit : Libadalang.Analysis.Ada_Node; Stubbed_Spec_Name : String)
+   is
+      Tmp_File_Name : constant String :=
+        Ada.Directories.Compose
+          (Utils.Environment.Tool_Temp_Dir.all, "gnattest_tmp_stub_spec");
+   begin
+      Me.Trace
+        ("rewriting spec "
+         & Unit.Unit.Get_Filename
+         & " => "
+         & Stubbed_Spec_Name);
+
+      Create_File (Tmp_File_Name);
+
+   end Rewrite_Spec;
 end Test.Stub.Write;
