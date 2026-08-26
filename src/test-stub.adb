@@ -176,7 +176,7 @@ package body Test.Stub is
               & "s";
             --  FIXME: Maybe refine this name generation ?
          begin
-            Rewrite_Spec (Pack, Stubbed_Spec_Filename);
+            Rewrite_Spec (Pack.As_Package_Decl, Stubbed_Spec_Filename);
          end;
       end if;
 
