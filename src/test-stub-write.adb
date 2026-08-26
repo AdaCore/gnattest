@@ -1733,6 +1733,10 @@ package body Test.Stub.Write is
       --  "Convention". Then, remove the Aspect member altogether if we
       --  removed ALL aspects.
 
+      procedure Remove_Import_Pragma (Prag : Pragma_Node);
+      --  Remove the Pragma if it is an Import pragma and its Entity target is
+      --  a subprogram.
+
       ---------------------------
       -- Remove_Import_Aspect --
       ---------------------------
@@ -1778,6 +1782,92 @@ package body Test.Stub.Write is
             end if;
          end if;
       end Remove_Import_Aspect;
+
+      --------------------------
+      -- Remove_Import_Pragma --
+      --------------------------
+
+      procedure Remove_Import_Pragma (Prag : Pragma_Node) is
+
+         Pragma_Name : constant Text_Type :=
+           To_Lower (Prag.F_Id.As_Identifier.Text);
+
+         function Get_Entity_Id
+           (Assocs : Base_Assoc_List; Nth : Positive) return Expr;
+         --  Return the expression corresponding to the `Entity => expr` part
+         --  of the pragma, or the N-th (1-based) child of the list
+
+         -------------------
+         -- Get_Entity_Id --
+         -------------------
+
+         function Get_Entity_Id
+           (Assocs : Base_Assoc_List; Nth : Positive) return Expr
+         is
+            Child_Count : Positive := 1;
+         begin
+            for Child of Assocs.Children loop
+               declare
+                  Assoc      : constant Pragma_Argument_Assoc :=
+                    Child.As_Pragma_Argument_Assoc;
+                  Assoc_Name : constant Name := Assoc.F_Name;
+               begin
+                  if (not Assoc_Name.Is_Null
+                      --  Argument is of the form "Key => Value", check if the
+                      --  key is "entity".
+
+                      and then
+                        To_Lower (Assoc_Name.As_Identifier.Text) = "entity")
+
+                    or else Child_Count = Nth
+                    --  Argument is positional, thus Entity should be the
+                    --  second argument.
+                  then
+                     return Assoc.F_Expr;
+                  end if;
+               end;
+
+               Child_Count := @ + 1;
+            end loop;
+
+            return No_Expr;
+         end Get_Entity_Id;
+
+      begin
+         if Pragma_Name = "import"
+           or else Pragma_Name = "interface"
+           or else Pragma_Name = "interface_name"
+         then
+
+            --  Once in an Import pragma, retrieve the Entity we're actually
+            --  importing and only remove the pragma if it's a Subp_Decl.
+            --
+            --  "pragma interface" is the legacy (Ada83) equivalent of
+            --  "pragma Import".
+            --  "pragma interface_name" is the legacy "External_Name".
+
+            declare
+               Nth_Child : constant Positive :=
+                 (if Pragma_Name = "interface_name" then 1 else 2);
+               --  If using positional argument passing, "Entity" should be the
+               --  second argument, or the first for "pragma interface_name".
+
+               Name : constant Expr := Get_Entity_Id (Prag.F_Args, Nth_Child);
+               Decl : constant Basic_Decl := Name.As_Name.P_Referenced_Decl;
+            begin
+               if Decl.Kind = Ada_Subp_Decl then
+                  Me.Trace
+                    ("Removing pragma "
+                     & Image (Pragma_Name)
+                     & " for "
+                     & Name.Image);
+                  Handle (Prag).Remove_Child;
+               end if;
+            end;
+         end if;
+      end Remove_Import_Pragma;
+
+      --  Start of processing for Rewrite_Spec
    begin
       Me.Trace
         ("rewriting spec "
@@ -1787,10 +1877,13 @@ package body Test.Stub.Write is
 
       for Decl of Unit_Node.F_Public_Part.F_Decls loop
          case Decl.Kind is
-            when Ada_Subp_Decl =>
+            when Ada_Subp_Decl   =>
                Remove_Import_Aspect (Decl.As_Subp_Decl);
 
-            when others        =>
+            when Ada_Pragma_Node =>
+               Remove_Import_Pragma (Decl.As_Pragma_Node);
+
+            when others          =>
                null;
          end case;
       end loop;
