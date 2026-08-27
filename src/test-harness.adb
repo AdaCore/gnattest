@@ -2122,7 +2122,7 @@ package body Test.Harness is
    ---------------------------
 
    procedure Generate_Test_Drivers
-     (Data : Data_Holder; UUT : String; Stub_List : Ada_Nodes_List.List)
+     (Data : Data_Holder; UUT : String; Stub_List : Pkg_Decl_List)
    is
 
       procedure Process_Test_Routine (Current_TR : Test_Routine_Info'Class);
@@ -2175,7 +2175,6 @@ package body Test.Harness is
             Project_Path       : constant String :=
               Test.Skeleton.Source_Table.Get_Project_Path (Project_Name);
 
-            use Ada_Nodes_List;
          begin
             SPI.Name_Extending := new String'(Current_TR.TR_Text_Name.all);
             SPI.Path_Extending :=

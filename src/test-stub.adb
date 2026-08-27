@@ -48,7 +48,8 @@ package body Test.Stub is
    Me_Mapping : constant Trace_Handle :=
      Create ("Stubs.Mapping", Default => Off);
 
-   procedure Gather_Data (The_Unit : Ada_Node; Data : out Stubbing_Data);
+   procedure Gather_Data
+     (The_Unit : Base_Package_Decl; Data : out Stubbing_Data);
    --  Gathers all LAL info for stub generation
 
    function Filter_Private_Parameters
@@ -64,7 +65,7 @@ package body Test.Stub is
    ------------------
 
    procedure Process_Unit
-     (Pack                : Libadalang.Analysis.Ada_Node;
+     (Pack                : Base_Package_Decl;
       Body_File_Name      : String;
       Stub_Data_File_Spec : String;
       Stub_Data_File_Body : String)
@@ -184,7 +185,9 @@ package body Test.Stub is
    -- Gather_Data --
    -----------------
 
-   procedure Gather_Data (The_Unit : Ada_Node; Data : out Stubbing_Data) is
+   procedure Gather_Data
+     (The_Unit : Base_Package_Decl; Data : out Stubbing_Data)
+   is
       Spec_Base_File_Name : constant String := The_Unit.Unit.Get_Filename;
 
       Generic_Layers_Counter : Natural := 0;

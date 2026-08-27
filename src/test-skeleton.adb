@@ -250,7 +250,7 @@ package body Test.Skeleton is
             Package_Data_List : Package_Info_List.List;
             --  Stores info of nested packages
 
-            Units_To_Stub : Ada_Nodes_List.List;
+            Units_To_Stub : Pkg_Decl_List;
             --  List of direct dependancies of current unit
 
             Subp_Name_Frequency : Name_Frequency.Map;
@@ -523,7 +523,7 @@ package body Test.Skeleton is
      (The_Unit : Compilation_Unit; Data : in out Data_Holder);
    --  Populates the list of units that should be stubbed.
 
-   procedure Process_Stubs (List : Ada_Nodes_List.List);
+   procedure Process_Stubs (List : Pkg_Decl_List);
 
    function Is_Declared_In_Regular_Package
      (Elem : Ada_Node'Class) return Boolean;
@@ -4070,12 +4070,12 @@ package body Test.Skeleton is
       end Put_TP_Header;
 
       procedure Put_Stub_Data_Import is
-         S_Cur    : Ada_Nodes_List.Cursor := Data.Units_To_Stub.First;
+         S_Cur    : Pkg_Decl_Lists.Cursor := Data.Units_To_Stub.First;
          Tmp      : Unbounded_String;
          Def_Name : Defining_Name;
-         use Ada_Nodes_List;
+         use Pkg_Decl_Lists;
       begin
-         while S_Cur /= Ada_Nodes_List.No_Element loop
+         while S_Cur /= Pkg_Decl_Lists.No_Element loop
             Tmp := To_Unbounded_String (Element (S_Cur).Unit.Get_Filename);
 
             if Source_Stubbed (To_String (Tmp))
@@ -4083,8 +4083,7 @@ package body Test.Skeleton is
                 not Excluded_Test_Data_Files.Contains
                       (Base_Name (Get_Source_Stub_Data_Spec (To_String (Tmp))))
             then
-               Def_Name :=
-                 Ada_Nodes_List.Element (S_Cur).As_Basic_Decl.P_Defining_Name;
+               Def_Name := Element (S_Cur).As_Basic_Decl.P_Defining_Name;
                S_Put
                  (0,
                   "with "
@@ -8296,7 +8295,7 @@ package body Test.Skeleton is
                            then
                               Already_Stubbing.Include (Withed_Spec_Image);
                               Data.Units_To_Stub.Append
-                                (Withed_Spec.As_Ada_Node);
+                                (Withed_Spec.As_Base_Package_Decl);
                               Trace (Me, Withed_Spec_Image);
 
                               --  Recursively stub
@@ -8327,7 +8326,8 @@ package body Test.Skeleton is
                                            (Parent_File)
                                  then
                                     Already_Stubbing.Include (Parent_File);
-                                    Data.Units_To_Stub.Append (Parent_Unit);
+                                    Data.Units_To_Stub.Append
+                                      (Parent_Unit.As_Base_Package_Decl);
                                     Trace (Me, Parent_File);
                                  end if;
                               end;
@@ -8463,7 +8463,7 @@ package body Test.Skeleton is
                     and then not Already_Stubbing.Contains (Parent_File)
                   then
                      Already_Stubbing.Include (Parent_File);
-                     Data.Units_To_Stub.Append (Parent);
+                     Data.Units_To_Stub.Append (Parent.As_Base_Package_Decl);
                      Trace (Me, Parent_File);
                   end if;
                end;
@@ -9169,12 +9169,10 @@ package body Test.Skeleton is
    -- Process_Stubs --
    -------------------
 
-   procedure Process_Stubs (List : Ada_Nodes_List.List) is
+   procedure Process_Stubs (List : Pkg_Decl_List) is
       Str : String_Access;
 
       Stub_Success : Boolean;
-
-      use Ada_Nodes_List;
    begin
       --  Once we change the context, contents of List won't make sense.
 
