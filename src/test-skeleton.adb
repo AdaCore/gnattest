@@ -1405,8 +1405,9 @@ package body Test.Skeleton is
 
          if (Node.Kind = Ada_Generic_Package_Instantiation
              and Node.Parent.Kind = Ada_Library_Item)
-           or (Node.Kind = Ada_Generic_Package_Instantiation
-               and Inside_Top_Level_Inst)
+           or
+             (Node.Kind = Ada_Generic_Package_Instantiation
+              and Inside_Top_Level_Inst)
          then
             Inside_Inst := True;
             Inside_Top_Level_Inst := True;
@@ -1855,8 +1856,9 @@ package body Test.Skeleton is
                     and then not Is_Overridden (ISub, ISubs2)
                     and then not (ISub.Kind in Ada_Synthetic_Subp_Decl)
                     and then not ISub.P_Subp_Spec_Or_Null.Is_Null
-                    and then not (ISub.P_Subp_Spec_Or_Null.Kind
-                                  in Ada_Synthetic_Binary_Spec)
+                    and then
+                      not (ISub.P_Subp_Spec_Or_Null.Kind
+                           in Ada_Synthetic_Binary_Spec)
                   then
 
                      --  We need to go to original declaration of the inherited
@@ -1902,8 +1904,9 @@ package body Test.Skeleton is
 
                      if Test_Types_Linked
                           (Ancestor_Type, Type_Dec.As_Base_Type_Decl)
-                       and then No_Inheritance_Through_Generics
-                                  (Ancestor_Type, Type_Dec.As_Base_Type_Decl)
+                       and then
+                         No_Inheritance_Through_Generics
+                           (Ancestor_Type, Type_Dec.As_Base_Type_Decl)
                      then
                         --  Check if the inherited subprogram had
                         --  Test_Cases. In such case one test per Test_Case
@@ -2166,12 +2169,12 @@ package body Test.Skeleton is
 
                if Source_Present (Ancestor_Type.Unit.Get_Filename)
                  and then Is_Callable_Subprogram (OSub)
-                 and then Test_Types_Linked
-                            (Ancestor_Type,
-                             TR_W.Original_Type.As_Base_Type_Decl)
-                 and then No_Inheritance_Through_Generics
-                            (Ancestor_Type,
-                             TR_W.Original_Type.As_Base_Type_Decl)
+                 and then
+                   Test_Types_Linked
+                     (Ancestor_Type, TR_W.Original_Type.As_Base_Type_Decl)
+                 and then
+                   No_Inheritance_Through_Generics
+                     (Ancestor_Type, TR_W.Original_Type.As_Base_Type_Decl)
                then
                   Depth :=
                     Inheritance_Depth
@@ -3000,8 +3003,8 @@ package body Test.Skeleton is
 
       begin
          if Node.Kind /= Ada_Attribute_Ref
-           or else To_Lower (Node_Image (Node.As_Attribute_Ref.F_Attribute))
-                   /= "old"
+           or else
+             To_Lower (Node_Image (Node.As_Attribute_Ref.F_Attribute)) /= "old"
          then
             return Into;
          end if;
@@ -3240,9 +3243,8 @@ package body Test.Skeleton is
 
                if Post'Last >= I + F_Name_Length then
                   if Eq (Post (I .. I + F_Name_Length), F_Name & "' Result")
-                    or else Eq
-                              (Post (I .. I + F_Name_Length),
-                               F_Name & " 'Result")
+                    or else
+                      Eq (Post (I .. I + F_Name_Length), F_Name & " 'Result")
                   then
                      Tmp :=
                        new String'(Res.all & Post (Idx .. I - 1) & R_Name);
@@ -3995,8 +3997,8 @@ package body Test.Skeleton is
       begin
          return
            TR_Text.Is_Empty
-           or else (for some S of TR_Text =>
-                      Index (S, Unimplemented_Line) /= 0);
+           or else
+             (for some S of TR_Text => Index (S, Unimplemented_Line) /= 0);
       end Is_Unimplemented_Test;
 
       function Markered_Data_Map_Is_Empty return Boolean is
@@ -4077,9 +4079,9 @@ package body Test.Skeleton is
             Tmp := To_Unbounded_String (Element (S_Cur).Unit.Get_Filename);
 
             if Source_Stubbed (To_String (Tmp))
-              and then not Excluded_Test_Data_Files.Contains
-                             (Base_Name
-                                (Get_Source_Stub_Data_Spec (To_String (Tmp))))
+              and then
+                not Excluded_Test_Data_Files.Contains
+                      (Base_Name (Get_Source_Stub_Data_Spec (To_String (Tmp))))
             then
                Def_Name :=
                  Ada_Nodes_List.Element (S_Cur).As_Basic_Decl.P_Defining_Name;
@@ -4454,11 +4456,12 @@ package body Test.Skeleton is
          end if;
 
          if not Current_Type.Main_Type_Abstract
-           and then not Is_Regular_File
-                          (Output_Dir
-                           & Dir_Sep
-                           & Test_File_Name.all
-                           & Body_Suffix.all)
+           and then
+             not Is_Regular_File
+                   (Output_Dir
+                    & Dir_Sep
+                    & Test_File_Name.all
+                    & Body_Suffix.all)
          then
 
             Create
@@ -4993,8 +4996,9 @@ package body Test.Skeleton is
                                   "_"
                                   & Current_Subp.TC_Info.TC_Hash
                                       (Current_Subp.TC_Info.TC_Hash'First
-                                       .. Current_Subp.TC_Info.TC_Hash'First
-                                          + 5)
+                                       ..
+                                         Current_Subp.TC_Info.TC_Hash'First
+                                         + 5)
                                 else ""))
                         & Body_Suffix.all,
                         UH,
@@ -5147,8 +5151,9 @@ package body Test.Skeleton is
                      MD := Markered_Data_Maps.Element (MD_Cur);
 
                      if not Short_Names_Used.Contains (MD.Short_Name.all)
-                       or else Shortnamed_Subps.Contains
-                                 (Current_Subp.Subp_Declaration)
+                       or else
+                         Shortnamed_Subps.Contains
+                           (Current_Subp.Subp_Declaration)
                      then
                         Short_Names_Used.Include (MD.Short_Name.all);
                         Shortnamed_Subps.Include
@@ -5205,8 +5210,9 @@ package body Test.Skeleton is
 
                      if not Short_Names_Used.Contains
                               (To_Lower (Current_Subp.Subp_Text_Name.all))
-                       or else Shortnamed_Subps.Contains
-                                 (Current_Subp.Subp_Declaration)
+                       or else
+                         Shortnamed_Subps.Contains
+                           (Current_Subp.Subp_Declaration)
                      then
                         --  Short name is free, we can use it
                         MD.Short_Name_Used := True;
@@ -6164,8 +6170,9 @@ package body Test.Skeleton is
                                   "_"
                                   & Current_Subp.TC_Info.TC_Hash
                                       (Current_Subp.TC_Info.TC_Hash'First
-                                       .. Current_Subp.TC_Info.TC_Hash'First
-                                          + 5)
+                                       ..
+                                         Current_Subp.TC_Info.TC_Hash'First
+                                         + 5)
                                 else ""))
                         & Body_Suffix.all,
                         UH,
@@ -6289,8 +6296,9 @@ package body Test.Skeleton is
                      MD := Markered_Data_Maps.Element (MD_Cur);
 
                      if not Short_Names_Used.Contains (MD.Short_Name.all)
-                       or else Shortnamed_Subps.Contains
-                                 (Current_Subp.Subp_Declaration)
+                       or else
+                         Shortnamed_Subps.Contains
+                           (Current_Subp.Subp_Declaration)
                      then
                         Short_Names_Used.Include (MD.Short_Name.all);
                         Shortnamed_Subps.Include
@@ -6348,8 +6356,9 @@ package body Test.Skeleton is
 
                      if not Short_Names_Used.Contains
                               (To_Lower (Current_Subp.Subp_Text_Name.all))
-                       or else Shortnamed_Subps.Contains
-                                 (Current_Subp.Subp_Declaration)
+                       or else
+                         Shortnamed_Subps.Contains
+                           (Current_Subp.Subp_Declaration)
                      then
                         --  Short name is free, we can use it
                         MD.Short_Name_Used := True;
@@ -6919,8 +6928,7 @@ package body Test.Skeleton is
               (if Is_Operator
                then
                  Subp_FQN
-                   (Index (Subp_FQN, ".", Going => Ada.Strings.Backward)
-                    + 2
+                   (Index (Subp_FQN, ".", Going => Ada.Strings.Backward) + 2
                     .. Subp_FQN'Last - 1)
                else "");
             --  Operator name, without surrounding double quotes
@@ -8282,8 +8290,9 @@ package body Test.Skeleton is
                              Withed_Spec.Unit.Get_Filename;
                         begin
                            if Good_To_Stub (Withed_Spec.Unit)
-                             and then not Already_Stubbing.Contains
-                                            (Withed_Spec_Image)
+                             and then
+                               not Already_Stubbing.Contains
+                                     (Withed_Spec_Image)
                            then
                               Already_Stubbing.Include (Withed_Spec_Image);
                               Data.Units_To_Stub.Append
@@ -8304,8 +8313,8 @@ package body Test.Skeleton is
                         --  Gathering parent packages
                         Parent_Unit := Withed_Spec.P_Semantic_Parent;
                         while not Parent_Unit.Is_Null
-                          and then Parent_Unit.Unit
-                                   /= Parent_Unit.P_Standard_Unit
+                          and then
+                            Parent_Unit.Unit /= Parent_Unit.P_Standard_Unit
                         loop
                            if Parent_Unit.Kind = Ada_Package_Decl then
                               declare
@@ -8313,8 +8322,9 @@ package body Test.Skeleton is
                                    Parent_Unit.Unit.Get_Filename;
                               begin
                                  if Good_To_Stub (Parent_Unit.Unit)
-                                   and then not Already_Stubbing.Contains
-                                                  (Parent_File)
+                                   and then
+                                     not Already_Stubbing.Contains
+                                           (Parent_File)
                                  then
                                     Already_Stubbing.Include (Parent_File);
                                     Data.Units_To_Stub.Append (Parent_Unit);

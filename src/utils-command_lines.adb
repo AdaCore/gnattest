@@ -626,8 +626,8 @@ package body Utils.Command_Lines is
       function Arg (Cmd : Command_Line; Switch : Switches) return Arg_Type is
       begin
          return Value (Cmd.Sw (To_All (Switch)).String_Val.all);
-      --  If the ".all" blows up because of a null pointer, that's because
-      --  the client forgot to instantiate Set_Defaults to set defaults.
+         --  If the ".all" blows up because of a null pointer, that's because
+         --  the client forgot to instantiate Set_Defaults to set defaults.
       end Arg;
 
       procedure Set_Arg
@@ -899,9 +899,9 @@ package body Utils.Command_Lines is
 
                      when ':' | '!' | '?' =>
                         if Result = All_Switches'Last
-                          or else Desc.Text'Length
-                                  > Descriptor.Allowed_Switches (Result)
-                                      .Text'Length
+                          or else
+                            Desc.Text'Length
+                            > Descriptor.Allowed_Switches (Result).Text'Length
                         then
                            Result := Switch;
                         end if;
@@ -1349,9 +1349,9 @@ package body Utils.Command_Lines is
                         goto Continue;
                      end if;
                      if Descriptor.Allowed_Switches (Switch).Default /= null
-                       and then Sw (Switch).String_Val.all
-                                = Descriptor.Allowed_Switches (Switch)
-                                    .Default.all
+                       and then
+                         Sw (Switch).String_Val.all
+                         = Descriptor.Allowed_Switches (Switch).Default.all
                      then
                         goto Continue;
                      end if;

@@ -798,9 +798,10 @@ package body Utils.Projects is
         Mains.Length /= 0
         --  Empty Mains assumed to be non Ada-only
 
-        and then (for all Main of Mains =>
-                    Prj.Root_Project.Visible_Source (Main.Source).Language
-                    = Ada_Language);
+        and then
+          (for all Main of Mains =>
+             Prj.Root_Project.Visible_Source (Main.Source).Language
+             = Ada_Language);
    end Has_Mains_And_Ada_Only;
 
    --------------------
@@ -1021,9 +1022,9 @@ package body Utils.Projects is
       end if;
 
       if No_Subprjs
-        or else (CLI_Main_Unit_Names'Length = 0
-                 and then (All_Update
-                           or else not Has_Mains_And_Ada_Only (Prj)))
+        or else
+          (CLI_Main_Unit_Names'Length = 0
+           and then (All_Update or else not Has_Mains_And_Ada_Only (Prj)))
       then
 
          --  IF --no-subprojects is passed, or there is no Main provided from

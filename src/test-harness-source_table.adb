@@ -207,8 +207,8 @@ package body Test.Harness.Source_Table is
          end if;
 
          if Cur_Pending = Source_File_Table.No_Element
-           and then Source_File_Table.Element (SF_Iterator).Status
-                    = Pending_For_Body
+           and then
+             Source_File_Table.Element (SF_Iterator).Status = Pending_For_Body
          then
             Cur_Body := SF_Iterator;
          end if;

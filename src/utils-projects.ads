@@ -166,8 +166,8 @@ package Utils.Projects is
 
    function Has_Runtime_Source (Source : String) return Boolean
    is (Project_Tree.Has_Runtime_Project
-       and then Project_Tree.Runtime_Project.Has_Source
-                  (Simple_Name (Source)));
+       and then
+         Project_Tree.Runtime_Project.Has_Source (Simple_Name (Source)));
    --  If the project has a defined runtime, check whether the given source is
    --  part of it.
 

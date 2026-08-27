@@ -84,8 +84,8 @@ package body Test.Instrument is
    function From_Same_Unit (L, R : Ada_Node'Class) return Boolean
    is (not L.Is_Null
        and then not R.Is_Null
-       and then L.P_Enclosing_Compilation_Unit
-                = R.P_Enclosing_Compilation_Unit);
+       and then
+         L.P_Enclosing_Compilation_Unit = R.P_Enclosing_Compilation_Unit);
 
    Included_Subps : String_Ordered_Set;
 
@@ -514,8 +514,9 @@ package body Test.Instrument is
 
             if not From_Same_Unit (D.As_Subp_Body.P_Decl_Part, D)
               and then D.As_Subp_Body.F_Subp_Spec.P_Params'Length > 0
-              and then Included_Subps.Contains
-                         (Image (D.As_Subp_Body.P_Unique_Identifying_Name))
+              and then
+                Included_Subps.Contains
+                  (Image (D.As_Subp_Body.P_Unique_Identifying_Name))
             then
                Process_Subprogram_Body (D.As_Base_Subp_Body);
             else
@@ -527,8 +528,9 @@ package body Test.Instrument is
 
             if not From_Same_Unit (D.As_Expr_Function.P_Decl_Part, D)
               and then D.As_Expr_Function.F_Subp_Spec.P_Params'Length > 0
-              and then Included_Subps.Contains
-                         (Image (D.As_Expr_Function.P_Unique_Identifying_Name))
+              and then
+                Included_Subps.Contains
+                  (Image (D.As_Expr_Function.P_Unique_Identifying_Name))
             then
                Process_Subprogram_Body (D.As_Base_Subp_Body);
             else
@@ -540,9 +542,9 @@ package body Test.Instrument is
 
             if not From_Same_Unit (D.As_Null_Subp_Decl.P_Decl_Part, D)
               and then D.As_Null_Subp_Decl.F_Subp_Spec.P_Params'Length > 0
-              and then Included_Subps.Contains
-                         (Image
-                            (D.As_Null_Subp_Decl.P_Unique_Identifying_Name))
+              and then
+                Included_Subps.Contains
+                  (Image (D.As_Null_Subp_Decl.P_Unique_Identifying_Name))
             then
                Process_Subprogram_Body (D.As_Base_Subp_Body);
             else
@@ -554,11 +556,9 @@ package body Test.Instrument is
 
             if not From_Same_Unit (D.As_Subp_Renaming_Decl.P_Decl_Part, D)
               and then D.As_Subp_Renaming_Decl.F_Subp_Spec.P_Params'Length > 0
-              and then Included_Subps.Contains
-                         (Image
-                            (D
-                               .As_Subp_Renaming_Decl
-                               .P_Unique_Identifying_Name))
+              and then
+                Included_Subps.Contains
+                  (Image (D.As_Subp_Renaming_Decl.P_Unique_Identifying_Name))
             then
                Process_Subprogram_Body (D.As_Base_Subp_Body);
             else

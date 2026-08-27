@@ -105,8 +105,9 @@ package body TGen.Types is
          else Self.Name);
    begin
       if No_Std
-        and then Ada.Strings.Equal_Case_Insensitive
-                   (To_String (Name.First_Element), "standard")
+        and then
+          Ada.Strings.Equal_Case_Insensitive
+            (To_String (Name.First_Element), "standard")
       then
          declare
             Stripped : Ada_Qualified_Name := Name;

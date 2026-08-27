@@ -177,8 +177,9 @@ package body Test.Common is
       begin
          for Pr of Prelude loop
             if Pr.Kind = Ada_Pragma_Node
-              and then To_Lower (Node_Image (Pr.As_Pragma_Node.F_Id))
-                       = "extend_system"
+              and then
+                To_Lower (Node_Image (Pr.As_Pragma_Node.F_Id))
+                = "extend_system"
             then
                declare
                   Assocs : constant Base_Assoc_List :=
@@ -843,8 +844,8 @@ package body Test.Common is
       for J in T.all'First .. T.all'Last loop
          if T.all (J) = '.' then
             if J = T.all'First + 1
-              and then T.all (J - 1)
-                       in 'a' | 's' | 'i' | 'g' | 'A' | 'S' | 'I' | 'G'
+              and then
+                T.all (J - 1) in 'a' | 's' | 'i' | 'g' | 'A' | 'S' | 'I' | 'G'
             then
                T.all (J) := '~';
             else
@@ -1339,8 +1340,8 @@ package body Test.Common is
 
       if Body_N /= No_Body_Node
         and then Body_N.Unit.Root.Kind = Ada_Compilation_Unit
-        and then Body_N.Unit.Root.As_Compilation_Unit.F_Body.Kind
-                 /= Ada_Subunit
+        and then
+          Body_N.Unit.Root.As_Compilation_Unit.F_Body.Kind /= Ada_Subunit
       then
          Process_CU (Body_N.Unit.Root.As_Compilation_Unit);
       end if;

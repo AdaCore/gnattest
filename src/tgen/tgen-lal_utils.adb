@@ -169,10 +169,10 @@ package body TGen.LAL_Utils is
                  CU_Decl.P_Fully_Qualified_Name_Array;
             begin
                if CU_FQN'Length <= Subp_FQN'Length
-                 and then Subp_FQN
-                            (Subp_FQN'First
-                             .. Subp_FQN'First + CU_FQN'Length - 1)
-                          = CU_FQN
+                 and then
+                   Subp_FQN
+                     (Subp_FQN'First .. Subp_FQN'First + CU_FQN'Length - 1)
+                   = CU_FQN
                then
                   return CU_Decl;
                end if;
@@ -208,8 +208,9 @@ package body TGen.LAL_Utils is
       Decl : LAL.Base_Type_Decl'Class := Ty_Decl;
    begin
       while (Decl.Kind = Ada_Concrete_Type_Decl
-             and then Decl.As_Concrete_Type_Decl.F_Type_Def.Kind
-                      = Ada_Derived_Type_Def)
+             and then
+               Decl.As_Concrete_Type_Decl.F_Type_Def.Kind
+               = Ada_Derived_Type_Def)
         or Decl.Kind in Ada_Subtype_Decl_Range
       loop
          if Decl.Kind = Ada_Concrete_Type_Decl then

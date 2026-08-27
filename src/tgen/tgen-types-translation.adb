@@ -377,8 +377,9 @@ package body TGen.Types.Translation is
 
    function Variant_Support_Static_Gen (Var : Variant_Part_Acc) return Boolean
    is (Var = null
-       or else (for all Choice of Var.all.Variant_Choices =>
-                  Var_Choice_Supports_Static_Gen (Choice)));
+       or else
+         (for all Choice of Var.all.Variant_Choices =>
+            Var_Choice_Supports_Static_Gen (Choice)));
 
    ----------------------
    -- New_Eval_As_Int --
@@ -440,9 +441,9 @@ package body TGen.Types.Translation is
       --  reach a library level package declaration.
 
       while not Sem_Parent.Is_Null
-        and then not (Sem_Parent.Kind in Ada_Package_Decl_Range
-                      and then Sem_Parent.Parent.Kind
-                               in Ada_Library_Item_Range)
+        and then
+          not (Sem_Parent.Kind in Ada_Package_Decl_Range
+               and then Sem_Parent.Parent.Kind in Ada_Library_Item_Range)
       loop
          if Sem_Parent.Kind in Ada_Private_Part_Range then
             return True;
@@ -845,9 +846,10 @@ package body TGen.Types.Translation is
               Decl.As_Type_Decl.F_Type_Def.As_Ordinary_Fixed_Point_Def.F_Delta;
 
          elsif Kind (Decl) in Ada_Subtype_Decl_Range
-           or else (Kind (Decl) in Ada_Type_Decl
-                    and then Kind (Decl.As_Type_Decl.F_Type_Def)
-                             = Ada_Derived_Type_Def)
+           or else
+             (Kind (Decl) in Ada_Type_Decl
+              and then
+                Kind (Decl.As_Type_Decl.F_Type_Def) = Ada_Derived_Type_Def)
          then
 
             --  Case of a subtype decl or derived type decl, look at the
@@ -1015,8 +1017,9 @@ package body TGen.Types.Translation is
                    & Kind_Name (Decl);
          end case;
          if Is_Null (Parent_Subtype.F_Constraint)
-           or else not (Kind (Parent_Subtype.F_Constraint)
-                        in Ada_Digits_Constraint_Range)
+           or else
+             not (Kind (Parent_Subtype.F_Constraint)
+                  in Ada_Digits_Constraint_Range)
          then
             Find_Digits (Parent_Subtype.P_Designated_Type_Decl, Digits_Val);
             return;
@@ -1139,8 +1142,8 @@ package body TGen.Types.Translation is
 
       else
          if Kind (Decl) in Ada_Type_Decl
-           and then Kind (Decl.As_Type_Decl.F_Type_Def)
-                    in Ada_Derived_Type_Def_Range
+           and then
+             Kind (Decl.As_Type_Decl.F_Type_Def) in Ada_Derived_Type_Def_Range
          then
 
             --  Decl is a derived type decl, look at the constraints in the
@@ -1190,7 +1193,7 @@ package body TGen.Types.Translation is
          pragma
            Assert
              (Real_Rng.Low_Bound.Kind = Static
-                and then Real_Rng.High_Bound.Kind = Static);
+              and then Real_Rng.High_Bound.Kind = Static);
          Has_Range := True;
          Min := Real_Rng.Low_Bound.Real_Val;
          Max := Real_Rng.High_Bound.Real_Val;
@@ -1584,11 +1587,12 @@ package body TGen.Types.Translation is
                              .F_Prefix
                              .P_Name_Designated_Type
                              .P_Is_Static_Decl
-                          and then not Range_Exp
-                                         .As_Attribute_Ref
-                                         .F_Prefix
-                                         .P_Name_Designated_Type
-                                         .P_Is_Enum_Type
+                          and then
+                            not Range_Exp
+                                  .As_Attribute_Ref
+                                  .F_Prefix
+                                  .P_Name_Designated_Type
+                                  .P_Is_Enum_Type
                         then
                            Constraint_Min :=
                              Big_Int.From_String
@@ -1770,8 +1774,9 @@ package body TGen.Types.Translation is
 
             Res_Typ.all.Static_Gen :=
               Res_Typ.all.Component_Type.all.Supports_Static_Gen
-              and then (for all Idx in 1 .. Res_Typ.all.Num_Dims =>
-                          Static (Res_Typ.all.Index_Constraints (Idx).all));
+              and then
+                (for all Idx in 1 .. Res_Typ.all.Num_Dims =>
+                   Static (Res_Typ.all.Index_Constraints (Idx).all));
 
             --  Check if the translated array type has less elements than what
             --  is allowed.
@@ -1855,8 +1860,9 @@ package body TGen.Types.Translation is
          end loop;
          Res_Typ.Static_Gen :=
            Res_Typ.Component_Type.all.Supports_Static_Gen
-           and then (for all Index_Ref of Res_Typ.Index_Types =>
-                       Index_Ref.all.Supports_Static_Gen);
+           and then
+             (for all Index_Ref of Res_Typ.Index_Types =>
+                Index_Ref.all.Supports_Static_Gen);
 
          return Res : Translation_Result (Success => True) do
             Res.Res := Typ_Access (Res_Typ);
@@ -2003,10 +2009,11 @@ package body TGen.Types.Translation is
            Assert
              (Kind (Ancestor_Type.F_Constraint)
               in Ada_Composite_Constraint_Range
-                and Ancestor_Type
-                      .F_Constraint
-                      .As_Composite_Constraint
-                      .P_Is_Discriminant_Constraint);
+              and
+                Ancestor_Type
+                  .F_Constraint
+                  .As_Composite_Constraint
+                  .P_Is_Discriminant_Constraint);
          return True;
       end if;
    end Record_Constrained;
@@ -2226,14 +2233,15 @@ package body TGen.Types.Translation is
       return New_Typ : Record_Typ (Constrained => True) do
          New_Typ.Mutable :=
            not Is_Null (Decl.F_Discriminants)
-           and then not Is_Null
-                          (Decl
-                             .F_Discriminants
-                             .As_Known_Discriminant_Part
-                             .F_Discr_Specs
-                             .First_Child
-                             .As_Discriminant_Spec
-                             .F_Default_Expr);
+           and then
+             not Is_Null
+                   (Decl
+                      .F_Discriminants
+                      .As_Known_Discriminant_Part
+                      .F_Discr_Specs
+                      .First_Child
+                      .As_Discriminant_Spec
+                      .F_Default_Expr);
 
          for Pair of
            Decl
@@ -2246,15 +2254,16 @@ package body TGen.Types.Translation is
              .P_Zip_With_Params
          loop
             if Kind (Actual (Pair)) in Ada_Name
-              and then not Is_Null
-                             (Actual (Pair).As_Name.P_Referenced_Defining_Name)
-              and then Kind
-                         (Actual (Pair)
-                            .As_Name
-                            .P_Referenced_Defining_Name
-                            .Parent
-                            .Parent)
-                       in Ada_Discriminant_Spec_Range
+              and then
+                not Is_Null (Actual (Pair).As_Name.P_Referenced_Defining_Name)
+              and then
+                Kind
+                  (Actual (Pair)
+                     .As_Name
+                     .P_Referenced_Defining_Name
+                     .Parent
+                     .Parent)
+                in Ada_Discriminant_Spec_Range
             then
                --  Case of a Discriminant correspondence
 
@@ -2429,8 +2438,8 @@ package body TGen.Types.Translation is
          --  or we are past the current alternative range
 
          while Has_Element (Cur_Others_Segment)
-           and then not Overlap
-                          (Element (Cur_Others_Segment), Element (Cur_Alt))
+           and then
+             not Overlap (Element (Cur_Others_Segment), Element (Cur_Alt))
            and then Element (Cur_Others_Segment) < Element (Cur_Alt)
          loop
             Next (Cur_Others_Segment);
@@ -2582,8 +2591,8 @@ package body TGen.Types.Translation is
                              ((Min => Choice_Min, Max => Choice_Min));
                         end if;
                      elsif Alt.Kind in Ada_Name
-                       and then not Is_Null
-                                      (Alt.As_Name.P_Name_Designated_Type)
+                       and then
+                         not Is_Null (Alt.As_Name.P_Name_Designated_Type)
                      then
                         Choice_Min :=
                           Big_Int.From_String
@@ -2954,12 +2963,14 @@ package body TGen.Types.Translation is
             Trans_Res.all.Static_Gen :=
               (for all Comp_Ref of Trans_Res.all.Component_Types =>
                  Comp_Ref.all.Supports_Static_Gen)
-              and then (for all Disc_Ref of Trans_Res.all.Discriminant_Types =>
-                          Disc_Ref.all.Supports_Static_Gen)
-              and then (not Trans_Res.all.Constrained
-                        or else (for all Const of
-                                   Trans_Res.all.Discriminant_Constraint =>
-                                   Const.Kind in Static | Discriminant))
+              and then
+                (for all Disc_Ref of Trans_Res.all.Discriminant_Types =>
+                   Disc_Ref.all.Supports_Static_Gen)
+              and then
+                (not Trans_Res.all.Constrained
+                 or else
+                   (for all Const of Trans_Res.all.Discriminant_Constraint =>
+                      Const.Kind in Static | Discriminant))
               and then Variant_Support_Static_Gen (Trans_Res.all.Variant);
 
             --  Apply_Constraints can actually return a type that isn't
@@ -3052,15 +3063,16 @@ package body TGen.Types.Translation is
                  Big_Int.From_String
                    (New_Eval_As_Int (Low_Bound (Rng)).Image));
          elsif Low_Bound (Rng).Kind in Ada_Name
-           and then not Is_Null
-                          (Low_Bound (Rng).As_Name.P_Referenced_Defining_Name)
-           and then Kind
-                      (Low_Bound (Rng)
-                         .As_Name
-                         .P_Referenced_Defining_Name
-                         .Parent
-                         .Parent)
-                    in Ada_Discriminant_Spec_Range
+           and then
+             not Is_Null (Low_Bound (Rng).As_Name.P_Referenced_Defining_Name)
+           and then
+             Kind
+               (Low_Bound (Rng)
+                  .As_Name
+                  .P_Referenced_Defining_Name
+                  .Parent
+                  .Parent)
+             in Ada_Discriminant_Spec_Range
          then
             Low_Bnd :=
               (Kind      => Discriminant,
@@ -3082,15 +3094,16 @@ package body TGen.Types.Translation is
                  Big_Int.From_String
                    (New_Eval_As_Int (High_Bound (Rng)).Image));
          elsif High_Bound (Rng).Kind in Ada_Name
-           and then not Is_Null
-                          (High_Bound (Rng).As_Name.P_Referenced_Defining_Name)
-           and then Kind
-                      (High_Bound (Rng)
-                         .As_Name
-                         .P_Referenced_Defining_Name
-                         .Parent
-                         .Parent)
-                    in Ada_Discriminant_Spec_Range
+           and then
+             not Is_Null (High_Bound (Rng).As_Name.P_Referenced_Defining_Name)
+           and then
+             Kind
+               (High_Bound (Rng)
+                  .As_Name
+                  .P_Referenced_Defining_Name
+                  .Parent
+                  .Parent)
+             in Ada_Discriminant_Spec_Range
          then
             High_Bnd :=
               (Kind      => Discriminant,
@@ -3365,17 +3378,17 @@ package body TGen.Types.Translation is
                        Big_Int.From_String
                          (New_Eval_As_Int (Actual (Pair)).Image));
                elsif Kind (Actual (Pair)) in Ada_Name
-                 and then not Is_Null
-                                (Actual (Pair)
-                                   .As_Name
-                                   .P_Referenced_Defining_Name)
-                 and then Kind
-                            (Actual (Pair)
-                               .As_Name
-                               .P_Referenced_Defining_Name
-                               .Parent
-                               .Parent)
-                          in Ada_Discriminant_Spec_Range
+                 and then
+                   not Is_Null
+                         (Actual (Pair).As_Name.P_Referenced_Defining_Name)
+                 and then
+                   Kind
+                     (Actual (Pair)
+                        .As_Name
+                        .P_Referenced_Defining_Name
+                        .Parent
+                        .Parent)
+                   in Ada_Discriminant_Spec_Range
                then
                   New_Item :=
                     (Kind      => Discriminant,
@@ -3813,11 +3826,12 @@ package body TGen.Types.Translation is
                  Assert
                    (Kind (N.As_Subtype_Indication.F_Constraint)
                     in Ada_Composite_Constraint_Range
-                      and N
-                            .As_Subtype_Indication
-                            .F_Constraint
-                            .As_Composite_Constraint
-                            .P_Is_Discriminant_Constraint);
+                    and
+                      N
+                        .As_Subtype_Indication
+                        .F_Constraint
+                        .As_Composite_Constraint
+                        .P_Is_Discriminant_Constraint);
                Res.Res :=
                  new Anonymous_Typ'
                    (Name                => Ada_Identifier_Vectors.Empty_Vector,
@@ -3950,12 +3964,12 @@ package body TGen.Types.Translation is
 
       Is_Opaque_Type_Def : constant Boolean :=
         ((N.Kind = Ada_Concrete_Type_Decl
-          and then N.As_Concrete_Type_Decl.F_Type_Def.Kind
-                   = Ada_Derived_Type_Def
+          and then
+            N.As_Concrete_Type_Decl.F_Type_Def.Kind = Ada_Derived_Type_Def
           and then TGen.LAL_Utils.Derive_Opaque_Type (N))
-         or (N.Kind in Ada_Subtype_Decl_Range
-             and then TGen.LAL_Utils.Derive_Opaque_Type
-                        (N.As_Base_Type_Decl)));
+         or
+           (N.Kind in Ada_Subtype_Decl_Range
+            and then TGen.LAL_Utils.Derive_Opaque_Type (N.As_Base_Type_Decl)));
       --  True if N is the definition of an opaque type, False otherwise
 
       type FQN_Auto_Remove_Cur is new Ada.Finalization.Limited_Controlled

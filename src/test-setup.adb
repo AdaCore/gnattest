@@ -865,8 +865,8 @@ package body Test.Setup is
             declare
                Build_TGen : Boolean :=
                  Opts.Tgen_Mode = Tgen_Build
-                 or else (Opts.Tgen_Mode = Tgen_Auto
-                          and then Is_Native (Opts));
+                 or else
+                   (Opts.Tgen_Mode = Tgen_Auto and then Is_Native (Opts));
             begin
                if Build_TGen
                  and then Opts.Tgen_Mode = Tgen_Auto

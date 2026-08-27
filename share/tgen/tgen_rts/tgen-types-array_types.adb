@@ -79,13 +79,12 @@ package body TGen.Types.Array_Types is
          if Self.Index_Types (J) /= null then
             Res := Res & Typ (Self.Index_Types (J).all).Image;
             if Self.Index_Constraints (J).Present
-              and then Self.Index_Constraints (J).Discrete_Range.Low_Bound.Kind
-                       = Static
-              and then Self.Index_Constraints (J)
-                         .Discrete_Range
-                         .High_Bound
-                         .Kind
-                       = Static
+              and then
+                Self.Index_Constraints (J).Discrete_Range.Low_Bound.Kind
+                = Static
+              and then
+                Self.Index_Constraints (J).Discrete_Range.High_Bound.Kind
+                = Static
             then
                Res :=
                  Res
@@ -141,8 +140,8 @@ package body TGen.Types.Array_Types is
             end if;
          elsif Self.Index_Constraints (I).Discrete_Range.High_Bound.Kind
            = Static
-           and then Self.Index_Constraints (I).Discrete_Range.Low_Bound.Kind
-                    = Static
+           and then
+             Self.Index_Constraints (I).Discrete_Range.Low_Bound.Kind = Static
          then
             Total_Size :=
               Total_Size

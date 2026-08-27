@@ -492,8 +492,9 @@ package body TGen.Libgen is
             --  `Pkg_Name`.
 
             if No_Circular_Dependencies (To_Ada (Dep))
-              and (not Is_Private_Support_Package (To_Ada (Dep))
-                   or else Dep.First_Element = Pkg_Name.First_Element)
+              and
+                (not Is_Private_Support_Package (To_Ada (Dep))
+                 or else Dep.First_Element = Pkg_Name.First_Element)
             then
                Package_Dependency_Tags.Append (To_Ada (Dep));
             end if;
@@ -556,9 +557,9 @@ package body TGen.Libgen is
               (Assoc
                  ("DEPENDS_ON_PRIVATE",
                   Vis = Pub
-                  and then (for some Ty of Typ_Dependencies =>
-                              Ty.Fully_Private
-                              and Ty.Package_Name = Pkg_Name)));
+                  and then
+                    (for some Ty of Typ_Dependencies =>
+                       Ty.Fully_Private and Ty.Package_Name = Pkg_Name)));
 
             --  We depends on the public counterpart package only if we are
             --  generating the private package and there's a type in the
@@ -569,9 +570,9 @@ package body TGen.Libgen is
               (Assoc
                  ("DEPENDS_ON_PUBLIC",
                   Vis = Priv
-                  and then (for some Ty of Typ_Dependencies =>
-                              not Ty.Fully_Private
-                              and Ty.Package_Name = Pkg_Name)));
+                  and then
+                    (for some Ty of Typ_Dependencies =>
+                       not Ty.Fully_Private and Ty.Package_Name = Pkg_Name)));
 
             Generate_Marshalling_Functions
               (Ctx,
@@ -1051,14 +1052,9 @@ package body TGen.Libgen is
 
          if Inst.Unit.Root.As_Compilation_Unit.F_Body.Kind
            = Libadalang.Common.Ada_Library_Item
-           and then Inst
-                      .Unit
-                      .Root
-                      .As_Compilation_Unit
-                      .F_Body
-                      .As_Library_Item
-                      .F_Item
-                    = Inst.As_Basic_Decl
+           and then
+             Inst.Unit.Root.As_Compilation_Unit.F_Body.As_Library_Item.F_Item
+             = Inst.As_Basic_Decl
          then
             return True;
          end if;
@@ -1161,8 +1157,9 @@ package body TGen.Libgen is
               Subp.Parent.Parent.Parent.As_Generic_Package_Internal;
          begin
             if not Package_Internal.F_Private_Part.Is_Null
-              and then Package_Internal.F_Private_Part.F_Decls.First_Child
-                       /= No_Ada_Node
+              and then
+                Package_Internal.F_Private_Part.F_Decls.First_Child
+                /= No_Ada_Node
             then
                Put_Line
                  ("warning (TGen): generic package "
@@ -1246,8 +1243,8 @@ package body TGen.Libgen is
                else Support_Library_Package (Param.all.Compilation_Unit_Name));
 
             if Param.Fully_Private
-              and then Fct_Typ.Compilation_Unit_Name
-                       /= Param.Compilation_Unit_Name
+              and then
+                Fct_Typ.Compilation_Unit_Name /= Param.Compilation_Unit_Name
             then
                Ctx.Support_Packs_Per_Unit.Reference (Support_Packs).Include
                  (Support_Private_Library_Package
