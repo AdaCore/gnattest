@@ -214,7 +214,7 @@ package Test.Harness is
    --  generation.
 
    procedure Generate_Test_Drivers
-     (Data : Data_Holder; UUT : String; Stub_List : Ada_Nodes_List.List);
+     (Data : Data_Holder; UUT : String; Stub_List : Pkg_Decl_List);
    --  For the given UUT generates a set of independent test driver mains,
    --  one per subprogram under test, inherited or declared.
 

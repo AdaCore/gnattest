@@ -39,7 +39,7 @@ with Test.Mapping; use Test.Mapping;
 package Test.Stub is
 
    procedure Process_Unit
-     (Pack                : Libadalang.Analysis.Ada_Node;
+     (Pack                : Base_Package_Decl;
       Body_File_Name      : String;
       Stub_Data_File_Spec : String;
       Stub_Data_File_Body : String);

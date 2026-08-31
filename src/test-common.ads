@@ -66,6 +66,10 @@ package Test.Common is
    package Ada_Nodes_List is new
      Ada.Containers.Indefinite_Doubly_Linked_Lists (Ada_Node);
 
+   package Pkg_Decl_Lists is new
+     Ada.Containers.Indefinite_Doubly_Linked_Lists (Base_Package_Decl);
+   subtype Pkg_Decl_List is Pkg_Decl_Lists.List;
+
    package Unbounded_String_Vectors is new
      Ada.Containers.Vectors
        (Index_Type   => Positive,
