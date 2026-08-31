@@ -108,7 +108,7 @@ package body TGen.Types.Real_Types is
       if Self.Has_Range then
          return Self.Range_Value.Min;
       else
-         return -To_Real (10)**(4 * Self.Digits_Value);
+         return -To_Real (10) ** (4 * Self.Digits_Value);
       end if;
    end Low_Bound_Or_Default;
 
@@ -118,7 +118,7 @@ package body TGen.Types.Real_Types is
          return Self.Range_Value.Max;
       else
          --  return the minimum bound specified by the RM
-         return To_Real (10)**(4 * Self.Digits_Value);
+         return To_Real (10) ** (4 * Self.Digits_Value);
       end if;
    end High_Bound_Or_Default;
 
@@ -165,7 +165,7 @@ package body TGen.Types.Real_Types is
         (if Self.Has_Range
          then Self.Range_Value.Min
          else
-           -(To_Real (10)**Self.Digits_Value - To_Real (1))
+           -(To_Real (10) ** Self.Digits_Value - To_Real (1))
            * Self.Delta_Value);
    end Low_Bound_Or_Default;
 
@@ -175,7 +175,8 @@ package body TGen.Types.Real_Types is
         (if Self.Has_Range
          then Self.Range_Value.Max
          else
-           (To_Real (10)**Self.Digits_Value - To_Real (1)) * Self.Delta_Value);
+           (To_Real (10) ** Self.Digits_Value - To_Real (1))
+           * Self.Delta_Value);
    end High_Bound_Or_Default;
 
    function Gen return T is

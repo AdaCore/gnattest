@@ -115,9 +115,9 @@ package body TGen.Wrappers is
 
                         if (Polarity = Dnf_Kind
                             and then Ada_Op in Ada_Op_And_Then | Ada_Op_And)
-                          or else (Polarity = Dnf_Neg_Kind
-                                   and then Ada_Op
-                                            in Ada_Op_Or_Else | Ada_Op_Or)
+                          or else
+                            (Polarity = Dnf_Neg_Kind
+                             and then Ada_Op in Ada_Op_Or_Else | Ada_Op_Or)
                         then
                            for Clause_Left of Dnf_Left loop
                               for Clause_Right of Dnf_Right loop

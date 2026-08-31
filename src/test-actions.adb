@@ -668,9 +668,9 @@ package body Test.Actions is
                Src_Dir_Str : constant String := String (Src_Dir_Path.Text);
             begin
                if Src_Dir_Str'Length >= 2
-                 and then Src_Dir_Str
-                            (Src_Dir_Str'Last - 1 .. Src_Dir_Str'Last)
-                          = "**"
+                 and then
+                   Src_Dir_Str (Src_Dir_Str'Last - 1 .. Src_Dir_Str'Last)
+                   = "**"
                then
                   Cmd_Error_No_Help
                     ("cannot specify test subdir along with a source directory"
@@ -785,9 +785,10 @@ package body Test.Actions is
 
       Test.Common.Strict_Execution :=
         Arg (Cmd, Strict)
-        or else (Ada.Environment_Variables.Exists ("GNATTEST_STRICT")
-                 and then Ada.Environment_Variables.Value ("GNATTEST_STRICT")
-                          = "TRUE");
+        or else
+          (Ada.Environment_Variables.Exists ("GNATTEST_STRICT")
+           and then
+             Ada.Environment_Variables.Value ("GNATTEST_STRICT") = "TRUE");
 
       --  Command line support
 
@@ -1464,8 +1465,9 @@ package body Test.Actions is
                   return Stop;
                end if;
                if Kind (Node) in Ada_Basic_Subp_Decl
-                 and then Natural (Node.Sloc_Range.Start_Line)
-                          = Test.Common.Subp_Line_Nbr
+                 and then
+                   Natural (Node.Sloc_Range.Start_Line)
+                   = Test.Common.Subp_Line_Nbr
                then
                   Ada.Text_IO.Put_Line
                     (TGen.LAL_Utils.Short_Hash (Node.As_Basic_Decl));
@@ -2260,8 +2262,9 @@ package body Test.Actions is
 
             for F of Files loop
                if F.Unit.Kind = S_Spec
-                 and then Test.Skeleton.Source_Table.Source_Present
-                            (F.Path_Name.String_Value)
+                 and then
+                   Test.Skeleton.Source_Table.Source_Present
+                     (F.Path_Name.String_Value)
                then
                   Tmp :=
                     new String'(F.Path_Name.Virtual_File.Display_Dir_Name);

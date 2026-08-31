@@ -1273,8 +1273,9 @@ package body TGen.Marshalling is
                then
                   Res :=
                     Res
-                    and Get_IO_Support
-                          (FN_Typ.Component_Types.Element (Param_Name).all);
+                    and
+                      Get_IO_Support
+                        (FN_Typ.Component_Types.Element (Param_Name).all);
                end if;
             end loop;
 
@@ -1367,16 +1368,17 @@ package body TGen.Marshalling is
    function Needs_Header (Typ : TGen.Types.Typ'Class) return Boolean is
       function Rec_Needs_Header (R : Record_Typ'Class) return Boolean
       is ((Is_Discriminated (R) and then not R.Constrained)
-          or else (R.Ancestor /= null
-                   and then Rec_Needs_Header (R.Ancestor.all)));
+          or else
+            (R.Ancestor /= null and then Rec_Needs_Header (R.Ancestor.all)));
       --  Records can be tagged and have ancestors. If at least one of the
       --  ancestors has constraints, then Typ has constraints and return True.
 
    begin
       return
         Typ in Unconstrained_Array_Typ'Class
-        or else (Typ in Record_Typ'Class
-                 and then Rec_Needs_Header (Record_Typ'Class (Typ)));
+        or else
+          (Typ in Record_Typ'Class
+           and then Rec_Needs_Header (Record_Typ'Class (Typ)));
    end Needs_Header;
 
    --------------------

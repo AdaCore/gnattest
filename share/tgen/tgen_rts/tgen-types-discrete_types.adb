@@ -130,11 +130,12 @@ package body TGen.Types.Discrete_Types is
                         (Self.Low_Bound,
                          LLI_Conversions.To_Big_Integer
                            (Long_Long_Integer'First + 1)))
-                   .. LLI_Conversions.From_Big_Integer
-                        (Big_Int.Min
-                           (Self.High_Bound,
-                            LLI_Conversions.To_Big_Integer
-                              (Long_Long_Integer'Last - 1)));
+                   ..
+                     LLI_Conversions.From_Big_Integer
+                       (Big_Int.Min
+                          (Self.High_Bound,
+                           LLI_Conversions.To_Big_Integer
+                             (Long_Long_Integer'Last - 1)));
 
       function Rand is new Gen (T);
    begin
@@ -195,8 +196,9 @@ package body TGen.Types.Discrete_Types is
          Result : JSON_Value;
       begin
          if S.Index = End_Index
-           and then T_Discrete.High_Bound - Other_Index_Value
-                    < Nat_Conversions.To_Big_Integer (Max_Size)
+           and then
+             T_Discrete.High_Bound - Other_Index_Value
+             < Nat_Conversions.To_Big_Integer (Max_Size)
          then
             --  We are generating J, and Integer'Last - I < Max_Size,
             --  e.g. with:
@@ -215,8 +217,9 @@ package body TGen.Types.Discrete_Types is
          end if;
 
          if S.Index = Start_Index
-           and then Other_Index_Value - T_Discrete.Low_Bound
-                    < Nat_Conversions.To_Big_Integer (Max_Size)
+           and then
+             Other_Index_Value - T_Discrete.Low_Bound
+             < Nat_Conversions.To_Big_Integer (Max_Size)
          then
             --  We are generating I, and J - Integer'First < Max_Size,
             --  e.g. with:

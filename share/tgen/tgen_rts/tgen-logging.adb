@@ -46,8 +46,9 @@ package body TGen.Logging is
    begin
       --  Skip tracing if `TGEN_RTS_TRACE` is not set
       if not Ada.Environment_Variables.Exists ("TGEN_RTS_TRACE")
-        or else To_Lower (Ada.Environment_Variables.Value ("TGEN_RTS_TRACE"))
-                not in "1" | "true"
+        or else
+          To_Lower (Ada.Environment_Variables.Value ("TGEN_RTS_TRACE"))
+          not in "1" | "true"
       then
          return;
       end if;

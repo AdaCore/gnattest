@@ -854,29 +854,32 @@ package body Test.Stub is
 
             if Type_Of_Interest then
                if Param_Type.Kind = Ada_Anonymous_Type
-                 and then Param_Type
+                 and then
+                   Param_Type
+                     .As_Anonymous_Type
+                     .F_Type_Decl
+                     .As_Type_Decl
+                     .F_Type_Def
+                     .Kind
+                   = Ada_Type_Access_Def
+                 and then
+                   not Param_Type
+                         .As_Anonymous_Type
+                         .F_Type_Decl
+                         .As_Type_Decl
+                         .F_Type_Def
+                         .As_Type_Access_Def
+                         .F_Has_Constant
+                 and then
+                   not Is_Limited
+                         (Param_Type
                             .As_Anonymous_Type
                             .F_Type_Decl
                             .As_Type_Decl
                             .F_Type_Def
-                            .Kind
-                          = Ada_Type_Access_Def
-                 and then not Param_Type
-                                .As_Anonymous_Type
-                                .F_Type_Decl
-                                .As_Type_Decl
-                                .F_Type_Def
-                                .As_Type_Access_Def
-                                .F_Has_Constant
-                 and then not Is_Limited
-                                (Param_Type
-                                   .As_Anonymous_Type
-                                   .F_Type_Decl
-                                   .As_Type_Decl
-                                   .F_Type_Def
-                                   .As_Type_Access_Def
-                                   .F_Subtype_Indication
-                                   .As_Type_Expr)
+                            .As_Type_Access_Def
+                            .F_Subtype_Indication
+                            .As_Type_Expr)
                then
                   for N of Name_List loop
                      SP.Name := new String'(Node_Image (N));
@@ -1256,12 +1259,14 @@ package body Test.Stub is
             then
                return True;
             elsif Param_Type_Def.Kind = Ada_Interface_Type_Def
-              and then not Param_Type_Def
-                             .As_Interface_Type_Def
-                             .F_Interface_Kind
-                             .Is_Null
-              and then Param_Type_Def.As_Interface_Type_Def.F_Interface_Kind
-                       = Ada_Interface_Kind_Limited
+              and then
+                not Param_Type_Def
+                      .As_Interface_Type_Def
+                      .F_Interface_Kind
+                      .Is_Null
+              and then
+                Param_Type_Def.As_Interface_Type_Def.F_Interface_Kind
+                = Ada_Interface_Kind_Limited
             then
                return True;
             end if;
@@ -1437,8 +1442,9 @@ package body Test.Stub is
 
    function Is_Anon_Access_To_Subp (Param_Type : Type_Expr) return Boolean
    is (Param_Type.Kind in Ada_Anonymous_Type
-       and then Param_Type.As_Anonymous_Type.F_Type_Decl.F_Type_Def.Kind
-                in Ada_Access_To_Subp_Def);
+       and then
+         Param_Type.As_Anonymous_Type.F_Type_Decl.F_Type_Def.Kind
+         in Ada_Access_To_Subp_Def);
 
    ------------------------------
    -- Add_Entity_To_Local_List --
@@ -1554,11 +1560,14 @@ package body Test.Stub is
       Skip_Res   : constant Boolean :=
         not Empty_Case
         and then not Param_List.Last_Element.Type_Elem.Is_Null
-        and then not Is_Only_Limited_Withed
-                       (Param_List.Last_Element.Type_Elem.As_Type_Expr)
-        and then (Is_Abstract (Param_List.Last_Element.Type_Elem.As_Type_Expr)
-                  or else Is_Anon_Access_To_Subp
-                            (Param_List.Last_Element.Type_Elem.As_Type_Expr));
+        and then
+          not Is_Only_Limited_Withed
+                (Param_List.Last_Element.Type_Elem.As_Type_Expr)
+        and then
+          (Is_Abstract (Param_List.Last_Element.Type_Elem.As_Type_Expr)
+           or else
+             Is_Anon_Access_To_Subp
+               (Param_List.Last_Element.Type_Elem.As_Type_Expr));
       --  Do not generate a setter for abstract types, or anonymous access-to-
       --  subprogram types.
 
@@ -1659,11 +1668,14 @@ package body Test.Stub is
       Skip_Res   : constant Boolean :=
         not Empty_Case
         and then not Param_List.Last_Element.Type_Elem.Is_Null
-        and then not Is_Only_Limited_Withed
-                       (Param_List.Last_Element.Type_Elem.As_Type_Expr)
-        and then (Is_Abstract (Param_List.Last_Element.Type_Elem.As_Type_Expr)
-                  or else Is_Anon_Access_To_Subp
-                            (Param_List.Last_Element.Type_Elem.As_Type_Expr));
+        and then
+          not Is_Only_Limited_Withed
+                (Param_List.Last_Element.Type_Elem.As_Type_Expr)
+        and then
+          (Is_Abstract (Param_List.Last_Element.Type_Elem.As_Type_Expr)
+           or else
+             Is_Anon_Access_To_Subp
+               (Param_List.Last_Element.Type_Elem.As_Type_Expr));
       --  Do not generate a setter for abstract types, or anonymous access-to-
       --  subprogram types.
 

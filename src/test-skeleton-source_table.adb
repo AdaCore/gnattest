@@ -318,8 +318,8 @@ package body Test.Skeleton.Source_Table is
       Initialize_Source_Name_Strings (Fname);
 
       if Source_Present (Full_Source_Name_String.all)
-        and then Get_Source_Status (Full_Source_Name_String.all)
-                 = Body_Reference
+        and then
+          Get_Source_Status (Full_Source_Name_String.all) = Body_Reference
       then
          Trace (Me, "...replacing body reference");
          New_SF_Record := SF_Table.Element (Full_Source_Name_String.all);
@@ -1048,8 +1048,8 @@ package body Test.Skeleton.Source_Table is
 
       loop
          if Cur = Source_File_Table.No_Element
-           and then Source_File_Table.Element (SF_Process_Iterator).Status
-                    = Pending
+           and then
+             Source_File_Table.Element (SF_Process_Iterator).Status = Pending
          then
             Cur := SF_Process_Iterator;
          end if;

@@ -79,8 +79,9 @@ package body TGen.Types.Record_Types is
    begin
       return
         not Self.Discriminant_Types.Is_Empty
-        or else (Self.Ancestor /= null
-                 and then Is_Discriminated (Self.Ancestor.all));
+        or else
+          (Self.Ancestor /= null
+           and then Is_Discriminated (Self.Ancestor.all));
    end Is_Discriminated;
 
    -------------------------------
@@ -640,8 +641,8 @@ package body TGen.Types.Record_Types is
          if Element (Constraint_Cur).Kind = Static then
             Value_Cur := Discriminant_Values.Find (Key (Constraint_Cur));
             if Has_Element (Value_Cur)
-              and then Element (Value_Cur).Get
-                       /= Element (Constraint_Cur).Int_Val
+              and then
+                Element (Value_Cur).Get /= Element (Constraint_Cur).Int_Val
             then
                return False;
             end if;
@@ -1726,8 +1727,8 @@ package body TGen.Types.Record_Types is
                if Active then
                   pragma Assert (Constraint.Present);
                   if Constraint.Discrete_Range.Low_Bound.Kind = Discriminant
-                    and then Constraint.Discrete_Range.High_Bound.Kind
-                             = Discriminant
+                    and then
+                      Constraint.Discrete_Range.High_Bound.Kind = Discriminant
                   then
                      Strat :=
                        new Enum_Strategy_Type'Class'
@@ -1770,8 +1771,9 @@ package body TGen.Types.Record_Types is
    begin
       Result.Delete_Last;
       if No_Std
-        and then Ada.Strings.Equal_Case_Insensitive
-                   (+Unbounded_String (Self.Name.First_Element), "standard")
+        and then
+          Ada.Strings.Equal_Case_Insensitive
+            (+Unbounded_String (Self.Name.First_Element), "standard")
       then
          Result.Delete_First;
       end if;

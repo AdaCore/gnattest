@@ -433,10 +433,11 @@ package body Test.Harness is
 
       Extend_User_Project : constant Boolean :=
         not Stub_Mode_ON
-        and then (Builder_Package_Present
-                  or else Linker_Package_Present
-                  or else Binder_Package_Present
-                  or else Compiler_Package_Present);
+        and then
+          (Builder_Package_Present
+           or else Linker_Package_Present
+           or else Binder_Package_Present
+           or else Compiler_Package_Present);
 
       Source_Prj_Name : constant String :=
         Base_Name (Source_Prj, File_Extension (Source_Prj));

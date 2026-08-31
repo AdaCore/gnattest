@@ -114,7 +114,7 @@ package body TGen.Types.Int_Types is
          Number_Of_Digits : Integer :=
            (if Low_Bound = 0 then 1 else Log (Low_Bound, 10.0) + 1);
          High_Bound       : Big_Integer :=
-           Big_Int.Min (10**Number_Of_Digits - 1, R.Max);
+           Big_Int.Min (10 ** Number_Of_Digits - 1, R.Max);
       begin
 
          --  While LLLI_Conversions do not actually support values outside of
@@ -126,7 +126,7 @@ package body TGen.Types.Int_Types is
             Result.Append (Int_Range'(Min => Low_Bound, Max => High_Bound));
             Low_Bound := High_Bound + 1;
             Number_Of_Digits := Number_Of_Digits + 1;
-            High_Bound := Big_Int.Min (10**Number_Of_Digits - 1, R.Max);
+            High_Bound := Big_Int.Min (10 ** Number_Of_Digits - 1, R.Max);
          end loop;
       end;
 
@@ -136,13 +136,13 @@ package body TGen.Types.Int_Types is
          High_Bound       : Big_Integer := Big_Int.Min (R.Max, -1);
          Number_Of_Digits : Integer := Log (-High_Bound, 10.0) + 1;
          Low_Bound        : Big_Integer :=
-           Big_Int.Max (-10**Number_Of_Digits + 1, R.Min);
+           Big_Int.Max (-10 ** Number_Of_Digits + 1, R.Min);
       begin
          while High_Bound > LLI_First and then High_Bound >= R.Min loop
             Result.Append (Int_Range'(Min => Low_Bound, Max => High_Bound));
             High_Bound := Low_Bound - 1;
             Number_Of_Digits := Number_Of_Digits + 1;
-            Low_Bound := Big_Int.Max (-10**Number_Of_Digits + 1, R.Min);
+            Low_Bound := Big_Int.Max (-10 ** Number_Of_Digits + 1, R.Min);
          end loop;
       end;
       return Result;
