@@ -165,6 +165,19 @@ package body Test.Skeleton.Source_Table is
          .Owning_View);
    --  Helper function. Return a GPR2 owned project view for a given name.
 
+   procedure Set_Body (SFR : in out SF_Record; Unit_Name : Optional_Name_Type);
+   --  Helper function to set Corresponding_Body or Theoretical_Body in SFR
+
+   procedure Set_Stub_Data_Unit
+     (SFR            : in out SF_Record;
+      P              : GPR2.Project.View.Object;
+      Stub_Unit_Name : Name_Type);
+   --  Helper function to set Stub_Data_Base_(Spec|Copy) in SFR
+
+   procedure Set_Inst_Dir
+     (SFR : in out SF_Record; P : GPR2.Project.View.Object);
+   --  Helper function to set Inst_Dir in SFR
+
    ---------------------------
    -- Normalize_Source_Name --
    ---------------------------
@@ -246,6 +259,55 @@ package body Test.Skeleton.Source_Table is
 
       end loop;
    end Extract_Last_Name_Index;
+
+   --------------
+   -- Set_Body --
+   --------------
+
+   procedure Set_Body (SFR : in out SF_Record; Unit_Name : Optional_Name_Type)
+   is
+      Unit : constant GPR2.Build.Compilation_Unit.Object :=
+        Unit_Name_To_Unit (String (Unit_Name));
+   begin
+      if Unit.Has_Part (S_Body) then
+         SFR.Corresponding_Body :=
+           new String'(Unit.Main_Body.Source.String_Value);
+      else
+         SFR.Theoretical_Body :=
+           new String'
+             (String (Unit.Owning_View.Filename_For_Unit (Unit_Name, S_Body)));
+      end if;
+   end Set_Body;
+
+   -----------------------------
+   -- Populate_Stub_Data_Base --
+   -----------------------------
+
+   procedure Set_Stub_Data_Unit
+     (SFR            : in out SF_Record;
+      P              : GPR2.Project.View.Object;
+      Stub_Unit_Name : Name_Type) is
+   begin
+      SFR.Stub_Data_Base_Spec :=
+        new String'(String (P.Filename_For_Unit (Stub_Unit_Name, S_Spec)));
+      SFR.Stub_Data_Base_Body :=
+        new String'(String (P.Filename_For_Unit (Stub_Unit_Name, S_Body)));
+   end Set_Stub_Data_Unit;
+
+   ------------------
+   -- Set_Inst_Dir --
+   ------------------
+
+   procedure Set_Inst_Dir
+     (SFR : in out SF_Record; P : GPR2.Project.View.Object) is
+   begin
+      SFR.Inst_Dir :=
+        new String'
+          (P.Object_Directory.String_Value
+           & Dir_Sep
+           & To_Lower (String (P.Name))
+           & Instr_Suffix);
+   end Set_Inst_Dir;
 
    procedure Generate_Stub_Extension_Project
      (Proj             : String;
@@ -343,74 +405,32 @@ package body Test.Skeleton.Source_Table is
 
       New_SF_Record.Status := Waiting;
 
-      if Stub_Mode_ON then
+      if Instrument or else Stub_Mode_ON then
          declare
             Unit_Name : constant Optional_Name_Type :=
               Project_Tree.Root_Project.Visible_Source
-                (GPR2.Path_Name.Create
-                   (GNATCOLL.VFS.Create (GNATCOLL.VFS."+" (Fname))))
+                (GPR2.Path_Name.Create (GNATCOLL.VFS.Create (+Fname)))
                 .Unit
                 .Name;
             Unit      : constant GPR2.Build.Compilation_Unit.Object :=
               Unit_Name_To_Unit (String (Unit_Name));
+
+            P : GPR2.Project.View.Object := Unit.Owning_View;
 
             Stub_Unit_Name : constant Name_Type :=
               Name_Type (String (Unit_Name) & "." & Stub_Data_Unit_Name);
-
-            P : GPR2.Project.View.Object := Unit.Owning_View;
          begin
-            if Unit.Has_Part (S_Body) then
-               New_SF_Record.Corresponding_Body :=
-                 new String'(Unit.Main_Body.Source.String_Value);
-            else
-
-               --  Add a theoritical body name in case it is required for
-               --  stubbing
-
-               New_SF_Record.Theoretical_Body :=
-                 new String'(String (P.Filename_For_Unit (Unit_Name, S_Body)));
+            if Instrument then
+               Set_Inst_Dir (New_SF_Record, P);
             end if;
 
-            New_SF_Record.Stub_Data_Base_Spec :=
-              new String'
-                (String (P.Filename_For_Unit (Stub_Unit_Name, S_Spec)));
+            Set_Body (New_SF_Record, Unit_Name);
 
-            New_SF_Record.Stub_Data_Base_Body :=
-              new String'
-                (String (P.Filename_For_Unit (Stub_Unit_Name, S_Body)));
+            if Stub_Mode_ON then
+               Set_Stub_Data_Unit (New_SF_Record, P, Stub_Unit_Name);
 
-            P := Outermost_Extending (P);
-            New_SF_Record.Project_Name := new String'(String (P.Name));
-         end;
-
-      end if;
-
-      if Instrument then
-         declare
-            Unit_Name : constant Optional_Name_Type :=
-              Project_Tree.Root_Project.Visible_Source
-                (GPR2.Path_Name.Create
-                   (GNATCOLL.VFS.Create (GNATCOLL.VFS."+" (Fname))))
-                .Unit
-                .Name;
-            Unit      : constant GPR2.Build.Compilation_Unit.Object :=
-              Unit_Name_To_Unit (String (Unit_Name));
-
-            P : constant GPR2.Project.View.Object := Unit.Owning_View;
-         begin
-            New_SF_Record.Inst_Dir :=
-              new String'
-                (P.Object_Directory.String_Value
-                 & Dir_Sep
-                 & To_Lower (String (P.Name))
-                 & Instr_Suffix);
-
-            if Unit.Has_Part (S_Body) then
-               New_SF_Record.Corresponding_Body :=
-                 new String'(Unit.Main_Body.Source.String_Value);
-            else
-               New_SF_Record.Theoretical_Body :=
-                 new String'(String (P.Filename_For_Unit (Unit_Name, S_Body)));
+               P := Outermost_Extending (P);
+               New_SF_Record.Project_Name := new String'(String (P.Name));
             end if;
          end;
       end if;
@@ -512,22 +532,9 @@ package body Test.Skeleton.Source_Table is
 
          P : GPR2.Project.View.Object := Unit.Owning_View;
       begin
-         if Unit.Has_Part (S_Body) then
-            New_SF_Record.Corresponding_Body :=
-              new String'(Unit.Main_Body.Source.String_Value);
-         else
+         Set_Body (New_SF_Record, Unit_Name);
 
-            --  Add a theoritical body name in case it is required for
-            --  stubbing
-
-            New_SF_Record.Theoretical_Body :=
-              new String'(String (P.Filename_For_Unit (Unit_Name, S_Body)));
-         end if;
-
-         New_SF_Record.Stub_Data_Base_Spec :=
-           new String'(String (P.Filename_For_Unit (Stub_Unit_Name, S_Spec)));
-         New_SF_Record.Stub_Data_Base_Body :=
-           new String'(String (P.Filename_For_Unit (Stub_Unit_Name, S_Body)));
+         Set_Stub_Data_Unit (New_SF_Record, P, Stub_Unit_Name);
 
          P := Outermost_Extending (P);
 
@@ -563,18 +570,12 @@ package body Test.Skeleton.Source_Table is
         new String'(Full_Source_Name_String.all);
 
       declare
-         Given_File : constant GNATCOLL.VFS.Virtual_File := Create (+Fname);
-         Src        : constant GPR2.Build.Source.Object :=
+         Src : constant GPR2.Build.Source.Object :=
            Project_Tree.Root_Project.Visible_Source
-             (GPR2.Path_Name.Create (Given_File));
-         P          : constant GPR2.Project.View.Object := Src.Owning_View;
+             (GPR2.Path_Name.Create (GNATCOLL.VFS.Create (+Fname)));
+         P   : constant GPR2.Project.View.Object := Src.Owning_View;
       begin
-         New_SF_Record.Inst_Dir :=
-           new String'
-             (P.Object_Directory.String_Value
-              & Dir_Sep
-              & To_Lower (String (P.Name))
-              & Instr_Suffix);
+         Set_Inst_Dir (New_SF_Record, P);
       end;
       Insert (SF_Table, Full_Source_Name_String.all, New_SF_Record);
       Free (Full_Source_Name_String);
