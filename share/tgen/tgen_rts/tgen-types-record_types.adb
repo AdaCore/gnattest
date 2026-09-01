@@ -939,12 +939,6 @@ package body TGen.Types.Record_Types is
               Get_All_Components (Self.Ancestor.all);
          begin
             for Comp_Cursor in Ancestor_Components.Iterate loop
-               declare
-                  Dummy_Name : constant Unbounded_String := Key (Comp_Cursor);
-                  Dummy_Type : constant Typ_Access := Element (Comp_Cursor);
-               begin
-                  null;
-               end;
                Res.Include (Key (Comp_Cursor), Element (Comp_Cursor));
             end loop;
          end;
@@ -1037,6 +1031,7 @@ package body TGen.Types.Record_Types is
       T          : Typ_Access;
       Local_Ctx  : out Disc_Value_Map)
    is
+      pragma Unreferenced (Global_Ctx);
       Disc_Record : Record_Typ renames Record_Typ (T.all);
    begin
       Local_Ctx.Clear;
@@ -1056,12 +1051,7 @@ package body TGen.Types.Record_Types is
                     (Discriminant_Name, TGen.JSON.Create (Constraint.Int_Val));
 
                when Discriminant =>
-
-                  --  Make the correspondence here
-
-                  Local_Ctx.Insert
-                    (Discriminant_Name,
-                     Global_Ctx.Element (Constraint.Disc_Name));
+                  null;
 
                when others       =>
                   raise Program_Error with "unsupported non static generation";
@@ -1204,6 +1194,75 @@ package body TGen.Types.Record_Types is
 
       Discriminants : constant JSON_Value := Create_Object;
       Result        : constant JSON_Value := Create_Object;
+
+      procedure Generate_Val_Corresp
+        (Disc_Name : Unbounded_String; Disc_Strat : Strategy_Acc);
+      --  Generate values for discriminants that are part of a correspondence
+
+      procedure Generate_Val
+        (Disc_Name : Unbounded_String; Disc_Strat : Strategy_Acc);
+      --  Generate values for discriminants which are not par of a
+      --  correspondence
+
+      procedure Generate_Val_Corresp
+        (Disc_Name : Unbounded_String; Disc_Strat : Strategy_Acc)
+      is
+         use Discriminant_Constraint_Maps;
+
+         Corresp : Discriminant_Constraint_Maps.Cursor :=
+           Rec.Discriminant_Constraint.Find (Disc_Name);
+
+         Generated_Value   : JSON_Value;
+         Curr_Typ          : Record_Typ_Access := Record_Typ_Access (S.T);
+         Corresp_Disc_Name : Unbounded_String;
+
+      begin
+         if Discriminant_Constraint_Maps.Has_Element (Corresp)
+           and then not Current_Context.Contains (Disc_Name)
+         then
+            --  If there is a correspondence involving this discriminant,
+            --  generate a value for it and insert it in Current_Context.
+
+            Generated_Value := Disc_Strat.Generate (Current_Context);
+
+            Current_Context.Insert (Disc_Name, Generated_Value);
+
+            --  Each record type holds a map of correspondance between its
+            --  discriminants and it's ancestors'. Go through the derivation
+            --  chain looking for correspondences for Disc_Name and ensure all
+            --  corresponding discriminants are set to Generated_Value.
+
+            while Discriminant_Constraint_Maps.Has_Element (Corresp) loop
+
+               Corresp_Disc_Name := Element (Corresp).Disc_Name;
+               Current_Context.Insert (Corresp_Disc_Name, Generated_Value);
+
+               if Curr_Typ.Ancestor /= null
+                 and then Curr_Typ.Ancestor.Constrained
+               then
+                  Curr_Typ := Curr_Typ.Ancestor;
+                  Corresp :=
+                    Curr_Typ.Discriminant_Constraint.Find (Corresp_Disc_Name);
+               else
+                  exit;
+               end if;
+            end loop;
+         end if;
+      end Generate_Val_Corresp;
+
+      procedure Generate_Val
+        (Disc_Name : Unbounded_String; Disc_Strat : Strategy_Acc) is
+      begin
+         --  If Disc_Name is not already in Current_Context then it was not
+         --  part of a discriminant correspondence and we must now generate a
+         --  new value for it.
+
+         if not Current_Context.Contains (Disc_Name) then
+            Current_Context.Insert
+              (Disc_Name, Disc_Strat.Generate (Current_Context));
+         end if;
+      end Generate_Val;
+
    begin
       --  Start of by filling the discriminant context
 
@@ -1217,26 +1276,37 @@ package body TGen.Types.Record_Types is
               (Global_Ctx => Disc_Values,
                T          => S.T,
                Local_Ctx  => Current_Context);
-         else
+
+            --  Handling of discriminant correspondence:
+            --
+            --  After the type translation, derived types are represented as
+            --  having their own discriminants as well as all those of their
+            --  ancestors (see marshalling of headers). (TODO: investigate if
+            --  this is really necessary ???)
+            --
+            --  This means that here, the list of discriminant strategies
+            --  contains all the discriminants of the derivation chain, even
+            --  when there are correspondences between some of them. The values
+            --  generation below requires to go through the S.Disc_Strat twice:
+            --
+            --  - First pass: generate values for the discriminants that have a
+            --                correspondence. Ensure all corresponding
+            --                discriminants are set to the same value.
+            --  - Second pass: generate values for all the discriminants that
+            --                 still have no associated value. Since
+            --                 S.Disc_Strat accounts for all discriminants of
+            --                 the derivation chain, this step covers all
+            --                 remaining discriminants.
+
             for D_Strat_Cursor in S.Disc_Strats.Iterate loop
-               declare
-                  procedure Generate_Val
-                    (Disc_Name : Unbounded_String; Disc_Strat : Strategy_Acc);
-
-                  procedure Generate_Val
-                    (Disc_Name : Unbounded_String; Disc_Strat : Strategy_Acc)
-                  is
-                  begin
-                     Current_Context.Insert
-                       (Disc_Name, Disc_Strat.Generate (Current_Context));
-                  end Generate_Val;
-
-               begin
-                  Strategy_Maps.Query_Element
-                    (D_Strat_Cursor, Generate_Val'Access);
-               end;
+               Strategy_Maps.Query_Element
+                 (D_Strat_Cursor, Generate_Val_Corresp'Access);
             end loop;
          end if;
+
+         for D_Strat_Cursor in S.Disc_Strats.Iterate loop
+            Strategy_Maps.Query_Element (D_Strat_Cursor, Generate_Val'Access);
+         end loop;
 
          --  Write the generated discriminant values; they are part of the
          --  generated record value.

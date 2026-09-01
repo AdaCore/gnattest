@@ -1976,7 +1976,7 @@ package body TGen.Types.Translation is
                Decl_Kind : constant Ada_Node_Kind_Type :=
                  Kind (Decl.As_Type_Decl.F_Type_Def);
             begin
-               --  The original Decl of a record is not constrained.
+               --  The original Decl of a record is not constrained
 
                if Decl_Kind = Ada_Record_Type_Def then
                   return False;
@@ -2267,6 +2267,17 @@ package body TGen.Types.Translation is
             then
                --  Case of a Discriminant correspondence
 
+               New_Typ.Has_Discr_Correspondence := True;
+
+               --  Link a type's discriminant to its ancestor's
+               Constraints_Map.Insert
+                 (Key      =>
+                    +Actual (Pair).As_Name.P_Referenced_Defining_Name.Text,
+                  New_Item =>
+                    (Kind      => Discriminant,
+                     Disc_Name => +Param (Pair).As_Defining_Name.Text));
+
+               --  Link a ancestor's discriminant to the derived type's
                Discr_Renaming_Map.Insert
                  (Key      => +Param (Pair).As_Defining_Name.Text,
                   New_Item =>
@@ -2320,35 +2331,29 @@ package body TGen.Types.Translation is
 
          --  Fill out discriminant types
 
-         Constraint_Cur := Discr_Renaming_Map.First;
-         while Has_Element (Constraint_Cur) loop
-            if Element (Constraint_Cur).Kind = Discriminant then
-               New_Typ.Discriminant_Types.Insert
-                 (Key      => Element (Constraint_Cur).Disc_Name,
-                  New_Item =>
-                    From.Discriminant_Types.Element (Key (Constraint_Cur)));
-            end if;
-            Next (Constraint_Cur);
-         end loop;
+         New_Typ.Discriminant_Types := From.Discriminant_Types;
 
          --  Then the non static constraints
 
          Constraint_Cur := Constraints_Map.First;
          while Has_Element (Constraint_Cur) loop
-            if Element (Constraint_Cur).Kind = Non_Static then
+            if Element (Constraint_Cur).Kind in Non_Static | Discriminant then
                New_Typ.Discriminant_Constraint.Insert
                  (Key (Constraint_Cur), Element (Constraint_Cur));
 
-               New_Typ.Discriminant_Types.Insert
-                 (Key      => Key (Constraint_Cur),
-                  New_Item =>
-                    From.Discriminant_Types.Element (Key (Constraint_Cur)));
+               if Element (Constraint_Cur).Kind = Non_Static then
+                  New_Typ.Discriminant_Types.Insert
+                    (Key      => Key (Constraint_Cur),
+                     New_Item =>
+                       From.Discriminant_Types.Element (Key (Constraint_Cur)));
+               end if;
             end if;
             Next (Constraint_Cur);
          end loop;
 
          New_Typ.Name := From.Name;
          New_Typ.Last_Comp_Unit_Idx := From.Last_Comp_Unit_Idx;
+         New_Typ.Ancestor := From.Ancestor;
       end return;
    end Apply_Record_Derived_Type_Decl;
 
@@ -2696,7 +2701,7 @@ package body TGen.Types.Translation is
         (D : Concrete_Type_Decl) return Component_List;
 
       procedure Apply_Constraints
-        (Decl, Root : Base_Type_Decl; Res : in out Record_Typ)
+        (Decl : Base_Type_Decl; Res : in out Record_Typ)
       with Pre => Is_Discriminated (Res);
       --  Modify Res to include all the discriminant constraints present in
       --  the type derivation / subtype decl chain.
@@ -2728,31 +2733,18 @@ package body TGen.Types.Translation is
       -----------------------
 
       procedure Apply_Constraints
-        (Decl, Root : Base_Type_Decl; Res : in out Record_Typ) is
+        (Decl : Base_Type_Decl; Res : in out Record_Typ)
+      is
+         Dummy : constant Wide_Wide_String :=
+           Decl.F_Name.As_Defining_Name.Text;
       begin
-         --  The original Decl of a record is not constrained.
 
-         if Decl = Root then
+         if not Record_Constrained (Decl) then
             return;
          end if;
 
          case Kind (Decl) is
             when Ada_Type_Decl          =>
-
-               --  First apply constraints of the ancestor type
-
-               Apply_Constraints
-                 (Decl
-                    .As_Type_Decl
-                    .F_Type_Def
-                    .As_Derived_Type_Def
-                    .F_Subtype_Indication
-                    .F_Name
-                    .P_Name_Designated_Type,
-                  Root,
-                  Res);
-
-               --  Then apply the effects of the type derivation
 
                Res := Apply_Record_Derived_Type_Decl (Decl.As_Type_Decl, Res);
 
@@ -2762,7 +2754,6 @@ package body TGen.Types.Translation is
 
                Apply_Constraints
                  (Decl.As_Subtype_Decl.F_Subtype.F_Name.P_Name_Designated_Type,
-                  Root,
                   Res);
 
                --  The register the eventual constraints imposed by the subtype
@@ -2956,8 +2947,7 @@ package body TGen.Types.Translation is
             --  constraints now.
 
             if Is_Constrained then
-               Apply_Constraints
-                 (Decl, Actual_Decl.As_Base_Type_Decl, Trans_Res.all);
+               Apply_Constraints (Decl, Trans_Res.all);
             end if;
 
             Trans_Res.all.Static_Gen :=
@@ -2980,6 +2970,7 @@ package body TGen.Types.Translation is
 
             if Trans_Res.all.Constrained
               and then Trans_Res.all.Discriminant_Constraint.Is_Empty
+              and then not Trans_Res.all.Has_Discr_Correspondence
             then
                if Trans_Res.all.Discriminant_Types.Is_Empty then
 

@@ -14,6 +14,8 @@
 @@--  @_COMP_PREFIX_@ Prefixes used for all entity of the index types
 @@--       for arrays, and of the discriminants for records.
 @@--  @_ANCESTORS_DISCR_NAME_@ List of this type's ancestor's discriminants.
+@@--  @_DISCR_ANCESTOR_NAME_@ List of the ancestors from which the
+@@--       discriminants originate.
 @@--  @_ANCESTORS_COMP_PREFIX_@ Same as COMP_PREFIX, but for this type's
 @@--       ancestor's discriminants.
 @@--  @_IS_ENUM_@ Boolean, indicates if the index type is an enumerated type
@@ -79,7 +81,7 @@
 @@TABLE@@
       @_ANCESTORS_COMP_PREFIX_@_Write
         (@_GLOBAL_PREFIX_@_Stream, @_GLOBAL_PREFIX_@_Buffer,
-         @_GLOBAL_PREFIX_@_Offset, TGen.TGen_Std.@_ANCESTOR_TY_NAME_@(@_GLOBAL_PREFIX_@_V).@_ANCESTORS_DISCR_NAME_@);
+         @_GLOBAL_PREFIX_@_Offset, TGen.TGen_Std.@_DISCR_ANCESTOR_NAME_@(@_GLOBAL_PREFIX_@_V).@_ANCESTORS_DISCR_NAME_@);
 @@END_TABLE@@
 @@END_IF@@
 @@TABLE@@

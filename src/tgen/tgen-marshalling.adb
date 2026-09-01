@@ -114,12 +114,11 @@ package body TGen.Marshalling is
    --  multidimensional ones.
 
    procedure Create_Tags_For_Discriminants
-     (D_Typ          : Record_Typ'Class;
-      Name_Tag       : in out Tag;
-      Typ_Tag        : in out Tag;
-      Pref_Tag       : in out Tag;
-      Discr_Ancestor : in out Tag;
-      Complete       : Boolean := False)
+     (D_Typ    : Record_Typ'Class;
+      Name_Tag : in out Tag;
+      Typ_Tag  : in out Tag;
+      Pref_Tag : in out Tag;
+      Complete : Boolean := False)
    with Pre => Is_Discriminated (D_Typ);
    --  Compute the tags for the discriminant of a record type:
    --    * Name_Tag contains the names of the  discriminants: Discr, ...,
@@ -403,12 +402,11 @@ package body TGen.Marshalling is
    -----------------------------------
 
    procedure Create_Tags_For_Discriminants
-     (D_Typ          : Record_Typ'Class;
-      Name_Tag       : in out Tag;
-      Typ_Tag        : in out Tag;
-      Pref_Tag       : in out Tag;
-      Discr_Ancestor : in out Tag;
-      Complete       : Boolean := False)
+     (D_Typ    : Record_Typ'Class;
+      Name_Tag : in out Tag;
+      Typ_Tag  : in out Tag;
+      Pref_Tag : in out Tag;
+      Complete : Boolean := False)
    is
       procedure Create_Tags_For_Discriminants_Aux (Cur_Typ : Record_Typ'Class);
 
@@ -438,8 +436,6 @@ package body TGen.Marshalling is
          while Cur_Ancestor_Typ /= null loop
             if not Cur_Ancestor_Typ.Discriminant_Types.Is_Empty then
                Create_Tags_For_Discriminants_Aux (Cur_Ancestor_Typ.all);
-               Discr_Ancestor :=
-                 Discr_Ancestor & Cur_Ancestor_Typ.FQN (No_Std => True);
                Cur_Ancestor_Typ := Cur_Ancestor_Typ.Ancestor;
             end if;
          end loop;
@@ -829,20 +825,16 @@ package body TGen.Marshalling is
                --  Fill the association maps
 
                Create_Tags_For_Discriminants
-                 (D_Typ,
-                  Discr_Name_Tag,
-                  Comp_Typ_Tag,
-                  Comp_Pref_Tag,
-                  Discr_Ancestor_Name_Tag);
+                 (D_Typ, Discr_Name_Tag, Comp_Typ_Tag, Comp_Pref_Tag);
 
                --  Get all discriminants of the derivation chain separatly,
                --  except those of the current type.
+
                Create_Tags_For_Discriminants
                  (D_Typ,
                   Ancestors_Discr_Name_Tag,
                   Ancestors_Comp_Typ_Tag,
                   Ancestors_Comp_Pref_Tag,
-                  Discr_Ancestor_Name_Tag,
                   True);
 
                Has_Discr_Tag :=
@@ -853,6 +845,22 @@ package body TGen.Marshalling is
                     Ancestor_Ty_Prefix & Prefix_For_Typ (D_Typ.Ancestor.Slug);
                   Ancestor_Ty_Name :=
                     Ancestor_Ty_Name & D_Typ.Ancestor.FQN (No_Std => True);
+
+                  --  Discr_Ancestor_Name_Tag holds a list of record type
+                  --  names. Each one appears as many times as this type has
+                  --  discriminants.
+                  declare
+                     Cur_Typ : Record_Typ_Access := D_Typ.Ancestor;
+                  begin
+                     while Cur_Typ /= null loop
+                        for Discr in Cur_Typ.Discriminant_Types.Iterate loop
+                           Discr_Ancestor_Name_Tag :=
+                             Discr_Ancestor_Name_Tag
+                             & Cur_Typ.FQN (No_Std => True);
+                        end loop;
+                        Cur_Typ := Cur_Typ.Ancestor;
+                     end loop;
+                  end;
                end if;
             end;
          end if;
@@ -877,7 +885,8 @@ package body TGen.Marshalling is
                  12 => Assoc ("ANCESTORS_COMP_TYP", Ancestors_Comp_Typ_Tag),
                  13 =>
                    Assoc ("ANCESTORS_COMP_PREFIX", Ancestors_Comp_Pref_Tag),
-                 14 => Assoc ("ANCESTOR_TY_NAME", Ancestor_Ty_Name)];
+                 14 => Assoc ("ANCESTOR_TY_NAME", Ancestor_Ty_Name),
+                 15 => Assoc ("DISCR_ANCESTOR_NAME", Discr_Ancestor_Name_Tag)];
          begin
             Print_Header (Assocs);
          end;
