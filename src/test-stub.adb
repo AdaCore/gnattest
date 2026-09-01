@@ -70,9 +70,11 @@ package body Test.Stub is
    function Process_Unit
      (Pack                : Base_Package_Decl;
       Body_File_Name      : String;
+      Rewritten_Spec_Name : String;
       Stub_Data_File_Spec : String;
       Stub_Data_File_Body : String;
-      Theoritical_Body    : Boolean) return Boolean
+      Theoritical_Body    : Boolean;
+      Spec_Rewritten      : out Boolean) return Boolean
    is
       Data          : Stubbing_Data;
       Markered_Data : MD_Map;
@@ -130,6 +132,7 @@ package body Test.Stub is
 
       use Ada.Containers;
    begin
+      Spec_Rewritten := False;
 
       Gather_Data (Pack, Data);
       Gather_Markered_Data (Body_File_Name, Markered_Data);
@@ -170,14 +173,8 @@ package body Test.Stub is
       Generate_Body_Stub (Body_File_Name, Data, Markered_Data);
 
       if Data.Need_Spec_Rewrite then
-         declare
-            Stubbed_Spec_Filename : constant String :=
-              Body_File_Name (Body_File_Name'First .. Body_File_Name'Last - 1)
-              & "s";
-            --  FIXME: Maybe refine this name generation ?
-         begin
-            Rewrite_Spec (Pack.As_Package_Decl, Stubbed_Spec_Filename);
-         end;
+         Rewrite_Spec (Pack.As_Package_Decl, Rewritten_Spec_Name);
+         Spec_Rewritten := True;
       end if;
 
       --  FIXME: Understand why we call Generate_Stub_Data only when Flat_List

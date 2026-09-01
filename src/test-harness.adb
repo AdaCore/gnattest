@@ -41,7 +41,8 @@ with GPR2.Path_Name;
 with GPR2.Project.Attribute;
 with GPR2.Project.View;
 
-with Libadalang.Common; use Libadalang.Common;
+with Langkit_Support.Text; use Langkit_Support.Text;
+with Libadalang.Common;    use Libadalang.Common;
 
 with Test.Skeleton.Source_Table;
 with Test.Mapping;              use Test.Mapping;
@@ -2266,47 +2267,45 @@ package body Test.Harness is
 
                      if S /= UUT then
                         declare
-                           App : constant String :=
-                             Test
-                               .Skeleton
-                               .Source_Table
-                               .Get_Source_Existing_Body (S);
+                           App       : constant String :=
+                             Test.Skeleton.Source_Table.Get_Source_Body (S);
+                           Unit_Name : constant String :=
+                             Image (Stub.P_Fully_Qualified_Name);
                         begin
-                           if App /= "" then
-                              SPI.Sources_List.Append (App);
-                              SPI.Units_List.Append
-                                (Skeleton.Source_Table.Get_Source_Unit_Name
-                                   (App));
-                              declare
-                                 SD_Spec : constant String :=
-                                   Test
-                                     .Skeleton
-                                     .Source_Table
-                                     .Get_Source_Stub_Data_Spec (S);
-                                 SD_Body : constant String :=
-                                   Test
-                                     .Skeleton
-                                     .Source_Table
-                                     .Get_Source_Stub_Data_Body (S);
-                              begin
-                                 if not Excluded_Test_Data_Files.Contains
-                                          (SD_Spec)
-                                 then
-                                    SPI.Sources_List.Append (SD_Spec);
-                                    SPI.Units_List.Append
-                                      (Skeleton
-                                         .Source_Table
-                                         .Get_Source_Unit_Name (App)
-                                       & "."
-                                       & Stub_Data_Unit_Name);
-                                 end if;
-                                 if not Excluded_Test_Data_Files.Contains
-                                          (SD_Body)
-                                 then
-                                    SPI.Sources_List.Append (SD_Body);
-                                 end if;
-                              end;
+                           SPI.Sources_List.Append (App);
+
+                           if Test.Skeleton.Source_Table.Source_Spec_Rewritten
+                                (S)
+                           then
+                              SPI.Sources_List.Append (Base_Name (S));
                            end if;
+
+                           SPI.Units_List.Append (Unit_Name);
+                           declare
+                              SD_Spec : constant String :=
+                                Test
+                                  .Skeleton
+                                  .Source_Table
+                                  .Get_Source_Stub_Data_Spec (S);
+                              SD_Body : constant String :=
+                                Test
+                                  .Skeleton
+                                  .Source_Table
+                                  .Get_Source_Stub_Data_Body (S);
+                           begin
+                              if not Excluded_Test_Data_Files.Contains
+                                       (SD_Spec)
+                              then
+                                 SPI.Sources_List.Append (SD_Spec);
+                                 SPI.Units_List.Append
+                                   (Unit_Name & "." & Stub_Data_Unit_Name);
+                              end if;
+                              if not Excluded_Test_Data_Files.Contains
+                                       (SD_Body)
+                              then
+                                 SPI.Sources_List.Append (SD_Body);
+                              end if;
+                           end;
                         end;
                      end if;
 
@@ -3524,6 +3523,7 @@ package body Test.Harness is
          Put_New_Line;
          Put_New_Line;
 
+         Me.Trace ("PRINTING SOURCE LIST: " & P.Sources_List.Length'Image);
          if not P.Sources_List.Is_Empty then
             S_Put (3, "for Source_Files use (");
             Put_New_Line;

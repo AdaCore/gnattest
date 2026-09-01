@@ -83,7 +83,7 @@ package body Test.Skeleton.Source_Table is
 
       Theoretical_Body : String_Access := null;
       --  Set for creating an instrumented body in case a bodyless spec would
-      --  need a body due to expression functions.
+      --  need a body due to imported or expression functions.
 
       Stub_Data_Base_Spec : String_Access;
       Stub_Data_Base_Body : String_Access;
@@ -91,7 +91,10 @@ package body Test.Skeleton.Source_Table is
       --  schemes, but we won't have the access to this info once ASIS context
       --  is generated, so we need to calculate those names beforehand.
 
-      Stub_Created : Boolean := False;
+      Stub_Created   : Boolean := False;
+      Spec_Rewritten : Boolean := False;
+      --  Set if stubbing rewrote the spec (happens in case there are
+      --  imported functions in the spec).
 
       Project_Name : String_Access;
       --  Name of corresponding project. Only relevant for bodies.
@@ -1059,10 +1062,12 @@ package body Test.Skeleton.Source_Table is
    end Mark_Projects_With_Stubbed_Sources;
 
    -------------------------
-   -- Mark_Sourse_Stubbed --
+   -- Mark_Source_Stubbed --
    -------------------------
 
-   procedure Mark_Sourse_Stubbed (Source_Name : String) is
+   procedure Mark_Source_Stubbed
+     (Source_Name : String; Spec_Rewritten : Boolean)
+   is
       procedure Set_Stub_Created (SF_Rec : in out SF_Record);
       --  Set Stub_Created flag to `True` in the source file record.
 
@@ -1073,10 +1078,11 @@ package body Test.Skeleton.Source_Table is
       procedure Set_Stub_Created (SF_Rec : in out SF_Record) is
       begin
          SF_Rec.Stub_Created := True;
+         SF_Rec.Spec_Rewritten := Spec_Rewritten;
       end Set_Stub_Created;
    begin
       Update_SF_Record (Source_Name, Set_Stub_Created'Access);
-   end Mark_Sourse_Stubbed;
+   end Mark_Source_Stubbed;
 
    ---------------------------------
    --  Next_Non_Processed_Source  --
@@ -1407,6 +1413,17 @@ package body Test.Skeleton.Source_Table is
       return Source_File_Table.Element (SF_Table, SN).Stub_Created;
    end Source_Stubbed;
 
+   ---------------------------
+   -- Source_Spec_Rewritten --
+   ---------------------------
+
+   function Source_Spec_Rewritten (Source_Name : String) return Boolean is
+      SN  : constant String := Normalize_Source_Name (Source_Name);
+      SFR : constant SF_Record := Source_File_Table.Element (SF_Table, SN);
+   begin
+      return SFR.Stub_Created and then SFR.Spec_Rewritten;
+   end Source_Spec_Rewritten;
+
    -------------------------------------
    -- Generate_Stub_Extension_Project --
    -------------------------------------
@@ -1612,10 +1629,14 @@ package body Test.Skeleton.Source_Table is
                      end if;
 
                      S_Put
-                       (6,
-                        """"
-                        & Base_Name (Get_Source_Existing_Body (Source))
-                        & """");
+                       (6, """" & Base_Name (Get_Source_Body (Source)) & """");
+
+                     if Source_Spec_Rewritten (Source) then
+                        S_Put (0, ",");
+                        Put_New_Line;
+                        S_Put (6, """" & Base_Name (Source) & """");
+                     end if;
+
                      Sources_Names.Include (Base_Name (Source));
 
                      S_Put
@@ -1681,14 +1702,20 @@ package body Test.Skeleton.Source_Table is
                   Put_New_Line;
 
                   for Cur in Current_Proj_Present_Sources.Iterate loop
-                     S_Put
-                       (9,
-                        """"
-                        & Get_Source_Unit_Name
-                            (Get_Source_Existing_Body
-                               (Current_Proj_Present_Sources.Constant_Reference
-                                  (Cur)))
-                        & """");
+                     declare
+                        Existing_Body : constant String :=
+                          Get_Source_Existing_Body
+                            (Current_Proj_Present_Sources.Constant_Reference
+                               (Cur));
+                     begin
+                        if Existing_Body /= "" then
+                           S_Put
+                             (9,
+                              """"
+                              & Get_Source_Unit_Name (Existing_Body)
+                              & """");
+                        end if;
+                     end;
                      if Cur = Current_Proj_Present_Sources.Last then
                         S_Put (0, ");");
                      else

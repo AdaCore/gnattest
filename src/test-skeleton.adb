@@ -9185,7 +9185,9 @@ package body Test.Skeleton is
    procedure Process_Stubs (Units_To_Stub : Pkg_Decl_List) is
       Str : String_Access;
 
-      Stub_Success : Boolean;
+      Stub_Success   : Boolean;
+      Spec_Rewritten : Boolean;
+
    begin
       --  Once we change the context, contents of List won't make sense.
 
@@ -9202,12 +9204,16 @@ package body Test.Skeleton is
                     & Base_Name (Get_Source_Body (Str.all)),
                     Get_Source_Stub_Dir (Str.all)
                     & Dir_Sep
+                    & Base_Name (Str.all),
+                    Get_Source_Stub_Dir (Str.all)
+                    & Dir_Sep
                     & Get_Source_Stub_Data_Spec (Str.all),
                     Get_Source_Stub_Dir (Str.all)
                     & Dir_Sep
                     & Get_Source_Stub_Data_Body (Str.all),
                     Theoritical_Body =>
-                      Get_Source_Existing_Body (Str.all) = "");
+                      Get_Source_Existing_Body (Str.all) = "",
+                    Spec_Rewritten   => Spec_Rewritten);
 
             exception
                when Test.Stub.Stub_Processing_Error =>
@@ -9216,7 +9222,7 @@ package body Test.Skeleton is
             end;
 
             if Stub_Success then
-               Mark_Sourse_Stubbed (Str.all);
+               Mark_Source_Stubbed (Str.all, Spec_Rewritten);
             end if;
 
          end if;

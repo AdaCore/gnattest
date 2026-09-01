@@ -118,8 +118,10 @@ package Test.Skeleton.Source_Table is
    function Get_Source_Instr_Dir (Source_Name : String) return String;
    function Get_Source_Instr_Body (Source_Name : String) return String;
 
-   procedure Mark_Sourse_Stubbed (Source_Name : String);
+   procedure Mark_Source_Stubbed
+     (Source_Name : String; Spec_Rewritten : Boolean);
    function Source_Stubbed (Source_Name : String) return Boolean;
+   function Source_Spec_Rewritten (Source_Name : String) return Boolean;
 
    procedure Reset_Source_Iterator;
    --  Sets the iterator of source files list in the initial position.

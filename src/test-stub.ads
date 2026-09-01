@@ -41,9 +41,11 @@ package Test.Stub is
    function Process_Unit
      (Pack                : Base_Package_Decl;
       Body_File_Name      : String;
+      Rewritten_Spec_Name : String;
       Stub_Data_File_Spec : String;
       Stub_Data_File_Body : String;
-      Theoritical_Body    : Boolean) return Boolean;
+      Theoritical_Body    : Boolean;
+      Spec_Rewritten      : out Boolean) return Boolean;
    --  Processes corresponding spec and body,
    --  (re)creates stub body and stub data package.
    --

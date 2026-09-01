@@ -46,7 +46,7 @@ with Test.Mapping; use Test.Mapping;
 
 package body Test.Stub.Write is
 
-   Me : constant Trace_Handle := Create ("Stubs.Write");
+   Me : constant Trace_Handle := Create ("Stubs.Write", Default => Off);
 
    Level        : Integer := 0;
    --  Nesting level of a spec being processed
