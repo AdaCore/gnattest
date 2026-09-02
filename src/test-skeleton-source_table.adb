@@ -586,10 +586,10 @@ package body Test.Skeleton.Source_Table is
    ----------------------
 
    function SF_Table_Empty return Boolean is
-      Empty : constant Boolean := Is_Empty (SF_Table);
    begin
       return
-        Empty or else (for all SF of SF_Table => SF.Status = To_Stub_Body);
+        Is_Empty (SF_Table)
+        or else (for all SF of SF_Table => SF.Status = To_Stub_Body);
    end SF_Table_Empty;
 
    ---------------------------
@@ -1526,19 +1526,14 @@ package body Test.Skeleton.Source_Table is
                        & To_Lower (Stub_Project_Prefix & Current_Infix & P)
                        & ".gpr";
                   begin
-                     if P = Generate_Stub_Extension_Project.Proj then
-                        Relative_I_Path :=
-                          new String'
-                            (+Relative_Path
-                                (Create (+Subroot_Stub_Prj),
-                                 Create (+Arg_Proj.Stub_Dir.all)));
-                     else
-                        Relative_I_Path :=
-                          new String'
-                            (+Relative_Path
-                                (Create (+Imported_Sub_Project),
-                                 Create (+Arg_Proj.Stub_Dir.all)));
-                     end if;
+                     Relative_I_Path :=
+                       new String'
+                         (+Relative_Path
+                             (Create
+                                (+(if P = Generate_Stub_Extension_Project.Proj
+                                   then Subroot_Stub_Prj
+                                   else Imported_Sub_Project)),
+                              Create (+Arg_Proj.Stub_Dir.all)));
                   end;
                   if Arg_Proj.Aggregate_Lib then
                      Resolved_Dep_List.Append
@@ -1682,38 +1677,36 @@ package body Test.Skeleton.Source_Table is
             end if;
             Put_New_Line;
 
-            if not Arg_Proj.Aggregate_Lib then
-               if not Current_Proj_Present_Sources.Is_Empty then
-                  S_Put (3, "package Coverage is");
-                  Put_New_Line;
-                  S_Put (6, "for Excluded_Units use (");
-                  Put_New_Line;
+            if not Arg_Proj.Aggregate_Lib
+              and then not Current_Proj_Present_Sources.Is_Empty
+            then
+               S_Put (3, "package Coverage is");
+               Put_New_Line;
+               S_Put (6, "for Excluded_Units use (");
+               Put_New_Line;
 
-                  for Cur in Current_Proj_Present_Sources.Iterate loop
-                     declare
-                        Existing_Body : constant String :=
-                          Get_Source_Existing_Body
-                            (Current_Proj_Present_Sources.Constant_Reference
-                               (Cur));
-                     begin
-                        if Existing_Body /= "" then
-                           S_Put
-                             (9,
-                              """"
-                              & Get_Source_Unit_Name (Existing_Body)
-                              & """");
-                        end if;
-                     end;
-                     if Cur = Current_Proj_Present_Sources.Last then
-                        S_Put (0, ");");
-                     else
-                        S_Put (0, ",");
+               for Cur in Current_Proj_Present_Sources.Iterate loop
+                  declare
+                     Existing_Body : constant String :=
+                       Get_Source_Existing_Body
+                         (Current_Proj_Present_Sources.Constant_Reference
+                            (Cur));
+                  begin
+                     if Existing_Body /= "" then
+                        S_Put
+                          (9,
+                           """" & Get_Source_Unit_Name (Existing_Body) & """");
                      end if;
-                     Put_New_Line;
-                  end loop;
-                  S_Put (3, "end Coverage;");
+                  end;
+                  if Cur = Current_Proj_Present_Sources.Last then
+                     S_Put (0, ");");
+                  else
+                     S_Put (0, ",");
+                  end if;
                   Put_New_Line;
-               end if;
+               end loop;
+               S_Put (3, "end Coverage;");
+               Put_New_Line;
             end if;
 
             S_Put (0, "end " & Stub_Prj_Name & ";");
