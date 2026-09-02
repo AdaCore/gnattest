@@ -1737,6 +1737,10 @@ package body Test.Stub.Write is
       --  Remove the Pragma if it is an Import pragma and its Entity target is
       --  a subprogram.
 
+      procedure Process_Package_Decl (Pkg : Base_Package_Decl'Class);
+      --  Call Remove_Import_Aspect and Remove_Import_Pragma on the matching
+      --  declarations in Pkg.
+
       ---------------------------
       -- Remove_Import_Aspect --
       ---------------------------
@@ -1867,6 +1871,47 @@ package body Test.Stub.Write is
          end if;
       end Remove_Import_Pragma;
 
+      --------------------------
+      -- Process_Package_Decl --
+      --------------------------
+
+      procedure Process_Package_Decl (Pkg : Base_Package_Decl'Class) is
+
+         procedure Iterate_Decls (Decls : Ada_Node_List);
+
+         procedure Iterate_Decls (Decls : Ada_Node_List) is
+         begin
+            for Decl of Decls loop
+               case Decl.Kind is
+                  when Ada_Subp_Decl            =>
+                     Remove_Import_Aspect (Decl.As_Subp_Decl);
+
+                  when Ada_Pragma_Node          =>
+                     Remove_Import_Pragma (Decl.As_Pragma_Node);
+
+                  when Ada_Package_Decl         =>
+                     --  Recurse in sub-packages
+
+                     Process_Package_Decl (Decl.As_Package_Decl);
+
+                  when Ada_Generic_Package_Decl =>
+                     --  Recurse in sub-packages
+
+                     Process_Package_Decl
+                       (Decl.As_Generic_Package_Decl.F_Package_Decl);
+
+                  when others                   =>
+                     null;
+               end case;
+            end loop;
+         end Iterate_Decls;
+      begin
+         Iterate_Decls (Pkg.F_Public_Part.F_Decls);
+         if not Pkg.F_Private_Part.Is_Null then
+            Iterate_Decls (Pkg.F_Private_Part.F_Decls);
+         end if;
+      end Process_Package_Decl;
+
       --  Start of processing for Rewrite_Spec
    begin
       Me.Trace
@@ -1875,18 +1920,9 @@ package body Test.Stub.Write is
          & " => "
          & Stubbed_Spec_Name);
 
-      for Decl of Unit_Node.F_Public_Part.F_Decls loop
-         case Decl.Kind is
-            when Ada_Subp_Decl   =>
-               Remove_Import_Aspect (Decl.As_Subp_Decl);
+      --  Browse Unit_Node to remove any Import pragma/aspects or equivalent.
 
-            when Ada_Pragma_Node =>
-               Remove_Import_Pragma (Decl.As_Pragma_Node);
-
-            when others          =>
-               null;
-         end case;
-      end loop;
+      Process_Package_Decl (Unit_Node);
 
       --  Write the modified code to the stubbed spec.
 
@@ -1901,8 +1937,9 @@ package body Test.Stub.Write is
            (Tmp_File_Name, Stubbed_Spec_Name, "stubbed spec");
       end;
 
-      Rw_Handle.Abort_Rewriting;
       --  Cleanly abort the rewriting context for the unit.
+
+      Rw_Handle.Abort_Rewriting;
 
    end Rewrite_Spec;
 
