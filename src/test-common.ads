@@ -219,6 +219,10 @@ package Test.Common is
    --  more code than necessary, but we won't be missing any non-ghost
    --  cases.
 
+   function Shorten_Name (Name : String) return String;
+   --  Shorten a unit name to at max Package_Name_Max_Len by replacing
+   --  part of it by a hash.
+
    --------------------------------
    -- Stub inclusion / exclusion --
    --------------------------------
@@ -338,6 +342,17 @@ package Test.Common is
    Test_Dir_Name : GNAT.OS_Lib.String_Access :=
      new String'("gnattest" & GNAT.OS_Lib.Directory_Separator & "tests");
    --  Name of default directory to place test files
+
+   Shorten_Package      : Boolean := False;
+   --  Whether to shorten package name to stay under the OS max path length
+   --  limite.
+   Package_Name_Max_Len : Natural := 20;
+   --  The max length a package can have before being shortened.
+   Package_Hash_Len     : Natural := 5;
+   --  The length of the reduced part of the package name.
+   --  The final package name woule be :
+   --  Name(Name'First..(Package_Name_Max_Len - Package_Hash_Len))
+   --  & Package_Hash
 
    Stub_Mode_ON : Boolean := False;
 

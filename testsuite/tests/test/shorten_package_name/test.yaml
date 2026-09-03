@@ -1,0 +1,5 @@
+description:
+    Check that a long package name get properly reduced to avoid going above the 
+    max path limit
+
+driver: python_script

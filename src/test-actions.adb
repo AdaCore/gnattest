@@ -693,6 +693,28 @@ package body Test.Actions is
 
       end if;
 
+      if Arg (Cmd, Shorten_Package) then
+         Test.Common.Shorten_Package := True;
+         if Arg (Cmd, Package_Max_Len) = 0 then
+            Cmd_Error_No_Help
+              (" --package-max-len should be a positive number");
+         else
+            Test.Common.Package_Name_Max_Len := Arg (Cmd, Package_Max_Len);
+         end if;
+
+         if Arg (Cmd, Package_Hash_Len) = 0 then
+            Cmd_Error_No_Help
+              (" --package-hash-len should be a positive number");
+         elsif Arg (Cmd, Package_Hash_Len) >= Test.Common.Package_Name_Max_Len
+         then
+            Cmd_Error_No_Help
+              (" --package-hash-len must always be lower "
+               & "than --package-max-len");
+         else
+            Test.Common.Package_Hash_Len := Arg (Cmd, Package_Hash_Len);
+         end if;
+      end if;
+
       if Arg (Cmd, Harness_Dir) /= null then
          Free (Test.Common.Harness_Dir_Str);
          Test.Common.Harness_Dir_Str :=
@@ -1602,6 +1624,14 @@ package body Test.Actions is
       Put ("                          as sources but rooted at dirname\n");
       Put
         (" --stubs-dir=dirname    - Stub files are put in subdirs of dirname\n");
+      Put
+        (" --shorten-package      - Reduce the name's length of the packages that are tested\n");
+      Put
+        (" --package-max-len      - The maximum size of a test package before being shortened\n");
+      Put
+        (" --package-hash-len     - The size the max-package-len that will be replaced by a shortened name\n");
+      Put
+        ("                          The package-hash-len must be strictely lower than max-package-len\n");
       Put ("\n");
 
       Put

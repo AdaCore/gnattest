@@ -121,7 +121,8 @@ package Test.Mapping is
    use DT_Mapping_List;
 
    type TP_Mapping is record
-      TP_Name : String_Access;
+      TP_Name       : String_Access;
+      TP_Short_Name : String_Access;
       --  Name of the tested package
 
       SetUp_Name      : String_Access;

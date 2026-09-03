@@ -194,6 +194,12 @@ package body Test.Skeleton is
      Ada.Containers.Indefinite_Ordered_Maps (String, Natural);
    use Name_Frequency;
 
+   package Package_Mapping is new
+     Ada.Containers.Indefinite_Ordered_Maps (String, String);
+   use Package_Mapping;
+
+   Package_Name_Mapping : Package_Mapping.Map;
+
    type Data_Holder (Data_Kind : Data_Kind_Type := Declaration_Data) is record
 
       Unit : Compilation_Unit;
@@ -205,6 +211,9 @@ package body Test.Skeleton is
 
       Unit_File_Name : String_Access;
       --  Full name of the file, containing the CU
+
+      Unit_Short_Name : String_Access;
+      --  A short version of the Unit_Full_Name
 
       Has_Gen_Tests : Boolean := False;
       --  Whether this unit has generated tests that were expanded into
@@ -578,8 +587,10 @@ package body Test.Skeleton is
       --  Fills suite data sorting out routines from generic packages
 
       function Get_Suite_Components
-        (S_Data : Suites_Data_Type; Package_Name : String)
-         return Test.Harness.Data_Holder;
+        (S_Data          : Suites_Data_Type;
+         Package_Name    : String;
+         Unit_Full_Name  : String;
+         Unit_Short_Name : String) return Test.Harness.Data_Holder;
 
       procedure Cleanup;
       --  Frees Data components
@@ -624,8 +635,10 @@ package body Test.Skeleton is
       end Get_Test_Packages_List;
 
       function Get_Suite_Components
-        (S_Data : Suites_Data_Type; Package_Name : String)
-         return Test.Harness.Data_Holder
+        (S_Data          : Suites_Data_Type;
+         Package_Name    : String;
+         Unit_Full_Name  : String;
+         Unit_Short_Name : String) return Test.Harness.Data_Holder
       is
          Suite_Data   : Test.Harness.Data_Holder;
          Test_Routine : Test.Harness.Test_Routine_Info;
@@ -645,6 +658,13 @@ package body Test.Skeleton is
       begin
 
          Suite_Data.Test_Unit_Full_Name := new String'(Package_Name);
+         Suite_Data.Test_Unit_Short_Name :=
+           new String'
+             (Unit_Short_Name
+              & Package_Name
+                  (Package_Name'First
+                   + Unit_Full_Name'Length
+                   .. Package_Name'Last));
 
          for K in S_Data.Test_Types.First_Index .. S_Data.Test_Types.Last_Index
          loop
@@ -807,7 +827,11 @@ package body Test.Skeleton is
             Get_Test_Packages_List (Suite_Data_List);
             for Test_Package of Test_Packages loop
                Suite_Data :=
-                 Get_Suite_Components (Suite_Data_List, Test_Package);
+                 Get_Suite_Components
+                   (Suite_Data_List,
+                    Test_Package,
+                    Data.Unit_Full_Name.all,
+                    Data.Unit_Short_Name.all);
 
                if Suite_Data.Good_For_Suite then
                   if not Stub_Mode_ON and then not Separate_Drivers then
@@ -828,7 +852,11 @@ package body Test.Skeleton is
                for Test_Package of Test_Packages loop
 
                   Suite_Data :=
-                    Get_Suite_Components (Suite_Data_List, Test_Package);
+                    Get_Suite_Components
+                      (Suite_Data_List,
+                       Test_Package,
+                       Data.Unit_Full_Name.all,
+                       Data.Unit_Short_Name.all);
 
                   if Suite_Data.Good_For_Suite then
                      Test.Harness.Generate_Test_Drivers
@@ -2570,6 +2598,9 @@ package body Test.Skeleton is
            else Node_Image (Unit.As_Basic_Decl.P_Defining_Name));
       Data.Unit_File_Name := new String'(The_Unit.Unit.Get_Filename);
 
+      Data.Unit_Short_Name :=
+        new String'(Shorten_Name (Data.Unit_Full_Name.all));
+
       Trace (Me, "Gathering nested packages");
       Traverse (Unit, Get_Nested_Packages'Access);
 
@@ -3699,23 +3730,32 @@ package body Test.Skeleton is
          exit when Cur = Package_Info_List.No_Element;
 
          declare
-            S      : constant String :=
+            S           : constant String :=
               Package_Info_List.Element (Cur).Name.all;
-            S_Pack : constant String :=
+            S_Suffix    : constant String :=
+              (if Data.Is_Top_Level_Generic_Instantiation
+               then ""
+               else ("." & Nesting_Difference (Data.Unit_Full_Name.all, S)));
+            S_Pack      : constant String :=
               Data.Unit_Full_Name.all
               & "."
               & Test_Data_Unit_Name
               & "."
               & Test_Unit_Name
-              & (if Data.Is_Top_Level_Generic_Instantiation
-                 then ""
-                 else ("." & Nesting_Difference (Data.Unit_Full_Name.all, S)));
+              & S_Suffix;
+            S_Pack_File : constant String :=
+              Data.Unit_Short_Name.all
+              & "."
+              & Test_Data_Unit_Name
+              & "."
+              & Test_Unit_Name
+              & S_Suffix;
          begin
             if Data.Unit_Full_Name.all /= S then
                Create
                  (Output_Dir
                   & Dir_Sep
-                  & Unit_To_File_Name (S_Pack)
+                  & Unit_To_File_Name (S_Pack_File)
                   & Spec_Suffix.all);
 
                S_Put (0, "package " & S_Pack & " is");
@@ -3739,7 +3779,7 @@ package body Test.Skeleton is
               Output_Dir
               & Dir_Sep
               & (+(GNATCOLL.VFS.Create
-                     (+Unit_To_File_Name (Data.Unit_Full_Name.all))
+                     (+Unit_To_File_Name (Data.Unit_Short_Name.all))
                      .Base_Name))
               & Spec_Suffix.all;
             F_Type    : File_Type;
@@ -3783,7 +3823,9 @@ package body Test.Skeleton is
       Test_File_Name : String_Access;
       Data_Unit_Name : String_Access;
       Unit_Name      : String_Access;
+      Package_Base   : String_Access;
       Unit_Pref      : String_Access;
+      Short_Pref     : String_Access;
 
       Setters_Set : String_Set.Set;
 
@@ -4146,10 +4188,21 @@ package body Test.Skeleton is
 
          if Data.Unit_Full_Name.all = Current_Type.Nesting.all then
             Unit_Pref := new String'(Data.Unit_Full_Name.all);
+            Short_Pref := new String'(Data.Unit_Short_Name.all);
          else
             Unit_Pref :=
               new String'
                 (Data.Unit_Full_Name.all
+                 & "."
+                 & Test_Data_Unit_Name
+                 & "."
+                 & Test_Unit_Name
+                 & "."
+                 & Nesting_Difference
+                     (Data.Unit_Full_Name.all, Current_Type.Nesting.all));
+            Short_Pref :=
+              new String'
+                (Data.Unit_Short_Name.all
                  & "."
                  & Test_Data_Unit_Name
                  & "."
@@ -4166,7 +4219,15 @@ package body Test.Skeleton is
               & Current_Type.Main_Type_Text_Name.all
               & Test_Data_Unit_Name_Suff);
 
-         Test_File_Name := new String'(Unit_To_File_Name (Data_Unit_Name.all));
+         Test_File_Name :=
+           new String'
+             (Unit_To_File_Name
+                (Short_Pref.all
+                 & "."
+                 & Current_Type.Main_Type_Text_Name.all
+                 & Test_Data_Unit_Name_Suff));
+
+         Package_Name_Mapping.Insert (Data_Unit_Name.all, Test_File_Name.all);
 
          --  saving test data package name for further reference
          Test_Data_Package_Name := new String'(Data_Unit_Name.all);
@@ -4789,7 +4850,19 @@ package body Test.Skeleton is
 
          Free (Unit_Pref);
 
-         Test_File_Name := new String'(Unit_To_File_Name (Unit_Name.all));
+         Test_File_Name :=
+           new String'
+             (Unit_To_File_Name
+                (Short_Pref.all
+                 & "."
+                 & Current_Type.Main_Type_Text_Name.all
+                 & Test_Data_Unit_Name_Suff
+                 & "."
+                 & Current_Type.Main_Type_Text_Name.all
+                 & Test_Unit_Name_Suff));
+
+         Free (Short_Pref);
+         Package_Name_Mapping.Insert (Unit_Name.all, Test_File_Name.all);
 
          ----------------------------------
          --  Creating test package spec  --
@@ -4937,6 +5010,7 @@ package body Test.Skeleton is
 
          if not Current_Type.Main_Type_Abstract then
             TP_Map.TP_Name := new String'(Data.Unit_Full_Name.all);
+            TP_Map.TP_Short_Name := new String'(Data.Unit_Short_Name.all);
             TP_List.Append (TP_Map);
          end if;
 
@@ -5633,18 +5707,14 @@ package body Test.Skeleton is
          end loop;
 
          if Current_Pack.Name.all = Data.Unit_Full_Name.all then
-            Data_Unit_Name :=
-              new String'(Current_Pack.Name.all & "." & Test_Data_Unit_Name);
+            Package_Base := new String'("." & Test_Data_Unit_Name);
          else
             if Data.Is_Top_Level_Generic_Instantiation then
-               Data_Unit_Name :=
-                 new String'
-                   (Data.Unit_Full_Name.all & "." & Test_Data_Unit_Name);
+               Package_Base := new String'("." & Test_Data_Unit_Name);
             else
-               Data_Unit_Name :=
+               Package_Base :=
                  new String'
-                   (Data.Unit_Full_Name.all
-                    & "."
+                   ("."
                     & Test_Data_Unit_Name
                     & "."
                     & Test_Unit_Name
@@ -5656,7 +5726,15 @@ package body Test.Skeleton is
             end if;
          end if;
 
-         Test_File_Name := new String'(Unit_To_File_Name (Data_Unit_Name.all));
+         Data_Unit_Name :=
+           new String'(Data.Unit_Full_Name.all & Package_Base.all);
+         Test_File_Name :=
+           new String'
+             (Unit_To_File_Name (Data.Unit_Short_Name.all & Package_Base.all));
+
+         Package_Name_Mapping.Insert (Data_Unit_Name.all, Test_File_Name.all);
+
+         Free (Package_Base);
 
          --  saving test data package name for further reference
          Test_Data_Package_Name := new String'(Data_Unit_Name.all);
@@ -5931,27 +6009,16 @@ package body Test.Skeleton is
          Free (Test_File_Name);
 
          if Current_Pack.Name.all = Data.Unit_Full_Name.all then
-            Unit_Name :=
-              new String'
-                (Current_Pack.Name.all
-                 & "."
-                 & Test_Data_Unit_Name
-                 & "."
-                 & Test_Unit_Name);
+            Package_Base :=
+              new String'("." & Test_Data_Unit_Name & "." & Test_Unit_Name);
          else
             if Data.Is_Top_Level_Generic_Instantiation or Data.Is_Generic then
-               Unit_Name :=
-                 new String'
-                   (Data.Unit_Full_Name.all
-                    & "."
-                    & Test_Data_Unit_Name
-                    & "."
-                    & Test_Unit_Name);
+               Package_Base :=
+                 new String'("." & Test_Data_Unit_Name & "." & Test_Unit_Name);
             else
-               Unit_Name :=
+               Package_Base :=
                  new String'
-                   (Data.Unit_Full_Name.all
-                    & "."
+                   ("."
                     & Test_Data_Unit_Name
                     & "."
                     & Test_Unit_Name
@@ -5964,9 +6031,13 @@ package body Test.Skeleton is
                     & Test_Unit_Name);
             end if;
          end if;
+         Unit_Name := new String'(Data.Unit_Full_Name.all & Package_Base.all);
+         Test_File_Name :=
+           new String'
+             (Unit_To_File_Name (Data.Unit_Short_Name.all & Package_Base.all));
+         Package_Name_Mapping.Insert (Unit_Name.all, Test_File_Name.all);
 
-         Test_File_Name := new String'(Unit_To_File_Name (Unit_Name.all));
-
+         Free (Package_Base);
          Actual_Test := False;
 
          --  Generating simple test package spec.
@@ -6076,6 +6147,7 @@ package body Test.Skeleton is
          Close_File;
 
          TP_Map.TP_Name := new String'(Data.Unit_Full_Name.all);
+         TP_Map.TP_Short_Name := new String'(Data.Unit_Short_Name.all);
          TP_List.Append (TP_Map);
 
          Reset_Line_Counter;
@@ -9145,12 +9217,49 @@ package body Test.Skeleton is
       Put_New_Line;
       Put_New_Line;
 
-      if Body_Suffix.all /= ".adb" or else Spec_Suffix.all /= ".ads" then
-         S_Put
-           (3,
-            "package Naming renames "
-            & Base_Name (Source_Prj_Name)
-            & ".Naming;");
+      if Body_Suffix.all /= ".adb"
+        or else Spec_Suffix.all /= ".ads"
+        or else Shorten_Package
+      then
+         S_Put (3, "package Naming is");
+         Put_New_Line;
+         if Shorten_Package then
+            for C in Package_Name_Mapping.Iterate loop
+               S_Put
+                 (6,
+                  "for Body ("""
+                  & Key (C)
+                  & """) use """
+                  & Element (C)
+                  & Body_Suffix.all
+                  & """;");
+               Put_New_Line;
+               S_Put
+                 (6,
+                  "for Spec ("""
+                  & Key (C)
+                  & """) use """
+                  & Element (C)
+                  & Spec_Suffix.all
+                  & """;");
+               Put_New_Line;
+            end loop;
+         end if;
+         if Body_Suffix.all /= ".adb" or else Spec_Suffix.all /= ".ads" then
+            S_Put
+              (6,
+               "for Spec_Suffix use "
+               & Base_Name (Source_Prj_Name)
+               & ".Naming'Spec_Suffix;");
+            Put_New_Line;
+            S_Put
+              (6,
+               "for Body_Suffix use "
+               & Base_Name (Source_Prj_Name)
+               & ".Naming'Body_Suffix;");
+            Put_New_Line;
+         end if;
+         S_Put (3, "end Naming;");
          Put_New_Line;
          Put_New_Line;
       end if;
