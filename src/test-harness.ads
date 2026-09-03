@@ -146,6 +146,9 @@ package Test.Harness is
       Test_Unit_Full_Name : String_Access := null;
       --  Fully expanded Ada name of the CU under consideration.
 
+      Test_Unit_Short_Name : String_Access := null;
+      --  A short version of the Test_Unit_Short_Name
+
       Test_Unit_File_Name : String_Access := null;
       --  Name of file containing the CU under consideration.
 

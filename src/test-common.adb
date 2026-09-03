@@ -1497,6 +1497,25 @@ package body Test.Common is
       end if;
    end Is_Ghost_Code;
 
+   ------------------
+   -- Shorten_Name --
+   ------------------
+
+   function Shorten_Name (Name : String) return String is
+   begin
+      if not Shorten_Package or else Name'Length < Package_Name_Max_Len then
+         return Name;
+      else
+         declare
+            Hash_String : constant String := GNAT.SHA1.Digest (Name);
+         begin
+            return
+              Name (Name'First .. Package_Name_Max_Len - Package_Hash_Len)
+              & Hash_String (Hash_String'First .. Package_Hash_Len);
+         end;
+      end if;
+   end Shorten_Name;
+
    -----------------------------
    -- Add_Allowed_Subprograms --
    -----------------------------

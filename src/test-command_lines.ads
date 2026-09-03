@@ -28,7 +28,7 @@ package Test.Command_Lines is
    Descriptor : aliased Command_Line_Descriptor;
 
    --  ??? -j is ignored.
-   type Test_Nats is (Jobs);
+   type Test_Nats is (Jobs, Package_Max_Len, Package_Hash_Len);
    package Test_Nat_Switches is new
      Other_Switches
        (Descriptor,
@@ -36,13 +36,15 @@ package Test.Command_Lines is
         Natural,
         Natural'Image,
         Natural'Value);
-   package Test_Nat_Syntax is new Test_Nat_Switches.Set_Syntax ([Jobs => '!']);
+   package Test_Nat_Syntax is new
+     Test_Nat_Switches.Set_Syntax ([Jobs => '!', others => '=']);
    package Test_Nat_Defaults is new
-     Test_Nat_Switches.Set_Defaults ([Jobs => 1]);
+     Test_Nat_Switches.Set_Defaults
+       ([Jobs => 1, Package_Max_Len => 20, Package_Hash_Len => 5]);
    package Test_Nat_Shorthands is new
-     Test_Nat_Switches.Set_Shorthands ([Jobs => +"-j"]);
+     Test_Nat_Switches.Set_Shorthands ([Jobs => +"-j", others => null]);
    package Test_Nat_Shorthands_2 is new
-     Test_Nat_Switches.Set_Shorthands ([Jobs => +"--queues"]);
+     Test_Nat_Switches.Set_Shorthands ([Jobs => +"--queues", others => null]);
 
    type Test_Booleans is
      (Strict,
@@ -57,6 +59,7 @@ package Test.Command_Lines is
       Command_Line_Support,
       Test_Duration,
       Relocatable_Harness,
+      Shorten_Package,
       Gen_Test_Vectors,
       Test_Filtering,
       Test_Filtering_File_IO,
@@ -109,6 +112,7 @@ package Test.Command_Lines is
          Command_Line_Support   => True,
          Harness_Only           => False,
          Test_Filtering         => True,
+         Shorten_Package        => False,
          Test_Filtering_File_IO => True,
          others                 => False]);
 

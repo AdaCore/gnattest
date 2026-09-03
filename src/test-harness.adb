@@ -24,6 +24,7 @@
 with Ada.Directories;
 with Ada.Characters.Handling; use Ada.Characters.Handling;
 with Ada.Containers;          use Ada.Containers;
+with Ada.Containers.Indefinite_Ordered_Maps;
 with Ada.Containers.Vectors;
 with Ada.Strings;             use Ada.Strings;
 with Ada.Strings.Fixed;       use Ada.Strings.Fixed;
@@ -61,20 +62,29 @@ package body Test.Harness is
    Suit_List : List_Of_Strings.List;
    --  Storing the names of all suits
 
+   package Suite_Name_Mapping_Package is new
+     Ada.Containers.Indefinite_Ordered_Maps (String, String);
+   use Suite_Name_Mapping_Package;
+
+   Suite_Name_Mapping : Suite_Name_Mapping_Package.Map;
+   --  Maps Ada suite package name to the shortened base file name.
+
    type Separate_Project_Info is record
-      Name_TD          : String_Access := null;
-      Name_Extending   : String_Access := null;
-      Path_TD          : String_Access := null;
-      Path_Extending   : String_Access := null;
-      Name_Of_Extended : String_Access := null;
-      Path_Of_Extended : String_Access := null;
-      Main_File_Name   : String_Access := null;
-      Stub_Source_Dir  : String_Access := null;
-      Test_Package     : String_Access := null;
-      Test_Data        : String_Access := null;
-      UUT_File_Name    : String_Access := null;
-      Sources_List     : List_Of_Strings.List := List_Of_Strings.Empty_List;
-      Units_List       : List_Of_Strings.List := List_Of_Strings.Empty_List;
+      Name_TD            : String_Access := null;
+      Name_Extending     : String_Access := null;
+      Path_TD            : String_Access := null;
+      Path_Extending     : String_Access := null;
+      Name_Of_Extended   : String_Access := null;
+      Path_Of_Extended   : String_Access := null;
+      Main_File_Name     : String_Access := null;
+      Stub_Source_Dir    : String_Access := null;
+      Test_Package       : String_Access := null;
+      Test_Package_Short : String_Access := null;
+      Test_Data          : String_Access := null;
+      Test_Data_Short    : String_Access := null;
+      UUT_File_Name      : String_Access := null;
+      Sources_List       : List_Of_Strings.List := List_Of_Strings.Empty_List;
+      Units_List         : List_Of_Strings.List := List_Of_Strings.Empty_List;
    end record;
 
    package Separate_Project_Info_Vectors is new
@@ -1573,15 +1583,44 @@ package body Test.Harness is
          Put_New_Line;
       end if;
 
-      if Body_Suffix.all /= ".adb" or else Spec_Suffix.all /= ".ads" then
+      if Body_Suffix.all /= ".adb"
+        or else Spec_Suffix.all /= ".ads"
+        or else (Shorten_Package and then not Suite_Name_Mapping.Is_Empty)
+      then
          S_Put (3, "package Naming is");
          Put_New_Line;
-         S_Put
-           (6, "for Spec_Suffix (""Ada"") use """ & Spec_Suffix.all & """;");
-         Put_New_Line;
-         S_Put
-           (6, "for Body_Suffix (""Ada"") use """ & Body_Suffix.all & """;");
-         Put_New_Line;
+         if Shorten_Package then
+            for C in Suite_Name_Mapping.Iterate loop
+               S_Put
+                 (6,
+                  "for Body ("""
+                  & Key (C)
+                  & """) use """
+                  & Element (C)
+                  & Body_Suffix.all
+                  & """;");
+               Put_New_Line;
+               S_Put
+                 (6,
+                  "for Spec ("""
+                  & Key (C)
+                  & """) use """
+                  & Element (C)
+                  & Spec_Suffix.all
+                  & """;");
+               Put_New_Line;
+            end loop;
+         end if;
+         if Body_Suffix.all /= ".adb" or else Spec_Suffix.all /= ".ads" then
+            S_Put
+              (6,
+               "for Spec_Suffix (""Ada"") use """ & Spec_Suffix.all & """;");
+            Put_New_Line;
+            S_Put
+              (6,
+               "for Body_Suffix (""Ada"") use """ & Body_Suffix.all & """;");
+            Put_New_Line;
+         end if;
          S_Put (3, "end Naming;");
          Put_New_Line;
          Put_New_Line;
@@ -1600,6 +1639,7 @@ package body Test.Harness is
 
    procedure Generate_Suite (Data : Data_Holder; Path : String := "") is
       New_Unit_Name : String_Access;
+      New_File_Name : String_Access;
 
       Current_Type : Test_Type_Info;
 
@@ -1607,23 +1647,34 @@ package body Test.Harness is
         (if Path = "" then Harness_Dir.all else Path);
 
       Test_File : constant String :=
-        Get_Test_File (Data.Test_Unit_Full_Name.all);
+        Get_Test_File (Data.Test_Unit_Short_Name.all);
    begin
 
-      if Data.Generic_Kind then
-         New_Unit_Name :=
-           new String'
-             (Data.Test_Unit_Full_Name.all & "." & Generic_Suite_Name);
-      else
+      New_Unit_Name :=
+        new String'
+          (Data.Test_Unit_Full_Name.all
+           & "."
+           & (if Data.Generic_Kind
+              then Generic_Suite_Name
+              else Common_Suite_Name));
 
-         New_Unit_Name :=
-           new String'(Data.Test_Unit_Full_Name.all & "." & Common_Suite_Name);
+      New_File_Name :=
+        new String'
+          (Data.Test_Unit_Short_Name.all
+           & "."
+           & (if Data.Generic_Kind
+              then Generic_Suite_Name
+              else Common_Suite_Name));
+
+      if Data.Test_Unit_Short_Name.all /= Data.Test_Unit_Full_Name.all then
+         Suite_Name_Mapping.Insert
+           (New_Unit_Name.all, Unit_To_File_Name (New_File_Name.all));
       end if;
 
       --  Creating test suite spec
       Create
         (File_Destination
-         & Unit_To_File_Name (New_Unit_Name.all)
+         & Unit_To_File_Name (New_File_Name.all)
          & Spec_Suffix.all);
 
       Put_Harness_Header;
@@ -1717,7 +1768,7 @@ package body Test.Harness is
       --  Creating test suite body
       Create
         (File_Destination
-         & Unit_To_File_Name (New_Unit_Name.all)
+         & Unit_To_File_Name (New_File_Name.all)
          & Body_Suffix.all);
 
       Put_Harness_Header;
@@ -2133,7 +2184,7 @@ package body Test.Harness is
       function Get_SPI
         (Current_TR    : Test_Routine_Info'Class;
          New_Unit_Dir  : String_Access;
-         New_Unit_Name : String_Access) return Separate_Project_Info;
+         New_File_Name : String_Access) return Separate_Project_Info;
 
       Local_SPI         : Separate_Project_Info;
       Local_Data_Holder : Data_Holder := Data;
@@ -2141,7 +2192,7 @@ package body Test.Harness is
       function Get_SPI
         (Current_TR    : Test_Routine_Info'Class;
          New_Unit_Dir  : String_Access;
-         New_Unit_Name : String_Access) return Separate_Project_Info
+         New_File_Name : String_Access) return Separate_Project_Info
       is
          SPI : Separate_Project_Info;
       begin
@@ -2154,7 +2205,7 @@ package body Test.Harness is
               & ".gpr");
          SPI.Main_File_Name :=
            new String'
-             (Unit_To_File_Name (New_Unit_Name.all) & Body_Suffix.all);
+             (Unit_To_File_Name (New_File_Name.all) & Body_Suffix.all);
 
          if not Stub_Mode_ON then
             Trace (Me, "done");
@@ -2190,9 +2241,14 @@ package body Test.Harness is
                     (Create (+Project_Path), Create (+New_Unit_Dir.all)));
 
             SPI.Test_Package := new String'(Data.Test_Unit_Full_Name.all);
+            SPI.Test_Package_Short :=
+              new String'(Data.Test_Unit_Short_Name.all);
             SPI.Test_Data :=
               new String'
                 (Recover_Test_Data_Unit_Name (Data.Test_Unit_Full_Name.all));
+            SPI.Test_Data_Short :=
+              new String'
+                (Recover_Test_Data_Unit_Name (Data.Test_Unit_Short_Name.all));
 
             for Stub of Stub_List loop
                declare
@@ -2461,9 +2517,10 @@ package body Test.Harness is
            Data.Test_Types.Element (Current_TR.Test_Type_Numb);
 
          Test_File : constant String :=
-           Get_Test_File (Data.Test_Unit_Full_Name.all);
+           Get_Test_File (Data.Test_Unit_Short_Name.all);
 
          New_Unit_Name : String_Access;
+         New_File_Name : String_Access;
          New_Unit_Dir  : String_Access;
       begin
          Trace (Me, "processing routine " & Current_TR.TR_Text_Name.all);
@@ -2471,6 +2528,13 @@ package body Test.Harness is
          New_Unit_Name :=
            new String'
              (Data.Test_Unit_Full_Name.all
+              & "."
+              & TD_Prefix
+              & Current_TR.TR_Text_Name.all);
+
+         New_File_Name :=
+           new String'
+             (Data.Test_Unit_Short_Name.all
               & "."
               & TD_Prefix
               & Current_TR.TR_Text_Name.all);
@@ -2495,7 +2559,7 @@ package body Test.Harness is
          --  Creating test driver procedure
          Create
            (New_Unit_Dir.all
-            & Unit_To_File_Name (New_Unit_Name.all)
+            & Unit_To_File_Name (New_File_Name.all)
             & Body_Suffix.all);
 
          Put_Harness_Header;
@@ -2651,7 +2715,7 @@ package body Test.Harness is
          Close_File;
 
          Separate_Projects.Append
-           (Get_SPI (Current_TR, New_Unit_Dir, New_Unit_Name));
+           (Get_SPI (Current_TR, New_Unit_Dir, New_File_Name));
 
       end Process_Test_Routine;
 
@@ -2767,20 +2831,21 @@ package body Test.Harness is
       Current_TR : Test_Routine_Info_Enhanced;
 
       New_Unit_Name : String_Access;
+      New_File_Name : String_Access;
       New_Unit_Dir  : String_Access;
 
       Test_File : constant String :=
-        Get_Test_File (Data.Test_Unit_Full_Name.all);
+        Get_Test_File (Data.Test_Unit_Short_Name.all);
 
       function Get_SPI
         (Current_TR    : Test_Routine_Info'Class;
          New_Unit_Dir  : String_Access;
-         New_Unit_Name : String_Access) return Separate_Project_Info;
+         New_File_Name : String_Access) return Separate_Project_Info;
 
       function Get_SPI
         (Current_TR    : Test_Routine_Info'Class;
          New_Unit_Dir  : String_Access;
-         New_Unit_Name : String_Access) return Separate_Project_Info
+         New_File_Name : String_Access) return Separate_Project_Info
       is
          SPI : Separate_Project_Info;
       begin
@@ -2794,7 +2859,7 @@ package body Test.Harness is
               & ".gpr");
          SPI.Main_File_Name :=
            new String'
-             (Unit_To_File_Name (New_Unit_Name.all) & Body_Suffix.all);
+             (Unit_To_File_Name (New_File_Name.all) & Body_Suffix.all);
 
          return SPI;
       end Get_SPI;
@@ -2809,6 +2874,13 @@ package body Test.Harness is
          New_Unit_Name :=
            new String'
              (Data.Test_Unit_Full_Name.all
+              & "."
+              & TD_Prefix_Overriden
+              & Current_TR.TR_Text_Name.all);
+
+         New_File_Name :=
+           new String'
+             (Data.Test_Unit_Short_Name.all
               & "."
               & TD_Prefix_Overriden
               & Current_TR.TR_Text_Name.all);
@@ -2833,7 +2905,7 @@ package body Test.Harness is
          --  Creating test driver procedure
          Create
            (New_Unit_Dir.all
-            & Unit_To_File_Name (New_Unit_Name.all)
+            & Unit_To_File_Name (New_File_Name.all)
             & Body_Suffix.all);
 
          Put_Harness_Header;
@@ -3062,7 +3134,7 @@ package body Test.Harness is
          Close_File;
 
          Separate_Projects.Append
-           (Get_SPI (Current_TR, New_Unit_Dir, New_Unit_Name));
+           (Get_SPI (Current_TR, New_Unit_Dir, New_File_Name));
       end loop;
    end Generate_Substitution_Test_Drivers;
 
@@ -3216,15 +3288,23 @@ package body Test.Harness is
 
       use String_Set;
 
-      procedure Add_Nesting_Hierarchy_Dummies (S : String);
+      procedure Add_Nesting_Hierarchy_Dummies (S : String; Short_S : String);
       --  For nested packages corresponding test packages are children to a
       --  dummy hierarchy replicating the original package nesting and
       --  descending from top-level test project. All those dummy packages
       --  should also be included as test driver source files.
       --  Analyzes test package name and acts accordingly.
+      --  S is the full Ada unit name; Short_S is the shortened file-stem name
+      --  used when creating the physical files on disk.
 
-      procedure Add_Nesting_Hierarchy_Dummies (S : String) is
+      procedure Add_Nesting_Hierarchy_Dummies (S : String; Short_S : String) is
          Idx, Idx2 : Integer;
+         --  The suffix from the first Test_Data_Unit_Name occurrence onward is
+         --  identical in S and Short_S; only the leading package prefix
+         --  differs.
+         --  Dot positions in S minus Diff give the corresponding positions in
+         --  Short_S.
+         Diff      : constant Integer := S'Length - Short_S'Length;
       begin
          Idx := Index (S, Test_Data_Unit_Name);
          Idx2 := Index (S, Test_Data_Unit_Name, Idx + 1);
@@ -3236,13 +3316,14 @@ package body Test.Harness is
 
          Idx2 := Index (S, ".", Idx);
          if not Excluded_Test_Package_Bodies.Contains
-                  (Unit_To_File_Name (S (S'First .. Idx2 - 1))
+                  (Unit_To_File_Name
+                     (Short_S (Short_S'First .. Idx2 - 1 - Diff))
                    & Body_Suffix.all)
          then
             S_Put
               (6,
                """"
-               & Unit_To_File_Name (S (S'First .. Idx2 - 1))
+               & Unit_To_File_Name (Short_S (Short_S'First .. Idx2 - 1 - Diff))
                & Body_Suffix.all
                & """,");
             Put_New_Line;
@@ -3250,20 +3331,21 @@ package body Test.Harness is
          S_Put
            (6,
             """"
-            & Unit_To_File_Name (S (S'First .. Idx2 - 1))
+            & Unit_To_File_Name (Short_S (Short_S'First .. Idx2 - 1 - Diff))
             & Spec_Suffix.all
             & """,");
          Put_New_Line;
 
          Idx2 := Index (S, ".", Idx2 + 1);
          if not Excluded_Test_Package_Bodies.Contains
-                  (Unit_To_File_Name (S (S'First .. Idx2 - 1))
+                  (Unit_To_File_Name
+                     (Short_S (Short_S'First .. Idx2 - 1 - Diff))
                    & Body_Suffix.all)
          then
             S_Put
               (6,
                """"
-               & Unit_To_File_Name (S (S'First .. Idx2 - 1))
+               & Unit_To_File_Name (Short_S (Short_S'First .. Idx2 - 1 - Diff))
                & Body_Suffix.all
                & """,");
             Put_New_Line;
@@ -3271,7 +3353,7 @@ package body Test.Harness is
          S_Put
            (6,
             """"
-            & Unit_To_File_Name (S (S'First .. Idx2 - 1))
+            & Unit_To_File_Name (Short_S (Short_S'First .. Idx2 - 1 - Diff))
             & Spec_Suffix.all
             & """,");
          Put_New_Line;
@@ -3281,7 +3363,7 @@ package body Test.Harness is
             S_Put
               (6,
                """"
-               & Unit_To_File_Name (S (S'First .. Idx2 - 1))
+               & Unit_To_File_Name (Short_S (Short_S'First .. Idx2 - 1 - Diff))
                & Spec_Suffix.all
                & """,");
             Put_New_Line;
@@ -3645,18 +3727,19 @@ package body Test.Harness is
             Put_New_Line;
             S_Put (6, """" & P.Main_File_Name.all & """,");
             Put_New_Line;
-            Add_Nesting_Hierarchy_Dummies (P.Test_Package.all);
+            Add_Nesting_Hierarchy_Dummies
+              (P.Test_Package.all, P.Test_Package_Short.all);
             S_Put
               (6,
                """"
-               & Unit_To_File_Name (P.Test_Package.all)
+               & Unit_To_File_Name (P.Test_Package_Short.all)
                & Body_Suffix.all
                & """,");
             Put_New_Line;
             S_Put
               (6,
                """"
-               & Unit_To_File_Name (P.Test_Package.all)
+               & Unit_To_File_Name (P.Test_Package_Short.all)
                & Spec_Suffix.all
                & """,");
             Put_New_Line;
@@ -3664,14 +3747,14 @@ package body Test.Harness is
                S_Put
                  (6,
                   """"
-                  & Unit_To_File_Name (P.Test_Package.all & ".Suite")
+                  & Unit_To_File_Name (P.Test_Package_Short.all & ".Suite")
                   & Body_Suffix.all
                   & """,");
                Put_New_Line;
                S_Put
                  (6,
                   """"
-                  & Unit_To_File_Name (P.Test_Package.all & ".Suite")
+                  & Unit_To_File_Name (P.Test_Package_Short.all & ".Suite")
                   & Spec_Suffix.all
                   & """,");
                Put_New_Line;
@@ -3679,14 +3762,14 @@ package body Test.Harness is
             S_Put
               (6,
                """"
-               & Unit_To_File_Name (P.Test_Data.all)
+               & Unit_To_File_Name (P.Test_Data_Short.all)
                & Body_Suffix.all
                & """,");
             Put_New_Line;
             S_Put
               (6,
                """"
-               & Unit_To_File_Name (P.Test_Data.all)
+               & Unit_To_File_Name (P.Test_Data_Short.all)
                & Spec_Suffix.all
                & """);");
             Put_New_Line;
@@ -4896,6 +4979,9 @@ package body Test.Harness is
       Data.Test_Unit := The_Unit;
       Data.Test_Unit_Full_Name :=
         new String'(Node_Image (Unit.As_Basic_Decl.P_Defining_Name));
+
+      Data.Test_Unit_Short_Name :=
+        new String'(Shorten_Name (Data.Test_Unit_Full_Name.all));
       Data.Test_Unit_File_Name := new String'(The_Unit.Unit.Get_Filename);
       Data.Good_For_Suite := False;
 
@@ -5082,9 +5168,11 @@ package body Test.Harness is
 
       New_Unit_Name : constant String :=
         Data.Test_Unit_Full_Name.all & "." & Substitution_Suite_Name;
+      New_File_Name : constant String :=
+        Data.Test_Unit_Short_Name.all & "." & Substitution_Suite_Name;
 
       Test_File : constant String :=
-        Get_Test_File (Data.Test_Unit_Full_Name.all);
+        Get_Test_File (Data.Test_Unit_Short_Name.all);
 
       Type_Ancestor : Base_Type_Decl;
 
@@ -5131,10 +5219,15 @@ package body Test.Harness is
 
    begin
 
+      if Data.Test_Unit_Short_Name.all /= Data.Test_Unit_Full_Name.all then
+         Suite_Name_Mapping.Insert
+           (New_Unit_Name, Unit_To_File_Name (New_File_Name));
+      end if;
+
       --  Creating overridden test suite spec
       Create
         (File_Destination
-         & Unit_To_File_Name (New_Unit_Name)
+         & Unit_To_File_Name (New_File_Name)
          & Spec_Suffix.all);
 
       Put_Harness_Header;
@@ -5213,7 +5306,7 @@ package body Test.Harness is
       --  Creating overridden test suite body
       Create
         (File_Destination
-         & Unit_To_File_Name (New_Unit_Name)
+         & Unit_To_File_Name (New_File_Name)
          & Body_Suffix.all);
 
       Put_Harness_Header;
