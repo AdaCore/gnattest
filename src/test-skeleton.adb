@@ -513,9 +513,17 @@ package body Test.Skeleton is
    --  of whitespace characters are replaced with an underscore, all other
    --  illegal characters are omitted.
 
-   function Get_Test_Name (Subp : Subp_Info) return GNAT.OS_Lib.String_Access;
+   function Get_Raw_Test_Name (Subp : Subp_Info) return String
+   is (Subp.Subp_Text_Name.all
+       & (if Subp.Has_TC_Info
+          then "_" & Sanitize_TC_Name (Subp.TC_Info.Name.all)
+          else ""));
+   --  Get the string that will be used to create the test name.
+
+   function Get_Test_Name (Subp : Subp_Info) return GNAT.OS_Lib.String_Access
+   is (new String'(Test_Routine_Prefix & Get_Raw_Test_Name (Subp)));
    --  Get the name of the test that will be created from the subprogram passed
-   --  as argument.
+   --  as argument. Basically prepends "Test_" to Get_Raw_Test_Name (Subp) .
 
    procedure Put_Wrapper_Rename (Span : Natural; Current_Subp : Subp_Info);
    --  Puts subprogram renaming declaration, which renames generated wrapper
@@ -8601,22 +8609,6 @@ package body Test.Skeleton is
       return To_Lower (Tmp.all);
    end Sanitize_TC_Name;
 
-   -------------------
-   -- Get_Test_Name --
-   -------------------
-
-   function Get_Test_Name (Subp : Subp_Info) return GNAT.OS_Lib.String_Access
-   is
-   begin
-      return
-        new String'
-          (Test_Routine_Prefix
-           & Subp.Subp_Text_Name.all
-           & (if Subp.Has_TC_Info
-              then "_" & Sanitize_TC_Name (Subp.TC_Info.Name.all)
-              else ""));
-   end Get_Test_Name;
-
    --------------------------
    -- Find_Same_Short_Name --
    --------------------------
@@ -8694,10 +8686,7 @@ package body Test.Skeleton is
            (3,
             "--  end "
             & Test_Routine_Prefix
-            & Subp.Subp_Text_Name.all
-            & (if Subp.Has_TC_Info
-               then "_" & Sanitize_TC_Name (Subp.TC_Info.Name.all)
-               else "")
+            & Get_Raw_Test_Name (Subp)
             & ";");
       else
          S_Put
@@ -8705,10 +8694,7 @@ package body Test.Skeleton is
             "end "
             & Test_Routine_Prefix
             & Overloading_Prefix.all
-            & Subp.Subp_Text_Name.all
-            & (if Subp.Has_TC_Info
-               then "_" & Sanitize_TC_Name (Subp.TC_Info.Name.all)
-               else "")
+            & Get_Raw_Test_Name (Subp)
             & ";");
       end if;
       New_Line_Count;
@@ -8760,10 +8746,7 @@ package body Test.Skeleton is
               (3,
                "--  procedure "
                & Test_Routine_Prefix
-               & Subp.Subp_Text_Name.all
-               & (if Subp.Has_TC_Info
-                  then "_" & Sanitize_TC_Name (Subp.TC_Info.Name.all)
-                  else "")
+               & Get_Raw_Test_Name (Subp)
                & " (Gnattest_T : in out Test);");
             New_Line_Count;
             S_Put
@@ -8772,10 +8755,7 @@ package body Test.Skeleton is
                & Subp.Subp_Mangle_Name.all
                & " (Gnattest_T : in out Test) renames "
                & Test_Routine_Prefix
-               & Subp.Subp_Text_Name.all
-               & (if Subp.Has_TC_Info
-                  then "_" & Sanitize_TC_Name (Subp.TC_Info.Name.all)
-                  else "")
+               & Get_Raw_Test_Name (Subp)
                & ";");
             New_Line_Count;
          else
@@ -8784,10 +8764,7 @@ package body Test.Skeleton is
                "procedure "
                & Test_Routine_Prefix
                & Overloading_Prefix.all
-               & Subp.Subp_Text_Name.all
-               & (if Subp.Has_TC_Info
-                  then "_" & Sanitize_TC_Name (Subp.TC_Info.Name.all)
-                  else "")
+               & Get_Raw_Test_Name (Subp)
                & " (Gnattest_T : in out Test);");
             New_Line_Count;
             S_Put
@@ -8797,10 +8774,7 @@ package body Test.Skeleton is
                & " (Gnattest_T : in out Test) renames "
                & Test_Routine_Prefix
                & Overloading_Prefix.all
-               & Subp.Subp_Text_Name.all
-               & (if Subp.Has_TC_Info
-                  then "_" & Sanitize_TC_Name (Subp.TC_Info.Name.all)
-                  else "")
+               & Get_Raw_Test_Name (Subp)
                & ";");
             New_Line_Count;
          end if;
@@ -8810,10 +8784,7 @@ package body Test.Skeleton is
               (3,
                "--  procedure "
                & Test_Routine_Prefix
-               & Subp.Subp_Text_Name.all
-               & (if Subp.Has_TC_Info
-                  then "_" & Sanitize_TC_Name (Subp.TC_Info.Name.all)
-                  else "")
+               & Get_Raw_Test_Name (Subp)
                & " (Gnattest_T : in out Test_"
                & Type_Name
                & ");");
@@ -8826,10 +8797,7 @@ package body Test.Skeleton is
                & Type_Name
                & ") renames "
                & Test_Routine_Prefix
-               & Subp.Subp_Text_Name.all
-               & (if Subp.Has_TC_Info
-                  then "_" & Sanitize_TC_Name (Subp.TC_Info.Name.all)
-                  else "")
+               & Get_Raw_Test_Name (Subp)
                & ";");
             New_Line_Count;
          else
@@ -8838,10 +8806,7 @@ package body Test.Skeleton is
                "procedure "
                & Test_Routine_Prefix
                & Overloading_Prefix.all
-               & Subp.Subp_Text_Name.all
-               & (if Subp.Has_TC_Info
-                  then "_" & Sanitize_TC_Name (Subp.TC_Info.Name.all)
-                  else "")
+               & Get_Raw_Test_Name (Subp)
                & " (Gnattest_T : in out Test_"
                & Type_Name
                & ");");
@@ -8855,10 +8820,7 @@ package body Test.Skeleton is
                & ") renames "
                & Test_Routine_Prefix
                & Overloading_Prefix.all
-               & Subp.Subp_Text_Name.all
-               & (if Subp.Has_TC_Info
-                  then "_" & Sanitize_TC_Name (Subp.TC_Info.Name.all)
-                  else "")
+               & Get_Raw_Test_Name (Subp)
                & ";");
             New_Line_Count;
          end if;
@@ -8887,10 +8849,7 @@ package body Test.Skeleton is
            (3,
             "--  procedure "
             & Test_Routine_Prefix
-            & Subp.Subp_Text_Name.all
-            & (if Subp.Has_TC_Info
-               then "_" & Sanitize_TC_Name (Subp.TC_Info.Name.all)
-               else "")
+            & Get_Raw_Test_Name (Subp)
             & " (Gnattest_T : in out ");
       else
          S_Put
@@ -8898,12 +8857,10 @@ package body Test.Skeleton is
             "procedure "
             & Test_Routine_Prefix
             & Overloading_Prefix.all
-            & Subp.Subp_Text_Name.all
-            & (if Subp.Has_TC_Info
-               then "_" & Sanitize_TC_Name (Subp.TC_Info.Name.all)
-               else "")
+            & Get_Raw_Test_Name (Subp)
             & " (Gnattest_T : in out ");
       end if;
+
       if Subp.Corresp_Type = 0 then
          S_Put (0, "Test) is");
       else
