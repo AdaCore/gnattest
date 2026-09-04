@@ -8577,7 +8577,7 @@ package body Test.Skeleton is
          if Underscore then
             if Name (I) /= '_' then
                Underscore := False;
-               if Is_Letter (Name (I)) or else Is_Digit (Name (I)) then
+               if Is_Alphanumeric (Name (I)) then
                   Buff := new String'(Tmp.all & Name (I));
                   Free (Tmp);
                   Tmp := Buff;
@@ -8585,10 +8585,7 @@ package body Test.Skeleton is
                end if;
             end if;
          else
-            if Is_Letter (Name (I))
-              or else Is_Digit (Name (I))
-              or else Name (I) = '_'
-            then
+            if Is_Alphanumeric (Name (I)) or else Name (I) = '_' then
                Buff := new String'(Tmp.all & Name (I));
                Free (Tmp);
                Tmp := Buff;
