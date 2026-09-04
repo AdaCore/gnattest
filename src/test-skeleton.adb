@@ -356,9 +356,7 @@ package body Test.Skeleton is
       Subp              : Subp_Info);
    --  Add the given test case to the test package mapping. This does not use
    --  Subp.TC_Info contrarily to the above, but uses the parameter values to
-   --  fill in a new test case. TODO???: there is a lot of code duplication
-   --  with the subprogram above; if not merged, the two subprograms should
-   --  be at least refactored to avoid it.
+   --  fill in a new test case.
 
    procedure Add_DT
      (TP_List : in out TP_Mapping_List.List;
@@ -502,6 +500,12 @@ package body Test.Skeleton is
       Commented_Out  : Boolean := False;
       Use_Short_Name : Boolean := True;
       Add_Cov_Dump   : Boolean := False);
+
+   type Assert_Kind is (Ensures, Requires);
+
+   procedure Put_Assert
+     (TCI : Test_Case_Info; Kind : Assert_Kind; Indent : Natural := 0);
+   --  Write a pragma Assert call to the current file for the given testcase
 
    function Sanitize_TC_Name (TC_Name : String) return String;
    --  Processes the name of the test case in such a way that it could be used
@@ -9010,6 +9014,58 @@ package body Test.Skeleton is
 
    end Put_Opening_Comment_Section;
 
+   ----------------
+   -- Put_Assert --
+   ----------------
+
+   procedure Put_Assert
+     (TCI : Test_Case_Info; Kind : Assert_Kind; Indent : Natural := 0)
+   is
+      Img      : constant String_Access :=
+        (case Kind is
+           when Ensures  => TCI.Ens_Image,
+           when Requires => TCI.Req_Image);
+      Kind_Str : constant String :=
+        (case Kind is
+           when Ensures  => "commitment",
+           when Requires => "requirement");
+      Line     : constant String_Access :=
+        (case Kind is
+           when Ensures  => TCI.Ens_Line,
+           when Requires => TCI.Req_Line);
+   begin
+      S_Put (Indent, "begin");
+      New_Line_Count;
+      S_Put (Indent + 3, "pragma Assert");
+      New_Line_Count;
+      S_Put (Indent + 5, "(" & Img.all & ");");
+      New_Line_Count;
+      S_Put (Indent + 3, "null;");
+      New_Line_Count;
+      S_Put (Indent, "exception");
+      New_Line_Count;
+      S_Put (Indent + 6, "when System.Assertions.Assert_Failure =>");
+      New_Line_Count;
+      S_Put (Indent + 9, "AUnit.Assertions.Assert");
+      New_Line_Count;
+      S_Put (Indent + 11, "(False,");
+      New_Line_Count;
+      S_Put
+        (Indent + 12,
+         """"
+         & To_Lower (Kind'Image (1 .. 3))
+         & "_sloc("
+         & Line.all
+         & "):"
+         & TCI.Name.all
+         & " test "
+         & Kind_Str
+         & " violated"");");
+      New_Line_Count;
+      S_Put (Indent, "end;");
+      New_Line_Count;
+   end Put_Assert;
+
    --------------------
    -- Uncomment_Line --
    --------------------
@@ -9432,32 +9488,7 @@ package body Test.Skeleton is
       New_Line_Count;
 
       if Current_Subp.TC_Info.Req_Image.all /= "" then
-         S_Put (6, "begin");
-         New_Line_Count;
-         S_Put (9, "pragma Assert");
-         New_Line_Count;
-         S_Put (11, "(" & Current_Subp.TC_Info.Req_Image.all & ");");
-         New_Line_Count;
-         S_Put (9, "null;");
-         New_Line_Count;
-         S_Put (6, "exception");
-         New_Line_Count;
-         S_Put (12, "when System.Assertions.Assert_Failure =>");
-         New_Line_Count;
-         S_Put (15, "AUnit.Assertions.Assert");
-         New_Line_Count;
-         S_Put (17, "(False,");
-         New_Line_Count;
-         S_Put
-           (18,
-            """req_sloc("
-            & Current_Subp.TC_Info.Req_Line.all
-            & "):"
-            & Current_Subp.TC_Info.Name.all
-            & " test requirement violated"");");
-         New_Line_Count;
-         S_Put (6, "end;");
-         New_Line_Count;
+         Put_Assert (Current_Subp.TC_Info, Kind => Requires, Indent => 6);
       end if;
 
       S_Put (6, "declare");
@@ -9506,32 +9537,7 @@ package body Test.Skeleton is
       New_Line_Count;
 
       if Current_Subp.TC_Info.Ens_Image.all /= "" then
-         S_Put (9, "begin");
-         New_Line_Count;
-         S_Put (12, "pragma Assert");
-         New_Line_Count;
-         S_Put (14, "(" & Current_Subp.TC_Info.Ens_Image.all & ");");
-         New_Line_Count;
-         S_Put (12, "null;");
-         New_Line_Count;
-         S_Put (9, "exception");
-         New_Line_Count;
-         S_Put (12, "when System.Assertions.Assert_Failure =>");
-         New_Line_Count;
-         S_Put (15, "AUnit.Assertions.Assert");
-         New_Line_Count;
-         S_Put (17, "(False,");
-         New_Line_Count;
-         S_Put
-           (18,
-            """ens_sloc("
-            & Current_Subp.TC_Info.Ens_Line.all
-            & "):"
-            & Current_Subp.TC_Info.Name.all
-            & " test commitment violated"");");
-         New_Line_Count;
-         S_Put (9, "end;");
-         New_Line_Count;
+         Put_Assert (Current_Subp.TC_Info, Kind => Ensures, Indent => 9);
       end if;
 
       S_Put (9, "return " & Current_Subp.Subp_Mangle_Name.all & "_Result;");
@@ -9589,32 +9595,7 @@ package body Test.Skeleton is
       New_Line_Count;
 
       if Current_Subp.TC_Info.Req_Image.all /= "" then
-         S_Put (6, "begin");
-         New_Line_Count;
-         S_Put (9, "pragma Assert");
-         New_Line_Count;
-         S_Put (11, "(" & Current_Subp.TC_Info.Req_Image.all & ");");
-         New_Line_Count;
-         S_Put (9, "null;");
-         New_Line_Count;
-         S_Put (6, "exception");
-         New_Line_Count;
-         S_Put (9, "when System.Assertions.Assert_Failure =>");
-         New_Line_Count;
-         S_Put (12, "AUnit.Assertions.Assert");
-         New_Line_Count;
-         S_Put (14, "(False,");
-         New_Line_Count;
-         S_Put
-           (15,
-            """req_sloc("
-            & Current_Subp.TC_Info.Req_Line.all
-            & "):"
-            & Current_Subp.TC_Info.Name.all
-            & " test requirement violated"");");
-         New_Line_Count;
-         S_Put (6, "end;");
-         New_Line_Count;
+         Put_Assert (Current_Subp.TC_Info, Kind => Requires, Indent => 6);
       end if;
 
       S_Put
@@ -9655,32 +9636,7 @@ package body Test.Skeleton is
       New_Line_Count;
 
       if Current_Subp.TC_Info.Ens_Image.all /= "" then
-         S_Put (6, "begin");
-         New_Line_Count;
-         S_Put (9, "pragma Assert");
-         New_Line_Count;
-         S_Put (11, "(" & Current_Subp.TC_Info.Ens_Image.all & ");");
-         New_Line_Count;
-         S_Put (9, "null;");
-         New_Line_Count;
-         S_Put (6, "exception");
-         New_Line_Count;
-         S_Put (9, "when System.Assertions.Assert_Failure =>");
-         New_Line_Count;
-         S_Put (12, "AUnit.Assertions.Assert");
-         New_Line_Count;
-         S_Put (14, "(False,");
-         New_Line_Count;
-         S_Put
-           (15,
-            """ens_sloc("
-            & Current_Subp.TC_Info.Ens_Line.all
-            & "):"
-            & Current_Subp.TC_Info.Name.all
-            & " test commitment violated"");");
-         New_Line_Count;
-         S_Put (6, "end;");
-         New_Line_Count;
+         Put_Assert (Current_Subp.TC_Info, Kind => Ensures, Indent => 6);
       end if;
 
       S_Put
