@@ -195,13 +195,21 @@ package body Test.Harness is
    --  Indicates if the given Subprogram is of interest, that is a test routine
    --  or Set_Up/Tear_Down etc.
 
-   function Type_Test_Package (Elem : Base_Type_Decl) return String;
-   --  Get name of test package where test type corresponding to Elem should be
-   --  declared.
-
    function Type_Name (Elem : Base_Type_Decl) return String
    is (Node_Image (Elem.As_Basic_Decl.P_Defining_Name));
    --  Returns image of type name
+
+   function Type_Test_Package (Elem : Base_Type_Decl) return String
+   is (Type_Name (Elem)
+       & Test_Data_Unit_Name_Suff
+       & "."
+       & Type_Name (Elem)
+       & Test_Unit_Name_Suff);
+   --  Get name of test package where test type corresponding to Elem should be
+   --  declared.
+
+   function FQ_Type_Test_Package (Elem : Base_Type_Decl) return String;
+   --  Fully qualified version of Type_Test_Package
 
    function File_Exists (Filename : String) return Boolean;
    --  Returns True if Filename exists on disk and is readable.
@@ -2950,7 +2958,7 @@ package body Test.Harness is
 
          for I in 1 .. Current_Type.Max_Inheritance_Depth loop
             Type_Ancestor := Parent_Type_Declaration (Type_Ancestor);
-            S_Put (0, "with " & Type_Test_Package (Type_Ancestor) & ";");
+            S_Put (0, "with " & FQ_Type_Test_Package (Type_Ancestor) & ";");
             Put_New_Line;
          end loop;
 
@@ -2974,7 +2982,7 @@ package body Test.Harness is
             S_Put
               (5,
                "(T : in out "
-               & Type_Test_Package (Type_Ancestor)
+               & FQ_Type_Test_Package (Type_Ancestor)
                & ".Test_"
                & Type_Name (Type_Ancestor)
                & ");");
@@ -3047,7 +3055,7 @@ package body Test.Harness is
                Test_Info           => Test_Routine_Info (Current_TR),
                Test_Method         =>
                  "Convert ("
-                 & Type_Test_Package (Type_Ancestor)
+                 & FQ_Type_Test_Package (Type_Ancestor)
                  & "."
                  & Current_TR.TR_Text_Name.all
                  & "'Access)");
@@ -5279,13 +5287,7 @@ package body Test.Harness is
 
             if Type_Ns.all = PUnit_Im.all then
                Include_Units.Include
-                 (PUnit_Im.all
-                  & "."
-                  & Type_Name (Type_Ancestor)
-                  & Test_Data_Unit_Name_Suff
-                  & "."
-                  & Type_Name (Type_Ancestor)
-                  & Test_Unit_Name_Suff);
+                 (PUnit_Im.all & "." & Type_Test_Package (Type_Ancestor));
             else
                Include_Units.Include
                  (PUnit_Im.all
@@ -5296,11 +5298,7 @@ package body Test.Harness is
                   & "."
                   & Nesting_Difference (Type_Ns.all, PUnit_Im.all)
                   & "."
-                  & Type_Name (Type_Ancestor)
-                  & Test_Data_Unit_Name_Suff
-                  & "."
-                  & Type_Name (Type_Ancestor)
-                  & Test_Unit_Name_Suff);
+                  & Type_Test_Package (Type_Ancestor));
             end if;
 
          end loop;
@@ -5375,7 +5373,7 @@ package body Test.Harness is
                Type_Ancestor := Parent_Type_Declaration (Type_Ancestor);
                Type_Im :=
                  new String'(Test_Routine_Prefix & Type_Name (Type_Ancestor));
-               PUnit_Im := new String'(Type_Test_Package (Type_Ancestor));
+               PUnit_Im := new String'(FQ_Type_Test_Package (Type_Ancestor));
 
                S_Put
                  (3,
@@ -5467,7 +5465,7 @@ package body Test.Harness is
          for Depth in 1 .. Data.LTR_List.Element (K).Inheritance_Depth loop
 
             Type_Ancestor := Parent_Type_Declaration (Type_Ancestor);
-            PUnit_Im := new String'(Type_Test_Package (Type_Ancestor));
+            PUnit_Im := new String'(FQ_Type_Test_Package (Type_Ancestor));
 
             Print_Create_Function
               (Indent              => 6,
@@ -5544,19 +5542,12 @@ package body Test.Harness is
    -- Type_Test_Package --
    -----------------------
 
-   function Type_Test_Package (Elem : Base_Type_Decl) return String is
+   function FQ_Type_Test_Package (Elem : Base_Type_Decl) return String is
       Type_Nesting : constant String := Get_Nesting (Elem);
       Package_Name : constant String := Enclosing_Unit_Name (Elem);
    begin
       if Type_Nesting = Package_Name then
-         return
-           Package_Name
-           & "."
-           & Type_Name (Elem)
-           & Test_Data_Unit_Name_Suff
-           & "."
-           & Type_Name (Elem)
-           & Test_Unit_Name_Suff;
+         return Package_Name & "." & Type_Test_Package (Elem);
       end if;
 
       return
@@ -5568,11 +5559,7 @@ package body Test.Harness is
         & "."
         & Nesting_Difference (Type_Nesting, Package_Name)
         & "."
-        & Type_Name (Elem)
-        & Test_Data_Unit_Name_Suff
-        & "."
-        & Type_Name (Elem)
-        & Test_Unit_Name_Suff;
-   end Type_Test_Package;
+        & Type_Test_Package (Elem);
+   end FQ_Type_Test_Package;
 
 end Test.Harness;
