@@ -3298,6 +3298,18 @@ package body Test.Harness is
 
       use String_Set;
 
+      procedure Put_Filename
+        (Fname  : String;
+         Prefix : String := "";
+         Suffix : String := ",";
+         Indent : Natural := 6);
+      --  Print to the current file the given Fname, prepending prefix and
+      --  appending suffix.
+
+      procedure Put_Unit
+        (Unit : String; Last : Boolean := False; Indent : Natural := 6);
+      --  Call Put_Filename twice, for the body and spec files of Unit
+
       procedure Add_Nesting_Hierarchy_Dummies (S : String; Short_S : String);
       --  For nested packages corresponding test packages are children to a
       --  dummy hierarchy replicating the original package nesting and
@@ -3306,6 +3318,40 @@ package body Test.Harness is
       --  Analyzes test package name and acts accordingly.
       --  S is the full Ada unit name; Short_S is the shortened file-stem name
       --  used when creating the physical files on disk.
+
+      ------------------
+      -- Put_Filename --
+      ------------------
+
+      procedure Put_Filename
+        (Fname  : String;
+         Prefix : String := "";
+         Suffix : String := ",";
+         Indent : Natural := 6) is
+      begin
+         S_Put (Indent, Prefix & """" & Fname & """" & Suffix);
+         Put_New_Line;
+      end Put_Filename;
+
+      --------------
+      -- Put_Unit --
+      --------------
+
+      procedure Put_Unit
+        (Unit : String; Last : Boolean := False; Indent : Natural := 6)
+      is
+         Fname_Base : constant String := Unit_To_File_Name (Unit);
+      begin
+         Put_Filename (Fname_Base & Body_Suffix.all, Indent => Indent);
+         Put_Filename
+           (Fname_Base & Spec_Suffix.all,
+            Suffix => (if Last then ");" else ","),
+            Indent => Indent);
+      end Put_Unit;
+
+      -----------------------------------
+      -- Add_Nesting_Hierarchy_Dummies --
+      -----------------------------------
 
       procedure Add_Nesting_Hierarchy_Dummies (S : String; Short_S : String) is
          Idx, Idx2 : Integer;
@@ -3325,58 +3371,38 @@ package body Test.Harness is
          end if;
 
          Idx2 := Index (S, ".", Idx);
-         if not Excluded_Test_Package_Bodies.Contains
-                  (Unit_To_File_Name
-                     (Short_S (Short_S'First .. Idx2 - 1 - Diff))
-                   & Body_Suffix.all)
-         then
-            S_Put
-              (6,
-               """"
-               & Unit_To_File_Name (Short_S (Short_S'First .. Idx2 - 1 - Diff))
-               & Body_Suffix.all
-               & """,");
-            Put_New_Line;
-         end if;
-         S_Put
-           (6,
-            """"
-            & Unit_To_File_Name (Short_S (Short_S'First .. Idx2 - 1 - Diff))
-            & Spec_Suffix.all
-            & """,");
-         Put_New_Line;
+         declare
+            Unit       : constant String :=
+              Short_S (Short_S'First .. Idx2 - 1 - Diff);
+            Fname_Base : constant String := Unit_To_File_Name (Unit);
+         begin
+            if not Excluded_Test_Package_Bodies.Contains
+                     (Fname_Base & Body_Suffix.all)
+            then
+               Put_Filename (Fname_Base & Body_Suffix.all);
+            end if;
+            Put_Filename (Fname_Base & Spec_Suffix.all);
+         end;
 
          Idx2 := Index (S, ".", Idx2 + 1);
-         if not Excluded_Test_Package_Bodies.Contains
-                  (Unit_To_File_Name
-                     (Short_S (Short_S'First .. Idx2 - 1 - Diff))
-                   & Body_Suffix.all)
-         then
-            S_Put
-              (6,
-               """"
-               & Unit_To_File_Name (Short_S (Short_S'First .. Idx2 - 1 - Diff))
-               & Body_Suffix.all
-               & """,");
-            Put_New_Line;
-         end if;
-         S_Put
-           (6,
-            """"
-            & Unit_To_File_Name (Short_S (Short_S'First .. Idx2 - 1 - Diff))
-            & Spec_Suffix.all
-            & """,");
-         Put_New_Line;
+         declare
+            Unit       : constant String :=
+              Short_S (Short_S'First .. Idx2 - 1 - Diff);
+            Fname_Base : constant String := Unit_To_File_Name (Unit);
+         begin
+            if not Excluded_Test_Package_Bodies.Contains
+                     (Fname_Base & Body_Suffix.all)
+            then
+               Put_Filename (Fname_Base & Body_Suffix.all);
+            end if;
+            Put_Filename (Fname_Base & Spec_Suffix.all);
+         end;
 
          loop
             Idx2 := Index (S, ".", Idx2 + 1);
-            S_Put
-              (6,
-               """"
-               & Unit_To_File_Name (Short_S (Short_S'First .. Idx2 - 1 - Diff))
-               & Spec_Suffix.all
-               & """,");
-            Put_New_Line;
+            Put_Filename
+              (Unit_To_File_Name (Short_S (Short_S'First .. Idx2 - 1 - Diff))
+               & Spec_Suffix.all);
 
             if Index (S, ".", Idx2 + 1)
               > Index (S, Test_Data_Unit_Name, Idx2 + 1)
@@ -3728,62 +3754,24 @@ package body Test.Harness is
          if Stub_Mode_ON then
             S_Put (3, "for Source_Files use");
             Put_New_Line;
-            S_Put (5, "(""gnattest_generated" & Spec_Suffix.all & """,");
-            Put_New_Line;
-            S_Put
-              (6, """gnattest_generated-persistent" & Spec_Suffix.all & """,");
-            Put_New_Line;
-            S_Put
-              (6, """gnattest_generated-persistent" & Body_Suffix.all & """,");
-            Put_New_Line;
-            S_Put (6, """" & P.Main_File_Name.all & """,");
-            Put_New_Line;
+
+            Put_Filename
+              ("gnattest_generated" & Spec_Suffix.all,
+               Prefix => "(",
+               Indent => 5);
+            Put_Filename ("gnattest_generated-persistent" & Spec_Suffix.all);
+            Put_Filename ("gnattest_generated-persistent" & Body_Suffix.all);
+            Put_Filename (P.Main_File_Name.all);
+
             Add_Nesting_Hierarchy_Dummies
               (P.Test_Package.all, P.Test_Package_Short.all);
-            S_Put
-              (6,
-               """"
-               & Unit_To_File_Name (P.Test_Package_Short.all)
-               & Body_Suffix.all
-               & """,");
-            Put_New_Line;
-            S_Put
-              (6,
-               """"
-               & Unit_To_File_Name (P.Test_Package_Short.all)
-               & Spec_Suffix.all
-               & """,");
-            Put_New_Line;
+
+            Put_Unit (Unit => P.Test_Package_Short.all);
             if Driver_Per_Unit then
-               S_Put
-                 (6,
-                  """"
-                  & Unit_To_File_Name (P.Test_Package_Short.all & ".Suite")
-                  & Body_Suffix.all
-                  & """,");
-               Put_New_Line;
-               S_Put
-                 (6,
-                  """"
-                  & Unit_To_File_Name (P.Test_Package_Short.all & ".Suite")
-                  & Spec_Suffix.all
-                  & """,");
-               Put_New_Line;
+               Put_Unit (Unit => P.Test_Package_Short.all & ".Suite");
             end if;
-            S_Put
-              (6,
-               """"
-               & Unit_To_File_Name (P.Test_Data_Short.all)
-               & Body_Suffix.all
-               & """,");
-            Put_New_Line;
-            S_Put
-              (6,
-               """"
-               & Unit_To_File_Name (P.Test_Data_Short.all)
-               & Spec_Suffix.all
-               & """);");
-            Put_New_Line;
+            Put_Unit (Unit => P.Test_Data_Short.all, Last => True);
+
             Put_New_Line;
          end if;
 
