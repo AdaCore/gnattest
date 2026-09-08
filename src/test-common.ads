@@ -417,6 +417,12 @@ package Test.Common is
 
    Target_Val : GNAT.OS_Lib.String_Access;
 
+   Is_Cross_Target : Boolean := False;
+   --  Whether the project targets a cross configuration (either through a
+   --  Target attribute in the project or the --target switch). When True,
+   --  the TGen value-generation harness is cross-built and executed on the
+   --  target through <target>-gnatemu (JSON generation only).
+
    Has_Test_Cases : Boolean := False;
 
    Separate_Drivers : Boolean := False;

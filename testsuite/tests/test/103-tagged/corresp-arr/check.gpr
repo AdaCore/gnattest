@@ -4,6 +4,7 @@ with "obj/tgen_support/tgen_support.gpr";
 project Check is
 
    for Object_Dir use "obj_check";
+   for Exec_Dir use "exe_check";
    for Source_Dirs use ("check");
    for Main use ("example_gen.adb");
 

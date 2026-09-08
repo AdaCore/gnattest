@@ -5,3 +5,6 @@ description: Check that the test generation part of gnattest does not
 driver: gnattest_tgen
 
 suppress_test_dump: True
+
+control:
+ - [SKIP, 'not native', 'Test code not compatible with restricted runtimes']

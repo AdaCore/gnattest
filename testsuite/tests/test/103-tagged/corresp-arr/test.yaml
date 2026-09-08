@@ -2,7 +2,8 @@ description:
     Test that TGen is able to generate tests for a derived type of a
     discriminated tagged record defined using discriminant correspondance.
 
-driver: shell_script
+driver: python_script
 
 control:
-  - [XFAIL, 'True', 'Discriminant correspondance unsupported for now']
+  - [SKIP, "rts_light", "tgen not supported on light runtimes"]
+  - [XFAIL, 'True', 'Discriminant correspondance unsupported for array constraints']

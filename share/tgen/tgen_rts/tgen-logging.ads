@@ -34,31 +34,25 @@
 --  Trace (Me, +"Useful debug message");
 
 with Ada.Strings.Unbounded;
-with Ada.Text_IO;
 
 package TGen.Logging is
-
-   use type Ada.Text_IO.File_Access;
 
    type TGen_Trace is record
       Unit_Name : Ada.Strings.Unbounded.Unbounded_String :=
         Ada.Strings.Unbounded.Null_Unbounded_String;
-      Output    : Ada.Text_IO.File_Access := null;
    end record;
 
    TGen_Trace_Prefix : constant String := "tgen.";
    --  Prefix to use for all TGen traces.
 
    function Create_Trace
-     (Unit_Name : Ada.Strings.Unbounded.Unbounded_String;
-      Output    : Ada.Text_IO.File_Access := Ada.Text_IO.Standard_Error)
-      return TGen_Trace;
-   --  Create a TGen trace object for a given unit name. `Output` parameter
-   --  can be used to control where logs are written. Logs are written to
-   --  standard error (stderr) by default.
+     (Unit_Name : Ada.Strings.Unbounded.Unbounded_String) return TGen_Trace;
+   --  Create a TGen trace object for a given unit name.
 
-   procedure Trace (Self : TGen_Trace; Message : String)
-   with Pre => Self.Output /= null;
-   --  Write a message to the output with the configured package name.
+   procedure Trace (Self : TGen_Trace; Message : String);
+   --  Write a message to the standard output with the configured package name.
+   --  Traces are only emitted when the TGEN_RTS_TRACE environment variable is
+   --  set (see TGen.Environment); on runtimes without environment-variable
+   --  support this is always a no-op.
 
 end TGen.Logging;

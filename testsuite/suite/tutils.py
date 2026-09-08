@@ -4,10 +4,12 @@ This module exposes utility functions, to interact with gnattest and
 factorize some common test utils.
 """
 
+from glob import glob
 import os
 from subprocess import PIPE, STDOUT
 from sys import stderr
 import sys
+
 from e3.os.process import Run
 from e3.os.fs import which
 
@@ -89,10 +91,19 @@ def run_gnattest(
 
     Add additional arguments that must be present regardless of the
     current test, to handle cross generation for example.
+
+    If the GNATTEST_DEBUG env variable is set, -d1 and -dn are added to the
+    command line in order to aid debugging (preserve temp dir, compile TGen
+    harness with debug info)
     """
     thistest.log(f"Gnattest command:{os.linesep}\t", False)
     return run_command(
-        "gnattest", gpr, args, output_in_baseline, allow_failure, **run_args
+        "gnattest",
+        gpr,
+        args + (["-d1", "-dn"] if os.environ.get("GNATTEST_DEBUG", None) else []),
+        output_in_baseline,
+        allow_failure,
+        **run_args,
     )
 
 
@@ -113,6 +124,7 @@ def build_harness(
     return run_command(
         "gprbuild", gpr, args, output_in_baseline, allow_failure, **run_args
     )
+
 
 def run_harness(
     executable: str,
@@ -145,3 +157,56 @@ def run_harness(
 
     thistest.log(f"Harness run command:{os.linesep}\t", False)
     return run_wrapper(harness_args, output_in_baseline, allow_failure, **run_args)
+
+
+def run_tgen_marshalling_test(
+    test_prj: str,
+    test_prj_src: list[str],
+    test_prj_objdir: str = "obj",
+    check_prj: str | None = None,
+):
+    """
+    Run a "classic" tgen_marshalling based test, where the tgen_marshalling
+    program is invoked on test_prj, for the sources listed in test_prj_src,
+    then check_prj is compiled and the programs produced in `exe_check` are
+    executed. The later should not produce any output in case everything is ok
+    with marshalling, as this first step is never executed on cross configs.
+    gnattest is then invoked to generate test on test_prj, the harness is built
+    and executed.
+
+    If check_prj is empty, only tgen_support is compiled as a sanity check.
+    """
+    # First the tgen_marshalling part, if not on cross configs
+    if not thistest.env.is_cross:
+        templates_path = os.path.join(
+            os.path.dirname(os.path.dirname(which("gnattest"))),
+            "share",
+            "tgen",
+            "templates",
+        )
+        os.makedirs(test_prj_objdir, exist_ok=True)
+        run_command(
+            "tgen_marshalling",
+            test_prj,
+            [
+                f"--templates-dir={templates_path}",
+                "-o",
+                f"{test_prj_objdir}/tgen_support",
+            ]
+            + test_prj_src,
+        )
+        # If we were not provided with an actual verification project, just
+        # compile tgen_support as a sanity check
+        actual_check_prj = check_prj
+        if not actual_check_prj:
+            actual_check_prj = os.path.join(
+                test_prj_objdir, "tgen_support", "tgen_support"
+            )
+        run_command("gprbuild", actual_check_prj, ["-q"])
+        if os.path.exists("exe_check"):
+            for exec in glob("exe_check/*"):
+                run_wrapper([exec])
+
+    run_gnattest(test_prj, ["-q", "--gen-test-vectors"])
+    build_harness(f"{test_prj_objdir}/gnattest/harness/test_driver.gpr", ["-q"])
+    run_harness(f"{test_prj_objdir}/gnattest/harness/test_runner")

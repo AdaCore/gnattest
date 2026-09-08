@@ -1,0 +1,12 @@
+{
+  "format_version": 1,
+  "_comment": "Maps a compilation target to the predefined GNAT runtime and gnatemu board gnattest uses to build and run the TGen value-generation harness on target. Only the type layout (target ABI) matters for value generation, so a gnatemu-supported runtime is used regardless of the runtime the user's project declares. The runtime must be an embedded-class runtime rich enough to host the generation side (System.Random_Numbers, containers, big numerics). 'board' is optional. Users can extend/override this mapping with --tgen-target-config=<file>.",
+  "targets": {
+    "ppc-elf": {"runtime": "embedded-mpc8641", "board": "mpc8641d"},
+    "arm-elf": {"runtime": "embedded-stm32f4", "board": "stm32f4"},
+    "aarch64-elf": {"runtime": "embedded-zynqmp", "board": "zynqmp"},
+    "leon3-elf": {"runtime": "embedded-leon3", "board": "leon3"},
+    "morello-elf": {"runtime": "embedded-morello-semihosting", "board": "morello"},
+    "riscv64-elf": {"runtime": "embedded-polarfirescoc", "board": "polarfiresoc"}
+  }
+}

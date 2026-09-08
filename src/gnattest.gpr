@@ -31,6 +31,13 @@ library project GNATtest is
       for Implementation_Suffix ("Templates") use ".tmplt";
    end Naming;
 
-   for Excluded_Source_Files use ("test-main.adb");
+   --  tgen-environment-embedded.adb is an alternate body of TGen.Environment
+   --  used only when building tgen_rts for a non-native runtime (selected via a
+   --  Naming clause in tgen_rts.gpr). The tool itself is native and uses the
+   --  default body tgen-environment.adb, so exclude the alternate here.
+   for Excluded_Source_Files use
+     ("test-main.adb",
+      "tgen-environment-embedded.adb",
+      "tgen-runtime_properties_embedded.ads");
 
 end GNATtest;

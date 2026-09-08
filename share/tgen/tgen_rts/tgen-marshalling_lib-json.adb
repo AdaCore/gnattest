@@ -23,14 +23,25 @@
 
 with TGen.Big_Reals;     use TGen.Big_Reals;
 with TGen.Big_Reals_Aux; use TGen.Big_Reals_Aux;
+with TGen.Runtime_Properties;
+
+with Ada.Strings.UTF_Encoding.Wide_Wide_Strings;
 
 package body TGen.Marshalling_Lib.JSON is
+
+   function Trim_Leading_Space (S : String) return String
+   is (if S (S'First) = ' ' then S (S'First + 1 .. S'Last) else S);
+   --  This is not in TGen.Strings in order not to pull the unit into the
+   --  closure for marshalling only scenarios.
 
    ------------------------------
    -- Read_Write_Discrete_JSON --
    ------------------------------
 
    package body Read_Write_Discrete_JSON is
+      use Ada.Strings.UTF_Encoding.Wide_Wide_Strings;
+      --  We need to encode characters as UTF8 strings, as JSON only supports
+      --  UTF-8 encoded strings.
 
       -----------
       -- Write --
@@ -38,7 +49,7 @@ package body TGen.Marshalling_Lib.JSON is
 
       procedure Write (JSON : in out TGen.JSON.JSON_Value; V : T) is
       begin
-         JSON := Create (T'Image (V));
+         JSON := Create (Encode (T'Wide_Wide_Image (V)));
       end Write;
 
       ----------
@@ -47,7 +58,7 @@ package body TGen.Marshalling_Lib.JSON is
 
       procedure Read (JSON : TGen.JSON.JSON_Value; V : out T) is
       begin
-         V := T'Value (Get (JSON));
+         V := T'Wide_Wide_Value (Decode (Get (JSON)));
       end Read;
 
    end Read_Write_Discrete_JSON;
@@ -60,7 +71,9 @@ package body TGen.Marshalling_Lib.JSON is
 
       package T_Conversions is new Decimal_Fixed_Conversions (Num => T);
       --  To avoid the loss of precision, we encode the fixed point as a
-      --  Big_Real and then represent it as a fraction.
+      --  Big_Real and then represent it as a fraction, except on runtimes not
+      --  supporting dynamic secondary stack (quotient strings are usually too
+      --  long).
 
       -----------
       -- Write --
@@ -68,11 +81,17 @@ package body TGen.Marshalling_Lib.JSON is
 
       pragma Warnings (Off, "formal parameter * is read but never assigned");
       procedure Write (JSON : in out TGen.JSON.JSON_Value; V : T) is
-         V_Big_Real : constant TGen.Big_Reals.Big_Real :=
-           T_Conversions.To_Big_Real (V);
       begin
-         Set_Field (JSON, "quotient", True);
-         Set_Field (JSON, "value", To_Quotient_String (V_Big_Real));
+         if TGen.Runtime_Properties.Sec_Stack_Dynamic then
+            Set_Field (JSON, "quotient", True);
+            Set_Field
+              (JSON,
+               "value",
+               To_Quotient_String (T_Conversions.To_Big_Real (V)));
+         else
+            Set_Field (JSON, "quotient", False);
+            Set_Field (JSON, "value", Trim_Leading_Space (V'Image));
+         end if;
       end Write;
       pragma Warnings (On, "formal parameter * is read but never assigned");
 
@@ -81,13 +100,20 @@ package body TGen.Marshalling_Lib.JSON is
       ----------
 
       procedure Read (JSON : TGen.JSON.JSON_Value; V : out T) is
-         Value : constant JSON_Value := Get (JSON, "value");
+         Has_Quotient : constant Boolean := Get (JSON, "quotient");
+         Value        : constant JSON_Value := Get (JSON, "value");
       begin
-         --  Decode the big real from the string encoded as a quotient string.
+         if Has_Quotient then
 
-         V :=
-           T_Conversions.From_Big_Real
-             (Big_Reals.From_Quotient_String (Get (Value)));
+            --  Decode the big real from the string encoded as a quotient
+            --  string.
+
+            V :=
+              T_Conversions.From_Big_Real
+                (Big_Reals.From_Quotient_String (Get (Value)));
+         else
+            V := T'Value (Get (Value));
+         end if;
       end Read;
 
    end Read_Write_Decimal_Fixed_JSON;
@@ -100,7 +126,9 @@ package body TGen.Marshalling_Lib.JSON is
 
       package T_Conversions is new TGen.Big_Reals.Fixed_Conversions (Num => T);
       --  To avoid the loss of precision, we encode the fixed point as a
-      --  Big_Real and then represent it as a fraction.
+      --  Big_Real and then represent it as a fraction, unless the runtime does
+      --  not support dynamic secondary stack (quotient string can be very
+      --  long).
 
       -----------
       -- Write --
@@ -108,11 +136,17 @@ package body TGen.Marshalling_Lib.JSON is
 
       pragma Warnings (Off, "formal parameter * is read but never assigned");
       procedure Write (JSON : in out TGen.JSON.JSON_Value; V : T) is
-         V_Big_Real : constant TGen.Big_Reals.Big_Real :=
-           T_Conversions.To_Big_Real (V);
       begin
-         Set_Field (JSON, "quotient", True);
-         Set_Field (JSON, "value", To_Quotient_String (V_Big_Real));
+         if TGen.Runtime_Properties.Sec_Stack_Dynamic then
+            Set_Field (JSON, "quotient", True);
+            Set_Field
+              (JSON,
+               "value",
+               To_Quotient_String (T_Conversions.To_Big_Real (V)));
+         else
+            Set_Field (JSON, "quotient", False);
+            Set_Field (JSON, "value", Trim_Leading_Space (V'Image));
+         end if;
       end Write;
       pragma Warnings (On, "formal parameter * is read but never assigned");
 
@@ -121,12 +155,19 @@ package body TGen.Marshalling_Lib.JSON is
       ----------
 
       procedure Read (JSON : TGen.JSON.JSON_Value; V : out T) is
+         Has_Quotient : constant Boolean := Get (JSON, "quotient");
       begin
-         --  Decode the big real from the string encoded as a quotient string
+         if Has_Quotient then
 
-         V :=
-           T_Conversions.From_Big_Real
-             (Big_Reals.From_Quotient_String (Get (JSON, "value")));
+            --  Decode the big real from the string encoded as a quotient
+            --  string.
+
+            V :=
+              T_Conversions.From_Big_Real
+                (Big_Reals.From_Quotient_String (Get (JSON, "value")));
+         else
+            V := T'Value (Get (JSON, "value"));
+         end if;
       end Read;
 
    end Read_Write_Ordinary_Fixed_JSON;
@@ -139,7 +180,8 @@ package body TGen.Marshalling_Lib.JSON is
 
       package T_Conversions is new TGen.Big_Reals.Float_Conversions (Num => T);
       --  To avoid the loss of precision, we need to encode the float as a
-      --  Big_Real and then represent it as a fraction.
+      --  Big_Real and then represent it as a fraction, unless the runtime does
+      --  not support dynamic secondary stack (quotient strings get very large)
 
       -----------
       -- Write --
@@ -147,11 +189,17 @@ package body TGen.Marshalling_Lib.JSON is
 
       pragma Warnings (Off, "formal parameter * is read but never assigned");
       procedure Write (JSON : in out TGen.JSON.JSON_Value; V : T) is
-         V_Big_Real : constant TGen.Big_Reals.Big_Real :=
-           T_Conversions.To_Big_Real (V);
       begin
-         Set_Field (JSON, "quotient", True);
-         Set_Field (JSON, "value", To_Quotient_String (V_Big_Real));
+         if TGen.Runtime_Properties.Sec_Stack_Dynamic then
+            Set_Field (JSON, "quotient", True);
+            Set_Field
+              (JSON,
+               "value",
+               To_Quotient_String (T_Conversions.To_Big_Real (V)));
+         else
+            Set_Field (JSON, "quotient", False);
+            Set_Field (JSON, "value", Trim_Leading_Space (V'Image));
+         end if;
       end Write;
       pragma Warnings (On, "formal parameter * is read but never assigned");
 

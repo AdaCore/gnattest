@@ -2,4 +2,7 @@ description:
     Test checking tgen support (dynamic type introspection and binary /
     JSON marshallers) for all of the types supported by the library.
 
-driver: shell_script
+driver: python_script
+
+control:
+  - [SKIP, "rts_light", "tgen not supported on light runtimes"]

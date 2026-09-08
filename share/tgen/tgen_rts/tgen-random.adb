@@ -22,11 +22,11 @@
 ------------------------------------------------------------------------------
 
 with Ada.Calendar; use Ada.Calendar;
-with Ada.Environment_Variables;
 with Ada.Numerics.Generic_Elementary_Functions;
 with Ada.Strings.Unbounded;
 with Ada.Unchecked_Conversion;
 
+with TGen.Environment;
 with TGen.Logging;
 
 package body TGen.Random is
@@ -35,13 +35,16 @@ package body TGen.Random is
      TGen.Logging.Create_Trace
        (Ada.Strings.Unbounded.To_Unbounded_String ("RANDOM"));
 
+   function Get_Default_Seed return Unsigned_32;
+   --  Return the default seed to be used if not overridden by the environment
+
    -----------
    -- Reset --
    -----------
 
    procedure Reset (N : Unsigned_32 := Default_Seed) is
    begin
-      GNAT.Random_Numbers.Reset (Generator_Instance, N);
+      System.Random_Numbers.Reset (Generator_Instance, N);
    end Reset;
 
    ---------------
@@ -49,13 +52,14 @@ package body TGen.Random is
    ---------------
 
    function Draw_Bits (N : Positive) return Unsigned_128 is
-      function Rand is new GNAT.Random_Numbers.Random_Discrete (Unsigned_128);
+      function Rand is new
+        System.Random_Numbers.Random_Discrete (Unsigned_128);
    begin
       return Rand (Generator_Instance, Min => 0, Max => 2 ** N);
    end Draw_Bits;
 
    function Draw_Bits (N : Positive) return Unsigned_64 is
-      function Rand is new GNAT.Random_Numbers.Random_Discrete (Unsigned_64);
+      function Rand is new System.Random_Numbers.Random_Discrete (Unsigned_64);
    begin
       return Rand (Generator_Instance, Min => 0, Max => 2 ** N);
    end Draw_Bits;
@@ -180,13 +184,13 @@ package body TGen.Random is
    end More;
 
    function Rand_Float return Float is
-      function Rand is new GNAT.Random_Numbers.Random_Float (Float);
+      function Rand is new System.Random_Numbers.Random_Float (Float);
    begin
       return Rand (Generator_Instance);
    end Rand_Float;
 
    function Rand_Int (Min, Max : Integer) return Integer is
-      function Rand is new GNAT.Random_Numbers.Random_Discrete (Integer);
+      function Rand is new System.Random_Numbers.Random_Discrete (Integer);
    begin
       return Rand (Generator_Instance, Min, Max);
    end Rand_Int;
@@ -195,7 +199,7 @@ package body TGen.Random is
      (Min, Max : Long_Long_Long_Integer) return Long_Long_Long_Integer
    is
       function Rand is new
-        GNAT.Random_Numbers.Random_Discrete (Long_Long_Long_Integer);
+        System.Random_Numbers.Random_Discrete (Long_Long_Long_Integer);
    begin
       return Rand (Generator_Instance, Min, Max);
    end Rand_LLLI;
@@ -227,7 +231,7 @@ package body TGen.Random is
 
       with
         function Random
-          (Gen : GNAT.Random_Numbers.Generator; Min, Max : Unsigned_Type)
+          (Gen : System.Random_Numbers.Generator; Min, Max : Unsigned_Type)
            return Unsigned_Type;
 
      function Random_Float (LB, HB : Float_Type) return Float_Type;
@@ -407,7 +411,7 @@ package body TGen.Random is
    function Unsigned_32_To_Float is new
      Ada.Unchecked_Conversion (Source => Unsigned_32, Target => Float);
    function Random_Unsigned_32 is new
-     GNAT.Random_Numbers.Random_Discrete (Unsigned_32);
+     System.Random_Numbers.Random_Discrete (Unsigned_32);
 
    function Random_F is new
      Random_Float
@@ -425,7 +429,7 @@ package body TGen.Random is
    function Unsigned_64_To_Long_Float is new
      Ada.Unchecked_Conversion (Source => Unsigned_64, Target => Long_Float);
    function Random_Unsigned_64 is new
-     GNAT.Random_Numbers.Random_Discrete (Unsigned_64);
+     System.Random_Numbers.Random_Discrete (Unsigned_64);
 
    function Random_LF is new
      Random_Float
@@ -457,7 +461,7 @@ package body TGen.Random is
        (Source => Unsigned_128,
         Target => Long_Long_Float);
    function Random_Unsigned_128 is new
-     GNAT.Random_Numbers.Random_Discrete (Unsigned_128);
+     System.Random_Numbers.Random_Discrete (Unsigned_128);
 
    function Random_LLF is new
      Random_Float
@@ -497,12 +501,20 @@ package body TGen.Random is
    function To_U64 is new
      Ada.Unchecked_Conversion (Duration, Interfaces.Unsigned_64);
 
+   ----------------------
+   -- Get_Default_Seed --
+   ----------------------
+
+   function Get_Default_Seed return Unsigned_32 is separate;
+   --  Separate body so we can replace it with a different implementation if
+   --  needed.
+
 begin
-   Default_Seed := Unsigned_32'Mod (To_U64 (Clock - Y2K));
-   if Ada.Environment_Variables.Exists (Seed_Env_Var) then
+   Default_Seed := Get_Default_Seed;
+   if TGen.Environment.Exists (Seed_Env_Var) then
       begin
          Default_Seed :=
-           Unsigned_32'Value (Ada.Environment_Variables.Value (Seed_Env_Var));
+           Unsigned_32'Value (TGen.Environment.Value (Seed_Env_Var));
       exception
          when Constraint_Error =>
             TGen.Logging.Trace

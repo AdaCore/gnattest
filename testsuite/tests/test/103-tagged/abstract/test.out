@@ -1,6 +1,3 @@
-Error during parameter translation of subprogram Pkg.Test_Root:
-pkg.test_root.Val: pkg.root is not supported (Abstract types are not supported)
-
 gnattest: Error while processing <SubpDecl ["Test_Root"] pkg.ads:15:4-15:37>:
 pkg.test_root.Val: pkg.root is not supported (Abstract types are not supported)
 
@@ -10,9 +7,6 @@ pkg.test_bar.Val: pkg.bar is not supported (Abstract types are not supported)
 gnattest: Error while processing <SubpDecl ["Test_Derived"] pkg.ads:27:4-27:43>:
 pkg.test_derived.Val: pkg.derived is not supported (Abstract types are not supported)
 
-Units remaining: 3     
-Units remaining: 2     
-Units remaining: 1     
 pkg.ads:8:4: info: corresponding test PASSED
 pkg.ads:8:4: info: corresponding test PASSED
 pkg.ads:8:4: info: corresponding test PASSED

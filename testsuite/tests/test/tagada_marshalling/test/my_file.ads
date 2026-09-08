@@ -6,39 +6,50 @@ package My_File is
 
    type Non_Static_Mod is mod 2 ** Long_Long_Integer'Size;
 
-   type Constr_Array is array (Positive range 1 .. 10) of Integer range 0 .. Integer'Last;
+   type Constr_Array is
+     array (Positive range 1 .. 10) of Integer range 0 .. Integer'Last;
 
    type Matrix is array (Natural range <>, Character range <>) of Boolean;
 
    type Fixed_1 is delta 0.0001 range -0.1 .. 0.1;
-   type Fixed_2 is delta 1_000_000.0 digits 16 range -100_000_000.0 .. 100_000_000.0;
+   type Fixed_2 is
+     delta 1_000_000.0 digits 16 range -100_000_000.0 .. 100_000_000.0;
 
-   function Id (X : Integer) return Integer is (X);
+   function Id (X : Integer) return Integer
+   is (X);
 
    type Shape_Kind is (Point, Line, Circle, Square, Rectangle, Ellipse);
    subtype Name_Size_Ty is Natural range 0 .. 30;
-   type Shape (K : Shape_Kind := Line; Name_Size : Name_Size_Ty := 30) is record
-      Name  : String (1 .. Name_Size);
-      X, Y  : Integer range -100 .. Id (100);
+   type Shape
+     (K         : Shape_Kind := Line;
+      Name_Size : Name_Size_Ty := 30)
+   is record
+      Name : String (1 .. Name_Size);
+      X, Y : Integer range -100 .. Id (100);
       case K is
          when Line =>
             X_2, Y_2 : Integer range Id (-100) .. 100;
+
          when Circle | Ellipse =>
-            Radius   : Positive;
+            Radius : Positive;
             case K is
                when Ellipse =>
                   Radius_2 : Positive;
+
                when others =>
                   null;
             end case;
+
          when Square .. Rectangle =>
-            Side     : Positive;
+            Side : Positive;
             case K is
                when Rectangle =>
                   Side_2 : Positive;
+
                when others =>
                   null;
             end case;
+
          when others =>
             null;
       end case;
@@ -70,15 +81,25 @@ package My_File is
 
    type R2 is record
       F1, F2 : Boolean := False;
-   end record with Predicate => F1 or F2;
+   end record
+   with Predicate => F1 or F2;
 
-   procedure Test (X : in out R; Y : T2; A : String; M : Matrix; Z : R2; D : Shape; V : Shape_Array; Mod_Val : Non_Static_Mod) with Import;
+   procedure Test
+     (X       : in out R;
+      Y       : T2;
+      A       : String;
+      M       : Matrix;
+      Z       : R2;
+      D       : Shape;
+      V       : Shape_Array;
+      Mod_Val : Non_Static_Mod);
 
    generic
       type T is range <>;
    function Ident (X : T) return T;
 
-   function Ident (X : T) return T is (X);
+   function Ident (X : T) return T
+   is (X);
 
    type T_Gen is range 1 .. 10;
 
@@ -86,6 +107,6 @@ package My_File is
 
    type T_Null is null record;
 
-   procedure Use_Null_Rec (X : T_Null) with Import;
+   procedure Use_Null_Rec (X : T_Null);
 
 end My_File;

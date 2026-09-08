@@ -3,3 +3,6 @@ description: |
   GNATCOLL.JSON in its specs.
 
 driver: gnattest_tgen
+
+control:
+ - [SKIP, 'not native', 'Test uses GNATCOLL.JSON, not available on cross']

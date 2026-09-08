@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 import sys
 import time
+import yaml
 
 import e3.log
 from e3.env import Env
@@ -129,7 +130,6 @@ class _ReportOutput(object):
 
 class Test(object):
     def __init__(self):
-        self.env = Env()
 
         self.start_time = time.time()
         # Compute this test's home directory, absolute dir where test.py
@@ -155,6 +155,12 @@ class Test(object):
         self.report = _ReportOutput(
             self.options.report_file, self.options.test_log_file, self.options.error_file
         )
+        self.env = Env()
+
+        # Load the context that may be provided in the test.yaml file
+        self.test_env = {}
+        with open(os.path.join(self.homedir, "test.yaml")) as test_env_file:
+            self.test_env = yaml.safe_load(test_env_file)
 
     def __cmdline_options(self):
         """Return an options object to represent the command line options"""

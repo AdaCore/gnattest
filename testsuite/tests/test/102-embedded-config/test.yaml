@@ -1,0 +1,8 @@
+description: Check that gnattest correctly reports when the runtime mapping
+  file provided by the user does not contain an entry that can be used for the
+  current target.
+
+driver: python_script
+
+control:
+  - [SKIP, "not rts_embedded", "Test requires embedded RTS to work"]

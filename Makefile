@@ -243,6 +243,7 @@ install-tgen:
 	mkdir -p "$(DESTDIR)/share/tgen"
 	cp -r share/tgen/tgen_rts "$(DESTDIR)/share/tgen/"
 	cp -r share/tgen/templates "$(DESTDIR)/share/tgen/"
+	cp share/tgen/tgen_target_runtimes.json "$(DESTDIR)/share/tgen/"
 
 # Path to the AUnit source tree shipped with gnattest. When the submodule
 # is wired up this points to aunit/. Override via AUNIT_SRC to build against

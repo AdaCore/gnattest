@@ -22,18 +22,17 @@
 ------------------------------------------------------------------------------
 
 with Ada.Characters.Wide_Wide_Latin_1; use Ada.Characters.Wide_Wide_Latin_1;
+with Ada.Characters.Conversions;       use Ada.Characters.Conversions;
 with Ada.Containers;                   use Ada.Containers;
-with Ada.Directories;
 with Ada.Exceptions;
 with Ada.Text_IO;
-with Ada.Text_IO.Unbounded_IO;
 with Ada.Unchecked_Deallocation;
 with Interfaces;                       use Interfaces;
 with System.Atomic_Counters;           use System.Atomic_Counters;
 with GNAT.SHA1;
 
-with GNAT.Encode_UTF8_String;
-with GNAT.Decode_UTF8_String;
+with Ada.Strings.Wide_Wide_Unbounded;
+with Ada.Strings.UTF_Encoding.Wide_Wide_Strings;
 
 package body TGen.JSON is
 
@@ -1145,6 +1144,26 @@ package body TGen.JSON is
       return Ret;
    end Write;
 
+   -----------
+   -- Print --
+   -----------
+
+   procedure Print (Item : JSON_Value; Compact : Boolean := True) is
+      Encoded    : constant Unbounded_String := Write (Item, Compact);
+      Len        : constant Natural := Length (Encoded);
+      Chunk_Size : constant Positive := 1024;
+      Cur        : Positive := 1;
+   begin
+      if Len = 0 then
+         return;
+      end if;
+      while Cur + Chunk_Size <= Len loop
+         Ada.Text_IO.Put (Slice (Encoded, Cur, Cur + Chunk_Size - 1));
+         Cur := Cur + Chunk_Size;
+      end loop;
+      Ada.Text_IO.Put_Line (Slice (Encoded, Cur, Len));
+   end Print;
+
    ------------
    -- Length --
    ------------
@@ -1877,28 +1896,15 @@ package body TGen.JSON is
    function Escape_String
      (Text : UTF8_Unbounded_String) return Unbounded_String
    is
-      Str         : constant String := Ada.Strings.Unbounded.To_String (Text);
-      Text_Length : constant Natural := Str'Length;
-      Ret         : Unbounded_String;
-      Low         : Natural;
-      W_Chr       : Wide_Wide_Character;
+      use Ada.Strings.UTF_Encoding.Wide_Wide_Strings;
+      Encoded : constant UTF8_String := Ada.Strings.Unbounded.To_String (Text);
+      Decoded : constant Wide_Wide_String := Decode (Encoded);
+      Ret     : Unbounded_String;
 
    begin
       Append (Ret, '"');
-      Low := 1;
 
-      while Low <= Text_Length loop
-         --  UTF-8 sequence is maximum 4 characters long according to RFC3629
-
-         begin
-            GNAT.Decode_UTF8_String.Decode_Wide_Wide_Character
-              (Str (Low .. Natural'Min (Text_Length, Low + 3)), Low, W_Chr);
-         exception
-            when Constraint_Error =>
-               --  Skip the character even if it is invalid.
-               Low := Low + 1;
-               W_Chr := NUL;
-         end;
+      for W_Chr of Decoded loop
 
          case W_Chr is
             when NUL    =>
@@ -1950,10 +1956,12 @@ package body TGen.JSON is
      (Text : String; Low : Natural; High : Natural)
       return UTF8_Unbounded_String
    is
-      First : Integer;
-      Last  : Integer;
-      Unb   : UTF8_Unbounded_String;
-      Idx   : Natural;
+      use Ada.Strings.Wide_Wide_Unbounded;
+      use Ada.Strings.UTF_Encoding.Wide_Wide_Strings;
+      First   : Integer;
+      Last    : Integer;
+      Decoded : Unbounded_Wide_Wide_String;
+      Idx     : Natural;
 
    begin
       First := Low;
@@ -2019,36 +2027,33 @@ package body TGen.JSON is
                         Idx := Idx + 6;
                      end if;
 
-                     Append
-                       (Unb,
-                        GNAT.Encode_UTF8_String.Encode_Wide_Wide_String
-                          ([1 => Char]));
+                     Append (Decoded, Char);
                      Idx := Idx + 4;
                   end;
 
                when '"'       =>
-                  Append (Unb, '"');
+                  Append (Decoded, '"');
 
                when '/'       =>
-                  Append (Unb, '/');
+                  Append (Decoded, '/');
 
                when '\'       =>
-                  Append (Unb, '\');
+                  Append (Decoded, '\');
 
                when 'b'       =>
-                  Append (Unb, ASCII.BS);
+                  Append (Decoded, BS);
 
                when 'f'       =>
-                  Append (Unb, ASCII.FF);
+                  Append (Decoded, FF);
 
                when 'n'       =>
-                  Append (Unb, ASCII.LF);
+                  Append (Decoded, LF);
 
                when 'r'       =>
-                  Append (Unb, ASCII.CR);
+                  Append (Decoded, CR);
 
                when 't'       =>
-                  Append (Unb, ASCII.HT);
+                  Append (Decoded, HT);
 
                when others    =>
                   raise Invalid_JSON_Stream
@@ -2056,106 +2061,13 @@ package body TGen.JSON is
             end case;
 
          else
-            Append (Unb, Text (Idx));
+            Append (Decoded, To_Wide_Wide_Character (Text (Idx)));
          end if;
 
          Idx := Idx + 1;
       end loop;
 
-      return Unb;
+      return To_Unbounded_String (Encode (To_Wide_Wide_String (Decoded)));
    end Un_Escape_String;
-
-   -----------
-   -- Utils --
-   -----------
-   package body Utils is
-
-      function Read_Whole_File (Filename : String) return String;
-      --  Read the text content of `Filename`
-
-      ---------------------
-      -- Read_Whole_File --
-      ---------------------
-
-      function Read_Whole_File (Filename : String) return String is
-         use Ada.Text_IO;
-
-         FT     : File_Type;
-         Result : Unbounded_String;
-         Line   : Unbounded_String;
-      begin
-         Ada.Text_IO.Open (FT, Mode => In_File, Name => Filename);
-
-         loop
-            Unbounded_IO.Get_Line (FT, Line);
-            Append (Result, Line);
-
-            exit when Ada.Text_IO.End_Of_File (FT);
-         end loop;
-
-         Ada.Text_IO.Close (FT);
-         return To_String (Result);
-      end Read_Whole_File;
-
-      ------------
-      -- Create --
-      ------------
-
-      function Create (Filename : String) return JSON_Auto_IO is
-         Content : JSON_Value;
-      begin
-
-         --  Use Ada.Directories here as it checks whether Filename can
-         --  designate a file or not, and raises an exception if it is not the
-         --  case.
-         Content :=
-           (if Ada.Directories.Exists (Filename)
-            then Read (Read_Whole_File (Filename), Filename)
-            else Create_Object);
-         return Res : JSON_Auto_IO do
-            Res.Filename := new String'(Filename);
-            Res.JSON_Content := Content;
-         end return;
-      end Create;
-
-      ------------------
-      -- Get_JSON_Ref --
-      ------------------
-
-      function Get_JSON_Ref (Self : JSON_Auto_IO) return JSON_Value
-      is (Self.JSON_Content);
-
-      ----------------
-      --  Finalize  --
-      ----------------
-
-      overriding
-      procedure Finalize (Self : in out JSON_Auto_IO) is
-         use Ada.Directories;
-         use GNAT.Strings;
-         File : Ada.Text_IO.File_Type;
-      begin
-         if Self.Filename = null then
-            return;
-         end if;
-
-         --  Assume Self.Filename is a valid path, as otherwise Create would
-         --  have already complained about this.
-
-         if not Self.JSON_Content.Is_Empty then
-            if Ada.Directories.Exists (Self.Filename.all) then
-               Ada.Text_IO.Open
-                 (File, Ada.Text_IO.Out_File, Self.Filename.all);
-            else
-               Create_Path (Containing_Directory (Self.Filename.all));
-               Ada.Text_IO.Create
-                 (File, Ada.Text_IO.Out_File, Self.Filename.all);
-            end if;
-            Ada.Text_IO.Put (File, Self.JSON_Content.Write (Compact => True));
-            Ada.Text_IO.Close (File);
-         end if;
-         Free (Self.Filename);
-      end Finalize;
-   end Utils;
 
 end TGen.JSON;

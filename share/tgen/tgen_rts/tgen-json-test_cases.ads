@@ -24,8 +24,11 @@
 --  This unit provides a unify way to load and manipulate the TGen JSON test
 --  case format. In fact this package provides helpers functions to retrieve
 --  fields in the TGEN JSON test cases.
-
-with GNAT.OS_Lib;
+--
+--  The file-I/O operations (loading from / writing to a file) live in the
+--  child unit TGen.JSON.Test_Cases.IO so that this parent unit stays free of
+--  file-I/O dependencies (GNAT.OS_Lib, Ada.Text_IO) and remains buildable on
+--  embedded runtimes.
 
 package TGen.JSON.Test_Cases is
 
@@ -134,19 +137,10 @@ package TGen.JSON.Test_Cases is
      (Arr : Subprogram_Parameter_Vector) return Natural;
    --  Return the number of parameters in this test vector
 
-   function Load_From_File (File_Path : String) return JSON_Test_Cases
-   with Pre => GNAT.OS_Lib.Is_Read_Accessible_File (File_Path);
-   --  Load a TGen JSON test case file and return an instance of the loaded
-   --  file. This function will raise an exception
-   --  (`TGen.JSON.Invalid_JSON_Stream`) if the JSON file is not valid.
-
    procedure Bind_JSON (Self : in out JSON_Test_Cases; New_JSON : JSON_Value)
    with Pre => New_JSON.Kind = JSON_Object_Type;
    --  Bind Self to New_JSON. There is no validation done on New_JSON as to the
    --  expected structure of the JSON value.
-
-   procedure Write_To_File (Self : JSON_Test_Cases; File_Path : String);
-   --  Write Self encoded as a JSON to File_Path
 
    procedure Add_Subprogram_To_JSON_File
      (Self            : in out JSON_Test_Cases;
@@ -300,9 +294,6 @@ private
 
    Empty_Parameter_Vector : constant Subprogram_Parameter_Vector :=
      Subprogram_Parameter_Vector'(Values => Empty_Array);
-
-   function Read_Whole_File (Filename : String) return String;
-   --  Return the content of a text file as a string
 
    No_Hash : constant UTF8_Unbounded_String := To_Unbounded_String ("");
 

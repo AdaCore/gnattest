@@ -62,6 +62,7 @@ with Test.Stub;
 with TGen.LAL_Utils;
 with TGen.JSON;                  use TGen.JSON;
 with TGen.JSON.Test_Cases;
+with TGen.JSON.Test_Cases.IO;
 with TGen.JSON.Unparse;
 with TGen.Libgen;
 with TGen.Marshalling;           use TGen.Marshalling;
@@ -6863,6 +6864,7 @@ package body Test.Skeleton is
       use TGen.Strings;
 
       package TGen_JSON_TC renames TGen.JSON.Test_Cases;
+      package TGen_JSON_TC_IO renames TGen.JSON.Test_Cases.IO;
       use type TGen_JSON_TC.Subprogram_Test_Case;
 
       --  ??? TODO: Clean leftover generated tests if the hash of a given
@@ -6935,7 +6937,7 @@ package body Test.Skeleton is
          return False;
       end if;
 
-      Test_Cases := TGen_JSON_TC.Load_From_File (+JSON_Unit_File.Full_Name);
+      Test_Cases := TGen_JSON_TC_IO.Load_From_File (+JSON_Unit_File.Full_Name);
 
       for Subp of Data.Subp_List loop
 

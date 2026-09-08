@@ -3,6 +3,6 @@ repos:
     hooks:
       - id: gnatformat
         name: Run gnatformat
-        entry: gnatformat
+        entry: gnatformat --no-project
         language: system
         files: "^(src|share)/.*.ad(b|s)"

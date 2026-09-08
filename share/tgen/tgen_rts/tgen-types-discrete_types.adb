@@ -21,7 +21,9 @@
 -- <http://www.gnu.org/licenses/>.                                          --
 ------------------------------------------------------------------------------
 
-with GNAT.Random_Numbers;
+pragma Warnings (Off, "*internal GNAT unit*");
+with System.Random_Numbers;
+pragma Warnings (On, "*internal GNAT unit*");
 
 with TGen.Numerics;
 with TGen.Random;            use TGen.Random;
@@ -104,7 +106,7 @@ package body TGen.Types.Discrete_Types is
    ---------
 
    function Gen return T is
-      function Rand is new GNAT.Random_Numbers.Random_Discrete (T, T'First);
+      function Rand is new System.Random_Numbers.Random_Discrete (T, T'First);
    begin
       return Rand (Generator_Instance);
    end Gen;

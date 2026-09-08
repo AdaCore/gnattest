@@ -1,11 +1,12 @@
 with "test/test.gpr";
-with "test/tgen_support/tgen_support.gpr";
+with "test/obj/tgen_support/tgen_support.gpr";
 
 project Test_Gen is
 
    for Main use ("example_gen.adb", "example_introspection.adb");
 
    for Object_Dir use "obj";
+   for Exec_Dir use "exe_check";
 
    package Builder is
       for Switches ("ada") use ("-g", "-gnat2022");
@@ -16,4 +17,3 @@ project Test_Gen is
    end Linker;
 
 end Test_Gen;
-

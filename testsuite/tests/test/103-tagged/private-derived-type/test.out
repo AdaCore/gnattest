@@ -1,5 +1,3 @@
-tgen_support.gpr: warning: there are no sources of language "Ada" in this project
-Units remaining: 4     Units remaining: 3     Units remaining: 2     Units remaining: 1     
 pkh.ads:6:4: info: corresponding test PASSED
 pkh.ads:6:4: info: corresponding test PASSED
 pkh.ads:6:4: info: corresponding test PASSED
