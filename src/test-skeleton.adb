@@ -356,9 +356,7 @@ package body Test.Skeleton is
       Subp              : Subp_Info);
    --  Add the given test case to the test package mapping. This does not use
    --  Subp.TC_Info contrarily to the above, but uses the parameter values to
-   --  fill in a new test case. TODO???: there is a lot of code duplication
-   --  with the subprogram above; if not merged, the two subprograms should
-   --  be at least refactored to avoid it.
+   --  fill in a new test case.
 
    procedure Add_DT
      (TP_List : in out TP_Mapping_List.List;
@@ -503,15 +501,29 @@ package body Test.Skeleton is
       Use_Short_Name : Boolean := True;
       Add_Cov_Dump   : Boolean := False);
 
+   type Assert_Kind is (Ensures, Requires);
+
+   procedure Put_Assert
+     (TCI : Test_Case_Info; Kind : Assert_Kind; Indent : Natural := 0);
+   --  Write a pragma Assert call to the current file for the given testcase
+
    function Sanitize_TC_Name (TC_Name : String) return String;
    --  Processes the name of the test case in such a way that it could be used
    --  as a part of test routine name. the name is trimmed, then all sequences
    --  of whitespace characters are replaced with an underscore, all other
    --  illegal characters are omitted.
 
-   function Get_Test_Name (Subp : Subp_Info) return GNAT.OS_Lib.String_Access;
+   function Get_Raw_Test_Name (Subp : Subp_Info) return String
+   is (Subp.Subp_Text_Name.all
+       & (if Subp.Has_TC_Info
+          then "_" & Sanitize_TC_Name (Subp.TC_Info.Name.all)
+          else ""));
+   --  Get the string that will be used to create the test name.
+
+   function Get_Test_Name (Subp : Subp_Info) return GNAT.OS_Lib.String_Access
+   is (new String'(Test_Routine_Prefix & Get_Raw_Test_Name (Subp)));
    --  Get the name of the test that will be created from the subprogram passed
-   --  as argument.
+   --  as argument. Basically prepends "Test_" to Get_Raw_Test_Name (Subp) .
 
    procedure Put_Wrapper_Rename (Span : Natural; Current_Subp : Subp_Info);
    --  Puts subprogram renaming declaration, which renames generated wrapper
@@ -521,6 +533,16 @@ package body Test.Skeleton is
      (MD_Map : Markered_Data_Maps.Map; Subp : Subp_Info)
       return Markered_Data_Maps.Cursor;
    --  Searches for the test with given short name
+
+   function Get_Overloading_Prefix
+     (Subp : Subp_Info; Overloading_N : Natural; Use_Short_Name : Boolean)
+      return String
+   is (if Overloading_N /= 0 and then Subp.Is_Overloaded
+       then
+         (if Use_Short_Name
+          then "1_"
+          else Trim (Overloading_N'Image, Both) & "_")
+       else "");
 
    function Uncomment_Line (S : String) return String;
    --  Removes two dashes and two spaces from the beginning of the line.
@@ -3929,7 +3951,7 @@ package body Test.Skeleton is
          MD     : Markered_Data;
          MD_Cur : Markered_Data_Maps.Cursor;
       begin
-         S_Put (0, "--  begin read only");
+         S_Put (0, GT_Marker_Begin);
          New_Line_Count;
          case PS_Type is
             when With_Clauses      =>
@@ -3970,7 +3992,7 @@ package body Test.Skeleton is
             S_Put (0, "begin");
             New_Line_Count;
          end if;
-         S_Put (0, "--  end read only");
+         S_Put (0, GT_Marker_End);
          New_Line_Count;
 
          UH.Version := new String'(Hash_Version);
@@ -4000,9 +4022,9 @@ package body Test.Skeleton is
             New_Line_Count;
          end if;
 
-         S_Put (0, "--  begin read only");
+         S_Put (0, GT_Marker_Begin);
          New_Line_Count;
-         S_Put (0, "--  end read only");
+         S_Put (0, GT_Marker_End);
          New_Line_Count;
       end Put_Persistent_Section;
 
@@ -8573,7 +8595,7 @@ package body Test.Skeleton is
          if Underscore then
             if Name (I) /= '_' then
                Underscore := False;
-               if Is_Letter (Name (I)) or else Is_Digit (Name (I)) then
+               if Is_Alphanumeric (Name (I)) then
                   Buff := new String'(Tmp.all & Name (I));
                   Free (Tmp);
                   Tmp := Buff;
@@ -8581,10 +8603,7 @@ package body Test.Skeleton is
                end if;
             end if;
          else
-            if Is_Letter (Name (I))
-              or else Is_Digit (Name (I))
-              or else Name (I) = '_'
-            then
+            if Is_Alphanumeric (Name (I)) or else Name (I) = '_' then
                Buff := new String'(Tmp.all & Name (I));
                Free (Tmp);
                Tmp := Buff;
@@ -8599,22 +8618,6 @@ package body Test.Skeleton is
 
       return To_Lower (Tmp.all);
    end Sanitize_TC_Name;
-
-   -------------------
-   -- Get_Test_Name --
-   -------------------
-
-   function Get_Test_Name (Subp : Subp_Info) return GNAT.OS_Lib.String_Access
-   is
-   begin
-      return
-        new String'
-          (Test_Routine_Prefix
-           & Subp.Subp_Text_Name.all
-           & (if Subp.Has_TC_Info
-              then "_" & Sanitize_TC_Name (Subp.TC_Info.Name.all)
-              else ""));
-   end Get_Test_Name;
 
    --------------------------
    -- Find_Same_Short_Name --
@@ -8657,25 +8660,10 @@ package body Test.Skeleton is
       Overloading_N  : Natural;
       Commented_Out  : Boolean := False;
       Use_Short_Name : Boolean := True;
-      Add_Cov_Dump   : Boolean := False)
-   is
-      Overloading_Prefix : String_Access;
+      Add_Cov_Dump   : Boolean := False) is
    begin
 
-      if Overloading_N /= 0 then
-         if Subp.Is_Overloaded then
-            if Use_Short_Name then
-               Overloading_Prefix := new String'("1_");
-            else
-               Overloading_Prefix :=
-                 new String'(Trim (Natural'Image (Overloading_N), Both) & "_");
-            end if;
-         else
-            Overloading_Prefix := new String'("");
-         end if;
-      end if;
-
-      S_Put (0, "--  begin read only");
+      S_Put (0, GT_Marker_Begin);
       New_Line_Count;
 
       if Add_Cov_Dump then
@@ -8688,30 +8676,17 @@ package body Test.Skeleton is
          New_Line_Count;
       end if;
 
-      if Commented_Out then
-         S_Put
-           (3,
-            "--  end "
-            & Test_Routine_Prefix
-            & Subp.Subp_Text_Name.all
-            & (if Subp.Has_TC_Info
-               then "_" & Sanitize_TC_Name (Subp.TC_Info.Name.all)
-               else "")
-            & ";");
-      else
-         S_Put
-           (3,
-            "end "
-            & Test_Routine_Prefix
-            & Overloading_Prefix.all
-            & Subp.Subp_Text_Name.all
-            & (if Subp.Has_TC_Info
-               then "_" & Sanitize_TC_Name (Subp.TC_Info.Name.all)
-               else "")
-            & ";");
-      end if;
+      S_Put
+        (3,
+         (if Commented_Out then "--  " else "")
+         & "end "
+         & Test_Routine_Prefix
+         & Get_Overloading_Prefix (Subp, Overloading_N, Use_Short_Name)
+         & Get_Raw_Test_Name (Subp)
+         & ";");
+
       New_Line_Count;
-      S_Put (0, "--  end read only");
+      S_Put (0, GT_Marker_End);
       New_Line_Count;
 
    end Put_Closing_Comment_Section;
@@ -8733,135 +8708,36 @@ package body Test.Skeleton is
       Hash_Last        : constant Integer :=
         Subp.Subp_Full_Hash'First + Hash_Length_Used;
 
-      Overloading_Prefix : String_Access;
+      Maybe_Comment : constant String :=
+        (if Commented_Out then "--  " else "");
+
+      Test_Name : constant String :=
+        Test_Routine_Prefix
+        & Get_Overloading_Prefix (Subp, Overloading_N, Use_Short_Name)
+        & Get_Raw_Test_Name (Subp);
+
+      Test_Args : constant String :=
+        " (Gnattest_T : in out "
+        & (if Subp.Corresp_Type = 0 then "Test" else "Test_" & Type_Name)
+        & ")";
    begin
 
-      if Overloading_N /= 0 then
-         if Subp.Is_Overloaded then
-            if Use_Short_Name then
-               Overloading_Prefix := new String'("1_");
-            else
-               Overloading_Prefix :=
-                 new String'(Trim (Natural'Image (Overloading_N), Both) & "_");
-            end if;
-         else
-            Overloading_Prefix := new String'("");
-         end if;
-      end if;
-
       New_Line_Count;
-      S_Put (0, "--  begin read only");
+      S_Put (0, GT_Marker_Begin);
       New_Line_Count;
 
-      if Subp.Corresp_Type = 0 then
-         if Commented_Out then
-            S_Put
-              (3,
-               "--  procedure "
-               & Test_Routine_Prefix
-               & Subp.Subp_Text_Name.all
-               & (if Subp.Has_TC_Info
-                  then "_" & Sanitize_TC_Name (Subp.TC_Info.Name.all)
-                  else "")
-               & " (Gnattest_T : in out Test);");
-            New_Line_Count;
-            S_Put
-              (3,
-               "--  procedure "
-               & Subp.Subp_Mangle_Name.all
-               & " (Gnattest_T : in out Test) renames "
-               & Test_Routine_Prefix
-               & Subp.Subp_Text_Name.all
-               & (if Subp.Has_TC_Info
-                  then "_" & Sanitize_TC_Name (Subp.TC_Info.Name.all)
-                  else "")
-               & ";");
-            New_Line_Count;
-         else
-            S_Put
-              (3,
-               "procedure "
-               & Test_Routine_Prefix
-               & Overloading_Prefix.all
-               & Subp.Subp_Text_Name.all
-               & (if Subp.Has_TC_Info
-                  then "_" & Sanitize_TC_Name (Subp.TC_Info.Name.all)
-                  else "")
-               & " (Gnattest_T : in out Test);");
-            New_Line_Count;
-            S_Put
-              (3,
-               "procedure "
-               & Subp.Subp_Mangle_Name.all
-               & " (Gnattest_T : in out Test) renames "
-               & Test_Routine_Prefix
-               & Overloading_Prefix.all
-               & Subp.Subp_Text_Name.all
-               & (if Subp.Has_TC_Info
-                  then "_" & Sanitize_TC_Name (Subp.TC_Info.Name.all)
-                  else "")
-               & ";");
-            New_Line_Count;
-         end if;
-      else
-         if Commented_Out then
-            S_Put
-              (3,
-               "--  procedure "
-               & Test_Routine_Prefix
-               & Subp.Subp_Text_Name.all
-               & (if Subp.Has_TC_Info
-                  then "_" & Sanitize_TC_Name (Subp.TC_Info.Name.all)
-                  else "")
-               & " (Gnattest_T : in out Test_"
-               & Type_Name
-               & ");");
-            New_Line_Count;
-            S_Put
-              (3,
-               "--  procedure "
-               & Subp.Subp_Mangle_Name.all
-               & " (Gnattest_T : in out Test_"
-               & Type_Name
-               & ") renames "
-               & Test_Routine_Prefix
-               & Subp.Subp_Text_Name.all
-               & (if Subp.Has_TC_Info
-                  then "_" & Sanitize_TC_Name (Subp.TC_Info.Name.all)
-                  else "")
-               & ";");
-            New_Line_Count;
-         else
-            S_Put
-              (3,
-               "procedure "
-               & Test_Routine_Prefix
-               & Overloading_Prefix.all
-               & Subp.Subp_Text_Name.all
-               & (if Subp.Has_TC_Info
-                  then "_" & Sanitize_TC_Name (Subp.TC_Info.Name.all)
-                  else "")
-               & " (Gnattest_T : in out Test_"
-               & Type_Name
-               & ");");
-            New_Line_Count;
-            S_Put
-              (3,
-               "procedure "
-               & Subp.Subp_Mangle_Name.all
-               & " (Gnattest_T : in out Test_"
-               & Type_Name
-               & ") renames "
-               & Test_Routine_Prefix
-               & Overloading_Prefix.all
-               & Subp.Subp_Text_Name.all
-               & (if Subp.Has_TC_Info
-                  then "_" & Sanitize_TC_Name (Subp.TC_Info.Name.all)
-                  else "")
-               & ";");
-            New_Line_Count;
-         end if;
-      end if;
+      S_Put (3, Maybe_Comment & "procedure " & Test_Name & Test_Args & ";");
+      New_Line_Count;
+      S_Put
+        (3,
+         Maybe_Comment
+         & "procedure "
+         & Subp.Subp_Mangle_Name.all
+         & Test_Args
+         & " renames "
+         & Test_Name
+         & ";");
+      New_Line_Count;
 
       S_Put
         (0,
@@ -8881,33 +8757,7 @@ package body Test.Skeleton is
       end if;
       New_Line_Count;
 
-      if Commented_Out then
-         S_Put
-           (3,
-            "--  procedure "
-            & Test_Routine_Prefix
-            & Subp.Subp_Text_Name.all
-            & (if Subp.Has_TC_Info
-               then "_" & Sanitize_TC_Name (Subp.TC_Info.Name.all)
-               else "")
-            & " (Gnattest_T : in out ");
-      else
-         S_Put
-           (3,
-            "procedure "
-            & Test_Routine_Prefix
-            & Overloading_Prefix.all
-            & Subp.Subp_Text_Name.all
-            & (if Subp.Has_TC_Info
-               then "_" & Sanitize_TC_Name (Subp.TC_Info.Name.all)
-               else "")
-            & " (Gnattest_T : in out ");
-      end if;
-      if Subp.Corresp_Type = 0 then
-         S_Put (0, "Test) is");
-      else
-         S_Put (0, "Test_" & Type_Name & ") is");
-      end if;
+      S_Put (3, Maybe_Comment & "procedure " & Test_Name & Test_Args & " is");
 
       New_Line_Count;
 
@@ -9005,10 +8855,62 @@ package body Test.Skeleton is
          New_Line_Count;
       end if;
 
-      S_Put (0, "--  end read only");
+      S_Put (0, GT_Marker_End);
       New_Line_Count;
 
    end Put_Opening_Comment_Section;
+
+   ----------------
+   -- Put_Assert --
+   ----------------
+
+   procedure Put_Assert
+     (TCI : Test_Case_Info; Kind : Assert_Kind; Indent : Natural := 0)
+   is
+      Img      : constant String_Access :=
+        (case Kind is
+           when Ensures  => TCI.Ens_Image,
+           when Requires => TCI.Req_Image);
+      Kind_Str : constant String :=
+        (case Kind is
+           when Ensures  => "commitment",
+           when Requires => "requirement");
+      Line     : constant String_Access :=
+        (case Kind is
+           when Ensures  => TCI.Ens_Line,
+           when Requires => TCI.Req_Line);
+   begin
+      S_Put (Indent, "begin");
+      New_Line_Count;
+      S_Put (Indent + 3, "pragma Assert");
+      New_Line_Count;
+      S_Put (Indent + 5, "(" & Img.all & ");");
+      New_Line_Count;
+      S_Put (Indent + 3, "null;");
+      New_Line_Count;
+      S_Put (Indent, "exception");
+      New_Line_Count;
+      S_Put (Indent + 6, "when System.Assertions.Assert_Failure =>");
+      New_Line_Count;
+      S_Put (Indent + 9, "AUnit.Assertions.Assert");
+      New_Line_Count;
+      S_Put (Indent + 11, "(False,");
+      New_Line_Count;
+      S_Put
+        (Indent + 12,
+         """"
+         & To_Lower (Kind'Image (1 .. 3))
+         & "_sloc("
+         & Line.all
+         & "):"
+         & TCI.Name.all
+         & " test "
+         & Kind_Str
+         & " violated"");");
+      New_Line_Count;
+      S_Put (Indent, "end;");
+      New_Line_Count;
+   end Put_Assert;
 
    --------------------
    -- Uncomment_Line --
@@ -9432,32 +9334,7 @@ package body Test.Skeleton is
       New_Line_Count;
 
       if Current_Subp.TC_Info.Req_Image.all /= "" then
-         S_Put (6, "begin");
-         New_Line_Count;
-         S_Put (9, "pragma Assert");
-         New_Line_Count;
-         S_Put (11, "(" & Current_Subp.TC_Info.Req_Image.all & ");");
-         New_Line_Count;
-         S_Put (9, "null;");
-         New_Line_Count;
-         S_Put (6, "exception");
-         New_Line_Count;
-         S_Put (12, "when System.Assertions.Assert_Failure =>");
-         New_Line_Count;
-         S_Put (15, "AUnit.Assertions.Assert");
-         New_Line_Count;
-         S_Put (17, "(False,");
-         New_Line_Count;
-         S_Put
-           (18,
-            """req_sloc("
-            & Current_Subp.TC_Info.Req_Line.all
-            & "):"
-            & Current_Subp.TC_Info.Name.all
-            & " test requirement violated"");");
-         New_Line_Count;
-         S_Put (6, "end;");
-         New_Line_Count;
+         Put_Assert (Current_Subp.TC_Info, Kind => Requires, Indent => 6);
       end if;
 
       S_Put (6, "declare");
@@ -9506,32 +9383,7 @@ package body Test.Skeleton is
       New_Line_Count;
 
       if Current_Subp.TC_Info.Ens_Image.all /= "" then
-         S_Put (9, "begin");
-         New_Line_Count;
-         S_Put (12, "pragma Assert");
-         New_Line_Count;
-         S_Put (14, "(" & Current_Subp.TC_Info.Ens_Image.all & ");");
-         New_Line_Count;
-         S_Put (12, "null;");
-         New_Line_Count;
-         S_Put (9, "exception");
-         New_Line_Count;
-         S_Put (12, "when System.Assertions.Assert_Failure =>");
-         New_Line_Count;
-         S_Put (15, "AUnit.Assertions.Assert");
-         New_Line_Count;
-         S_Put (17, "(False,");
-         New_Line_Count;
-         S_Put
-           (18,
-            """ens_sloc("
-            & Current_Subp.TC_Info.Ens_Line.all
-            & "):"
-            & Current_Subp.TC_Info.Name.all
-            & " test commitment violated"");");
-         New_Line_Count;
-         S_Put (9, "end;");
-         New_Line_Count;
+         Put_Assert (Current_Subp.TC_Info, Kind => Ensures, Indent => 9);
       end if;
 
       S_Put (9, "return " & Current_Subp.Subp_Mangle_Name.all & "_Result;");
@@ -9589,32 +9441,7 @@ package body Test.Skeleton is
       New_Line_Count;
 
       if Current_Subp.TC_Info.Req_Image.all /= "" then
-         S_Put (6, "begin");
-         New_Line_Count;
-         S_Put (9, "pragma Assert");
-         New_Line_Count;
-         S_Put (11, "(" & Current_Subp.TC_Info.Req_Image.all & ");");
-         New_Line_Count;
-         S_Put (9, "null;");
-         New_Line_Count;
-         S_Put (6, "exception");
-         New_Line_Count;
-         S_Put (9, "when System.Assertions.Assert_Failure =>");
-         New_Line_Count;
-         S_Put (12, "AUnit.Assertions.Assert");
-         New_Line_Count;
-         S_Put (14, "(False,");
-         New_Line_Count;
-         S_Put
-           (15,
-            """req_sloc("
-            & Current_Subp.TC_Info.Req_Line.all
-            & "):"
-            & Current_Subp.TC_Info.Name.all
-            & " test requirement violated"");");
-         New_Line_Count;
-         S_Put (6, "end;");
-         New_Line_Count;
+         Put_Assert (Current_Subp.TC_Info, Kind => Requires, Indent => 6);
       end if;
 
       S_Put
@@ -9655,32 +9482,7 @@ package body Test.Skeleton is
       New_Line_Count;
 
       if Current_Subp.TC_Info.Ens_Image.all /= "" then
-         S_Put (6, "begin");
-         New_Line_Count;
-         S_Put (9, "pragma Assert");
-         New_Line_Count;
-         S_Put (11, "(" & Current_Subp.TC_Info.Ens_Image.all & ");");
-         New_Line_Count;
-         S_Put (9, "null;");
-         New_Line_Count;
-         S_Put (6, "exception");
-         New_Line_Count;
-         S_Put (9, "when System.Assertions.Assert_Failure =>");
-         New_Line_Count;
-         S_Put (12, "AUnit.Assertions.Assert");
-         New_Line_Count;
-         S_Put (14, "(False,");
-         New_Line_Count;
-         S_Put
-           (15,
-            """ens_sloc("
-            & Current_Subp.TC_Info.Ens_Line.all
-            & "):"
-            & Current_Subp.TC_Info.Name.all
-            & " test commitment violated"");");
-         New_Line_Count;
-         S_Put (6, "end;");
-         New_Line_Count;
+         Put_Assert (Current_Subp.TC_Info, Kind => Ensures, Indent => 6);
       end if;
 
       S_Put
