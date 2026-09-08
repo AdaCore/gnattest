@@ -988,10 +988,11 @@ package body Test.Skeleton.Source_Table is
    -------------
 
    function Is_Body (Source_Name : String) return Boolean is
-      SN : constant String := Normalize_Source_Name (Source_Name);
+      SN  : constant String := Normalize_Source_Name (Source_Name);
+      SFR : constant SF_Record := Source_File_Table.Element (SF_Table, SN);
    begin
       return
-        Source_File_Table.Element (SF_Table, SN).Corresponding_Body = null;
+        SFR.Corresponding_Body = null and then SFR.Theoretical_Body = null;
    end Is_Body;
 
    ----------------------------------------
