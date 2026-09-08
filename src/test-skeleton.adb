@@ -3951,7 +3951,7 @@ package body Test.Skeleton is
          MD     : Markered_Data;
          MD_Cur : Markered_Data_Maps.Cursor;
       begin
-         S_Put (0, "--  begin read only");
+         S_Put (0, GT_Marker_Begin);
          New_Line_Count;
          case PS_Type is
             when With_Clauses      =>
@@ -3992,7 +3992,7 @@ package body Test.Skeleton is
             S_Put (0, "begin");
             New_Line_Count;
          end if;
-         S_Put (0, "--  end read only");
+         S_Put (0, GT_Marker_End);
          New_Line_Count;
 
          UH.Version := new String'(Hash_Version);
@@ -4022,9 +4022,9 @@ package body Test.Skeleton is
             New_Line_Count;
          end if;
 
-         S_Put (0, "--  begin read only");
+         S_Put (0, GT_Marker_Begin);
          New_Line_Count;
-         S_Put (0, "--  end read only");
+         S_Put (0, GT_Marker_End);
          New_Line_Count;
       end Put_Persistent_Section;
 
@@ -8663,7 +8663,7 @@ package body Test.Skeleton is
       Add_Cov_Dump   : Boolean := False) is
    begin
 
-      S_Put (0, "--  begin read only");
+      S_Put (0, GT_Marker_Begin);
       New_Line_Count;
 
       if Add_Cov_Dump then
@@ -8686,7 +8686,7 @@ package body Test.Skeleton is
          & ";");
 
       New_Line_Count;
-      S_Put (0, "--  end read only");
+      S_Put (0, GT_Marker_End);
       New_Line_Count;
 
    end Put_Closing_Comment_Section;
@@ -8723,7 +8723,7 @@ package body Test.Skeleton is
    begin
 
       New_Line_Count;
-      S_Put (0, "--  begin read only");
+      S_Put (0, GT_Marker_Begin);
       New_Line_Count;
 
       S_Put (3, Maybe_Comment & "procedure " & Test_Name & Test_Args & ";");
@@ -8855,7 +8855,7 @@ package body Test.Skeleton is
          New_Line_Count;
       end if;
 
-      S_Put (0, "--  end read only");
+      S_Put (0, GT_Marker_End);
       New_Line_Count;
 
    end Put_Opening_Comment_Section;
