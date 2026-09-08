@@ -534,6 +534,16 @@ package body Test.Skeleton is
       return Markered_Data_Maps.Cursor;
    --  Searches for the test with given short name
 
+   function Get_Overloading_Prefix
+     (Subp : Subp_Info; Overloading_N : Natural; Use_Short_Name : Boolean)
+      return String
+   is (if Overloading_N /= 0 and then Subp.Is_Overloaded
+       then
+         (if Use_Short_Name
+          then "1_"
+          else Trim (Overloading_N'Image, Both) & "_")
+       else "");
+
    function Uncomment_Line (S : String) return String;
    --  Removes two dashes and two spaces from the beginning of the line.
    --  Returns argument string if commenting prefix not found.
@@ -8650,23 +8660,8 @@ package body Test.Skeleton is
       Overloading_N  : Natural;
       Commented_Out  : Boolean := False;
       Use_Short_Name : Boolean := True;
-      Add_Cov_Dump   : Boolean := False)
-   is
-      Overloading_Prefix : String_Access;
+      Add_Cov_Dump   : Boolean := False) is
    begin
-
-      if Overloading_N /= 0 then
-         if Subp.Is_Overloaded then
-            if Use_Short_Name then
-               Overloading_Prefix := new String'("1_");
-            else
-               Overloading_Prefix :=
-                 new String'(Trim (Natural'Image (Overloading_N), Both) & "_");
-            end if;
-         else
-            Overloading_Prefix := new String'("");
-         end if;
-      end if;
 
       S_Put (0, "--  begin read only");
       New_Line_Count;
@@ -8681,22 +8676,15 @@ package body Test.Skeleton is
          New_Line_Count;
       end if;
 
-      if Commented_Out then
-         S_Put
-           (3,
-            "--  end "
-            & Test_Routine_Prefix
-            & Get_Raw_Test_Name (Subp)
-            & ";");
-      else
-         S_Put
-           (3,
-            "end "
-            & Test_Routine_Prefix
-            & Overloading_Prefix.all
-            & Get_Raw_Test_Name (Subp)
-            & ";");
-      end if;
+      S_Put
+        (3,
+         (if Commented_Out then "--  " else "")
+         & "end "
+         & Test_Routine_Prefix
+         & Get_Overloading_Prefix (Subp, Overloading_N, Use_Short_Name)
+         & Get_Raw_Test_Name (Subp)
+         & ";");
+
       New_Line_Count;
       S_Put (0, "--  end read only");
       New_Line_Count;
@@ -8720,110 +8708,62 @@ package body Test.Skeleton is
       Hash_Last        : constant Integer :=
         Subp.Subp_Full_Hash'First + Hash_Length_Used;
 
-      Overloading_Prefix : String_Access;
+      Maybe_Comment      : constant String :=
+        (if Commented_Out then "--  " else "");
+      Overloading_Prefix : constant String :=
+        Get_Overloading_Prefix (Subp, Overloading_N, Use_Short_Name);
    begin
-
-      if Overloading_N /= 0 then
-         if Subp.Is_Overloaded then
-            if Use_Short_Name then
-               Overloading_Prefix := new String'("1_");
-            else
-               Overloading_Prefix :=
-                 new String'(Trim (Natural'Image (Overloading_N), Both) & "_");
-            end if;
-         else
-            Overloading_Prefix := new String'("");
-         end if;
-      end if;
 
       New_Line_Count;
       S_Put (0, "--  begin read only");
       New_Line_Count;
 
       if Subp.Corresp_Type = 0 then
-         if Commented_Out then
-            S_Put
-              (3,
-               "--  procedure "
-               & Test_Routine_Prefix
-               & Get_Raw_Test_Name (Subp)
-               & " (Gnattest_T : in out Test);");
-            New_Line_Count;
-            S_Put
-              (3,
-               "--  procedure "
-               & Subp.Subp_Mangle_Name.all
-               & " (Gnattest_T : in out Test) renames "
-               & Test_Routine_Prefix
-               & Get_Raw_Test_Name (Subp)
-               & ";");
-            New_Line_Count;
-         else
-            S_Put
-              (3,
-               "procedure "
-               & Test_Routine_Prefix
-               & Overloading_Prefix.all
-               & Get_Raw_Test_Name (Subp)
-               & " (Gnattest_T : in out Test);");
-            New_Line_Count;
-            S_Put
-              (3,
-               "procedure "
-               & Subp.Subp_Mangle_Name.all
-               & " (Gnattest_T : in out Test) renames "
-               & Test_Routine_Prefix
-               & Overloading_Prefix.all
-               & Get_Raw_Test_Name (Subp)
-               & ";");
-            New_Line_Count;
-         end if;
+         S_Put
+           (3,
+            Maybe_Comment
+            & "procedure "
+            & Test_Routine_Prefix
+            & Overloading_Prefix
+            & Get_Raw_Test_Name (Subp)
+            & " (Gnattest_T : in out Test);");
+         New_Line_Count;
+         S_Put
+           (3,
+            Maybe_Comment
+            & "procedure "
+            & Subp.Subp_Mangle_Name.all
+            & " (Gnattest_T : in out Test) renames "
+            & Test_Routine_Prefix
+            & Overloading_Prefix
+            & Get_Raw_Test_Name (Subp)
+            & ";");
+         New_Line_Count;
       else
-         if Commented_Out then
-            S_Put
-              (3,
-               "--  procedure "
-               & Test_Routine_Prefix
-               & Get_Raw_Test_Name (Subp)
-               & " (Gnattest_T : in out Test_"
-               & Type_Name
-               & ");");
-            New_Line_Count;
-            S_Put
-              (3,
-               "--  procedure "
-               & Subp.Subp_Mangle_Name.all
-               & " (Gnattest_T : in out Test_"
-               & Type_Name
-               & ") renames "
-               & Test_Routine_Prefix
-               & Get_Raw_Test_Name (Subp)
-               & ";");
-            New_Line_Count;
-         else
-            S_Put
-              (3,
-               "procedure "
-               & Test_Routine_Prefix
-               & Overloading_Prefix.all
-               & Get_Raw_Test_Name (Subp)
-               & " (Gnattest_T : in out Test_"
-               & Type_Name
-               & ");");
-            New_Line_Count;
-            S_Put
-              (3,
-               "procedure "
-               & Subp.Subp_Mangle_Name.all
-               & " (Gnattest_T : in out Test_"
-               & Type_Name
-               & ") renames "
-               & Test_Routine_Prefix
-               & Overloading_Prefix.all
-               & Get_Raw_Test_Name (Subp)
-               & ";");
-            New_Line_Count;
-         end if;
+         S_Put
+           (3,
+            Maybe_Comment
+            & "procedure "
+            & Test_Routine_Prefix
+            & Overloading_Prefix
+            & Get_Raw_Test_Name (Subp)
+            & " (Gnattest_T : in out Test_"
+            & Type_Name
+            & ");");
+         New_Line_Count;
+         S_Put
+           (3,
+            Maybe_Comment
+            & "procedure "
+            & Subp.Subp_Mangle_Name.all
+            & " (Gnattest_T : in out Test_"
+            & Type_Name
+            & ") renames "
+            & Test_Routine_Prefix
+            & Overloading_Prefix
+            & Get_Raw_Test_Name (Subp)
+            & ";");
+         New_Line_Count;
       end if;
 
       S_Put
@@ -8844,22 +8784,14 @@ package body Test.Skeleton is
       end if;
       New_Line_Count;
 
-      if Commented_Out then
-         S_Put
-           (3,
-            "--  procedure "
-            & Test_Routine_Prefix
-            & Get_Raw_Test_Name (Subp)
-            & " (Gnattest_T : in out ");
-      else
-         S_Put
-           (3,
-            "procedure "
-            & Test_Routine_Prefix
-            & Overloading_Prefix.all
-            & Get_Raw_Test_Name (Subp)
-            & " (Gnattest_T : in out ");
-      end if;
+      S_Put
+        (3,
+         Maybe_Comment
+         & "procedure "
+         & Test_Routine_Prefix
+         & Overloading_Prefix
+         & Get_Raw_Test_Name (Subp)
+         & " (Gnattest_T : in out ");
 
       if Subp.Corresp_Type = 0 then
          S_Put (0, "Test) is");
