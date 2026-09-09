@@ -183,6 +183,9 @@ package Test.Common is
    procedure S_Put (Span : Natural; Text : String);
    --  Adds Span number spaces before the Text and prints it to Output_File
 
+   procedure S_Put_Line (Span : Natural; Text : String);
+   --  S_Put then Put_New_Line
+
    procedure Create (Name : String);
    procedure Close_File;
    --  Wrappers for creating and closing output files
