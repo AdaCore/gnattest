@@ -1459,6 +1459,9 @@ package body Test.Skeleton.Source_Table is
          Sources_Names : String_Set.Set := String_Set.Empty_Set;
          --  Used to store the names of all sources of this project to be able
          --  to add those needed in the interface if the project is a library.
+
+         Stub_Prj_Name : constant String :=
+           Stub_Project_Prefix & Current_Infix & Proj;
       begin
          if Processed_Projects.Contains (Proj) then
             return;
@@ -1482,8 +1485,7 @@ package body Test.Skeleton.Source_Table is
                   GNATCOLL.VFS.Create
                     (+(Arg_Proj.Stub_Dir.all
                        & Dir_Sep
-                       & Unit_To_File_Name
-                           (Stub_Project_Prefix & Current_Infix & Proj))));
+                       & Unit_To_File_Name (Stub_Prj_Name))));
 
                if Arg_Proj.Is_Library then
                   Append
@@ -1491,11 +1493,7 @@ package body Test.Skeleton.Source_Table is
                      GNATCOLL.VFS.Create
                        (+(Arg_Proj.Stub_Dir.all
                           & Dir_Sep
-                          & Unit_To_File_Name
-                              (Stub_Project_Prefix
-                               & Current_Infix
-                               & Proj
-                               & "_lib"))));
+                          & Unit_To_File_Name (Stub_Prj_Name & "_lib"))));
                end if;
                Create_Dirs (F);
             end;
@@ -1511,12 +1509,12 @@ package body Test.Skeleton.Source_Table is
                "Creating "
                & Arg_Proj.Stub_Dir.all
                & Dir_Sep
-               & Unit_To_File_Name (Stub_Project_Prefix & Current_Infix & Proj)
+               & Unit_To_File_Name (Stub_Prj_Name)
                & ".gpr");
             Create
               (Arg_Proj.Stub_Dir.all
                & Dir_Sep
-               & Unit_To_File_Name (Stub_Project_Prefix & Current_Infix & Proj)
+               & Unit_To_File_Name (Stub_Prj_Name)
                & ".gpr");
 
             --  Generate the list of stubbed projects on which Proj depends.
@@ -1584,9 +1582,7 @@ package body Test.Skeleton.Source_Table is
             S_Put
               (0,
                "project "
-               & Stub_Project_Prefix
-               & Current_Infix
-               & Proj
+               & Stub_Prj_Name
                & " extends """
                & Relative_P_Path.all
                & """ is");
@@ -1671,22 +1667,20 @@ package body Test.Skeleton.Source_Table is
             S_Put
               (3,
                "for Object_Dir use """
-               & Unit_To_File_Name (Stub_Project_Prefix & Current_Infix & Proj)
+               & Unit_To_File_Name (Stub_Prj_Name)
                & """;");
             Put_New_Line;
             if Arg_Proj.Is_Library then
                S_Put
                  (3,
                   "for Library_Dir use """
-                  & Unit_To_File_Name
-                      (Stub_Project_Prefix & Current_Infix & Proj & "_lib")
+                  & Unit_To_File_Name (Stub_Prj_Name & "_lib")
                   & """;");
                Put_New_Line;
                S_Put
                  (3,
                   "for Library_Name use """
-                  & Unit_To_File_Name
-                      (Stub_Project_Prefix & Current_Infix & Proj)
+                  & Unit_To_File_Name (Stub_Prj_Name)
                   & """;");
                Put_New_Line;
 
@@ -1729,8 +1723,7 @@ package body Test.Skeleton.Source_Table is
                end if;
             end if;
 
-            S_Put
-              (0, "end " & Stub_Project_Prefix & Current_Infix & Proj & ";");
+            S_Put (0, "end " & Stub_Prj_Name & ";");
 
             Close_File;
          end if;
