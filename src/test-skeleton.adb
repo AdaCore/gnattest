@@ -525,6 +525,11 @@ package body Test.Skeleton is
    --  Get the name of the test that will be created from the subprogram passed
    --  as argument. Basically prepends "Test_" to Get_Raw_Test_Name (Subp) .
 
+   function Make_Subp_Prototype
+     (Subp_Name : String; Current_Subp : Subp_Info) return String;
+   --  Returns a string like :
+   --  (function | procedure) `Subp_Name` [(Arg : Arg_Type; *)] [return Type]
+
    procedure Put_Wrapper_Rename (Span : Natural; Current_Subp : Subp_Info);
    --  Puts subprogram renaming declaration, which renames generated wrapper
    --  into original tested subprogram's name.
@@ -8983,11 +8988,13 @@ package body Test.Skeleton is
            Kind (Nesting (I)) /= Ada_Generic_Package_Decl);
    end Is_Declared_In_Regular_Package;
 
-   ------------------------
-   -- Put_Wrapper_Rename --
-   ------------------------
+   -------------------------
+   -- Make_Subp_Prototype --
+   -------------------------
 
-   procedure Put_Wrapper_Rename (Span : Natural; Current_Subp : Subp_Info) is
+   function Make_Subp_Prototype
+     (Subp_Name : String; Current_Subp : Subp_Info) return String
+   is
       Spec    : constant Base_Subp_Spec'Class :=
         (if Current_Subp.Subp_Declaration.Kind = Ada_Expr_Function
          then Current_Subp.Subp_Declaration.As_Expr_Function.F_Subp_Spec
@@ -8996,31 +9003,36 @@ package body Test.Skeleton is
       Params  : constant Param_Spec_Array := Spec.P_Params;
       Is_Func : constant Boolean :=
         Is_Function (Current_Subp.Subp_Declaration.As_Basic_Decl);
+
+      Result : Unbounded_String;
    begin
-
-      if Is_Func then
-         S_Put (Span, "function " & Current_Subp.Subp_Name_Image.all);
-
-      else
-         S_Put (Span, "procedure " & Current_Subp.Subp_Name_Image.all);
-      end if;
+      Result.Append ((if Is_Func then "function " else "procedure "));
+      Result.Append (Subp_Name);
 
       if Params'Length /= 0 then
-         S_Put (1, "(");
+         Result.Append (" (");
          for P in Params'Range loop
-            S_Put (0, Node_Image (Params (P)));
-            if P = Params'Last then
-               S_Put (0, ")");
-            else
-               S_Put (0, "; ");
-            end if;
+            Result.Append (Node_Image (Params (P)));
+            Result.Append ((if P = Params'Last then ")" else "; "));
          end loop;
       end if;
 
       if Is_Func then
-         S_Put (1, "return " & Node_Image (Spec.P_Returns));
+         Result.Append (" return " & Node_Image (Spec.P_Returns));
       end if;
 
+      return Result.To_String;
+   end Make_Subp_Prototype;
+
+   ------------------------
+   -- Put_Wrapper_Rename --
+   ------------------------
+
+   procedure Put_Wrapper_Rename (Span : Natural; Current_Subp : Subp_Info) is
+   begin
+      S_Put
+        (Span,
+         Make_Subp_Prototype (Current_Subp.Subp_Name_Image.all, Current_Subp));
       S_Put_Line_C
         (1,
          "renames "
@@ -9044,22 +9056,11 @@ package body Test.Skeleton is
       Str_Set : String_Set.Set;
    begin
       S_Put_Line_C (0, GT_Marker_Begin);
+
       S_Put
-        (3, "function " & Wrapper_Prefix & Current_Subp.Subp_Mangle_Name.all);
-
-      for I in Params'Range loop
-         if I = Params'First then
-            S_Put (0, " (");
-         end if;
-         S_Put (0, Node_Image (Params (I)));
-         if I = Params'Last then
-            S_Put (0, ") ");
-         else
-            S_Put (0, "; ");
-         end if;
-      end loop;
-
-      S_Put_Line_C (0, " return " & Node_Image (Spec.P_Returns));
+        (3,
+         Make_Subp_Prototype
+           (Wrapper_Prefix & Current_Subp.Subp_Mangle_Name.all, Current_Subp));
       S_Put_Line_C (3, "is");
 
       Str_Set := Current_Subp.TC_Info.Params_To_Temp;
@@ -9142,22 +9143,11 @@ package body Test.Skeleton is
       Str_Set : String_Set.Set;
    begin
       S_Put_Line_C (0, GT_Marker_Begin);
+
       S_Put
-        (3, "procedure " & Wrapper_Prefix & Current_Subp.Subp_Mangle_Name.all);
-
-      for I in Params'Range loop
-         if I = Params'First then
-            S_Put (0, " (");
-         end if;
-         S_Put (0, Node_Image (Params (I)));
-         if I = Params'Last then
-            S_Put (0, ") ");
-         else
-            S_Put (0, "; ");
-         end if;
-      end loop;
-
-      New_Line_Count;
+        (3,
+         Make_Subp_Prototype
+           (Wrapper_Prefix & Current_Subp.Subp_Mangle_Name.all, Current_Subp));
       S_Put_Line_C (3, "is");
 
       Str_Set := Current_Subp.TC_Info.Params_To_Temp;
