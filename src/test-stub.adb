@@ -1640,28 +1640,25 @@ package body Test.Stub is
       Empty_Case := Param_List.Is_Empty;
 
       --  Stub type
-      S_Put
+      S_Put_Line_C
         (3,
          "type "
          & Stub_Type_Prefix
          & Node.Spec_Name.all
          & Suffix
          & " is record");
-      New_Line_Count;
 
       for SP of Param_List loop
-         S_Put (6, SP.Name.all & " : " & SP.Type_Full_Name_Image.all & ";");
-         New_Line_Count;
+         S_Put_Line_C
+           (6, SP.Name.all & " : " & SP.Type_Full_Name_Image.all & ";");
       end loop;
 
       New_Line_Count;
-      S_Put (6, Stub_Counter_Var & " : Natural := 0;");
-      New_Line_Count;
-      S_Put (3, "end record;");
-      New_Line_Count;
+      S_Put_Line_C (6, Stub_Counter_Var & " : Natural := 0;");
+      S_Put_Line_C (3, "end record;");
 
       --  stub object
-      S_Put
+      S_Put_Line_C
         (3,
          Stub_Object_Prefix
          & Node.Spec_Name.all
@@ -1671,7 +1668,6 @@ package body Test.Stub is
          & Node.Spec_Name.all
          & Suffix
          & ";");
-      New_Line_Count;
 
       --  Setter
       S_Put (3, "procedure " & Setter_Prefix & Node.Spec_Name.all & Suffix);
@@ -1694,17 +1690,15 @@ package body Test.Stub is
                & SP.Name.all);
 
             if Count = Natural (Param_List.Length) then
-               S_Put (0, ");");
+               S_Put_Line_C (0, ");");
             else
-               S_Put (0, ";");
+               S_Put_Line_C (0, ";");
             end if;
-            New_Line_Count;
 
             Count := Count + 1;
          end loop;
       else
-         S_Put (0, ";");
-         New_Line_Count;
+         S_Put_Line_C (0, ";");
       end if;
 
       Param_List.Clear;
@@ -1773,22 +1767,20 @@ package body Test.Stub is
                & SP.Name.all);
 
             if Count = Natural (Param_List.Length) then
-               S_Put (0, ") is");
+               S_Put_Line_C (0, ") is");
             else
-               S_Put (0, ";");
+               S_Put_Line_C (0, ";");
             end if;
-            New_Line_Count;
             Count := Count + 1;
          end loop;
 
-         S_Put (3, "begin");
-         New_Line_Count;
+         S_Put_Line_C (3, "begin");
 
          --  Params setting
 
          for SP of Param_List loop
             if not Is_Limited (SP.Type_Elem.As_Type_Expr) then
-               S_Put
+               S_Put_Line_C
                  (6,
                   Stub_Object_Prefix
                   & Node.Spec_Name.all
@@ -1798,7 +1790,6 @@ package body Test.Stub is
                   & " := "
                   & SP.Name.all
                   & ";");
-               New_Line_Count;
 
                Non_Limited_Parameters := True;
             end if;
@@ -1807,18 +1798,15 @@ package body Test.Stub is
             S_Put (6, "null;");
          end if;
       else
-         S_Put (1, " is");
-         New_Line_Count;
-         S_Put (3, "begin");
-         New_Line_Count;
-         S_Put (6, "null;");
-         New_Line_Count;
+         S_Put_Line_C (1, " is");
+         S_Put_Line_C (3, "begin");
+         S_Put_Line_C (6, "null;");
       end if;
 
       New_Line_Count;
 
-      S_Put (3, "end " & Setter_Prefix & Node.Spec_Name.all & Suffix & ";");
-      New_Line_Count;
+      S_Put_Line_C
+        (3, "end " & Setter_Prefix & Node.Spec_Name.all & Suffix & ";");
       New_Line_Count;
 
       Param_List.Clear;
