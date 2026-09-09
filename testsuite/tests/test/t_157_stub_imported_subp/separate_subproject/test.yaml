@@ -1,0 +1,5 @@
+description: |
+  Check that gnattest stubbing of imported subprograms works
+  doesn't interfere with symbols exported from other projects.
+
+driver: python_script

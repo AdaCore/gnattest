@@ -57,18 +57,24 @@ package body Test.Stub is
       return Stubbed_Parameter_Lists.List;
    --  Filer out parameters of private types.
 
-   function Requires_Body (N : Ada_Node) return Boolean;
-   --  Checks if a body sample should be created for an element
+   function Requires_Body
+     (N : Ada_Node; Rewrite_Spec : out Boolean) return Boolean;
+   --  Checks if a body sample should be created for an element.
+   --  Additionally set Rewrite_Spec to True if we should remove
+   --  some "Import" pragmas or aspects.
 
    ------------------
    -- Process_Unit --
    ------------------
 
-   procedure Process_Unit
+   function Process_Unit
      (Pack                : Base_Package_Decl;
       Body_File_Name      : String;
+      Rewritten_Spec_Name : String;
       Stub_Data_File_Spec : String;
-      Stub_Data_File_Body : String)
+      Stub_Data_File_Body : String;
+      Theoritical_Body    : Boolean;
+      Spec_Rewritten      : out Boolean) return Boolean
    is
       Data          : Stubbing_Data;
       Markered_Data : MD_Map;
@@ -124,21 +130,52 @@ package body Test.Stub is
            (Base_Name (Pack.Unit.Get_Filename), Excluded, Error_Out => False);
       end Report_And_Exclude;
 
+      use Ada.Containers;
    begin
+      Spec_Rewritten := False;
 
       Gather_Data (Pack, Data);
       Gather_Markered_Data (Body_File_Name, Markered_Data);
+
+      --  If Theoritical_Body is True and data gathering didn't
+      --  find anything to stub, do not create the file.
+      --
+      --  If the element tree in Data only contains the package declaration
+      --  and nothing underneath, it means there's nothing to stub.
+
+      if Theoritical_Body
+        and then
+          (Data.Elem_Tree.Is_Empty -- Shouldn't happen ? but for soundness
+           or else
+             --  only one child ...
+             (Data.Elem_Tree.Root.Child_Count = 1
+              --  ... which is not empty ...
+              and then Data.Elem_Tree.Root.First_Child.Has_Element
+              --  ... and is a package decl ...
+              and then
+                Data.Elem_Tree.Root.First_Child.Element.Spec.Kind
+                = Ada_Package_Decl
+              --  ... and has no child itself
+              and then Data.Elem_Tree.Root.First_Child.Is_Leaf))
+      then
+         return False;
+      end if;
 
       Local_Stub_Unit_Mapping.Stub_Data_File_Name :=
         new String'(Stub_Data_File_Body);
       Local_Stub_Unit_Mapping.Orig_Body_File_Name :=
         new String'
-          (Test.Skeleton.Source_Table.Get_Source_Body
+          (Test.Skeleton.Source_Table.Get_Source_Existing_Body
              (Pack.Unit.Get_Filename));
       Local_Stub_Unit_Mapping.Stub_Body_File_Name :=
         new String'(Body_File_Name);
 
       Generate_Body_Stub (Body_File_Name, Data, Markered_Data);
+
+      if Data.Need_Spec_Rewrite then
+         Rewrite_Spec (Pack.As_Package_Decl, Rewritten_Spec_Name);
+         Spec_Rewritten := True;
+      end if;
 
       --  FIXME: Understand why we call Generate_Stub_Data only when Flat_List
       --  is not Empty.
@@ -152,6 +189,7 @@ package body Test.Stub is
       Add_Stub_List (Pack.Unit.Get_Filename, Local_Stub_Unit_Mapping);
 
       Cleanup;
+      return True;
 
    exception
       when Ex : Langkit_Support.Errors.Property_Error =>
@@ -260,6 +298,8 @@ package body Test.Stub is
       is
          Elem_Node : Element_Node := Nil_Element_Node;
          Cur       : Element_Node_Trees.Cursor;
+
+         Spec_Rewrite : Boolean;
       begin
 
          if Element.Kind = Ada_Generic_Package_Decl then
@@ -290,7 +330,9 @@ package body Test.Stub is
 
          Elem_Node.Inside_Protected := Inside_Protected;
 
-         if Requires_Body (Element.As_Ada_Node) then
+         if Requires_Body (Element.As_Ada_Node, Spec_Rewrite) then
+            Data.Need_Spec_Rewrite := @ or else Spec_Rewrite;
+
             Elem_Node.Spec := Element.As_Ada_Node;
 
             if Element.Kind = Ada_Subp_Decl then
@@ -360,8 +402,10 @@ package body Test.Stub is
    -- Requires_Body --
    -------------------
 
-   function Requires_Body (N : Ada_Node) return Boolean is
+   function Requires_Body
+     (N : Ada_Node; Rewrite_Spec : out Boolean) return Boolean is
    begin
+      Rewrite_Spec := False;
       case N.Kind is
          when Ada_Package_Decl
             | Ada_Generic_Package_Decl
@@ -380,21 +424,33 @@ package body Test.Stub is
             then
                return False;
             end if;
-            return not N.As_Basic_Subp_Decl.P_Is_Imported;
+
+            --  If the subp decl has a "pragma Import", only require a body if
+            --  external stubbing is enabled.
+            --
+            --  Additionally, in this case, ask for a rewrite of the spec to
+            --  remove the "pragma Import".
+
+            if N.As_Basic_Subp_Decl.P_Is_Imported then
+               if External_Stubbing_ON then
+                  Rewrite_Spec := True;
+                  return True;
+               else
+                  return False;
+               end if;
+            end if;
+
+            return True;
 
          when Ada_Generic_Subp_Decl                                      =>
-            return not N.As_Generic_Subp_Decl.P_Is_Imported;
+            return True;
 
          when Ada_Incomplete_Type_Decl | Ada_Incomplete_Tagged_Type_Decl =>
             declare
                Next_Part : constant Base_Type_Decl :=
                  N.As_Base_Type_Decl.P_Next_Part;
             begin
-               if Next_Part.Is_Null then
-                  return True;
-               else
-                  return N.Unit /= Next_Part.Unit;
-               end if;
+               return Next_Part.Is_Null or else N.Unit /= Next_Part.Unit;
             end;
 
          when others                                                     =>

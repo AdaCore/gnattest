@@ -555,7 +555,7 @@ package body Test.Skeleton is
      (The_Unit : Compilation_Unit; Data : in out Data_Holder);
    --  Populates the list of units that should be stubbed.
 
-   procedure Process_Stubs (List : Pkg_Decl_List);
+   procedure Process_Stubs (Units_To_Stub : Pkg_Decl_List);
 
    function Is_Declared_In_Regular_Package
      (Elem : Ada_Node'Class) return Boolean;
@@ -9182,43 +9182,49 @@ package body Test.Skeleton is
    -- Process_Stubs --
    -------------------
 
-   procedure Process_Stubs (List : Pkg_Decl_List) is
+   procedure Process_Stubs (Units_To_Stub : Pkg_Decl_List) is
       Str : String_Access;
 
-      Stub_Success : Boolean;
+      Stub_Success   : Boolean;
+      Spec_Rewritten : Boolean;
+
    begin
       --  Once we change the context, contents of List won't make sense.
 
-      for Node of List loop
+      for Node of Units_To_Stub loop
          Str := new String'(Node.Unit.Get_Filename);
 
-         if Get_Source_Body (Str.all) /= "" then
-            if not Source_Stubbed (Str.all) then
-               begin
-                  Test.Stub.Process_Unit
-                    (Node,
-                     Get_Source_Stub_Dir (Str.all)
-                     & Dir_Sep
-                     & Base_Name (Get_Source_Body (Str.all)),
-                     Get_Source_Stub_Dir (Str.all)
-                     & Dir_Sep
-                     & Get_Source_Stub_Data_Spec (Str.all),
-                     Get_Source_Stub_Dir (Str.all)
-                     & Dir_Sep
-                     & Get_Source_Stub_Data_Body (Str.all));
-                  Stub_Success := True;
+         if not Source_Stubbed (Str.all) then
+            begin
+               Stub_Success :=
+                 Test.Stub.Process_Unit
+                   (Node,
+                    Get_Source_Stub_Dir (Str.all)
+                    & Dir_Sep
+                    & Base_Name (Get_Source_Body (Str.all)),
+                    Get_Source_Stub_Dir (Str.all)
+                    & Dir_Sep
+                    & Base_Name (Str.all),
+                    Get_Source_Stub_Dir (Str.all)
+                    & Dir_Sep
+                    & Get_Source_Stub_Data_Spec (Str.all),
+                    Get_Source_Stub_Dir (Str.all)
+                    & Dir_Sep
+                    & Get_Source_Stub_Data_Body (Str.all),
+                    Theoritical_Body =>
+                      Get_Source_Existing_Body (Str.all) = "",
+                    Spec_Rewritten   => Spec_Rewritten);
 
-               exception
-                  when Test.Stub.Stub_Processing_Error =>
-                     --  Error message has been printed already
-                     Stub_Success := False;
-               end;
+            exception
+               when Test.Stub.Stub_Processing_Error =>
+                  --  Error message has been printed already
+                  Stub_Success := False;
+            end;
 
-               if Stub_Success then
-                  Mark_Sourse_Stubbed (Str.all);
-               end if;
-
+            if Stub_Success then
+               Mark_Source_Stubbed (Str.all, Spec_Rewritten);
             end if;
+
          end if;
 
          Free (Str);

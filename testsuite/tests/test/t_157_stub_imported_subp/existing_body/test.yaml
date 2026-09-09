@@ -1,0 +1,5 @@
+description: |
+  Check that gnattest stubbing correctly generates stubs for imported
+  subprograms, even when a body file already exists.
+
+driver: python_script

@@ -1,0 +1,5 @@
+description: |
+  Check that gnattest stubbing of imported subprogram correctly handles
+  pragmas with positional arguments.
+
+driver: python_script

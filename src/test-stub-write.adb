@@ -22,15 +22,21 @@
 ------------------------------------------------------------------------------
 
 with Ada.Directories;
-with Ada.Strings;       use Ada.Strings;
-with Ada.Strings.Fixed; use Ada.Strings.Fixed;
+with Ada.Strings;           use Ada.Strings;
+with Ada.Strings.Fixed;     use Ada.Strings.Fixed;
+with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
+with Ada.Wide_Wide_Text_IO;
 
 with GNATCOLL.Traces; use GNATCOLL.Traces;
 with GNATCOLL.VFS;    use GNATCOLL.VFS;
 
 with GNAT.Directory_Operations; use GNAT.Directory_Operations;
 
-with Libadalang.Common; use Libadalang.Common;
+with Langkit_Support.Text;                 use Langkit_Support.Text;
+with Libadalang.Common;                    use Libadalang.Common;
+with Libadalang.Generic_API.Introspection;
+use Libadalang.Generic_API.Introspection;
+with Libadalang.Rewriting;                 use Libadalang.Rewriting;
 
 with Utils.Command_Lines; use Utils.Command_Lines;
 with Utils.Environment;
@@ -40,7 +46,7 @@ with Test.Mapping; use Test.Mapping;
 
 package body Test.Stub.Write is
 
-   Me : constant Trace_Handle := Create ("Stubs.Write");
+   Me : constant Trace_Handle := Create ("Stubs.Write", Default => Off);
 
    Level        : Integer := 0;
    --  Nesting level of a spec being processed
@@ -106,6 +112,8 @@ package body Test.Stub.Write is
 
    procedure Put_Dangling_Elements (Markered_Data : in out MD_Map);
 
+   procedure Move_Tmp_File_To_Dest (Tmp, Dest, Info : String);
+
    ------------------------
    -- Generate_Body_Stub --
    ------------------------
@@ -119,7 +127,6 @@ package body Test.Stub.Write is
       Tmp_File_Name : constant String :=
         Ada.Directories.Compose
           (Utils.Environment.Tool_Temp_Dir.all, "gnattest_tmp_stub_body");
-      Success       : Boolean;
    begin
       Trace (Me, "generating body of " & Body_File_Name);
       Increase_Indent (Me);
@@ -150,21 +157,7 @@ package body Test.Stub.Write is
 
       --  At this point temp package is coplete and it is safe
       --  to replace the old one with it.
-      if Is_Regular_File (Body_File_Name) then
-         Delete_File (Body_File_Name, Success);
-         if not Success then
-            Cmd_Error_No_Help ("cannot delete " & Body_File_Name);
-         end if;
-      end if;
-      Copy_File (Tmp_File_Name, Body_File_Name, Success);
-      if not Success then
-         Cmd_Error_No_Help
-           ("cannot copy tmp test package to " & Body_File_Name);
-      end if;
-      Delete_File (Tmp_File_Name, Success);
-      if not Success then
-         Cmd_Error_No_Help ("cannot delete tmp test package");
-      end if;
+      Move_Tmp_File_To_Dest (Tmp_File_Name, Body_File_Name, "test package");
       Decrease_Indent (Me);
    end Generate_Body_Stub;
 
@@ -183,7 +176,6 @@ package body Test.Stub.Write is
       Tmp_File_Name : constant String :=
         Ada.Directories.Compose
           (Utils.Environment.Tool_Temp_Dir.all, "gnattest_tmp_stub_body");
-      Success       : Boolean;
 
       ID : Markered_Data_Id;
       MD : Markered_Data_Type;
@@ -291,21 +283,8 @@ package body Test.Stub.Write is
 
       --  At this point temp package is coplete and it is safe
       --  to replace the old one with it.
-      if Is_Regular_File (Stub_Data_File_Spec) then
-         Delete_File (Stub_Data_File_Spec, Success);
-         if not Success then
-            Cmd_Error_No_Help ("cannot delete " & Stub_Data_File_Spec);
-         end if;
-      end if;
-      Copy_File (Tmp_File_Name, Stub_Data_File_Spec, Success);
-      if not Success then
-         Cmd_Error_No_Help
-           ("cannot copy tmp test package to " & Stub_Data_File_Spec);
-      end if;
-      Delete_File (Tmp_File_Name, Success);
-      if not Success then
-         Cmd_Error_No_Help ("cannot delete tmp test package");
-      end if;
+      Move_Tmp_File_To_Dest
+        (Tmp_File_Name, Stub_Data_File_Spec, "test package");
       Decrease_Indent (Me);
 
       --  Body
@@ -403,21 +382,8 @@ package body Test.Stub.Write is
 
       --  At this point temp package is coplete and it is safe
       --  to replace the old one with it.
-      if Is_Regular_File (Stub_Data_File_Body) then
-         Delete_File (Stub_Data_File_Body, Success);
-         if not Success then
-            Cmd_Error_No_Help ("cannot delete " & Stub_Data_File_Body);
-         end if;
-      end if;
-      Copy_File (Tmp_File_Name, Stub_Data_File_Body, Success);
-      if not Success then
-         Cmd_Error_No_Help
-           ("cannot copy tmp test package to " & Stub_Data_File_Body);
-      end if;
-      Delete_File (Tmp_File_Name, Success);
-      if not Success then
-         Cmd_Error_No_Help ("cannot delete tmp test package");
-      end if;
+      Move_Tmp_File_To_Dest
+        (Tmp_File_Name, Stub_Data_File_Body, "test package");
       Decrease_Indent (Me);
 
    end Generate_Stub_Data;
@@ -1747,4 +1713,256 @@ package body Test.Stub.Write is
          <<END_DANGLING>>
       end loop;
    end Put_Dangling_Elements;
+
+   ------------------
+   -- Rewrite_Spec --
+   ------------------
+
+   procedure Rewrite_Spec
+     (Unit_Node : Package_Decl; Stubbed_Spec_Name : String)
+   is
+      Tmp_File_Name : constant String :=
+        Ada.Directories.Compose
+          (Utils.Environment.Tool_Temp_Dir.all, "gnattest_tmp_stub_spec");
+
+      Rw_Handle : Rewriting_Handle := Start_Rewriting (Unit_Node.Unit.Context);
+
+      procedure Remove_Import_Aspect (Decl : Subp_Decl);
+      --  If Decl has an F_Aspects member, check all aspects children and
+      --  remove any of them match "Import", "External_Name" or
+      --  "Convention". Then, remove the Aspect member altogether if we
+      --  removed ALL aspects.
+
+      procedure Remove_Import_Pragma (Prag : Pragma_Node);
+      --  Remove the Pragma if it is an Import pragma and its Entity target is
+      --  a subprogram.
+
+      procedure Process_Package_Decl (Pkg : Base_Package_Decl'Class);
+      --  Call Remove_Import_Aspect and Remove_Import_Pragma on the matching
+      --  declarations in Pkg.
+
+      ---------------------------
+      -- Remove_Import_Aspect --
+      ---------------------------
+
+      procedure Remove_Import_Aspect (Decl : Subp_Decl) is
+         Aspects        : constant Aspect_Spec := Decl.F_Aspects;
+         Remove_With    : Boolean := True;
+         Import_Removed : Boolean := False;
+         --  If True, we removed all aspects from the list, so we need to get
+         --  rid of the `with`.
+      begin
+         if Decl.P_Is_Imported and then not Aspects.Is_Null then
+            for Aspect of Aspects.F_Aspect_Assocs loop
+               declare
+                  Aspect_Name : constant Text_Type :=
+                    To_Lower (Aspect.F_Id.As_Identifier.Text);
+               begin
+                  if Aspect_Name = "external_name"
+                    or else Aspect_Name = "convention"
+                    or else Aspect_Name = "import"
+                    or else Aspect_Name = "link_name"
+                  then
+                     Import_Removed := True;
+                     Handle (Aspect).Remove_Child;
+                  else
+                     Remove_With := False;
+                  end if;
+
+               end;
+            end loop;
+
+            if Import_Removed then
+               Me.Trace
+                 ("Removing aspect Import for "
+                  & Decl.F_Subp_Spec.F_Subp_Name.F_Name.Image);
+            end if;
+
+            --  If we removed all aspects, remove the "with" as well
+            if Remove_With then
+               Handle (Decl).Set_Child
+                 (Field => Member_Refs.Basic_Decl_F_Aspects,
+                  Child => No_Node_Rewriting_Handle);
+            end if;
+         end if;
+      end Remove_Import_Aspect;
+
+      --------------------------
+      -- Remove_Import_Pragma --
+      --------------------------
+
+      procedure Remove_Import_Pragma (Prag : Pragma_Node) is
+
+         Pragma_Name : constant Text_Type :=
+           To_Lower (Prag.F_Id.As_Identifier.Text);
+
+         function Get_Entity_Id
+           (Assocs : Base_Assoc_List; Nth : Positive) return Expr;
+         --  Return the expression corresponding to the `Entity => expr` part
+         --  of the pragma, or the N-th (1-based) child of the list
+
+         -------------------
+         -- Get_Entity_Id --
+         -------------------
+
+         function Get_Entity_Id
+           (Assocs : Base_Assoc_List; Nth : Positive) return Expr
+         is
+            Child_Count : Positive := 1;
+         begin
+            for Child of Assocs.Children loop
+               declare
+                  Assoc      : constant Pragma_Argument_Assoc :=
+                    Child.As_Pragma_Argument_Assoc;
+                  Assoc_Name : constant Name := Assoc.F_Name;
+               begin
+                  if (not Assoc_Name.Is_Null
+                      --  Argument is of the form "Key => Value", check if the
+                      --  key is "entity".
+
+                      and then
+                        To_Lower (Assoc_Name.As_Identifier.Text) = "entity")
+
+                    or else Child_Count = Nth
+                    --  Argument is positional, thus Entity should be the
+                    --  second argument.
+                  then
+                     return Assoc.F_Expr;
+                  end if;
+               end;
+
+               Child_Count := @ + 1;
+            end loop;
+
+            return No_Expr;
+         end Get_Entity_Id;
+
+      begin
+         if Pragma_Name = "import"
+           or else Pragma_Name = "interface"
+           or else Pragma_Name = "interface_name"
+         then
+
+            --  Once in an Import pragma, retrieve the Entity we're actually
+            --  importing and only remove the pragma if it's a Subp_Decl.
+            --
+            --  "pragma interface" is the legacy (Ada83) equivalent of
+            --  "pragma Import".
+            --  "pragma interface_name" is the legacy "External_Name".
+
+            declare
+               Nth_Child : constant Positive :=
+                 (if Pragma_Name = "interface_name" then 1 else 2);
+               --  If using positional argument passing, "Entity" should be the
+               --  second argument, or the first for "pragma interface_name".
+
+               Name : constant Expr := Get_Entity_Id (Prag.F_Args, Nth_Child);
+               Decl : constant Basic_Decl := Name.As_Name.P_Referenced_Decl;
+            begin
+               if Decl.Kind = Ada_Subp_Decl then
+                  Me.Trace
+                    ("Removing pragma "
+                     & Image (Pragma_Name)
+                     & " for "
+                     & Name.Image);
+                  Handle (Prag).Remove_Child;
+               end if;
+            end;
+         end if;
+      end Remove_Import_Pragma;
+
+      --------------------------
+      -- Process_Package_Decl --
+      --------------------------
+
+      procedure Process_Package_Decl (Pkg : Base_Package_Decl'Class) is
+
+         procedure Iterate_Decls (Decls : Ada_Node_List);
+
+         procedure Iterate_Decls (Decls : Ada_Node_List) is
+         begin
+            for Decl of Decls loop
+               case Decl.Kind is
+                  when Ada_Subp_Decl            =>
+                     Remove_Import_Aspect (Decl.As_Subp_Decl);
+
+                  when Ada_Pragma_Node          =>
+                     Remove_Import_Pragma (Decl.As_Pragma_Node);
+
+                  when Ada_Package_Decl         =>
+                     --  Recurse in sub-packages
+
+                     Process_Package_Decl (Decl.As_Package_Decl);
+
+                  when Ada_Generic_Package_Decl =>
+                     --  Recurse in sub-packages
+
+                     Process_Package_Decl
+                       (Decl.As_Generic_Package_Decl.F_Package_Decl);
+
+                  when others                   =>
+                     null;
+               end case;
+            end loop;
+         end Iterate_Decls;
+      begin
+         Iterate_Decls (Pkg.F_Public_Part.F_Decls);
+         if not Pkg.F_Private_Part.Is_Null then
+            Iterate_Decls (Pkg.F_Private_Part.F_Decls);
+         end if;
+      end Process_Package_Decl;
+
+      --  Start of processing for Rewrite_Spec
+   begin
+      Me.Trace
+        ("rewriting spec "
+         & Unit_Node.Unit.Get_Filename
+         & " => "
+         & Stubbed_Spec_Name);
+
+      --  Browse Unit_Node to remove any Import pragma/aspects or equivalent.
+
+      Process_Package_Decl (Unit_Node);
+
+      --  Write the modified code to the stubbed spec.
+
+      declare
+         Unparsed : constant Text_Type := Handle (Unit_Node.Unit.Root).Unparse;
+         F        : Ada.Wide_Wide_Text_IO.File_Type;
+      begin
+         F.Create (Name => Tmp_File_Name);
+         F.Put_Line (Unparsed);
+         F.Close;
+         Move_Tmp_File_To_Dest
+           (Tmp_File_Name, Stubbed_Spec_Name, "stubbed spec");
+      end;
+
+      --  Cleanly abort the rewriting context for the unit.
+
+      Rw_Handle.Abort_Rewriting;
+
+   end Rewrite_Spec;
+
+   ----------------------------
+   --  Move_Tmp_File_To_Dest --
+   ----------------------------
+
+   procedure Move_Tmp_File_To_Dest (Tmp, Dest, Info : String) is
+      Success : Boolean;
+   begin
+      if Is_Regular_File (Dest) then
+         Delete_File (Dest, Success);
+         if not Success then
+            Cmd_Error_No_Help ("cannot delete " & Dest);
+         end if;
+      end if;
+      Copy_File (Tmp, Dest, Success);
+      if not Success then
+         Cmd_Error_No_Help ("cannot copy tmp " & Info & " to " & Dest);
+      end if;
+      Delete_File (Tmp, Success);
+      if not Success then
+         Cmd_Error_No_Help ("cannot delete tmp " & Info);
+      end if;
+   end Move_Tmp_File_To_Dest;
 end Test.Stub.Write;

@@ -300,7 +300,7 @@ package body Test.Instrument is
 
       if not Included_Subps.Is_Empty then
 
-         if Get_Source_Body (F_Name) /= "" then
+         if Get_Source_Existing_Body (F_Name) /= "" then
             CU := CU.P_Other_Part;
             Trace (Me, "instrumenting " & CU.Unit.Get_Filename);
          else
@@ -326,7 +326,7 @@ package body Test.Instrument is
          --  files to keep test driver compilable.
          Prev_Instr_File := Instr_File_Name;
 
-         if Get_Source_Body (F_Name) = "" then
+         if Get_Source_Existing_Body (F_Name) = "" then
             Instr_File_Name :=
               Ada.Strings.Unbounded.To_Unbounded_String
                 (Get_Source_Instr_Dir (CU.Unit.Get_Filename)
@@ -373,7 +373,7 @@ package body Test.Instrument is
             Put_New_Line;
          end loop;
 
-         if Get_Source_Body (F_Name) = "" then
+         if Get_Source_Existing_Body (F_Name) = "" then
             Generate_Package_Body
               (Spec_Unit.As_Basic_Decl.P_Unique_Identifying_Name);
          else

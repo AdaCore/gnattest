@@ -1,0 +1,5 @@
+description: |
+  Check that gnattest stubbing correctly generates stubs for imported
+  subprograms in subprojects
+
+driver: python_script

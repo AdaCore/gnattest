@@ -38,4 +38,13 @@ package Test.Stub.Write is
       Data                : Stubbing_Data);
    --  Generates Stub_Data package which contains setters
 
+   procedure Rewrite_Spec
+     (Unit_Node : Package_Decl; Stubbed_Spec_Name : String);
+   --  Rewrite Unit_Node to remove all the Import pragmas and aspects of
+   --  subprograms in Unit_Node and write the resulting spec file in
+   --  Stubbed_Spec_Name.
+   --
+   --  The rewriting is then aborted to avoid reparsing, thus Unit_Node is
+   --  still valid and usable.
+
 end Test.Stub.Write;

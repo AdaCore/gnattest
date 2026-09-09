@@ -354,9 +354,9 @@ package Test.Common is
    --  Name(Name'First..(Package_Name_Max_Len - Package_Hash_Len))
    --  & Package_Hash
 
-   Stub_Mode_ON : Boolean := False;
-
+   Stub_Mode_ON          : Boolean := False;
    Recursive_Stubbing_ON : Boolean := False;
+   External_Stubbing_ON  : Boolean := True;
 
    Transition : Boolean := False;
 

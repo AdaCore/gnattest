@@ -1,0 +1,5 @@
+description: |
+  Check that gnattest external stubbing avoids removing Import pragma and
+  aspects from variables.
+
+driver: python_script
