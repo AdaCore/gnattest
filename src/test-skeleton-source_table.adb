@@ -1554,40 +1554,34 @@ package body Test.Skeleton.Source_Table is
 
             if not Arg_Proj.Aggregate_Lib then
                for Str of Resolved_Dep_List loop
-                  S_Put (0, Str);
-                  Put_New_Line;
+                  S_Put_Line (0, Str);
                end loop;
             end if;
 
-            S_Put (0, "with ""aunit"";");
-            Put_New_Line;
+            S_Put_Line (0, "with ""aunit"";");
             Put_New_Line;
 
             if Arg_Proj.Aggregate_Lib then
                S_Put (0, "aggregate library ");
             end if;
 
-            S_Put
+            S_Put_Line
               (0,
                "project "
                & Stub_Prj_Name
                & " extends """
                & Relative_P_Path.all
                & """ is");
-            Put_New_Line;
 
             if not Arg_Proj.Aggregate_Lib then
-               S_Put (3, "for Source_Dirs use (""."");");
-               Put_New_Line;
+               S_Put_Line (3, "for Source_Dirs use (""."");");
 
                Get_Sources (Proj, Current_Proj_Present_Sources);
 
                if Current_Proj_Present_Sources.Is_Empty then
-                  S_Put (3, "for Source_Files use ();");
-                  Put_New_Line;
+                  S_Put_Line (3, "for Source_Files use ();");
                else
-                  S_Put (3, "for Source_Files use (");
-                  Put_New_Line;
+                  S_Put_Line (3, "for Source_Files use (");
                end if;
 
                for Cur in Current_Proj_Present_Sources.Iterate loop
@@ -1601,35 +1595,33 @@ package body Test.Skeleton.Source_Table is
                   begin
                      if not Excluded_Test_Data_Files.Contains (Stub_Data_Spec)
                      then
-                        S_Put (6, """" & Base_Name (Stub_Data_Spec) & """,");
+                        S_Put_Line
+                          (6, """" & Base_Name (Stub_Data_Spec) & """,");
                         Sources_Names.Include (Base_Name (Stub_Data_Spec));
-                        Put_New_Line;
                      end if;
 
                      if not Excluded_Test_Data_Files.Contains (Stub_Data_Body)
                      then
-                        S_Put (6, """" & Base_Name (Stub_Data_Body) & """,");
+                        S_Put_Line
+                          (6, """" & Base_Name (Stub_Data_Body) & """,");
                         Sources_Names.Include (Base_Name (Stub_Data_Body));
-                        Put_New_Line;
                      end if;
 
                      S_Put
                        (6, """" & Base_Name (Get_Source_Body (Source)) & """");
 
                      if Source_Spec_Rewritten (Source) then
-                        S_Put (0, ",");
-                        Put_New_Line;
+                        S_Put_Line (0, ",");
                         S_Put (6, """" & Base_Name (Source) & """");
                      end if;
 
                      Sources_Names.Include (Base_Name (Source));
 
-                     S_Put
+                     S_Put_Line
                        (0,
                         (if Cur = Current_Proj_Present_Sources.Last
                          then ");"
                          else ","));
-                     Put_New_Line;
                   end;
                end loop;
             end if;
@@ -1638,39 +1630,34 @@ package body Test.Skeleton.Source_Table is
             --  project.
 
             if Arg_Proj.Aggregate_Lib then
-               S_Put (3, "for Project_Files use (");
-               Put_New_Line;
+               S_Put_Line (3, "for Project_Files use (");
                for I_Cur in Resolved_Dep_List.Iterate loop
                   S_Put (6, Element (I_Cur));
                   if I_Cur = Resolved_Dep_List.Last then
-                     S_Put (0, ");");
+                     S_Put_Line (0, ");");
                   else
-                     S_Put (0, ",");
+                     S_Put_Line (0, ",");
                   end if;
-                  Put_New_Line;
                end loop;
                Put_New_Line;
             end if;
 
-            S_Put
+            S_Put_Line
               (3,
                "for Object_Dir use """
                & Unit_To_File_Name (Stub_Prj_Name)
                & """;");
-            Put_New_Line;
             if Arg_Proj.Is_Library then
-               S_Put
+               S_Put_Line
                  (3,
                   "for Library_Dir use """
                   & Unit_To_File_Name (Stub_Prj_Name & "_lib")
                   & """;");
-               Put_New_Line;
-               S_Put
+               S_Put_Line
                  (3,
                   "for Library_Name use """
                   & Unit_To_File_Name (Stub_Prj_Name)
                   & """;");
-               Put_New_Line;
 
                Put_Interface_For_Project (Proj, Sources_Names);
 
@@ -1680,10 +1667,8 @@ package body Test.Skeleton.Source_Table is
             if not Arg_Proj.Aggregate_Lib
               and then not Current_Proj_Present_Sources.Is_Empty
             then
-               S_Put (3, "package Coverage is");
-               Put_New_Line;
-               S_Put (6, "for Excluded_Units use (");
-               Put_New_Line;
+               S_Put_Line (3, "package Coverage is");
+               S_Put_Line (6, "for Excluded_Units use (");
 
                for Cur in Current_Proj_Present_Sources.Iterate loop
                   declare
@@ -1699,14 +1684,12 @@ package body Test.Skeleton.Source_Table is
                      end if;
                   end;
                   if Cur = Current_Proj_Present_Sources.Last then
-                     S_Put (0, ");");
+                     S_Put_Line (0, ");");
                   else
-                     S_Put (0, ",");
+                     S_Put_Line (0, ",");
                   end if;
-                  Put_New_Line;
                end loop;
-               S_Put (3, "end Coverage;");
-               Put_New_Line;
+               S_Put_Line (3, "end Coverage;");
             end if;
 
             S_Put (0, "end " & Stub_Prj_Name & ";");
