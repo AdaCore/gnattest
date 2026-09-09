@@ -197,39 +197,32 @@ package body Test.Stub.Write is
 
       Put_Import_Section (Markered_Subp_Data, Add_Language_Version => True);
 
-      S_Put
+      S_Put_Line_C
         (0,
          "package "
          & Root_Node.Spec_Name.all
          & "."
          & Stub_Data_Unit_Name
          & " is");
-      New_Line_Count;
 
       for E of Dictionary loop
-         S_Put (3, E.Entry_Str.all);
-         New_Line_Count;
+         S_Put_Line_C (3, E.Entry_Str.all);
       end loop;
 
       New_Line_Count;
 
       for Node of Data.Flat_List loop
-         S_Put (0, GT_Marker_Begin);
-         New_Line_Count;
-         S_Put (3, Generate_MD_Id_String (Node.Spec));
-         New_Line_Count;
-         S_Put (0, GT_Marker_End);
-         New_Line_Count;
+         S_Put_Line_C (0, GT_Marker_Begin);
+         S_Put_Line_C (3, Generate_MD_Id_String (Node.Spec));
+         S_Put_Line_C (0, GT_Marker_End);
 
          ID := Generate_MD_Id (Node.Spec);
          if not Contains_Then_Emit (ID, Markered_Subp_Data) then
             Generate_Default_Setter_Spec (Node);
          end if;
 
-         S_Put (0, GT_Marker_Begin);
-         New_Line_Count;
-         S_Put (0, GT_Marker_End);
-         New_Line_Count;
+         S_Put_Line_C (0, GT_Marker_Begin);
+         S_Put_Line_C (0, GT_Marker_End);
          New_Line_Count;
       end loop;
 
@@ -242,12 +235,9 @@ package body Test.Stub.Write is
             & Stub_Data_Unit_Name
             & " has dangling setter spec(s)");
 
-         S_Put (3, "----------------------");
-         New_Line_Count;
-         S_Put (3, "--  Unused Setters  --");
-         New_Line_Count;
-         S_Put (3, "----------------------");
-         New_Line_Count;
+         S_Put_Line_C (3, "----------------------");
+         S_Put_Line_C (3, "--  Unused Setters  --");
+         S_Put_Line_C (3, "----------------------");
          New_Line_Count;
 
          for MD_Cur in Markered_Subp_Data.Iterate loop
@@ -255,19 +245,14 @@ package body Test.Stub.Write is
             ID := Markered_Data_Maps.Key (MD_Cur);
             MD := Markered_Subp_Data.Constant_Reference (MD_Cur);
 
-            S_Put (0, GT_Marker_Begin);
-            New_Line_Count;
-            S_Put (3, Generate_MD_Id_String (ID));
-            New_Line_Count;
-            S_Put (0, GT_Marker_End);
-            New_Line_Count;
+            S_Put_Line_C (0, GT_Marker_Begin);
+            S_Put_Line_C (3, Generate_MD_Id_String (ID));
+            S_Put_Line_C (0, GT_Marker_End);
 
             Put_Lines (MD, Comment_Out => True);
 
-            S_Put (0, GT_Marker_Begin);
-            New_Line_Count;
-            S_Put (0, GT_Marker_End);
-            New_Line_Count;
+            S_Put_Line_C (0, GT_Marker_Begin);
+            S_Put_Line_C (0, GT_Marker_End);
             New_Line_Count;
          end loop;
 
@@ -301,22 +286,18 @@ package body Test.Stub.Write is
 
       Put_Import_Section (Markered_Subp_Data);
 
-      S_Put
+      S_Put_Line_C
         (0,
          "package body "
          & Root_Node.Spec_Name.all
          & "."
          & Stub_Data_Unit_Name
          & " is");
-      New_Line_Count;
 
       for Node of Data.Flat_List loop
-         S_Put (0, GT_Marker_Begin);
-         New_Line_Count;
-         S_Put (3, Generate_MD_Id_String (Node.Spec));
-         New_Line_Count;
-         S_Put (0, GT_Marker_End);
-         New_Line_Count;
+         S_Put_Line_C (0, GT_Marker_Begin);
+         S_Put_Line_C (3, Generate_MD_Id_String (Node.Spec));
+         S_Put_Line_C (0, GT_Marker_End);
 
          Update_Local_Entity_With_Setter (Node, New_Line_Counter, 4);
 
@@ -325,10 +306,8 @@ package body Test.Stub.Write is
             Generate_Default_Setter_Body (Node);
          end if;
 
-         S_Put (0, GT_Marker_Begin);
-         New_Line_Count;
-         S_Put (0, GT_Marker_End);
-         New_Line_Count;
+         S_Put_Line_C (0, GT_Marker_Begin);
+         S_Put_Line_C (0, GT_Marker_End);
          New_Line_Count;
       end loop;
 
@@ -341,12 +320,9 @@ package body Test.Stub.Write is
             & Stub_Data_Unit_Name
             & " has dangling setter body(ies)");
 
-         S_Put (3, "----------------------");
-         New_Line_Count;
-         S_Put (3, "--  Unused Setters  --");
-         New_Line_Count;
-         S_Put (3, "----------------------");
-         New_Line_Count;
+         S_Put_Line_C (3, "----------------------");
+         S_Put_Line_C (3, "--  Unused Setters  --");
+         S_Put_Line_C (3, "----------------------");
          New_Line_Count;
 
          for MD_Cur in Markered_Subp_Data.Iterate loop
@@ -354,29 +330,23 @@ package body Test.Stub.Write is
             ID := Markered_Data_Maps.Key (MD_Cur);
             MD := Markered_Subp_Data.Constant_Reference (MD_Cur);
 
-            S_Put (0, GT_Marker_Begin);
-            New_Line_Count;
+            S_Put_Line_C (0, GT_Marker_Begin);
             Local_Stub_Unit_Mapping.D_Setters.Append ((New_Line_Counter, 0));
-            S_Put (3, Generate_MD_Id_String (ID));
-            New_Line_Count;
-            S_Put (0, GT_Marker_End);
-            New_Line_Count;
+            S_Put_Line_C (3, Generate_MD_Id_String (ID));
+            S_Put_Line_C (0, GT_Marker_End);
 
             Put_Lines (MD, Comment_Out => True);
 
-            S_Put (0, GT_Marker_Begin);
-            New_Line_Count;
-            S_Put (0, GT_Marker_End);
-            New_Line_Count;
+            S_Put_Line_C (0, GT_Marker_Begin);
+            S_Put_Line_C (0, GT_Marker_End);
             New_Line_Count;
          end loop;
 
       end if;
 
-      S_Put
+      S_Put_Line_C
         (0,
          "end " & Root_Node.Spec_Name.all & "." & Stub_Data_Unit_Name & ";");
-      New_Line_Count;
 
       Close_File;
 
@@ -423,19 +393,16 @@ package body Test.Stub.Write is
 
       if MD.Commented_Out = Comment_Out then
          for I in MD.Lines.First_Index .. MD.Lines.Last_Index loop
-            S_Put (0, MD.Lines.Element (I));
-            New_Line_Count;
+            S_Put_Line_C (0, MD.Lines.Element (I));
          end loop;
       else
          if Comment_Out then
             for I in MD.Lines.First_Index .. MD.Lines.Last_Index loop
-               S_Put (0, Comment_Line (MD.Lines.Element (I)));
-               New_Line_Count;
+               S_Put_Line_C (0, Comment_Line (MD.Lines.Element (I)));
             end loop;
          else
             for I in MD.Lines.First_Index .. MD.Lines.Last_Index loop
-               S_Put (0, Uncomment_Line (MD.Lines.Element (I)));
-               New_Line_Count;
+               S_Put_Line_C (0, Uncomment_Line (MD.Lines.Element (I)));
             end loop;
          end if;
       end if;
@@ -453,29 +420,23 @@ package body Test.Stub.Write is
    is
       use String_Set;
    begin
-      S_Put
+      S_Put_Line_C
         (0, "--  This package has been generated automatically by GNATtest.");
-      New_Line_Count;
-      S_Put
+      S_Put_Line_C
         (0,
          "--  You are allowed to add your code to designated areas between"
          & " read-only");
-      New_Line_Count;
-      S_Put
+      S_Put_Line_C
         (0,
          "--  sections. Such changes will be kept during further regeneration"
          & " of this");
-      New_Line_Count;
-      S_Put
+      S_Put_Line_C
         (0,
          "--  file. All code placed outside of such areas will be lost"
          & " during");
+      S_Put_Line_C (0, "--  regeneration of this package.");
       New_Line_Count;
-      S_Put (0, "--  regeneration of this package.");
-      New_Line_Count;
-      New_Line_Count;
-      S_Put (0, GT_Marker_Begin);
-      New_Line_Count;
+      S_Put_Line_C (0, GT_Marker_Begin);
       if Stub_Data then
          S_Put
            (0,
@@ -495,12 +456,10 @@ package body Test.Stub.Write is
       --  from the spec.
 
       for LW of Limited_Withed loop
-         S_Put (0, "with " & LW & ";");
-         New_Line_Count;
+         S_Put_Line_C (0, "with " & LW & ";");
       end loop;
 
-      S_Put (0, GT_Marker_End);
-      New_Line_Count;
+      S_Put_Line_C (0, GT_Marker_End);
       New_Line_Count;
    end Put_Stub_Header;
 
@@ -524,24 +483,17 @@ package body Test.Stub.Write is
          new String'(""));
       MD : Markered_Data_Type;
    begin
-      S_Put (0, GT_Marker_Begin);
-      New_Line_Count;
-      S_Put
+      S_Put_Line_C (0, GT_Marker_Begin);
+      S_Put_Line_C
         (0,
          "--  id:" & Hash_Version & "/" & MD_Kind_To_String (Import_MD) & "/");
       --  No need for hashes here
 
-      New_Line_Count;
-      S_Put (0, "--");
-      New_Line_Count;
-      S_Put
+      S_Put_Line_C (0, "--");
+      S_Put_Line_C
         (0, "--  This section can be used to add with clauses if necessary.");
-      New_Line_Count;
-      S_Put (0, "--");
-      New_Line_Count;
-      S_Put (0, GT_Marker_End);
-
-      New_Line_Count;
+      S_Put_Line_C (0, "--");
+      S_Put_Line_C (0, GT_Marker_End);
 
       if Markered_Data.Contains (ID) then
          --  Extract importing MD
@@ -551,11 +503,10 @@ package body Test.Stub.Write is
       else
          New_Line_Count;
          if Add_Import and then Tasks_Present then
-            S_Put (3, "with Ada.Real_Time;");
-            New_Line_Count;
+            S_Put_Line_C (3, "with Ada.Real_Time;");
          end if;
          if Add_Language_Version then
-            S_Put
+            S_Put_Line_C
               (0,
                "pragma "
                & (case Test.Common.Lang_Version is
@@ -565,14 +516,11 @@ package body Test.Stub.Write is
                     when Ada_2012 => "Ada_2012",
                     when Ada_2022 => "Ada_2022")
                & ";");
-            New_Line_Count;
          end if;
       end if;
 
-      S_Put (0, GT_Marker_Begin);
-      New_Line_Count;
-      S_Put (0, GT_Marker_End);
-      New_Line_Count;
+      S_Put_Line_C (0, GT_Marker_Begin);
+      S_Put_Line_C (0, GT_Marker_End);
       New_Line_Count;
 
    end Put_Import_Section;
@@ -688,41 +636,32 @@ package body Test.Stub.Write is
       Trace (Me, "Generating package body for " & Node.Spec_Name.all);
 
       --  Put local declaration section
-      S_Put (0, GT_Marker_Begin);
-      New_Line_Count;
+      S_Put_Line_C (0, GT_Marker_Begin);
 
       Add_Entity_To_Local_List (Node, New_Line_Counter, Level * Indent_Level);
 
-      S_Put (Level * Indent_Level, "package body " & Node.Spec_Name.all);
-      New_Line_Count;
+      S_Put_Line_C
+        (Level * Indent_Level, "package body " & Node.Spec_Name.all);
 
       Level := Level + 1;
-      S_Put ((Level) * Indent_Level, Generate_MD_Id_String (Node.Spec));
-      New_Line_Count;
-      S_Put ((Level) * Indent_Level, "--");
-      New_Line_Count;
-      S_Put
+      S_Put_Line_C ((Level) * Indent_Level, Generate_MD_Id_String (Node.Spec));
+      S_Put_Line_C ((Level) * Indent_Level, "--");
+      S_Put_Line_C
         ((Level) * Indent_Level,
          "--  This section can be used for local declarations.");
-      New_Line_Count;
-      S_Put ((Level) * Indent_Level, "--");
-      New_Line_Count;
+      S_Put_Line_C ((Level) * Indent_Level, "--");
 
-      S_Put (0, GT_Marker_End);
-      New_Line_Count;
+      S_Put_Line_C (0, GT_Marker_End);
 
       --  Put bodies
 
       if not Contains_Then_Emit (ID, Markered_Data) then
          New_Line_Count;
-         S_Put ((Level - 1) * Indent_Level, "is");
-         New_Line_Count;
+         S_Put_Line_C ((Level - 1) * Indent_Level, "is");
       end if;
 
-      S_Put (0, GT_Marker_Begin);
-      New_Line_Count;
-      S_Put (0, GT_Marker_End);
-      New_Line_Count;
+      S_Put_Line_C (0, GT_Marker_Begin);
+      S_Put_Line_C (0, GT_Marker_End);
       New_Line_Count;
 
       if not Is_Leaf (Cur) then
@@ -730,22 +669,16 @@ package body Test.Stub.Write is
       end if;
 
       --  Put possible Elab sections
-      S_Put (0, GT_Marker_Begin);
-      New_Line_Count;
+      S_Put_Line_C (0, GT_Marker_Begin);
 
       ID.Kind := Elaboration_MD;
-      S_Put ((Level) * Indent_Level, Generate_MD_Id_String (ID));
-      New_Line_Count;
-      S_Put ((Level) * Indent_Level, "--");
-      New_Line_Count;
-      S_Put
+      S_Put_Line_C ((Level) * Indent_Level, Generate_MD_Id_String (ID));
+      S_Put_Line_C ((Level) * Indent_Level, "--");
+      S_Put_Line_C
         (Level * Indent_Level,
          "--  This section can be used for elaboration statements.");
-      New_Line_Count;
-      S_Put ((Level) * Indent_Level, "--");
-      New_Line_Count;
-      S_Put (0, GT_Marker_End);
-      New_Line_Count;
+      S_Put_Line_C ((Level) * Indent_Level, "--");
+      S_Put_Line_C (0, GT_Marker_End);
 
       if not Contains_Then_Emit (ID, Markered_Data) then
          New_Line_Count;
@@ -753,12 +686,9 @@ package body Test.Stub.Write is
 
       --  Put end package
       Level := Level - 1;
-      S_Put (0, GT_Marker_Begin);
-      New_Line_Count;
-      S_Put (Level * Indent_Level, "end " & Node.Spec_Name.all & ";");
-      New_Line_Count;
-      S_Put (0, GT_Marker_End);
-      New_Line_Count;
+      S_Put_Line_C (0, GT_Marker_Begin);
+      S_Put_Line_C (Level * Indent_Level, "end " & Node.Spec_Name.all & ";");
+      S_Put_Line_C (0, GT_Marker_End);
       New_Line_Count;
 
       --  If we are in the root package, we have to print all the dangling
@@ -789,16 +719,13 @@ package body Test.Stub.Write is
    begin
       Trace (Me, "Generating protected body for " & Node.Spec_Name.all);
 
-      S_Put (0, GT_Marker_Begin);
-      New_Line_Count;
+      S_Put_Line_C (0, GT_Marker_Begin);
 
       Add_Entity_To_Local_List (Node, New_Line_Counter, Level * Indent_Level);
 
-      S_Put
+      S_Put_Line_C
         (Level * Indent_Level, "protected body " & Node.Spec_Name.all & " is");
-      New_Line_Count;
-      S_Put (0, GT_Marker_End);
-      New_Line_Count;
+      S_Put_Line_C (0, GT_Marker_End);
       New_Line_Count;
 
       Level := Level + 1;
@@ -807,12 +734,9 @@ package body Test.Stub.Write is
       end if;
 
       Level := Level - 1;
-      S_Put (0, GT_Marker_Begin);
-      New_Line_Count;
-      S_Put (Level * Indent_Level, "end " & Node.Spec_Name.all & ";");
-      New_Line_Count;
-      S_Put (0, GT_Marker_End);
-      New_Line_Count;
+      S_Put_Line_C (0, GT_Marker_Begin);
+      S_Put_Line_C (Level * Indent_Level, "end " & Node.Spec_Name.all & ";");
+      S_Put_Line_C (0, GT_Marker_End);
       New_Line_Count;
 
    end Generate_Protected_Body;
@@ -850,20 +774,17 @@ package body Test.Stub.Write is
    begin
       Trace (Me, "Generating procedure body for " & Node.Spec_Name.all);
       Increase_Indent (Me);
-      S_Put (0, GT_Marker_Begin);
-      New_Line_Count;
+      S_Put_Line_C (0, GT_Marker_Begin);
 
       Add_Entity_To_Local_List (Node, New_Line_Counter, Level * Indent_Level);
 
       if Arg_Kind = Ada_Subp_Decl then
          case Node.Spec.As_Classic_Subp_Decl.F_Overriding.Kind is
             when Ada_Overriding_Overriding     =>
-               S_Put (Level * Indent_Level, "overriding");
-               New_Line_Count;
+               S_Put_Line_C (Level * Indent_Level, "overriding");
 
             when Ada_Overriding_Not_Overriding =>
-               S_Put (Level * Indent_Level, "not overriding");
-               New_Line_Count;
+               S_Put_Line_C (Level * Indent_Level, "not overriding");
 
             when others                        =>
                null;
@@ -873,8 +794,7 @@ package body Test.Stub.Write is
       S_Put (Level * Indent_Level, "procedure " & Node.Spec_Name.all);
 
       if Parameters'Length = 0 then
-         S_Put (0, " is");
-         New_Line_Count;
+         S_Put_Line_C (0, " is");
       else
          New_Line_Count;
          S_Put (Level * Indent_Level + 2, "(");
@@ -887,36 +807,30 @@ package body Test.Stub.Write is
             end if;
 
             if I = Parameters'Last then
-               S_Put (0, ") is");
+               S_Put_Line_C (0, ") is");
             else
-               S_Put (0, ";");
+               S_Put_Line_C (0, ";");
             end if;
-            New_Line_Count;
          end loop;
       end if;
 
-      S_Put ((Level + 1) * Indent_Level, Generate_MD_Id_String (Node.Spec));
-      New_Line_Count;
-      S_Put ((Level + 1) * Indent_Level, "--");
-      New_Line_Count;
-      S_Put
+      S_Put_Line_C
+        ((Level + 1) * Indent_Level, Generate_MD_Id_String (Node.Spec));
+      S_Put_Line_C ((Level + 1) * Indent_Level, "--");
+      S_Put_Line_C
         ((Level + 1) * Indent_Level,
          "--  This section can be used to change the procedure body.");
-      New_Line_Count;
-      S_Put ((Level + 1) * Indent_Level, "--");
-      New_Line_Count;
+      S_Put_Line_C ((Level + 1) * Indent_Level, "--");
 
-      S_Put (0, GT_Marker_End);
-      New_Line_Count;
+      S_Put_Line_C (0, GT_Marker_End);
 
       --  Put body
       if not Contains_Then_Emit (ID, Markered_Data) then
          New_Line_Count;
-         S_Put ((Level) * Indent_Level, "begin");
-         New_Line_Count;
+         S_Put_Line_C ((Level) * Indent_Level, "begin");
          if Not_Empty_Stub then
             New_Line_Count;
-            S_Put
+            S_Put_Line_C
               (6,
                Stub_Object_Prefix
                & Node.Spec_Name.all
@@ -930,7 +844,6 @@ package body Test.Stub.Write is
                & "."
                & Stub_Counter_Var
                & " + 1;");
-            New_Line_Count;
             if not Param_List.Is_Empty then
                for SP of Param_List loop
                   if Is_Only_Limited_Withed (SP.Type_Elem.As_Type_Expr) then
@@ -943,7 +856,7 @@ package body Test.Stub.Write is
 
                      case SP.Kind is
                         when Constrained     =>
-                           S_Put
+                           S_Put_Line_C
                              ((Level + 1) * Indent_Level,
                               SP.Name.all
                               & " := "
@@ -957,7 +870,7 @@ package body Test.Stub.Write is
                               & ";");
 
                         when Not_Constrained =>
-                           S_Put
+                           S_Put_Line_C
                              ((Level + 1) * Indent_Level,
                               SP.Name.all
                               & " := "
@@ -971,7 +884,7 @@ package body Test.Stub.Write is
                               & ".all;");
 
                         when Access_Kind     =>
-                           S_Put
+                           S_Put_Line_C
                              ((Level + 1) * Indent_Level,
                               SP.Name.all
                               & ".all := "
@@ -984,37 +897,27 @@ package body Test.Stub.Write is
                               & SP.Name.all
                               & ".all;");
                      end case;
-
-                     New_Line_Count;
-
                   end if;
                end loop;
             end if;
          else
-            S_Put ((Level + 1) * Indent_Level, "pragma Compile_Time_Warning");
-            New_Line_Count;
-            S_Put ((Level + 1) * Indent_Level + 2, "(Standard.True,");
-            New_Line_Count;
-            S_Put
+            S_Put_Line_C
+              ((Level + 1) * Indent_Level, "pragma Compile_Time_Warning");
+            S_Put_Line_C ((Level + 1) * Indent_Level + 2, "(Standard.True,");
+            S_Put_Line_C
               ((Level + 2) * Indent_Level,
                """Stub for " & Node.Spec_Name.all & " is unimplemented,""");
-            New_Line_Count;
-            S_Put
+            S_Put_Line_C
               ((Level + 2) * Indent_Level,
                "& "" this might affect some tests"");");
-            New_Line_Count;
-            S_Put ((Level + 1) * Indent_Level, "null;");
-            New_Line_Count;
+            S_Put_Line_C ((Level + 1) * Indent_Level, "null;");
          end if;
       end if;
 
-      S_Put (0, GT_Marker_Begin);
+      S_Put_Line_C (0, GT_Marker_Begin);
+      S_Put_Line_C ((Level) * Indent_Level, "end " & Node.Spec_Name.all & ";");
       New_Line_Count;
-      S_Put ((Level) * Indent_Level, "end " & Node.Spec_Name.all & ";");
-      New_Line_Count;
-      New_Line_Count;
-      S_Put (0, GT_Marker_End);
-      New_Line_Count;
+      S_Put_Line_C (0, GT_Marker_End);
       New_Line_Count;
 
       if Has_Limited_Params then
@@ -1142,8 +1045,7 @@ package body Test.Stub.Write is
    begin
       Trace (Me, "Generating function body for " & Node.Spec_Name.all);
       Increase_Indent (Me);
-      S_Put (0, GT_Marker_Begin);
-      New_Line_Count;
+      S_Put_Line_C (0, GT_Marker_Begin);
 
       Add_Entity_To_Local_List (Node, New_Line_Counter, Level * Indent_Level);
 
@@ -1167,8 +1069,7 @@ package body Test.Stub.Write is
          "function " & Node_Image (Node.Spec.As_Basic_Decl.P_Defining_Name));
 
       if Parameters'Length = 0 then
-         S_Put (0, " return " & Node_Image (Res_Profile) & " is");
-         New_Line_Count;
+         S_Put_Line_C (0, " return " & Node_Image (Res_Profile) & " is");
       else
          New_Line_Count;
          S_Put (Level * Indent_Level + 2, "(");
@@ -1181,36 +1082,31 @@ package body Test.Stub.Write is
             end if;
 
             if I = Parameters'Last then
-               S_Put (0, ") return " & Node_Image (Res_Profile) & " is");
+               S_Put_Line_C
+                 (0, ") return " & Node_Image (Res_Profile) & " is");
             else
-               S_Put (0, ";");
+               S_Put_Line_C (0, ";");
             end if;
-            New_Line_Count;
          end loop;
       end if;
 
-      S_Put ((Level + 1) * Indent_Level, Generate_MD_Id_String (Node.Spec));
-      New_Line_Count;
-      S_Put ((Level + 1) * Indent_Level, "--");
-      New_Line_Count;
-      S_Put
+      S_Put_Line_C
+        ((Level + 1) * Indent_Level, Generate_MD_Id_String (Node.Spec));
+      S_Put_Line_C ((Level + 1) * Indent_Level, "--");
+      S_Put_Line_C
         ((Level + 1) * Indent_Level,
          "--  This section can be used to change the function body.");
-      New_Line_Count;
-      S_Put ((Level + 1) * Indent_Level, "--");
-      New_Line_Count;
+      S_Put_Line_C ((Level + 1) * Indent_Level, "--");
 
-      S_Put (0, GT_Marker_End);
-      New_Line_Count;
+      S_Put_Line_C (0, GT_Marker_End);
 
       --  Put body
       if not Contains_Then_Emit (ID, Markered_Data) then
          New_Line_Count;
-         S_Put ((Level) * Indent_Level, "begin");
-         New_Line_Count;
+         S_Put_Line_C ((Level) * Indent_Level, "begin");
          if Not_Empty_Stub then
             New_Line_Count;
-            S_Put
+            S_Put_Line_C
               (6,
                Stub_Object_Prefix
                & Node.Spec_Name.all
@@ -1224,7 +1120,6 @@ package body Test.Stub.Write is
                & "."
                & Stub_Counter_Var
                & " + 1;");
-            New_Line_Count;
 
             if not Param_List.Is_Empty then
                for Cur in Param_List.Iterate loop
@@ -1297,25 +1192,21 @@ package body Test.Stub.Write is
               or else Is_Fully_Private (SP.Type_Elem.As_Type_Expr)
               or else Is_Anon_Access_To_Subp (SP.Type_Elem.As_Type_Expr)
             then
-               S_Put
+               S_Put_Line_C
                  ((Level + 1) * Indent_Level, "pragma Compile_Time_Warning");
-               New_Line_Count;
-               S_Put ((Level + 1) * Indent_Level + 2, "(Standard.True,");
-               New_Line_Count;
-               S_Put
+               S_Put_Line_C
+                 ((Level + 1) * Indent_Level + 2, "(Standard.True,");
+               S_Put_Line_C
                  ((Level + 2) * Indent_Level,
                   """Stub for " & Node.Spec_Name.all & " is unimplemented,""");
-               New_Line_Count;
-               S_Put
+               S_Put_Line_C
                  ((Level + 2) * Indent_Level,
                   "& "" this might affect some tests"");");
-               New_Line_Count;
-               S_Put
+               S_Put_Line_C
                  ((Level + 1) * Indent_Level,
                   "raise Program_Error with ""Unimplemented stub for function "
                   & Node.Spec_Name.all
                   & """;");
-               New_Line_Count;
                S_Put
                  ((Level + 1) * Indent_Level,
                   "return "
@@ -1356,24 +1247,20 @@ package body Test.Stub.Write is
             end if;
             New_Line_Count;
          else
-            S_Put ((Level + 1) * Indent_Level, "pragma Compile_Time_Warning");
-            New_Line_Count;
-            S_Put ((Level + 1) * Indent_Level + 2, "(Standard.True,");
-            New_Line_Count;
-            S_Put
+            S_Put_Line_C
+              ((Level + 1) * Indent_Level, "pragma Compile_Time_Warning");
+            S_Put_Line_C ((Level + 1) * Indent_Level + 2, "(Standard.True,");
+            S_Put_Line_C
               ((Level + 2) * Indent_Level,
                """Stub for " & Node.Spec_Name.all & " is unimplemented,""");
-            New_Line_Count;
-            S_Put
+            S_Put_Line_C
               ((Level + 2) * Indent_Level,
                "& "" this might affect some tests"");");
-            New_Line_Count;
-            S_Put
+            S_Put_Line_C
               ((Level + 1) * Indent_Level,
                "raise Program_Error with ""Unimplemented stub for function "
                & Node.Spec_Name.all
                & """;");
-            New_Line_Count;
             S_Put
               ((Level + 1) * Indent_Level,
                "return "
@@ -1387,15 +1274,12 @@ package body Test.Stub.Write is
          end if;
       end if;
 
-      S_Put (0, GT_Marker_Begin);
-      New_Line_Count;
-      S_Put
+      S_Put_Line_C (0, GT_Marker_Begin);
+      S_Put_Line_C
         ((Level) * Indent_Level,
          "end " & Node_Image (Node.Spec.As_Basic_Decl.P_Defining_Name) & ";");
       New_Line_Count;
-      New_Line_Count;
-      S_Put (0, GT_Marker_End);
-      New_Line_Count;
+      S_Put_Line_C (0, GT_Marker_End);
       New_Line_Count;
 
       if Has_Limited_Params then
@@ -1457,8 +1341,7 @@ package body Test.Stub.Write is
    begin
       Trace (Me, "Generating entry body for " & Node.Spec_Name.all);
 
-      S_Put (0, GT_Marker_Begin);
-      New_Line_Count;
+      S_Put_Line_C (0, GT_Marker_Begin);
 
       Add_Entity_To_Local_List (Node, New_Line_Counter, Level * Indent_Level);
 
@@ -1479,51 +1362,38 @@ package body Test.Stub.Write is
             end if;
 
             if I = Parameters'Last then
-               S_Put (0, ") when");
+               S_Put_Line_C (0, ") when");
             else
-               S_Put (0, ";");
+               S_Put_Line_C (0, ";");
             end if;
-            New_Line_Count;
          end loop;
       else
-         S_Put (Level * Indent_Level + 2, "when");
-         New_Line_Count;
+         S_Put_Line_C (Level * Indent_Level + 2, "when");
       end if;
 
-      S_Put ((Level + 1) * Indent_Level, Generate_MD_Id_String (Node.Spec));
-      New_Line_Count;
-      S_Put ((Level + 1) * Indent_Level, "--");
-      New_Line_Count;
-      S_Put
+      S_Put_Line_C
+        ((Level + 1) * Indent_Level, Generate_MD_Id_String (Node.Spec));
+      S_Put_Line_C ((Level + 1) * Indent_Level, "--");
+      S_Put_Line_C
         ((Level + 1) * Indent_Level,
          "--  This section can be used to change entry body.");
-      New_Line_Count;
-      S_Put ((Level + 1) * Indent_Level, "--");
-      New_Line_Count;
+      S_Put_Line_C ((Level + 1) * Indent_Level, "--");
 
-      S_Put (0, GT_Marker_End);
-      New_Line_Count;
+      S_Put_Line_C (0, GT_Marker_End);
 
       --  Put body
       if not Contains_Then_Emit (ID, Markered_Data) then
          New_Line_Count;
-         S_Put (Level * Indent_Level + 2, " Standard.True");
-         New_Line_Count;
-         S_Put (Level * Indent_Level, "is");
-         New_Line_Count;
-         S_Put ((Level) * Indent_Level, "begin");
-         New_Line_Count;
-         S_Put ((Level + 1) * Indent_Level, "null;");
-         New_Line_Count;
+         S_Put_Line_C (Level * Indent_Level + 2, " Standard.True");
+         S_Put_Line_C (Level * Indent_Level, "is");
+         S_Put_Line_C ((Level) * Indent_Level, "begin");
+         S_Put_Line_C ((Level + 1) * Indent_Level, "null;");
       end if;
 
-      S_Put (0, GT_Marker_Begin);
+      S_Put_Line_C (0, GT_Marker_Begin);
+      S_Put_Line_C ((Level) * Indent_Level, "end " & Node.Spec_Name.all & ";");
       New_Line_Count;
-      S_Put ((Level) * Indent_Level, "end " & Node.Spec_Name.all & ";");
-      New_Line_Count;
-      New_Line_Count;
-      S_Put (0, GT_Marker_End);
-      New_Line_Count;
+      S_Put_Line_C (0, GT_Marker_End);
       New_Line_Count;
    end Generate_Entry_Body;
 
@@ -1538,46 +1408,36 @@ package body Test.Stub.Write is
    begin
       Trace (Me, "Generating task body for " & Node.Spec_Name.all);
 
-      S_Put (0, GT_Marker_Begin);
-      New_Line_Count;
+      S_Put_Line_C (0, GT_Marker_Begin);
 
       Add_Entity_To_Local_List (Node, New_Line_Counter, Level * Indent_Level);
 
-      S_Put (Level * Indent_Level, "task body " & Node.Spec_Name.all & " is");
-      New_Line_Count;
+      S_Put_Line_C
+        (Level * Indent_Level, "task body " & Node.Spec_Name.all & " is");
 
-      S_Put ((Level + 1) * Indent_Level, Generate_MD_Id_String (Node.Spec));
-      New_Line_Count;
-      S_Put ((Level + 1) * Indent_Level, "--");
-      New_Line_Count;
-      S_Put
+      S_Put_Line_C
+        ((Level + 1) * Indent_Level, Generate_MD_Id_String (Node.Spec));
+      S_Put_Line_C ((Level + 1) * Indent_Level, "--");
+      S_Put_Line_C
         ((Level + 1) * Indent_Level,
          "--  This section can be used to change task body.");
-      New_Line_Count;
-      S_Put ((Level + 1) * Indent_Level, "--");
-      New_Line_Count;
+      S_Put_Line_C ((Level + 1) * Indent_Level, "--");
 
-      S_Put (0, GT_Marker_End);
-      New_Line_Count;
+      S_Put_Line_C (0, GT_Marker_End);
 
       --  Put body
       if not Contains_Then_Emit (ID, Markered_Data) then
          New_Line_Count;
-         S_Put ((Level) * Indent_Level, "begin");
-         New_Line_Count;
-         S_Put
+         S_Put_Line_C ((Level) * Indent_Level, "begin");
+         S_Put_Line_C
            ((Level + 1) * Indent_Level,
             "delay until Ada.Real_Time.Time_Last;");
-         New_Line_Count;
       end if;
 
-      S_Put (0, GT_Marker_Begin);
+      S_Put_Line_C (0, GT_Marker_Begin);
+      S_Put_Line_C ((Level) * Indent_Level, "end " & Node.Spec_Name.all & ";");
       New_Line_Count;
-      S_Put ((Level) * Indent_Level, "end " & Node.Spec_Name.all & ";");
-      New_Line_Count;
-      New_Line_Count;
-      S_Put (0, GT_Marker_End);
-      New_Line_Count;
+      S_Put_Line_C (0, GT_Marker_End);
       New_Line_Count;
    end Generate_Task_Body;
 
@@ -1597,8 +1457,7 @@ package body Test.Stub.Write is
    begin
       Trace (Me, "Generating full type declaration for " & Node.Spec_Name.all);
 
-      S_Put (0, GT_Marker_Begin);
-      New_Line_Count;
+      S_Put_Line_C (0, GT_Marker_Begin);
 
       Add_Entity_To_Local_List (Node, New_Line_Counter, Level * Indent_Level);
 
@@ -1614,33 +1473,25 @@ package body Test.Stub.Write is
       end if;
       New_Line_Count;
 
-      S_Put ((Level) * Indent_Level, Generate_MD_Id_String (Node.Spec));
-      New_Line_Count;
-      S_Put ((Level) * Indent_Level, "--");
-      New_Line_Count;
-      S_Put
+      S_Put_Line_C ((Level) * Indent_Level, Generate_MD_Id_String (Node.Spec));
+      S_Put_Line_C ((Level) * Indent_Level, "--");
+      S_Put_Line_C
         ((Level) * Indent_Level,
          "--  This section can be used for changing type completion.");
-      New_Line_Count;
-      S_Put ((Level) * Indent_Level, "--");
-      New_Line_Count;
+      S_Put_Line_C ((Level) * Indent_Level, "--");
 
-      S_Put (0, GT_Marker_End);
-      New_Line_Count;
+      S_Put_Line_C (0, GT_Marker_End);
 
       --  Put bodies
 
       if not Contains_Then_Emit (ID, Markered_Data) then
          New_Line_Count;
-         S_Put ((Level) * Indent_Level + 2, "null record;");
-         New_Line_Count;
+         S_Put_Line_C ((Level) * Indent_Level + 2, "null record;");
          New_Line_Count;
       end if;
 
-      S_Put (0, GT_Marker_Begin);
-      New_Line_Count;
-      S_Put (0, GT_Marker_End);
-      New_Line_Count;
+      S_Put_Line_C (0, GT_Marker_Begin);
+      S_Put_Line_C (0, GT_Marker_End);
       New_Line_Count;
    end Generate_Full_Type_Declaration;
 
@@ -1653,12 +1504,9 @@ package body Test.Stub.Write is
       MD : Markered_Data_Type;
    begin
 
-      S_Put (3, "-------------------");
-      New_Line_Count;
-      S_Put (3, "-- Unused Bodies --");
-      New_Line_Count;
-      S_Put (3, "-------------------");
-      New_Line_Count;
+      S_Put_Line_C (3, "-------------------");
+      S_Put_Line_C (3, "-- Unused Bodies --");
+      S_Put_Line_C (3, "-------------------");
       New_Line_Count;
 
       for MD_Cur in Markered_Data.Iterate loop
@@ -1670,8 +1518,7 @@ package body Test.Stub.Write is
             goto END_DANGLING;
          end if;
 
-         S_Put (0, GT_Marker_Begin);
-         New_Line_Count;
+         S_Put_Line_C (0, GT_Marker_Begin);
 
          case ID.Kind is
             when Subprogram_MD =>
@@ -1693,21 +1540,16 @@ package body Test.Stub.Write is
 
          Local_Stub_Unit_Mapping.D_Bodies.Append ((New_Line_Counter, 0));
 
-         S_Put
+         S_Put_Line_C
            (2 * Indent_Level,
             Generate_MD_Id_String (ID, Commented_Out => True));
-         New_Line_Count;
-         S_Put (0, GT_Marker_End);
-         New_Line_Count;
+         S_Put_Line_C (0, GT_Marker_End);
 
          Put_Lines (MD, Comment_Out => True);
 
-         S_Put (0, GT_Marker_Begin);
-         New_Line_Count;
-         S_Put (Indent_Level, "--  end " & ID.Name.all & ";");
-         New_Line_Count;
-         S_Put (0, GT_Marker_End);
-         New_Line_Count;
+         S_Put_Line_C (0, GT_Marker_Begin);
+         S_Put_Line_C (Indent_Level, "--  end " & ID.Name.all & ";");
+         S_Put_Line_C (0, GT_Marker_End);
          New_Line_Count;
 
          <<END_DANGLING>>

@@ -186,6 +186,9 @@ package Test.Common is
    procedure S_Put_Line (Span : Natural; Text : String);
    --  S_Put then Put_New_Line
 
+   procedure S_Put_Line_C (Span : Natural; Text : String);
+   --  S_Put then New_Line_Count
+
    procedure Create (Name : String);
    procedure Close_File;
    --  Wrappers for creating and closing output files

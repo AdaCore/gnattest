@@ -37,6 +37,7 @@ with GNAT.Directory_Operations; use GNAT.Directory_Operations;
 with GNAT.SHA1;
 with GNAT.Traceback.Symbolic;
 
+with Test.Mapping;
 with Utils.Command_Lines; use Utils.Command_Lines;
 with Utils.Tool_Names;
 with Utils.String_Utilities;
@@ -880,6 +881,16 @@ package body Test.Common is
       S_Put (Span, Text);
       Put_New_Line;
    end S_Put_Line;
+
+   ------------------
+   -- S_Put_Line_C --
+   ------------------
+
+   procedure S_Put_Line_C (Span : Natural; Text : String) is
+   begin
+      S_Put (Span, Text);
+      Test.Mapping.New_Line_Count;
+   end S_Put_Line_C;
 
    ------------
    -- Create --
