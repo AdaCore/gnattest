@@ -504,6 +504,16 @@ package body Test.Generation is
          --  restricted version the user may have installed.
 
          Build_Args.Append ("-aP" & Harness_Dir & Dir_Sep & "tgen_rts");
+
+         --  Minimize the size of the executable, the full TGen runtime is
+         --  quite heavy, it can be an issue on some targets.
+
+         Build_Args.Append ("-cargs:Ada");
+         Build_Args.Append ("-Os");
+         Build_Args.Append ("-ffunction-sections");
+         Build_Args.Append ("-largs");
+         Build_Args.Append ("-Wl,--gc-sections");
+
       end if;
 
       --  Suppress all warning/info messages and style checks

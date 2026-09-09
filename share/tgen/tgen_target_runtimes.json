@@ -7,6 +7,6 @@
     "aarch64-elf": {"runtime": "embedded-zynqmp", "board": "zynqmp"},
     "leon3-elf": {"runtime": "embedded-leon3", "board": "leon3"},
     "morello-elf": {"runtime": "embedded-morello-semihosting", "board": "morello"},
-    "riscv64-elf": {"runtime": "embedded-polarfirescoc", "board": "polarfiresoc"}
+    "riscv64-elf": {"runtime": "embedded-polarfiresoc", "board": "polarfiresoc"}
   }
 }
