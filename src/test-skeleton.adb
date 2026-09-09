@@ -3951,49 +3951,42 @@ package body Test.Skeleton is
          MD     : Markered_Data;
          MD_Cur : Markered_Data_Maps.Cursor;
       begin
-         S_Put (0, GT_Marker_Begin);
-         New_Line_Count;
+         S_Put_Line_C (0, GT_Marker_Begin);
          case PS_Type is
             when With_Clauses      =>
-               S_Put (0, "--  id:" & Hash_Version & "/00/");
+               S_Put_Line_C (0, "--  id:" & Hash_Version & "/00/");
 
             when Body_Declarations =>
-               S_Put (0, "--  id:" & Hash_Version & "/01/");
+               S_Put_Line_C (0, "--  id:" & Hash_Version & "/01/");
 
             when Body_Statements   =>
-               S_Put (0, "--  id:" & Hash_Version & "/02/");
+               S_Put_Line_C (0, "--  id:" & Hash_Version & "/02/");
          end case;
-         New_Line_Count;
-         S_Put (0, "--");
-         New_Line_Count;
+         S_Put_Line_C (0, "--");
          case PS_Type is
             when With_Clauses      =>
-               S_Put
+               S_Put_Line_C
                  (0,
                   "--  This section can be used to add with "
                   & "clauses if necessary.");
 
             when Body_Declarations =>
-               S_Put
+               S_Put_Line_C
                  (0,
                   "--  This section can be used to add global "
                   & "variables and other elements.");
 
             when Body_Statements   =>
-               S_Put
+               S_Put_Line_C
                  (0,
                   "--  This section can be used to add "
                   & "elaboration code for the global state.");
          end case;
-         New_Line_Count;
-         S_Put (0, "--");
-         New_Line_Count;
+         S_Put_Line_C (0, "--");
          if PS_Type = Body_Statements then
-            S_Put (0, "begin");
-            New_Line_Count;
+            S_Put_Line_C (0, "begin");
          end if;
-         S_Put (0, GT_Marker_End);
-         New_Line_Count;
+         S_Put_Line_C (0, GT_Marker_End);
 
          UH.Version := new String'(Hash_Version);
          case PS_Type is
@@ -4022,10 +4015,8 @@ package body Test.Skeleton is
             New_Line_Count;
          end if;
 
-         S_Put (0, GT_Marker_Begin);
-         New_Line_Count;
-         S_Put (0, GT_Marker_End);
-         New_Line_Count;
+         S_Put_Line_C (0, GT_Marker_Begin);
+         S_Put_Line_C (0, GT_Marker_End);
       end Put_Persistent_Section;
 
       procedure Add_Buffered_TR_Slocs
@@ -4082,55 +4073,45 @@ package body Test.Skeleton is
 
       procedure Put_Test_Data_Header is
       begin
-         S_Put
+         S_Put_Line
            (0,
             "--  This package is intended to set up and tear down "
             & " the test environment.");
-         Put_New_Line;
-         S_Put
+         S_Put_Line
            (0,
             "--  Once created by GNATtest, this package will "
             & "never be overwritten");
-         Put_New_Line;
-         S_Put
+         S_Put_Line
            (0,
             "--  automatically. Contents of this package can be "
             & "modified in any way");
-         Put_New_Line;
-         S_Put
+         S_Put_Line
            (0, "--  except for sections surrounded by a 'read only' marker.");
-         Put_New_Line;
          Put_New_Line;
       end Put_Test_Data_Header;
 
       procedure Put_TP_Header (TD_Package_Name : String) is
       begin
-         S_Put
+         S_Put_Line_C
            (0,
             "--  This package has been generated automatically by GNATtest.");
-         New_Line_Count;
-         S_Put
+         S_Put_Line_C
            (0,
             "--  You are allowed to add your code to the bodies "
             & "of test routines.");
-         New_Line_Count;
-         S_Put
+         S_Put_Line_C
            (0,
             "--  Such changes will be kept during further regeneration "
             & "of this file.");
-         New_Line_Count;
-         S_Put
+         S_Put_Line_C
            (0,
             "--  All code placed outside of test routine bodies "
             & "will be lost. The");
-         New_Line_Count;
-         S_Put
+         S_Put_Line_C
            (0,
             "--  code intended to set up and tear down the test "
             & "environment should be");
-         New_Line_Count;
-         S_Put (0, "--  placed into " & TD_Package_Name & ".");
-         New_Line_Count;
+         S_Put_Line_C (0, "--  placed into " & TD_Package_Name & ".");
          New_Line_Count;
       end Put_TP_Header;
 
@@ -4149,7 +4130,7 @@ package body Test.Skeleton is
                       (Base_Name (Get_Source_Stub_Data_Spec (To_String (Tmp))))
             then
                Def_Name := Element (S_Cur).As_Basic_Decl.P_Defining_Name;
-               S_Put
+               S_Put_Line_C
                  (0,
                   "with "
                   & Node_Image (Def_Name)
@@ -4160,7 +4141,6 @@ package body Test.Skeleton is
                   & "."
                   & Stub_Data_Unit_Name
                   & ";");
-               New_Line_Count;
             end if;
 
             Next (S_Cur);
@@ -4266,7 +4246,7 @@ package body Test.Skeleton is
 
             if not Current_Type.Has_Argument_Father then
                if Current_Pack.Data_Kind = Instantiation then
-                  S_Put
+                  S_Put_Line
                     (0,
                      "with "
                      & Current_Pack.Generic_Containing_Package.all
@@ -4274,8 +4254,7 @@ package body Test.Skeleton is
                      & Current_Type.Main_Type_Text_Name.all
                      & Test_Data_Unit_Name_Suff
                      & ";");
-                  Put_New_Line;
-                  S_Put
+                  S_Put_Line
                     (0,
                      "with "
                      & Current_Pack.Generic_Containing_Package.all
@@ -4287,13 +4266,12 @@ package body Test.Skeleton is
                      & Test_Unit_Name_Suff
                      & ";");
                end if;
-               Put_New_Line;
-               S_Put (0, "with AUnit.Test_Fixtures;");
+               S_Put_Line (0, "with AUnit.Test_Fixtures;");
             else
                if Current_Type.Argument_Father_Unit_Name.all
                  = Current_Type.Argument_Father_Nesting.all
                then
-                  S_Put
+                  S_Put_Line
                     (0,
                      "with "
                      & Current_Type.Argument_Father_Unit_Name.all
@@ -4305,7 +4283,7 @@ package body Test.Skeleton is
                      & Test_Unit_Suffix.all
                      & ";");
                else
-                  S_Put
+                  S_Put_Line
                     (0,
                      "with "
                      & Current_Type.Argument_Father_Unit_Name.all
@@ -4327,41 +4305,33 @@ package body Test.Skeleton is
                end if;
             end if;
             Put_New_Line;
-            Put_New_Line;
 
-            S_Put (0, "with GNATtest_Generated;");
-            Put_New_Line;
+            S_Put_Line (0, "with GNATtest_Generated;");
             Put_New_Line;
 
             if Current_Pack.Is_Generic then
-               S_Put (0, "generic");
-               Put_New_Line;
-               S_Put
+               S_Put_Line (0, "generic");
+               S_Put_Line
                  (3,
                   "type GNATtest_Test_Type is new "
                   & "AUnit.Test_Fixtures.Test_Fixture");
-               Put_New_Line;
-               S_Put (5, "with private;");
-               Put_New_Line;
+               S_Put_Line (5, "with private;");
             end if;
 
-            S_Put (0, "package " & Data_Unit_Name.all & " is");
-            Put_New_Line;
+            S_Put_Line (0, "package " & Data_Unit_Name.all & " is");
             Put_New_Line;
 
             if Current_Pack.Data_Kind = Declaration_Data then
                if Current_Type.Has_Argument_Father then
                   --  Declaring test type extension from another test type.
-                  S_Put (0, GT_Marker_Begin);
-                  Put_New_Line;
+                  S_Put_Line (0, GT_Marker_Begin);
                   S_Put
                     (3, "type Test_" & Current_Type.Main_Type_Text_Name.all);
                   if Current_Type.Main_Type_Abstract then
-                     S_Put (0, " is abstract new");
+                     S_Put_Line (0, " is abstract new");
                   else
-                     S_Put (0, " is new");
+                     S_Put_Line (0, " is new");
                   end if;
-                  Put_New_Line;
 
                   if Current_Type.Argument_Father_Unit_Name.all
                     /= Current_Type.Argument_Father_Nesting.all
@@ -4380,7 +4350,7 @@ package body Test.Skeleton is
                      Nesting_Add := new String'("");
                   end if;
 
-                  S_Put
+                  S_Put_Line
                     (5,
                      "GNATtest_Generated.GNATtest_Standard."
                      & Current_Type.Argument_Father_Unit_Name.all
@@ -4393,16 +4363,14 @@ package body Test.Skeleton is
                      & Test_Unit_Suffix.all
                      & ".Test_"
                      & Current_Type.Argument_Father_Type_Name.all);
-                  Put_New_Line;
-                  S_Put (0, GT_Marker_End);
-                  Put_New_Line;
-                  S_Put (3, "with null record;");
+                  S_Put_Line (0, GT_Marker_End);
+                  S_Put_Line (3, "with null record;");
 
                   Free (Nesting_Add);
 
                else
                   --  Declaring access type to tested type.
-                  S_Put
+                  S_Put_Line
                     (3,
                      "type "
                      & Current_Type.Main_Type_Text_Name.all
@@ -4413,11 +4381,9 @@ package body Test.Skeleton is
                      & Current_Type.Main_Type_Text_Name.all
                      & "'Class;");
                   Put_New_Line;
-                  Put_New_Line;
 
                   --  Declaring root test type.
-                  S_Put (0, GT_Marker_Begin);
-                  Put_New_Line;
+                  S_Put_Line (0, GT_Marker_Begin);
                   S_Put
                     (3,
                      "type Test_"
@@ -4426,56 +4392,45 @@ package body Test.Skeleton is
                   if Current_Type.Main_Type_Abstract then
                      S_Put (0, " abstract");
                   end if;
-                  S_Put (0, " new AUnit.Test_Fixtures.Test_Fixture");
-                  Put_New_Line;
-                  S_Put (0, GT_Marker_End);
-                  Put_New_Line;
-                  S_Put (3, "with record");
-                  Put_New_Line;
-                  S_Put
+                  S_Put_Line (0, " new AUnit.Test_Fixtures.Test_Fixture");
+                  S_Put_Line (0, GT_Marker_End);
+                  S_Put_Line (3, "with record");
+                  S_Put_Line
                     (6,
                      "Fixture : "
                      & Current_Type.Main_Type_Text_Name.all
                      & "_Access;");
-                  Put_New_Line;
-                  S_Put (3, "end record;");
+                  S_Put_Line (3, "end record;");
                end if;
             else
-               S_Put (0, GT_Marker_Begin);
-               Put_New_Line;
+               S_Put_Line (0, GT_Marker_Begin);
                S_Put
                  (3,
                   "type Test_" & Current_Type.Main_Type_Text_Name.all & " is");
-               S_Put (0, " new AUnit.Test_Fixtures.Test_Fixture");
-               Put_New_Line;
-               S_Put (0, GT_Marker_End);
-               Put_New_Line;
-               S_Put (3, "with null record;");
+               S_Put_Line (0, " new AUnit.Test_Fixtures.Test_Fixture");
+               S_Put_Line (0, GT_Marker_End);
+               S_Put_Line (3, "with null record;");
             end if;
 
             Put_New_Line;
-            Put_New_Line;
 
             if not Current_Type.Main_Type_Abstract then
-               S_Put
+               S_Put_Line
                  (3,
                   "procedure Set_Up (Gnattest_T : in out Test_"
                   & Current_Type.Main_Type_Text_Name.all
                   & ");");
-               Put_New_Line;
-               S_Put
+               S_Put_Line
                  (3,
                   "procedure Tear_Down (Gnattest_T : in out Test_"
                   & Current_Type.Main_Type_Text_Name.all
                   & ");");
                Put_New_Line;
-               Put_New_Line;
             end if;
 
             if Current_Pack.Data_Kind = Instantiation then
-               S_Put (0, GT_Marker_Begin);
-               Put_New_Line;
-               S_Put
+               S_Put_Line (0, GT_Marker_Begin);
+               S_Put_Line
                  (3,
                   "package Gnattest_Data_Inst is new "
                   & "GNATtest_Generated.GNATtest_Standard."
@@ -4486,53 +4441,44 @@ package body Test.Skeleton is
                   & " (Test_"
                   & Current_Type.Main_Type_Text_Name.all
                   & ");");
-               Put_New_Line;
-               S_Put
+               S_Put_Line
                  (3,
                   "package Gnattest_Tests_Inst is new Gnattest_Data_Inst."
                   & Current_Type.Main_Type_Text_Name.all
                   & Test_Unit_Name_Suff
                   & ";");
                Put_New_Line;
-               Put_New_Line;
-               S_Put
+               S_Put_Line
                  (3,
                   "type New_Test is new Gnattest_Tests_Inst.Test_"
                   & Current_Type.Main_Type_Text_Name.all
                   & " with null record;");
+               S_Put_Line (0, GT_Marker_End);
                Put_New_Line;
-               S_Put (0, GT_Marker_End);
-               Put_New_Line;
-               Put_New_Line;
-               S_Put
+               S_Put_Line
                  (3, "procedure User_Set_Up (Gnattest_T : in out New_Test);");
-               Put_New_Line;
-               S_Put
+               S_Put_Line
                  (3,
                   "procedure User_Tear_Down "
                   & "(Gnattest_T : in out New_Test);");
                Put_New_Line;
-               Put_New_Line;
             end if;
 
             if Current_Pack.Is_Generic then
-               S_Put
+               S_Put_Line
                  (3,
                   "procedure User_Set_Up (Gnattest_T : in out Test_"
                   & Current_Type.Main_Type_Text_Name.all
                   & ");");
-               Put_New_Line;
-               S_Put
+               S_Put_Line
                  (3,
                   "procedure User_Tear_Down (Gnattest_T : in out Test_"
                   & Current_Type.Main_Type_Text_Name.all
                   & ");");
                Put_New_Line;
-               Put_New_Line;
             end if;
 
-            S_Put (0, "end " & Data_Unit_Name.all & ";");
-            Put_New_Line;
+            S_Put_Line (0, "end " & Data_Unit_Name.all & ";");
 
             Close_File;
 
@@ -4552,13 +4498,12 @@ package body Test.Skeleton is
 
             Put_Test_Data_Header;
 
-            S_Put (0, "package body " & Data_Unit_Name.all & " is");
-            Put_New_Line;
+            S_Put_Line (0, "package body " & Data_Unit_Name.all & " is");
             Put_New_Line;
 
             if Current_Pack.Data_Kind = Declaration_Data then
                if Current_Type.No_Default_Discriminant then
-                  S_Put
+                  S_Put_Line
                     (3,
                      "--  Local_"
                      & Current_Type.Main_Type_Text_Name.all
@@ -4569,7 +4514,7 @@ package body Test.Skeleton is
                      & Current_Type.Main_Type_Text_Name.all
                      & ";");
                else
-                  S_Put
+                  S_Put_Line
                     (3,
                      "Local_"
                      & Current_Type.Main_Type_Text_Name.all
@@ -4580,31 +4525,27 @@ package body Test.Skeleton is
                      & Current_Type.Main_Type_Text_Name.all
                      & ";");
                end if;
-               Put_New_Line;
             end if;
 
-            S_Put
+            S_Put_Line
               (3,
                "procedure Set_Up (Gnattest_T : in out Test_"
                & Current_Type.Main_Type_Text_Name.all
                & ") is");
-            Put_New_Line;
 
             if Current_Pack.Data_Kind = Declaration_Data then
                if Current_Pack.Is_Generic then
-                  S_Put
+                  S_Put_Line
                     (6,
                      "X : Test_"
                      & Current_Type.Main_Type_Text_Name.all
                      & "'Class renames Test_"
                      & Current_Type.Main_Type_Text_Name.all
                      & "'Class (Gnattest_T);");
-                  Put_New_Line;
                end if;
             end if;
 
-            S_Put (3, "begin");
-            Put_New_Line;
+            S_Put_Line (3, "begin");
 
             if Current_Type.Has_Argument_Father then
                if Current_Type.Argument_Father_Unit_Name.all
@@ -4624,7 +4565,7 @@ package body Test.Skeleton is
                   Nesting_Add := new String'("");
                end if;
 
-               S_Put
+               S_Put_Line
                  (6,
                   "GNATtest_Generated.GNATtest_Standard."
                   & Current_Type.Argument_Father_Unit_Name.all
@@ -4636,8 +4577,7 @@ package body Test.Skeleton is
                   & Current_Type.Argument_Father_Type_Name.all
                   & Test_Unit_Suffix.all
                   & ".Set_Up");
-               Put_New_Line;
-               S_Put
+               S_Put_Line
                  (8,
                   "(GNATtest_Generated.GNATtest_Standard."
                   & Current_Type.Argument_Father_Unit_Name.all
@@ -4651,67 +4591,57 @@ package body Test.Skeleton is
                   & ".Test_"
                   & Current_Type.Argument_Father_Type_Name.all
                   & " (Gnattest_T));");
-               Put_New_Line;
 
                Free (Nesting_Add);
             end if;
 
             if Current_Pack.Data_Kind = Declaration_Data then
                if Current_Type.No_Default_Discriminant then
-                  S_Put (6, "null;");
-                  Put_New_Line;
-                  S_Put
+                  S_Put_Line (6, "null;");
+                  S_Put_Line
                     (6,
                      "--  Gnattest_T.Fixture := Local_"
                      & Current_Type.Main_Type_Text_Name.all
                      & "'Access;");
-                  Put_New_Line;
                else
-                  S_Put
+                  S_Put_Line
                     (6,
                      "Gnattest_T.Fixture := Local_"
                      & Current_Type.Main_Type_Text_Name.all
                      & "'Access;");
-                  Put_New_Line;
 
                   if Current_Pack.Data_Kind = Declaration_Data then
                      if Current_Pack.Is_Generic then
-                        S_Put (6, "User_Set_Up (X);");
-                        Put_New_Line;
+                        S_Put_Line (6, "User_Set_Up (X);");
                      end if;
                   end if;
                end if;
 
             else
-               S_Put (6, "null;");
-               Put_New_Line;
+               S_Put_Line (6, "null;");
             end if;
-            S_Put (3, "end Set_Up;");
-            Put_New_Line;
+            S_Put_Line (3, "end Set_Up;");
             Put_New_Line;
 
-            S_Put
+            S_Put_Line
               (3,
                "procedure Tear_Down (Gnattest_T : in out Test_"
                & Current_Type.Main_Type_Text_Name.all
                & ") is");
-            Put_New_Line;
 
             if Current_Pack.Data_Kind = Declaration_Data then
                if Current_Pack.Is_Generic then
-                  S_Put
+                  S_Put_Line
                     (6,
                      "X : Test_"
                      & Current_Type.Main_Type_Text_Name.all
                      & "'Class renames Test_"
                      & Current_Type.Main_Type_Text_Name.all
                      & "'Class (Gnattest_T);");
-                  Put_New_Line;
                end if;
             end if;
 
-            S_Put (3, "begin");
-            Put_New_Line;
+            S_Put_Line (3, "begin");
 
             if Current_Type.Has_Argument_Father then
                if Current_Type.Argument_Father_Unit_Name.all
@@ -4731,7 +4661,7 @@ package body Test.Skeleton is
                   Nesting_Add := new String'("");
                end if;
 
-               S_Put
+               S_Put_Line
                  (6,
                   "GNATtest_Generated.GNATtest_Standard."
                   & Current_Type.Argument_Father_Unit_Name.all
@@ -4743,8 +4673,7 @@ package body Test.Skeleton is
                   & Current_Type.Argument_Father_Type_Name.all
                   & Test_Unit_Suffix.all
                   & ".Tear_Down");
-               Put_New_Line;
-               S_Put
+               S_Put_Line
                  (8,
                   "(GNATtest_Generated.GNATtest_Standard."
                   & Current_Type.Argument_Father_Unit_Name.all
@@ -4764,80 +4693,58 @@ package body Test.Skeleton is
                if Current_Pack.Data_Kind = Declaration_Data
                  and then Current_Pack.Is_Generic
                then
-                  S_Put (6, "User_Tear_Down (X);");
+                  S_Put_Line (6, "User_Tear_Down (X);");
                else
-                  S_Put (6, "null;");
+                  S_Put_Line (6, "null;");
                end if;
             end if;
 
-            Put_New_Line;
-            S_Put (3, "end Tear_Down;");
-
-            Put_New_Line;
+            S_Put_Line (3, "end Tear_Down;");
             Put_New_Line;
 
             if Current_Pack.Data_Kind = Instantiation then
-               S_Put
+               S_Put_Line
                  (3,
                   "procedure User_Set_Up "
                   & "(Gnattest_T : in out New_Test) is");
+               S_Put_Line (6, "pragma Unreferenced (Gnattest_T);");
+               S_Put_Line (3, "begin");
+               S_Put_Line (6, "null;");
+               S_Put_Line (3, "end User_Set_Up;");
                Put_New_Line;
-               S_Put (6, "pragma Unreferenced (Gnattest_T);");
-               Put_New_Line;
-               S_Put (3, "begin");
-               Put_New_Line;
-               S_Put (6, "null;");
-               Put_New_Line;
-               S_Put (3, "end User_Set_Up;");
-               Put_New_Line;
-               Put_New_Line;
-               S_Put
+               S_Put_Line
                  (3,
                   "procedure User_Tear_Down "
                   & "(Gnattest_T : in out New_Test) is");
-               Put_New_Line;
-               S_Put (6, "pragma Unreferenced (Gnattest_T);");
-               Put_New_Line;
-               S_Put (3, "begin");
-               Put_New_Line;
-               S_Put (6, "null;");
-               Put_New_Line;
-               S_Put (3, "end User_Tear_Down;");
-               Put_New_Line;
+               S_Put_Line (6, "pragma Unreferenced (Gnattest_T);");
+               S_Put_Line (3, "begin");
+               S_Put_Line (6, "null;");
+               S_Put_Line (3, "end User_Tear_Down;");
                Put_New_Line;
             end if;
 
             if Current_Pack.Is_Generic then
-               S_Put
+               S_Put_Line
                  (3,
                   "procedure User_Set_Up (Gnattest_T : in out Test_"
                   & Current_Type.Main_Type_Text_Name.all
                   & ") is");
+               S_Put_Line (3, "begin");
+               S_Put_Line (6, "null;");
+               S_Put_Line (3, "end User_Set_Up;");
                Put_New_Line;
-               S_Put (3, "begin");
-               Put_New_Line;
-               S_Put (6, "null;");
-               Put_New_Line;
-               S_Put (3, "end User_Set_Up;");
-               Put_New_Line;
-               Put_New_Line;
-               S_Put
+               S_Put_Line
                  (3,
                   "procedure User_Tear_Down (Gnattest_T : in out Test_"
                   & Current_Type.Main_Type_Text_Name.all
                   & ") is");
-               Put_New_Line;
-               S_Put (3, "begin");
-               Put_New_Line;
-               S_Put (6, "null;");
-               Put_New_Line;
-               S_Put (3, "end User_Tear_Down;");
-               Put_New_Line;
+               S_Put_Line (3, "begin");
+               S_Put_Line (6, "null;");
+               S_Put_Line (3, "end User_Tear_Down;");
                Put_New_Line;
             end if;
 
-            S_Put (0, "end " & Data_Unit_Name.all & ";");
-            Put_New_Line;
+            S_Put_Line (0, "end " & Data_Unit_Name.all & ";");
             Close_File;
 
          end if;
@@ -4894,20 +4801,16 @@ package body Test.Skeleton is
          Create (Output_Dir & Dir_Sep & Test_File_Name.all & Spec_Suffix.all);
 
          Put_Harness_Header;
-         S_Put (0, GT_Marker_Begin);
-         Put_New_Line;
+         S_Put_Line (0, GT_Marker_Begin);
 
-         S_Put (0, "with GNATtest_Generated;");
-         Put_New_Line;
+         S_Put_Line (0, "with GNATtest_Generated;");
          if Stub_Mode_ON then
-            S_Put (0, "with AUnit.Test_Caller;");
-            Put_New_Line;
+            S_Put_Line (0, "with AUnit.Test_Caller;");
          end if;
          Put_New_Line;
 
          if Current_Pack.Is_Generic then
-            S_Put (0, "generic");
-            Put_New_Line;
+            S_Put_Line (0, "generic");
 
             declare
                GP : Generic_Package;
@@ -4926,21 +4829,19 @@ package body Test.Skeleton is
             end;
          end if;
 
-         S_Put (0, "package " & Unit_Name.all & " is");
-         Put_New_Line;
+         S_Put_Line (0, "package " & Unit_Name.all & " is");
          Put_New_Line;
 
          if Current_Pack.Data_Kind = Declaration_Data then
             S_Put (3, "type Test_" & Current_Type.Main_Type_Text_Name.all);
             if Current_Type.Main_Type_Abstract then
-               S_Put (0, " is abstract new");
+               S_Put_Line (0, " is abstract new");
             else
-               S_Put (0, " is new");
+               S_Put_Line (0, " is new");
             end if;
-            Put_New_Line;
 
             if Data.Unit_Full_Name.all = Current_Type.Nesting.all then
-               S_Put
+               S_Put_Line
                  (5,
                   "GNATtest_Generated.GNATtest_Standard."
                   & Data.Unit_Full_Name.all
@@ -4951,7 +4852,7 @@ package body Test.Skeleton is
                   & Current_Type.Main_Type_Text_Name.all
                   & " with null record;");
             else
-               S_Put
+               S_Put_Line
                  (5,
                   "GNATtest_Generated.GNATtest_Standard."
                   & Data.Unit_Full_Name.all
@@ -4971,7 +4872,7 @@ package body Test.Skeleton is
             end if;
 
          else
-            S_Put
+            S_Put_Line
               (3,
                "type Test_"
                & Current_Type.Main_Type_Text_Name.all
@@ -4984,7 +4885,6 @@ package body Test.Skeleton is
          end if;
 
          Put_New_Line;
-         Put_New_Line;
 
          --  Adding test routine declarations.
          if Current_Pack.Data_Kind = Declaration_Data then
@@ -4996,7 +4896,7 @@ package body Test.Skeleton is
                  = Current_Type.Type_Number
                then
 
-                  S_Put
+                  S_Put_Line
                     (3,
                      "procedure "
                      & Subp_Data_List.Element (Subp_Cur).Subp_Mangle_Name.all
@@ -5005,7 +4905,6 @@ package body Test.Skeleton is
                      & ");");
                   Actual_Test := True;
 
-                  Put_New_Line;
                   Print_Comment_Declaration
                     (Subp_Data_List.Element (Subp_Cur), 3);
                   Put_New_Line;
@@ -5016,19 +4915,16 @@ package body Test.Skeleton is
          end if;
 
          if Stub_Mode_ON then
-            S_Put
+            S_Put_Line
               (3,
                "package Caller is new AUnit.Test_Caller (Test_"
                & Current_Type.Main_Type_Text_Name.all
                & ");");
             Put_New_Line;
-            Put_New_Line;
          end if;
 
-         S_Put (0, "end " & Unit_Name.all & ";");
-         Put_New_Line;
-         S_Put (0, GT_Marker_End);
-         Put_New_Line;
+         S_Put_Line (0, "end " & Unit_Name.all & ";");
+         S_Put_Line (0, GT_Marker_End);
          Close_File;
 
          if not Current_Type.Main_Type_Abstract then
@@ -5400,18 +5296,14 @@ package body Test.Skeleton is
             end loop;
             Name_Numbers.Clear;
 
-            S_Put (0, "with AUnit.Assertions; use AUnit.Assertions;");
-            New_Line_Count;
-            S_Put (0, "with System.Assertions;");
-            New_Line_Count;
+            S_Put_Line_C (0, "with AUnit.Assertions; use AUnit.Assertions;");
+            S_Put_Line_C (0, "with System.Assertions;");
             if Test.Common.Instrument then
-               S_Put (0, "with TGen.Instr_Support;");
-               Put_New_Line;
+               S_Put_Line (0, "with TGen.Instr_Support;");
             end if;
             if Test.Common.Generate_Test_Vectors and then not Data.Is_Generic
             then
-               S_Put (0, "with Ada.Exceptions;");
-               New_Line_Count;
+               S_Put_Line_C (0, "with Ada.Exceptions;");
             end if;
             if Stub_Mode_ON then
                Put_Stub_Data_Import;
@@ -5507,27 +5399,22 @@ package body Test.Skeleton is
 
                      New_Tests_Counter := New_Tests_Counter + 1;
                      New_Line_Count;
-                     S_Put (6, "pragma Unreferenced (Gnattest_T);");
+                     S_Put_Line_C (6, "pragma Unreferenced (Gnattest_T);");
                      New_Line_Count;
-                     New_Line_Count;
-                     S_Put (3, "begin");
-                     New_Line_Count;
+                     S_Put_Line_C (3, "begin");
                      New_Line_Count;
                      if not Setters_Set.Is_Empty then
                         for Set of Setters_Set loop
-                           S_Put (3, "--  " & Set & "( );");
-                           New_Line_Count;
+                           S_Put_Line_C (3, "--  " & Set & "( );");
                         end loop;
                         New_Line_Count;
                         Setters_Set.Clear;
                      end if;
 
-                     S_Put (6, "AUnit.Assertions.Assert");
-                     New_Line_Count;
-                     S_Put (8, "(Gnattest_Generated.Default_Assert_Value,");
-                     New_Line_Count;
-                     S_Put (9, """Test not implemented."");");
-                     New_Line_Count;
+                     S_Put_Line_C (6, "AUnit.Assertions.Assert");
+                     S_Put_Line_C
+                       (8, "(Gnattest_Generated.Default_Assert_Value,");
+                     S_Put_Line_C (9, """Test not implemented."");");
                      New_Line_Count;
                   else
 
@@ -5559,11 +5446,11 @@ package body Test.Skeleton is
                      for I in MD.TR_Text.First_Index .. MD.TR_Text.Last_Index
                      loop
                         if MD.Commented_Out then
-                           S_Put (0, Uncomment_Line (MD.TR_Text.Element (I)));
+                           S_Put_Line_C
+                             (0, Uncomment_Line (MD.TR_Text.Element (I)));
                         else
-                           S_Put (0, MD.TR_Text.Element (I));
+                           S_Put_Line_C (0, MD.TR_Text.Element (I));
                         end if;
-                        New_Line_Count;
                      end loop;
                   end if;
 
@@ -5640,11 +5527,10 @@ package body Test.Skeleton is
                      for I in MD.TR_Text.First_Index .. MD.TR_Text.Last_Index
                      loop
                         if MD.Commented_Out then
-                           S_Put (0, MD.TR_Text.Element (I));
+                           S_Put_Line_C (0, MD.TR_Text.Element (I));
                         else
-                           S_Put (0, "--  " & MD.TR_Text.Element (I));
+                           S_Put_Line_C (0, "--  " & MD.TR_Text.Element (I));
                         end if;
-                        New_Line_Count;
                      end loop;
 
                      Put_Closing_Comment_Section
@@ -5660,8 +5546,7 @@ package body Test.Skeleton is
 
             Put_Persistent_Section (Body_Statements);
 
-            S_Put (0, "end " & Unit_Name.all & ";");
-            New_Line_Count;
+            S_Put_Line_C (0, "end " & Unit_Name.all & ";");
 
             Close_File;
 
@@ -5774,15 +5659,14 @@ package body Test.Skeleton is
             if Current_Pack.Data_Kind = Instantiation
               and not Data.Is_Top_Level_Generic_Instantiation
             then
-               S_Put
+               S_Put_Line
                  (0,
                   "with "
                   & Current_Pack.Generic_Containing_Package.all
                   & "."
                   & Test_Data_Unit_Name
                   & ";");
-               Put_New_Line;
-               S_Put
+               S_Put_Line
                  (0,
                   "with "
                   & Current_Pack.Generic_Containing_Package.all
@@ -5792,45 +5676,34 @@ package body Test.Skeleton is
                   & Test_Unit_Name
                   & ";");
             else
-               S_Put (0, "with AUnit.Test_Fixtures;");
+               S_Put_Line (0, "with AUnit.Test_Fixtures;");
             end if;
             Put_New_Line;
-            Put_New_Line;
             if Current_Pack.Is_Generic then
-               S_Put (0, "generic");
-               Put_New_Line;
-               S_Put
+               S_Put_Line (0, "generic");
+               S_Put_Line
                  (3,
                   "type GNATtest_Test_Type is new "
                   & "AUnit.Test_Fixtures.Test_Fixture");
-               Put_New_Line;
-               S_Put (5, "with private;");
-               Put_New_Line;
+               S_Put_Line (5, "with private;");
             end if;
-            S_Put (0, "package " & Data_Unit_Name.all & " is");
+            S_Put_Line (0, "package " & Data_Unit_Name.all & " is");
             Put_New_Line;
+            S_Put_Line (0, GT_Marker_Begin);
+            S_Put_Line
+              (3, "type Test is new AUnit.Test_Fixtures.Test_Fixture");
+            S_Put_Line (0, GT_Marker_End);
+            S_Put_Line (3, "with null record;");
             Put_New_Line;
-            S_Put (0, GT_Marker_Begin);
-            Put_New_Line;
-            S_Put (3, "type Test is new AUnit.Test_Fixtures.Test_Fixture");
-            Put_New_Line;
-            S_Put (0, GT_Marker_End);
-            Put_New_Line;
-            S_Put (3, "with null record;");
-            Put_New_Line;
-            Put_New_Line;
-            S_Put (3, "procedure Set_Up (Gnattest_T : in out Test);");
-            Put_New_Line;
-            S_Put (3, "procedure Tear_Down (Gnattest_T : in out Test);");
-            Put_New_Line;
+            S_Put_Line (3, "procedure Set_Up (Gnattest_T : in out Test);");
+            S_Put_Line (3, "procedure Tear_Down (Gnattest_T : in out Test);");
             Put_New_Line;
 
             if Current_Pack.Data_Kind = Instantiation
               and not Data.Is_Top_Level_Generic_Instantiation
             then
-               S_Put (0, GT_Marker_Begin);
-               Put_New_Line;
-               S_Put
+               S_Put_Line (0, GT_Marker_Begin);
+               S_Put_Line
                  (3,
                   "package Gnattest_Data_Inst is new "
                   & "GNATtest_Generated.GNATtest_Standard."
@@ -5838,44 +5711,35 @@ package body Test.Skeleton is
                   & "."
                   & Test_Data_Unit_Name
                   & " (Test);");
-               Put_New_Line;
-               S_Put
+               S_Put_Line
                  (3,
                   "package Gnattest_Tests_Inst is new Gnattest_Data_Inst."
                   & Test_Unit_Name
                   & ";");
                Put_New_Line;
-               Put_New_Line;
-               S_Put
+               S_Put_Line
                  (3,
                   "type New_Test is new Gnattest_Tests_Inst.Test"
                   & " with null record;");
+               S_Put_Line (0, GT_Marker_End);
                Put_New_Line;
-               S_Put (0, GT_Marker_End);
-               Put_New_Line;
-               Put_New_Line;
-               S_Put
+               S_Put_Line
                  (3, "procedure User_Set_Up (Gnattest_T : in out New_Test);");
-               Put_New_Line;
-               S_Put
+               S_Put_Line
                  (3,
-                  "procedure User_Tear_Down "
-                  & "(Gnattest_T : in out New_Test);");
-               Put_New_Line;
+                  "procedure User_Tear_Down (Gnattest_T : in out New_Test);");
                Put_New_Line;
             end if;
 
             if Current_Pack.Is_Generic then
-               S_Put (3, "procedure User_Set_Up (Gnattest_T : in out Test);");
-               Put_New_Line;
-               S_Put
+               S_Put_Line
+                 (3, "procedure User_Set_Up (Gnattest_T : in out Test);");
+               S_Put_Line
                  (3, "procedure User_Tear_Down (Gnattest_T : in out Test);");
-               Put_New_Line;
                Put_New_Line;
             end if;
 
-            S_Put (0, "end " & Data_Unit_Name.all & ";");
-            Put_New_Line;
+            S_Put_Line (0, "end " & Data_Unit_Name.all & ";");
 
             Close_File;
          end if;
@@ -5888,134 +5752,90 @@ package body Test.Skeleton is
 
             Put_Test_Data_Header;
 
-            S_Put (0, "package body " & Data_Unit_Name.all & " is");
-            Put_New_Line;
+            S_Put_Line (0, "package body " & Data_Unit_Name.all & " is");
             Put_New_Line;
             if Current_Pack.Data_Kind = Declaration_Data
               or Data.Is_Top_Level_Generic_Instantiation
             then
-               S_Put (3, "procedure Set_Up (Gnattest_T : in out Test) is");
-               Put_New_Line;
+               S_Put_Line
+                 (3, "procedure Set_Up (Gnattest_T : in out Test) is");
                if Current_Pack.Is_Generic then
-                  S_Put (6, "X : Test'Class renames Test'Class (Gnattest_T);");
-                  Put_New_Line;
-                  S_Put (3, "begin");
-                  Put_New_Line;
-                  S_Put (6, "User_Set_Up (X);");
+                  S_Put_Line
+                    (6, "X : Test'Class renames Test'Class (Gnattest_T);");
+                  S_Put_Line (3, "begin");
+                  S_Put_Line (6, "User_Set_Up (X);");
                else
-                  S_Put (6, "pragma Unreferenced (Gnattest_T);");
-                  Put_New_Line;
-                  S_Put (3, "begin");
-                  Put_New_Line;
-                  S_Put (6, "null;");
+                  S_Put_Line (6, "pragma Unreferenced (Gnattest_T);");
+                  S_Put_Line (3, "begin");
+                  S_Put_Line (6, "null;");
                end if;
+               S_Put_Line (3, "end Set_Up;");
                Put_New_Line;
-               S_Put (3, "end Set_Up;");
-               Put_New_Line;
-               Put_New_Line;
-               S_Put (3, "procedure Tear_Down (Gnattest_T : in out Test) is");
-               Put_New_Line;
+               S_Put_Line
+                 (3, "procedure Tear_Down (Gnattest_T : in out Test) is");
                if Current_Pack.Is_Generic then
-                  S_Put (6, "X : Test'Class renames Test'Class (Gnattest_T);");
-                  Put_New_Line;
-                  S_Put (3, "begin");
-                  Put_New_Line;
-                  S_Put (6, "User_Tear_Down (X);");
+                  S_Put_Line
+                    (6, "X : Test'Class renames Test'Class (Gnattest_T);");
+                  S_Put_Line (3, "begin");
+                  S_Put_Line (6, "User_Tear_Down (X);");
                else
-                  S_Put (6, "pragma Unreferenced (Gnattest_T);");
-                  Put_New_Line;
-                  S_Put (3, "begin");
-                  Put_New_Line;
-                  S_Put (6, "null;");
+                  S_Put_Line (6, "pragma Unreferenced (Gnattest_T);");
+                  S_Put_Line (3, "begin");
+                  S_Put_Line (6, "null;");
                end if;
-               Put_New_Line;
-               S_Put (3, "end Tear_Down;");
-               Put_New_Line;
+               S_Put_Line (3, "end Tear_Down;");
                Put_New_Line;
             else
-               S_Put
-                 (3, "procedure Set_Up " & "(Gnattest_T : in out Test) is");
+               S_Put_Line
+                 (3, "procedure Set_Up (Gnattest_T : in out Test) is");
+               S_Put_Line (6, "pragma Unreferenced (Gnattest_T);");
+               S_Put_Line (3, "begin");
+               S_Put_Line (6, "null;");
+               S_Put_Line (3, "end Set_Up;");
                Put_New_Line;
-               S_Put (6, "pragma Unreferenced (Gnattest_T);");
+               S_Put_Line
+                 (3, "procedure Tear_Down (Gnattest_T : in out Test) is");
+               S_Put_Line (6, "pragma Unreferenced (Gnattest_T);");
+               S_Put_Line (3, "begin");
+               S_Put_Line (6, "null;");
+               S_Put_Line (3, "end Tear_Down;");
                Put_New_Line;
-               S_Put (3, "begin");
-               Put_New_Line;
-               S_Put (6, "null;");
-               Put_New_Line;
-               S_Put (3, "end Set_Up;");
-               Put_New_Line;
-               Put_New_Line;
-               S_Put
-                 (3, "procedure Tear_Down " & "(Gnattest_T : in out Test) is");
-               Put_New_Line;
-               S_Put (6, "pragma Unreferenced (Gnattest_T);");
-               Put_New_Line;
-               S_Put (3, "begin");
-               Put_New_Line;
-               S_Put (6, "null;");
-               Put_New_Line;
-               S_Put (3, "end Tear_Down;");
-               Put_New_Line;
-               Put_New_Line;
-               S_Put
+               S_Put_Line
                  (3,
                   "procedure User_Set_Up "
                   & "(Gnattest_T : in out New_Test) is");
+               S_Put_Line (6, "pragma Unreferenced (Gnattest_T);");
+               S_Put_Line (3, "begin");
+               S_Put_Line (6, "null;");
+               S_Put_Line (3, "end User_Set_Up;");
                Put_New_Line;
-               S_Put (6, "pragma Unreferenced (Gnattest_T);");
-               Put_New_Line;
-               S_Put (3, "begin");
-               Put_New_Line;
-               S_Put (6, "null;");
-               Put_New_Line;
-               S_Put (3, "end User_Set_Up;");
-               Put_New_Line;
-               Put_New_Line;
-               S_Put
+               S_Put_Line
                  (3,
                   "procedure User_Tear_Down "
                   & "(Gnattest_T : in out New_Test) is");
-               Put_New_Line;
-               S_Put (6, "pragma Unreferenced (Gnattest_T);");
-               Put_New_Line;
-               S_Put (3, "begin");
-               Put_New_Line;
-               S_Put (6, "null;");
-               Put_New_Line;
-               S_Put (3, "end User_Tear_Down;");
-
-               Put_New_Line;
+               S_Put_Line (6, "pragma Unreferenced (Gnattest_T);");
+               S_Put_Line (3, "begin");
+               S_Put_Line (6, "null;");
+               S_Put_Line (3, "end User_Tear_Down;");
                Put_New_Line;
             end if;
 
             if Current_Pack.Is_Generic then
-               S_Put
-                 (3,
-                  "procedure User_Set_Up " & "(Gnattest_T : in out Test) is");
+               S_Put_Line
+                 (3, "procedure User_Set_Up (Gnattest_T : in out Test) is");
+               S_Put_Line (3, "begin");
+               S_Put_Line (6, "null;");
+               S_Put_Line (3, "end User_Set_Up;");
                Put_New_Line;
-               S_Put (3, "begin");
-               Put_New_Line;
-               S_Put (6, "null;");
-               Put_New_Line;
-               S_Put (3, "end User_Set_Up;");
-               Put_New_Line;
-               Put_New_Line;
-               S_Put
-                 (3,
-                  "procedure User_Tear_Down "
-                  & "(Gnattest_T : in out Test) is");
-               Put_New_Line;
-               S_Put (3, "begin");
-               Put_New_Line;
-               S_Put (6, "null;");
-               Put_New_Line;
-               S_Put (3, "end User_Tear_Down;");
-               Put_New_Line;
+               S_Put_Line
+                 (3, "procedure User_Tear_Down (Gnattest_T : in out Test) is");
+               S_Put_Line (3, "begin");
+               S_Put_Line (6, "null;");
+               S_Put_Line (3, "end User_Tear_Down;");
                Put_New_Line;
             end if;
 
-            S_Put (0, "end " & Data_Unit_Name.all & ";");
-            Put_New_Line;
+            S_Put_Line (0, "end " & Data_Unit_Name.all & ";");
 
             Close_File;
          end if;
@@ -6067,19 +5887,15 @@ package body Test.Skeleton is
          Create (Output_Dir & Dir_Sep & Test_File_Name.all & Spec_Suffix.all);
 
          Put_Harness_Header;
-         S_Put (0, GT_Marker_Begin);
-         Put_New_Line;
+         S_Put_Line (0, GT_Marker_Begin);
 
-         S_Put (0, "with Gnattest_Generated;");
-         Put_New_Line;
+         S_Put_Line (0, "with Gnattest_Generated;");
          if Stub_Mode_ON then
-            S_Put (0, "with AUnit.Test_Caller;");
-            Put_New_Line;
+            S_Put_Line (0, "with AUnit.Test_Caller;");
          end if;
          Put_New_Line;
          if Current_Pack.Is_Generic then
-            S_Put (0, "generic");
-            Put_New_Line;
+            S_Put_Line (0, "generic");
 
             declare
                GP : Generic_Package;
@@ -6098,8 +5914,7 @@ package body Test.Skeleton is
             end;
          end if;
 
-         S_Put (0, "package " & Unit_Name.all & " is");
-         Put_New_Line;
+         S_Put_Line (0, "package " & Unit_Name.all & " is");
          Put_New_Line;
 
          --  Declaring simple test type.
@@ -6107,14 +5922,14 @@ package body Test.Skeleton is
          if Current_Pack.Data_Kind = Declaration_Data
            or Data.Is_Top_Level_Generic_Instantiation
          then
-            S_Put
+            S_Put_Line
               (3,
                "type Test is new GNATtest_Generated.GNATtest_Standard."
                & Data_Unit_Name.all
                & ".Test");
 
          else
-            S_Put
+            S_Put_Line
               (3,
                "type Test is new GNATtest_Generated.GNATtest_Standard."
                & Data_Unit_Name.all
@@ -6123,9 +5938,7 @@ package body Test.Skeleton is
             Update_Generic_Packages
               (Current_Pack.Generic_Containing_Package.all);
          end if;
-         Put_New_Line;
-         S_Put (3, "with null record;");
-         Put_New_Line;
+         S_Put_Line (3, "with null record;");
          Put_New_Line;
 
          --  Adding test routine declarations.
@@ -6137,13 +5950,12 @@ package body Test.Skeleton is
 
                if Subp_Data_List.Element (Subp_Cur).Corresp_Type = 0 then
 
-                  S_Put
+                  S_Put_Line
                     (3,
                      "procedure "
                      & Subp_Data_List.Element (Subp_Cur).Subp_Mangle_Name.all
                      & " (Gnattest_T : in out Test);");
 
-                  Put_New_Line;
                   Print_Comment_Declaration
                     (Subp_Data_List.Element (Subp_Cur), 3);
                   Put_New_Line;
@@ -6156,16 +5968,12 @@ package body Test.Skeleton is
          end if;
 
          if Stub_Mode_ON then
-            S_Put (3, "package Caller is new AUnit.Test_Caller (Test);");
-            Put_New_Line;
+            S_Put_Line (3, "package Caller is new AUnit.Test_Caller (Test);");
             Put_New_Line;
          end if;
 
-         S_Put (0, "end " & Unit_Name.all & ";");
-
-         Put_New_Line;
-         S_Put (0, GT_Marker_End);
-         Put_New_Line;
+         S_Put_Line (0, "end " & Unit_Name.all & ";");
+         S_Put_Line (0, GT_Marker_End);
 
          Close_File;
 
@@ -6545,18 +6353,14 @@ package body Test.Skeleton is
             Create (Tmp_File_Name);
             Put_TP_Header (Test_Data_Package_Name.all);
 
-            S_Put (0, "with AUnit.Assertions; use AUnit.Assertions;");
-            New_Line_Count;
-            S_Put (0, "with System.Assertions;");
-            New_Line_Count;
+            S_Put_Line_C (0, "with AUnit.Assertions; use AUnit.Assertions;");
+            S_Put_Line_C (0, "with System.Assertions;");
             if Test.Common.Instrument then
-               S_Put (0, "with TGen.Instr_Support;");
-               Put_New_Line;
+               S_Put_Line (0, "with TGen.Instr_Support;");
             end if;
             if Test.Common.Generate_Test_Vectors and then not Data.Is_Generic
             then
-               S_Put (0, "with Ada.Exceptions;");
-               New_Line_Count;
+               S_Put_Line_C (0, "with Ada.Exceptions;");
             end if;
             if Stub_Mode_ON then
                Put_Stub_Data_Import;
@@ -6565,8 +6369,7 @@ package body Test.Skeleton is
 
             Put_Persistent_Section (With_Clauses);
 
-            S_Put (0, "package body " & Unit_Name.all & " is");
-            New_Line_Count;
+            S_Put_Line_C (0, "package body " & Unit_Name.all & " is");
             New_Line_Count;
 
             Put_Persistent_Section (Body_Declarations);
@@ -6650,26 +6453,21 @@ package body Test.Skeleton is
 
                      New_Tests_Counter := New_Tests_Counter + 1;
                      New_Line_Count;
-                     S_Put (6, "pragma Unreferenced (Gnattest_T);");
+                     S_Put_Line_C (6, "pragma Unreferenced (Gnattest_T);");
                      New_Line_Count;
-                     New_Line_Count;
-                     S_Put (3, "begin");
-                     New_Line_Count;
+                     S_Put_Line_C (3, "begin");
                      New_Line_Count;
                      if not Setters_Set.Is_Empty then
                         for Set of Setters_Set loop
-                           S_Put (3, "--  " & Set & "( );");
-                           New_Line_Count;
+                           S_Put_Line_C (3, "--  " & Set & "( );");
                         end loop;
                         New_Line_Count;
                         Setters_Set.Clear;
                      end if;
-                     S_Put (6, "AUnit.Assertions.Assert");
-                     New_Line_Count;
-                     S_Put (8, "(Gnattest_Generated.Default_Assert_Value,");
-                     New_Line_Count;
-                     S_Put (9, """Test not implemented."");");
-                     New_Line_Count;
+                     S_Put_Line_C (6, "AUnit.Assertions.Assert");
+                     S_Put_Line_C
+                       (8, "(Gnattest_Generated.Default_Assert_Value,");
+                     S_Put_Line_C (9, """Test not implemented."");");
                      New_Line_Count;
                   else
 
@@ -6812,8 +6610,7 @@ package body Test.Skeleton is
 
             Put_Persistent_Section (Body_Statements);
 
-            S_Put (0, "end " & Unit_Name.all & ";");
-            New_Line_Count;
+            S_Put_Line_C (0, "end " & Unit_Name.all & ";");
 
             Close_File;
 
@@ -8663,20 +8460,18 @@ package body Test.Skeleton is
       Add_Cov_Dump   : Boolean := False) is
    begin
 
-      S_Put (0, GT_Marker_Begin);
-      New_Line_Count;
+      S_Put_Line_C (0, GT_Marker_Begin);
 
       if Add_Cov_Dump then
-         S_Put
+         S_Put_Line_C
            (6,
             "pragma Annotate (Xcov, Dump_Buffers, """
             & TGen.LAL_Utils.Short_Hash
                 (Subp => Subp.Subp_Declaration.As_Basic_Decl)
             & """);");
-         New_Line_Count;
       end if;
 
-      S_Put
+      S_Put_Line_C
         (3,
          (if Commented_Out then "--  " else "")
          & "end "
@@ -8685,9 +8480,7 @@ package body Test.Skeleton is
          & Get_Raw_Test_Name (Subp)
          & ";");
 
-      New_Line_Count;
-      S_Put (0, GT_Marker_End);
-      New_Line_Count;
+      S_Put_Line_C (0, GT_Marker_End);
 
    end Put_Closing_Comment_Section;
 
@@ -8723,12 +8516,11 @@ package body Test.Skeleton is
    begin
 
       New_Line_Count;
-      S_Put (0, GT_Marker_Begin);
-      New_Line_Count;
+      S_Put_Line_C (0, GT_Marker_Begin);
 
-      S_Put (3, Maybe_Comment & "procedure " & Test_Name & Test_Args & ";");
-      New_Line_Count;
-      S_Put
+      S_Put_Line_C
+        (3, Maybe_Comment & "procedure " & Test_Name & Test_Args & ";");
+      S_Put_Line_C
         (3,
          Maybe_Comment
          & "procedure "
@@ -8737,7 +8529,6 @@ package body Test.Skeleton is
          & " renames "
          & Test_Name
          & ";");
-      New_Line_Count;
 
       S_Put
         (0,
@@ -8757,16 +8548,15 @@ package body Test.Skeleton is
       end if;
       New_Line_Count;
 
-      S_Put (3, Maybe_Comment & "procedure " & Test_Name & Test_Args & " is");
-
-      New_Line_Count;
+      S_Put_Line_C
+        (3, Maybe_Comment & "procedure " & Test_Name & Test_Args & " is");
 
       if not Commented_Out then
 
          --  we cannot relate to any sloc in case of a dangling test
 
          if not Omit_Sloc then
-            S_Put
+            S_Put_Line_C
               (3,
                "--  "
                & Base_Name (Subp.Subp_Declaration.Unit.Get_Filename)
@@ -8776,7 +8566,6 @@ package body Test.Skeleton is
                & Trim (First_Column_Number (Subp.Subp_Declaration)'Img, Both)
                & ":"
                & Subp.Subp_Name_Image.all);
-            New_Line_Count;
          end if;
 
          if Subp.Has_TC_Info then
@@ -8785,78 +8574,59 @@ package body Test.Skeleton is
       end if;
 
       if Test.Common.Instrument then
-         S_Put (6, "function GNATTEST_Set_Current_Test return Boolean;");
-         New_Line_Count;
-         S_Put (6, "function GNATTEST_Set_Current_Test return Boolean is");
-         New_Line_Count;
-         S_Put (6, "begin");
-         New_Line_Count;
-         S_Put (9, "TGen.Instr_Support.Autogenerated := False;");
-         New_Line_Count;
-         S_Put (9, "TGen.Instr_Support.Recursion_Depth := 0;");
-         New_Line_Count;
+         S_Put_Line_C
+           (6, "function GNATTEST_Set_Current_Test return Boolean;");
+         S_Put_Line_C
+           (6, "function GNATTEST_Set_Current_Test return Boolean is");
+         S_Put_Line_C (6, "begin");
+         S_Put_Line_C (9, "TGen.Instr_Support.Autogenerated := False;");
+         S_Put_Line_C (9, "TGen.Instr_Support.Recursion_Depth := 0;");
 
-         S_Put
+         S_Put_Line_C
            (9,
             "if TGen.Instr_Support.Subp_Hash /= """
             & Mangle_Hash_Full (Subp.Subp_Declaration)
             & """");
-         New_Line_Count;
-         S_Put
+         S_Put_Line_C
            (11,
             "or else TGen.Instr_Support.Nesting_Hash /= """
             & GNAT.SHA1.Digest (Get_Nesting (Subp.Subp_Declaration))
             & """");
-         New_Line_Count;
-         S_Put (9, "then");
-         New_Line_Count;
+         S_Put_Line_C (9, "then");
 
-         S_Put (12, "TGen.Instr_Support.Test_Input_Counter := 1;");
-         New_Line_Count;
-         S_Put
+         S_Put_Line_C (12, "TGen.Instr_Support.Test_Input_Counter := 1;");
+         S_Put_Line_C
            (12,
             "TGen.Instr_Support.Subp_Hash := """
             & Mangle_Hash_Full (Subp.Subp_Declaration)
             & """;");
-         New_Line_Count;
-         S_Put
+         S_Put_Line_C
            (12,
             "TGen.Instr_Support.Nesting_Hash := """
             & GNAT.SHA1.Digest (Get_Nesting (Subp.Subp_Declaration))
             & """;");
-         New_Line_Count;
 
-         S_Put (9, "end if;");
-         New_Line_Count;
-         S_Put (9, "return True;");
-         New_Line_Count;
-         S_Put (6, "end GNATTEST_Set_Current_Test;");
-         New_Line_Count;
-         S_Put (6, "Dummy_GNATTEST : Boolean := GNATTEST_Set_Current_Test;");
-         Put_New_Line;
+         S_Put_Line_C (9, "end if;");
+         S_Put_Line_C (9, "return True;");
+         S_Put_Line_C (6, "end GNATTEST_Set_Current_Test;");
+         S_Put_Line_C
+           (6, "Dummy_GNATTEST : Boolean := GNATTEST_Set_Current_Test;");
       end if;
 
       if Add_Cov_Dump then
-         S_Put (6, "function GNATTEST_Reset_Cov return Boolean is");
+         S_Put_Line_C (6, "function GNATTEST_Reset_Cov return Boolean is");
+         S_Put_Line_C (6, "begin");
+         S_Put_Line_C (9, "pragma Annotate (Xcov, Reset_Buffers);");
+         S_Put_Line_C (9, "return True;");
+         S_Put_Line_C (6, "end GNATTEST_Reset_Cov;");
          New_Line_Count;
-         S_Put (6, "begin");
-         New_Line_Count;
-         S_Put (9, "pragma Annotate (Xcov, Reset_Buffers);");
-         New_Line_Count;
-         S_Put (9, "return True;");
-         New_Line_Count;
-         S_Put (6, "end GNATTEST_Reset_Cov;");
-         New_Line_Count;
-         New_Line_Count;
-         S_Put
+         S_Put_Line_C
            (6,
             "Dummy_GNATTEST_Reset_Cov : constant Boolean :="
             & " GNATTEST_Reset_Cov;");
-         New_Line_Count;
       end if;
 
-      S_Put (0, GT_Marker_End);
-      New_Line_Count;
+      S_Put_Line_C (0, GT_Marker_End);
 
    end Put_Opening_Comment_Section;
 
@@ -8880,23 +8650,15 @@ package body Test.Skeleton is
            when Ensures  => TCI.Ens_Line,
            when Requires => TCI.Req_Line);
    begin
-      S_Put (Indent, "begin");
-      New_Line_Count;
-      S_Put (Indent + 3, "pragma Assert");
-      New_Line_Count;
-      S_Put (Indent + 5, "(" & Img.all & ");");
-      New_Line_Count;
-      S_Put (Indent + 3, "null;");
-      New_Line_Count;
-      S_Put (Indent, "exception");
-      New_Line_Count;
-      S_Put (Indent + 6, "when System.Assertions.Assert_Failure =>");
-      New_Line_Count;
-      S_Put (Indent + 9, "AUnit.Assertions.Assert");
-      New_Line_Count;
-      S_Put (Indent + 11, "(False,");
-      New_Line_Count;
-      S_Put
+      S_Put_Line_C (Indent, "begin");
+      S_Put_Line_C (Indent + 3, "pragma Assert");
+      S_Put_Line_C (Indent + 5, "(" & Img.all & ");");
+      S_Put_Line_C (Indent + 3, "null;");
+      S_Put_Line_C (Indent, "exception");
+      S_Put_Line_C (Indent + 6, "when System.Assertions.Assert_Failure =>");
+      S_Put_Line_C (Indent + 9, "AUnit.Assertions.Assert");
+      S_Put_Line_C (Indent + 11, "(False,");
+      S_Put_Line_C
         (Indent + 12,
          """"
          & To_Lower (Kind'Image (1 .. 3))
@@ -8907,9 +8669,7 @@ package body Test.Skeleton is
          & " test "
          & Kind_Str
          & " violated"");");
-      New_Line_Count;
-      S_Put (Indent, "end;");
-      New_Line_Count;
+      S_Put_Line_C (Indent, "end;");
    end Put_Assert;
 
    --------------------
@@ -9010,35 +8770,28 @@ package body Test.Skeleton is
 
       Create (Output_Prj.all);
 
-      S_Put (0, "with ""aunit"";");
-
-      Put_New_Line;
-      S_Put (0, "with ""gnattest_common.gpr"";");
-      Put_New_Line;
+      S_Put_Line (0, "with ""aunit"";");
+      S_Put_Line (0, "with ""gnattest_common.gpr"";");
       if Get_Lib_Support_Status in Needed | Generated then
-         S_Put (0, "with ""tgen_support" & Dir_Sep & "tgen_support.gpr"";");
-         Put_New_Line;
-         S_Put (0, "with ""tgen_rts.gpr"";");
+         S_Put_Line
+           (0, "with ""tgen_support" & Dir_Sep & "tgen_support.gpr"";");
+         S_Put_Line (0, "with ""tgen_rts.gpr"";");
       end if;
-      S_Put (0, "with """);
-      S_Put
+      S_Put_Line
         (0,
-         +Relative_Path (Create (+Source_Prj), Create (+Harness_Dir_Str.all))
+         "with """
+         & (+Relative_Path
+               (Create (+Source_Prj), Create (+Harness_Dir_Str.all)))
          & """;");
-      Put_New_Line;
-      S_Put
+      S_Put_Line
         (0,
          "project " & Test_Prj_Prefix & Base_Name (Source_Prj_Name) & " is");
       Put_New_Line;
-      Put_New_Line;
 
-      S_Put (3, "for Source_Dirs use");
-      Put_New_Line;
+      S_Put_Line (3, "for Source_Dirs use");
 
       if Out_Dirs.Is_Empty then
-         S_Put (5, "(""common"");");
-
-         Put_New_Line;
+         S_Put_Line (5, "(""common"");");
          Put_New_Line;
       else
          Out_Dirs_Cur := Out_Dirs.First;
@@ -9053,8 +8806,7 @@ package body Test.Skeleton is
             Srcs.Next (Out_Dirs_Cur);
             exit when Out_Dirs_Cur = Srcs.No_Element;
 
-            S_Put (0, ",");
-            Put_New_Line;
+            S_Put_Line (0, ",");
             S_Put (6, """");
             S_Put
               (0,
@@ -9064,16 +8816,12 @@ package body Test.Skeleton is
                & """");
 
          end loop;
-         S_Put (0, ",");
-         Put_New_Line;
-         S_Put (6, """common"");");
-
-         Put_New_Line;
+         S_Put_Line (0, ",");
+         S_Put_Line (6, """common"");");
          Put_New_Line;
       end if;
 
-      S_Put (3, "for Object_Dir use ""test_obj"";");
-      Put_New_Line;
+      S_Put_Line (3, "for Object_Dir use ""test_obj"";");
       declare
          Obj_Dir : constant String :=
            Harness_Dir_Str.all & Dir_Sep & "test_obj";
@@ -9086,50 +8834,44 @@ package body Test.Skeleton is
             Cmd_Error_No_Help ("cannot create directory " & Obj_Dir);
       end;
 
-      S_Put (3, "for Languages use Gnattest_Common'Languages & (""Ada"");");
-      Put_New_Line;
+      S_Put_Line
+        (3, "for Languages use Gnattest_Common'Languages & (""Ada"");");
 
       Test.Common.Write_Additional_Compiler_Flags (Harness_Dir_Str.all);
       Put_New_Line;
       Put_New_Line;
 
       if IDE_Package_Present then
-         S_Put
+         S_Put_Line
            (3,
             "package Ide renames "
             & Base_Name (Source_Prj, File_Extension (Source_Prj))
             & ".Ide;");
          Put_New_Line;
-         Put_New_Line;
       end if;
 
       if Make_Package_Present then
-         S_Put
+         S_Put_Line
            (3,
             "package Make renames "
             & Base_Name (Source_Prj, File_Extension (Source_Prj))
             & ".Make;");
          Put_New_Line;
-         Put_New_Line;
       end if;
 
-      S_Put (3, "package Coverage is");
-      Put_New_Line;
-      S_Put (6, "for Units use ();");
-      Put_New_Line;
-      S_Put (3, "end Coverage;");
-      Put_New_Line;
+      S_Put_Line (3, "package Coverage is");
+      S_Put_Line (6, "for Units use ();");
+      S_Put_Line (3, "end Coverage;");
       Put_New_Line;
 
       if Body_Suffix.all /= ".adb"
         or else Spec_Suffix.all /= ".ads"
         or else Shorten_Package
       then
-         S_Put (3, "package Naming is");
-         Put_New_Line;
+         S_Put_Line (3, "package Naming is");
          if Shorten_Package then
             for C in Package_Name_Mapping.Iterate loop
-               S_Put
+               S_Put_Line
                  (6,
                   "for Body ("""
                   & Key (C)
@@ -9137,8 +8879,7 @@ package body Test.Skeleton is
                   & Element (C)
                   & Body_Suffix.all
                   & """;");
-               Put_New_Line;
-               S_Put
+               S_Put_Line
                  (6,
                   "for Spec ("""
                   & Key (C)
@@ -9146,30 +8887,26 @@ package body Test.Skeleton is
                   & Element (C)
                   & Spec_Suffix.all
                   & """;");
-               Put_New_Line;
             end loop;
          end if;
          if Body_Suffix.all /= ".adb" or else Spec_Suffix.all /= ".ads" then
-            S_Put
+            S_Put_Line
               (6,
                "for Spec_Suffix use "
                & Base_Name (Source_Prj_Name)
                & ".Naming'Spec_Suffix;");
-            Put_New_Line;
-            S_Put
+            S_Put_Line
               (6,
                "for Body_Suffix use "
                & Base_Name (Source_Prj_Name)
                & ".Naming'Body_Suffix;");
-            Put_New_Line;
          end if;
-         S_Put (3, "end Naming;");
-         Put_New_Line;
+         S_Put_Line (3, "end Naming;");
          Put_New_Line;
       end if;
 
-      S_Put (0, "end " & Test_Prj_Prefix & Base_Name (Source_Prj_Name) & ";");
-      Put_New_Line;
+      S_Put_Line
+        (0, "end " & Test_Prj_Prefix & Base_Name (Source_Prj_Name) & ";");
       Close_File;
 
       Tmp_Test_Prj :=
@@ -9284,13 +9021,12 @@ package body Test.Skeleton is
          S_Put (1, "return " & Node_Image (Spec.P_Returns));
       end if;
 
-      S_Put
+      S_Put_Line_C
         (1,
          "renames "
          & Wrapper_Prefix
          & Current_Subp.Subp_Mangle_Name.all
          & ";");
-      New_Line_Count;
    end Put_Wrapper_Rename;
 
    -------------------------------
@@ -9307,8 +9043,7 @@ package body Test.Skeleton is
       Params  : constant Param_Spec_Array := Spec.P_Params;
       Str_Set : String_Set.Set;
    begin
-      S_Put (0, GT_Marker_Begin);
-      New_Line_Count;
+      S_Put_Line_C (0, GT_Marker_Begin);
       S_Put
         (3, "function " & Wrapper_Prefix & Current_Subp.Subp_Mangle_Name.all);
 
@@ -9324,27 +9059,21 @@ package body Test.Skeleton is
          end if;
       end loop;
 
-      S_Put (0, " return " & Node_Image (Spec.P_Returns));
-
-      New_Line_Count;
-      S_Put (3, "is");
-      New_Line_Count;
+      S_Put_Line_C (0, " return " & Node_Image (Spec.P_Returns));
+      S_Put_Line_C (3, "is");
 
       Str_Set := Current_Subp.TC_Info.Params_To_Temp;
       for Str of Str_Set loop
-         S_Put (6, Str);
-         New_Line_Count;
+         S_Put_Line_C (6, Str);
       end loop;
 
-      S_Put (3, "begin");
-      New_Line_Count;
+      S_Put_Line_C (3, "begin");
 
       if Current_Subp.TC_Info.Req_Image.all /= "" then
          Put_Assert (Current_Subp.TC_Info, Kind => Requires, Indent => 6);
       end if;
 
-      S_Put (6, "declare");
-      New_Line_Count;
+      S_Put_Line_C (6, "declare");
       S_Put
         (9,
          Current_Subp.Subp_Mangle_Name.all
@@ -9385,24 +9114,20 @@ package body Test.Skeleton is
 
       New_Line_Count;
 
-      S_Put (6, "begin");
-      New_Line_Count;
+      S_Put_Line_C (6, "begin");
 
       if Current_Subp.TC_Info.Ens_Image.all /= "" then
          Put_Assert (Current_Subp.TC_Info, Kind => Ensures, Indent => 9);
       end if;
 
-      S_Put (9, "return " & Current_Subp.Subp_Mangle_Name.all & "_Result;");
-      New_Line_Count;
+      S_Put_Line_C
+        (9, "return " & Current_Subp.Subp_Mangle_Name.all & "_Result;");
 
-      S_Put (6, "end;");
-      New_Line_Count;
+      S_Put_Line_C (6, "end;");
 
-      S_Put
+      S_Put_Line_C
         (3, "end " & Wrapper_Prefix & Current_Subp.Subp_Mangle_Name.all & ";");
-      New_Line_Count;
-      S_Put (0, GT_Marker_End);
-      New_Line_Count;
+      S_Put_Line_C (0, GT_Marker_End);
 
    end Generate_Function_Wrapper;
 
@@ -9416,8 +9141,7 @@ package body Test.Skeleton is
       Params  : constant Param_Spec_Array := Spec.P_Params;
       Str_Set : String_Set.Set;
    begin
-      S_Put (0, GT_Marker_Begin);
-      New_Line_Count;
+      S_Put_Line_C (0, GT_Marker_Begin);
       S_Put
         (3, "procedure " & Wrapper_Prefix & Current_Subp.Subp_Mangle_Name.all);
 
@@ -9434,17 +9158,14 @@ package body Test.Skeleton is
       end loop;
 
       New_Line_Count;
-      S_Put (3, "is");
-      New_Line_Count;
+      S_Put_Line_C (3, "is");
 
       Str_Set := Current_Subp.TC_Info.Params_To_Temp;
       for Str of Str_Set loop
-         S_Put (6, Str);
-         New_Line_Count;
+         S_Put_Line_C (6, Str);
       end loop;
 
-      S_Put (3, "begin");
-      New_Line_Count;
+      S_Put_Line_C (3, "begin");
 
       if Current_Subp.TC_Info.Req_Image.all /= "" then
          Put_Assert (Current_Subp.TC_Info, Kind => Requires, Indent => 6);
@@ -9491,11 +9212,9 @@ package body Test.Skeleton is
          Put_Assert (Current_Subp.TC_Info, Kind => Ensures, Indent => 6);
       end if;
 
-      S_Put
+      S_Put_Line_C
         (3, "end " & Wrapper_Prefix & Current_Subp.Subp_Mangle_Name.all & ";");
-      New_Line_Count;
-      S_Put (0, GT_Marker_End);
-      New_Line_Count;
+      S_Put_Line_C (0, GT_Marker_End);
 
    end Generate_Procedure_Wrapper;
 
