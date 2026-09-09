@@ -1237,26 +1237,22 @@ package body Test.Skeleton.Source_Table is
    -------------------------
 
    procedure Set_Subdir_Output is
-      SF_Rec     : SF_Record;
-      Tmp_Str    : String_Access;
-      SF_Rec_Key : String_Access;
+      SF_Rec : SF_Record;
    begin
       Increase_Indent (Me, "Set_Subdir_Output");
 
       for Cur in SF_Table.Iterate loop
          SF_Rec := Source_File_Table.Element (Cur);
-         SF_Rec_Key := new String'(Key (Cur));
 
-         Trace (Me, "processing: " & SF_Rec_Key.all);
-
-         Tmp_Str := new String'(Dir_Name (SF_Rec.Full_Source_Name.all));
+         Trace (Me, "processing: " & Key (Cur));
 
          SF_Rec.Test_Destination :=
-           new String'(Tmp_Str.all & Test_Subdir_Name.all & Dir_Sep);
+           new String'
+             (Dir_Name (SF_Rec.Full_Source_Name.all)
+              & Test_Subdir_Name.all
+              & Dir_Sep);
 
-         Replace (SF_Table, SF_Rec_Key.all, SF_Rec);
-         Free (SF_Rec_Key);
-         Free (Tmp_Str);
+         Replace (SF_Table, Key (Cur), SF_Rec);
       end loop;
 
       Decrease_Indent (Me);
@@ -1268,9 +1264,8 @@ package body Test.Skeleton.Source_Table is
    -------------------------
 
    procedure Set_Separate_Root (Max_Common_Root : String) is
-      SF_Rec     : SF_Record;
-      Tmp_Str    : String_Access;
-      SF_Rec_Key : String_Access;
+      SF_Rec  : SF_Record;
+      Tmp_Str : String_Access;
 
       Idx : Integer;
    begin
@@ -1278,9 +1273,8 @@ package body Test.Skeleton.Source_Table is
 
       for Cur in SF_Table.Iterate loop
          SF_Rec := Source_File_Table.Element (Cur);
-         SF_Rec_Key := new String'(Key (Cur));
 
-         Trace (Me, "processing: " & SF_Rec_Key.all);
+         Trace (Me, "processing: " & Key (Cur));
 
          Tmp_Str := new String'(Dir_Name (SF_Rec.Full_Source_Name.all));
 
@@ -1292,9 +1286,8 @@ package body Test.Skeleton.Source_Table is
               & Dir_Sep
               & Tmp_Str.all (Idx .. Tmp_Str.all'Last));
 
-         Replace (SF_Table, SF_Rec_Key.all, SF_Rec);
+         Replace (SF_Table, Key (Cur), SF_Rec);
 
-         Free (SF_Rec_Key);
          Free (Tmp_Str);
       end loop;
 
