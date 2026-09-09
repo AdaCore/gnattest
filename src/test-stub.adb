@@ -1110,24 +1110,17 @@ package body Test.Stub is
          then "_" & Node_Image (Elem.F_Name.As_Attribute_Ref.F_Attribute)
          else "");
 
+      Decl_Name : constant String :=
+        (if Get_Nesting (Decl) = "Standard"
+         then Node_Image (Decl.P_Defining_Name)
+         else
+           Encode
+             (Decl.P_Defining_Name.P_Fully_Qualified_Name,
+              Decl.Unit.Get_Charset));
    begin
-      if Get_Nesting (Decl) = "Standard" then
-         return
-           Utils.String_Utilities.Replace_Char
-             (Node_Image (Decl.P_Defining_Name) & Attr_Suff & "_Access",
-              From => '.',
-              To   => '_');
-      else
-         return
-           Utils.String_Utilities.Replace_Char
-             (Encode
-                (Decl.P_Defining_Name.P_Fully_Qualified_Name,
-                 Decl.Unit.Get_Charset)
-              & Attr_Suff
-              & "_Access",
-              From => '.',
-              To   => '_');
-      end if;
+      return
+        Utils.String_Utilities.Replace_Char
+          (Decl_Name & Attr_Suff & "_Access", From => '.', To => '_');
 
    end Get_Access_Type_Name;
 
