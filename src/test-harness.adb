@@ -195,13 +195,21 @@ package body Test.Harness is
    --  Indicates if the given Subprogram is of interest, that is a test routine
    --  or Set_Up/Tear_Down etc.
 
-   function Type_Test_Package (Elem : Base_Type_Decl) return String;
-   --  Get name of test package where test type corresponding to Elem should be
-   --  declared.
-
    function Type_Name (Elem : Base_Type_Decl) return String
    is (Node_Image (Elem.As_Basic_Decl.P_Defining_Name));
    --  Returns image of type name
+
+   function Type_Test_Package (Elem : Base_Type_Decl) return String
+   is (Type_Name (Elem)
+       & Test_Data_Unit_Name_Suff
+       & "."
+       & Type_Name (Elem)
+       & Test_Unit_Name_Suff);
+   --  Get name of test package where test type corresponding to Elem should be
+   --  declared.
+
+   function FQ_Type_Test_Package (Elem : Base_Type_Decl) return String;
+   --  Fully qualified version of Type_Test_Package
 
    function File_Exists (Filename : String) return Boolean;
    --  Returns True if Filename exists on disk and is readable.
@@ -268,22 +276,17 @@ package body Test.Harness is
       Indent         : Natural;
       Trailing_Comma : Boolean := True) is
    begin
-      S_Put
+      S_Put_Line
         (Indent, "(Tested_File => AUnit.Format (""" & Loc.File.all & """),");
-      Put_New_Line;
-      S_Put (Indent + 2, "Tested_Line => " & Loc.Line'Image & ",");
-      Put_New_Line;
-      S_Put (Indent + 2, "Tested_Column => " & Loc.Column'Image & ",");
-      Put_New_Line;
-      S_Put
+      S_Put_Line (Indent + 2, "Tested_Line => " & Loc.Line'Image & ",");
+      S_Put_Line (Indent + 2, "Tested_Column => " & Loc.Column'Image & ",");
+      S_Put_Line
         (Indent + 2,
          "Tested_Name => "
          & (if Loc.Tested_Name = null
             then "null"
             else "AUnit.Format (""" & Loc.Tested_Name.all & """)"));
-      Put_New_Line;
-      S_Put (Indent, ")" & (if Trailing_Comma then "," else ""));
-      Put_New_Line;
+      S_Put_Line (Indent, ")" & (if Trailing_Comma then "," else ""));
    end Print_Location;
 
    ------------------
@@ -298,19 +301,17 @@ package body Test.Harness is
       if Suffix = null then
          S_Put (Indent, "null,");
       else
-         S_Put (Indent, "new Test_Suffix'(");
-         Put_New_Line;
+         S_Put_Line (Indent, "new Test_Suffix'(");
          S_Put (Indent + 2, "Suffix_Text => ");
          if Suffix.Suffix_Text /= null then
-            S_Put (0, "AUnit.Format (""" & Suffix.Suffix_Text.all & """),");
+            S_Put_Line
+              (0, "AUnit.Format (""" & Suffix.Suffix_Text.all & """),");
          else
-            S_Put (0, "null,");
+            S_Put_Line (0, "null,");
          end if;
-         Put_New_Line;
          S_Put (Indent + 2, "Suffix_Location => ");
          if Suffix.Suffix_Location /= null then
-            S_Put (0, "new Tested_Location'(");
-            Put_New_Line;
+            S_Put_Line (0, "new Tested_Location'(");
             Print_Location (Suffix.Suffix_Location.all, Indent + 4, False);
             S_Put (Indent + 2, "),");
          else
@@ -322,8 +323,7 @@ package body Test.Harness is
             Put_New_Line;
             Print_Suffix (Suffix.Additional_Suffix, Indent + 2, False);
          else
-            S_Put (0, "null");
-            Put_New_Line;
+            S_Put_Line (0, "null");
          end if;
          S_Put (Indent, ")" & (if Trailing_Comma then "," else ""));
       end if;
@@ -343,20 +343,14 @@ package body Test.Harness is
       Test_Info           : Test_Routine_Info;
       Test_Method         : String) is
    begin
-      S_Put (Indent, Create_Package_Name & ".Create");
-      Put_New_Line;
-      S_Put (Indent + 2, "(" & Name & ",");
-      Put_New_Line;
-      S_Put (Indent + 2, """" & Test_Info.Test_Name.all & """,");
-      Put_New_Line;
-      S_Put (Indent + 2, """" & Test_Package_Name & """,");
-      Put_New_Line;
-      S_Put (Indent + 2, """" & Test_File & """,");
-      Put_New_Line;
+      S_Put_Line (Indent, Create_Package_Name & ".Create");
+      S_Put_Line (Indent + 2, "(" & Name & ",");
+      S_Put_Line (Indent + 2, """" & Test_Info.Test_Name.all & """,");
+      S_Put_Line (Indent + 2, """" & Test_Package_Name & """,");
+      S_Put_Line (Indent + 2, """" & Test_File & """,");
       Print_Location (Test_Info.Location, Indent + 2);
       Print_Suffix (Test_Info.Suffix, Indent + 2);
-      S_Put (Indent + 2, Test_Method & ");");
-      Put_New_Line;
+      S_Put_Line (Indent + 2, Test_Method & ");");
    end Print_Create_Function;
 
    ---------------------------
@@ -413,21 +407,16 @@ package body Test.Harness is
    begin
       if not Is_Regular_File (Harness_Dir.all & "suppress.adc") then
          Create (Harness_Dir.all & "suppress.adc");
-         S_Put (0, "pragma Assertion_Policy (Pre => Ignore);");
-         Put_New_Line;
-         S_Put (0, "pragma Assertion_Policy (Post => Ignore);");
-         Put_New_Line;
-         S_Put (0, "pragma Assertion_Policy (Ghost => Check);");
-         Put_New_Line;
+         S_Put_Line (0, "pragma Assertion_Policy (Pre => Ignore);");
+         S_Put_Line (0, "pragma Assertion_Policy (Post => Ignore);");
+         S_Put_Line (1, "pragma Assertion_Policy (Ghost => Check);");
          Close_File;
       end if;
 
       if not Is_Regular_File (Harness_Dir.all & "suppress_no_ghost.adc") then
          Create (Harness_Dir.all & "suppress_no_ghost.adc");
-         S_Put (0, "pragma Assertion_Policy (Pre => Ignore);");
-         Put_New_Line;
-         S_Put (0, "pragma Assertion_Policy (Post => Ignore);");
-         Put_New_Line;
+         S_Put_Line (0, "pragma Assertion_Policy (Pre => Ignore);");
+         S_Put_Line (0, "pragma Assertion_Policy (Post => Ignore);");
          Close_File;
       end if;
    end Generate_Global_Config_Pragmas_File;
@@ -510,7 +499,7 @@ package body Test.Harness is
          Attrs.Append ("Default_Switches");
          Attrs.Append ("Switches");
          for Attr of Attrs loop
-            S_Put
+            S_Put_Line
               (6,
                Add_Switches_From_Source_Prj
                  (Prepend_Switches,
@@ -518,7 +507,6 @@ package body Test.Harness is
                   Attr,
                   Pkg_Name,
                   Pkg_In_User_Prj));
-            Put_New_Line;
          end loop;
       end Add_Switches_And_Default_Switches_From_Source_Prj;
 
@@ -529,154 +517,115 @@ package body Test.Harness is
       Create (Gnattest_Common_Prj);
 
       if Extend_User_Project then
-         S_Put
+         S_Put_Line
            (0,
             "with """
             & (+Relative_Path
                   (Create (+Source_Prj), Create (+Harness_Dir.all)))
             & """;");
-         Put_New_Line;
       end if;
 
-      S_Put (0, "abstract project Gnattest_Common is");
-      Put_New_Line;
-      S_Put (3, "for Languages use (""Ada"");");
-      Put_New_Line;
-      S_Put (3, "for Source_Files use ();");
-      Put_New_Line;
+      S_Put_Line (0, "abstract project Gnattest_Common is");
+      S_Put_Line (3, "for Languages use (""Ada"");");
+      S_Put_Line (3, "for Source_Files use ();");
 
       if RTS_Attribute_Val.all /= "" then
-         S_Put
+         S_Put_Line
            (3, "for Runtime (""Ada"") use """ & RTS_Attribute_Val.all & """;");
-         Put_New_Line;
       end if;
 
       if Target_Val.all /= "" then
-         S_Put (3, "for Target use """ & Target_Val.all & """;");
-         Put_New_Line;
+         S_Put_Line (3, "for Target use """ & Target_Val.all & """;");
       end if;
 
       Put_New_Line;
-      S_Put
+      S_Put_Line
         (3,
          "type TD_Compilation_Type is (""contract-checks"","
          & """no-contract-checks"", ""no-config-file"");");
-      Put_New_Line;
-      if Has_Test_Cases then
-         S_Put
-           (3,
-            "TD_Compilation : TD_Compilation_Type := external "
-            & "(""TEST_DRIVER_BUILD_MODE"", ""contract-checks"");");
-      else
-         S_Put
-           (3,
-            "TD_Compilation : TD_Compilation_Type := external "
-            & "(""TEST_DRIVER_BUILD_MODE"", ""no-config-file"");");
-      end if;
-      Put_New_Line;
+
+      S_Put_Line
+        (3,
+         "TD_Compilation : TD_Compilation_Type := external "
+         & "(""TEST_DRIVER_BUILD_MODE"", """
+         & (if Has_Test_Cases then "contract-checks" else "no-config-file")
+         & """);");
 
       Put_New_Line;
-      S_Put
+      S_Put_Line
         (3,
          "package Builder"
          & Extends_Clause ("Builder", Builder_Package_Present)
          & " is");
-      Put_New_Line;
-      S_Put (6, "case TD_Compilation is");
-      Put_New_Line;
-      S_Put (9, "when ""contract-checks"" =>");
-      Put_New_Line;
-      S_Put (12, "for Global_Configuration_Pragmas use ""suppress.adc"";");
-      Put_New_Line;
-      S_Put (9, "when ""no-contract-checks"" =>");
-      Put_New_Line;
-      S_Put
+      S_Put_Line (6, "case TD_Compilation is");
+      S_Put_Line (9, "when ""contract-checks"" =>");
+      S_Put_Line
+        (12, "for Global_Configuration_Pragmas use ""suppress.adc"";");
+      S_Put_Line (9, "when ""no-contract-checks"" =>");
+      S_Put_Line
         (12,
          "for Global_Configuration_Pragmas use ""suppress_no_ghost.adc"";");
-      Put_New_Line;
-      S_Put (9, "when ""no-config-file"" =>");
-      Put_New_Line;
-      S_Put (12, "null;");
-      Put_New_Line;
-      S_Put (6, "end case;");
-      Put_New_Line;
-      S_Put (3, "end Builder;");
-      Put_New_Line;
+      S_Put_Line (9, "when ""no-config-file"" =>");
+      S_Put_Line (12, "null;");
+      S_Put_Line (6, "end case;");
+      S_Put_Line (3, "end Builder;");
       Put_New_Line;
 
-      S_Put
+      S_Put_Line
         (3,
          "package Linker"
          & Extends_Clause ("Linker", Linker_Package_Present)
          & " is");
-      Put_New_Line;
       Add_Switches_And_Default_Switches_From_Source_Prj
         (Prepend_Switches => "(""-g"")",
          Append_Switches  => "",
          Pkg_Name         => "Linker",
          Pkg_In_User_Prj  => Linker_Package_Present);
-      S_Put (3, "end Linker;");
-      Put_New_Line;
+      S_Put_Line (3, "end Linker;");
       Put_New_Line;
 
-      S_Put
+      S_Put_Line
         (3,
          "package Binder"
          & Extends_Clause ("Binder", Binder_Package_Present)
          & " is");
-      Put_New_Line;
       Add_Switches_And_Default_Switches_From_Source_Prj
         (Prepend_Switches => "(""-E"", ""-static"")",
          Append_Switches  => "",
          Pkg_Name         => "Binder",
          Pkg_In_User_Prj  => Binder_Package_Present);
-      S_Put (3, "end Binder;");
-      Put_New_Line;
-      Put_New_Line;
-
-      S_Put (3, "Contract_Switches := ();");
-      Put_New_Line;
-      S_Put (3, "case TD_Compilation is");
-      Put_New_Line;
-      S_Put (6, "when ""contract-checks"" =>");
-      Put_New_Line;
-      S_Put (9, "Contract_Switches := (""-gnata"");");
-      Put_New_Line;
-      S_Put (6, "when others =>");
-      Put_New_Line;
-      S_Put (9, "null;");
-      Put_New_Line;
-      S_Put (3, "end case;");
+      S_Put_Line (3, "end Binder;");
       Put_New_Line;
 
-      S_Put
+      S_Put_Line (3, "Contract_Switches := ();");
+      S_Put_Line (3, "case TD_Compilation is");
+      S_Put_Line (6, "when ""contract-checks"" =>");
+      S_Put_Line (9, "Contract_Switches := (""-gnata"");");
+      S_Put_Line (6, "when others =>");
+      S_Put_Line (9, "null;");
+      S_Put_Line (3, "end case;");
+
+      S_Put_Line
         (3,
          "package Compiler"
          & Extends_Clause ("Compiler", Compiler_Package_Present)
          & " is");
-      Put_New_Line;
       Add_Switches_And_Default_Switches_From_Source_Prj
         (Prepend_Switches => "(""-g"") & Contract_Switches",
          Append_Switches  => "(""-gnatyN"", ""-gnatyM0"", ""-gnatwA"")",
          Pkg_Name         => "Compiler",
          Pkg_In_User_Prj  => Compiler_Package_Present);
-      S_Put (3, "end Compiler;");
-      Put_New_Line;
+      S_Put_Line (3, "end Compiler;");
       Put_New_Line;
 
       if Stub_Mode_ON or else Separate_Drivers then
-         S_Put (3, "package Ide is");
-         Put_New_Line;
-         S_Put (3, "end Ide;");
-         Put_New_Line;
-         S_Put (3, "package Make is");
-         Put_New_Line;
-         S_Put (3, "end Make;");
-         Put_New_Line;
+         S_Put_Line (3, "package Ide is");
+         S_Put_Line (3, "end Ide;");
+         S_Put_Line (3, "package Make is");
+         S_Put_Line (3, "end Make;");
       end if;
 
-      S_Put (0, "end Gnattest_Common;");
-      Put_New_Line;
+      S_Put_Line (0, "end Gnattest_Common;");
       Close_File;
    end Generate_Gnattest_Common_Prj;
 
@@ -722,76 +671,56 @@ package body Test.Harness is
          & Spec_Suffix.all);
 
       Put_Harness_Header;
-      S_Put (0, GT_Marker_Begin);
+      S_Put_Line (0, GT_Marker_Begin);
+
+      S_Put_Line (0, "with AUnit.Test_Filters;");
+      S_Put_Line (0, "with AUnit.Tests;");
       Put_New_Line;
 
-      S_Put (0, "with AUnit.Test_Filters;");
-      Put_New_Line;
-      S_Put (0, "with AUnit.Tests;");
-      Put_New_Line;
-      Put_New_Line;
-
-      S_Put (0, "package " & Filter_Package_Name & " is");
-      Put_New_Line;
-      S_Put
+      S_Put_Line (0, "package " & Filter_Package_Name & " is");
+      S_Put_Line
         (3,
          "type GT_Filter is new AUnit.Test_Filters.Test_Filter with private;");
       Put_New_Line;
+      S_Put_Line (3, "function Is_Active");
+      S_Put_Line (6, "(Filter : GT_Filter;");
+      S_Put_Line (7, "T      : AUnit.Tests.Test'Class) return Boolean;");
       Put_New_Line;
-      S_Put (3, "function Is_Active");
+      S_Put_Line
+        (3, "procedure Set_Selection_Mode (Filter : in out GT_Filter);");
       Put_New_Line;
-      S_Put (6, "(Filter : GT_Filter;");
-      Put_New_Line;
-      S_Put (7, "T      : AUnit.Tests.Test'Class) return Boolean;");
-      Put_New_Line;
-      Put_New_Line;
-      S_Put (3, "procedure Set_Selection_Mode (Filter : in out GT_Filter);");
-      Put_New_Line;
-      Put_New_Line;
-      S_Put (3, "procedure Set_From_SLOC");
-      Put_New_Line;
-      S_Put (6, "(Filter : in out GT_Filter;");
-      Put_New_Line;
-      S_Put (7, "SLOC   : String;");
-      Put_New_Line;
-      S_Put (7, "Found  : out Boolean);");
-      Put_New_Line;
+      S_Put_Line (3, "procedure Set_From_SLOC");
+      S_Put_Line (6, "(Filter : in out GT_Filter;");
+      S_Put_Line (7, "SLOC   : String;");
+      S_Put_Line (7, "Found  : out Boolean);");
       Put_New_Line;
 
-      S_Put (0, "private");
-      Put_New_Line;
+      S_Put_Line (0, "private");
       Put_New_Line;
 
-      S_Put
+      S_Put_Line
         (3,
          "Test_Routines_Total : constant Positive := "
          & Total_Subp_Count'Image
          & ";");
       Put_New_Line;
-      Put_New_Line;
 
-      S_Put
+      S_Put_Line
         (3,
          "type Selection_Type is array "
          & "(1 .. Test_Routines_Total) of Boolean;");
       Put_New_Line;
-      Put_New_Line;
 
-      S_Put
+      S_Put_Line
         (3,
          "type GT_Filter is new AUnit.Test_Filters.Test_Filter with record");
-      Put_New_Line;
-      S_Put (6, "Selection : Selection_Type := (others => True);");
-      Put_New_Line;
-      S_Put (3, "end record;");
-      Put_New_Line;
+      S_Put_Line (6, "Selection : Selection_Type := (others => True);");
+      S_Put_Line (3, "end record;");
 
       Put_New_Line;
-      S_Put (0, "end " & Filter_Package_Name & ";");
-      Put_New_Line;
+      S_Put_Line (0, "end " & Filter_Package_Name & ";");
 
-      S_Put (0, GT_Marker_End);
-      Put_New_Line;
+      S_Put_Line (0, GT_Marker_End);
 
       Close_File;
 
@@ -806,160 +735,108 @@ package body Test.Harness is
       S_Put (0, GT_Marker_Begin);
       Put_New_Line;
 
-      S_Put (0, "with AUnit.Simple_Test_Cases;  use AUnit.Simple_Test_Cases;");
-      Put_New_Line;
-      S_Put (0, "with AUnit; use AUnit;");
-      Put_New_Line;
-      S_Put (0, "with AUnit.Test_Info;");
-      Put_New_Line;
-      S_Put (0, "with Ada.Strings; use Ada.Strings;");
-      Put_New_Line;
-      S_Put (0, "with Ada.Strings.Fixed; use Ada.Strings.Fixed;");
+      S_Put_Line
+        (0, "with AUnit.Simple_Test_Cases;  use AUnit.Simple_Test_Cases;");
+      S_Put_Line (0, "with AUnit; use AUnit;");
+      S_Put_Line (0, "with AUnit.Test_Info;");
+      S_Put_Line (0, "with Ada.Strings; use Ada.Strings;");
+      S_Put_Line (0, "with Ada.Strings.Fixed; use Ada.Strings.Fixed;");
 
       Put_New_Line;
+
+      S_Put_Line (0, "package body " & Filter_Package_Name & " is");
       Put_New_Line;
 
-      S_Put (0, "package body " & Filter_Package_Name & " is");
-      Put_New_Line;
-      Put_New_Line;
-
-      S_Put (3, "Selection_Mode : Boolean := False;");
-      Put_New_Line;
+      S_Put_Line (3, "Selection_Mode : Boolean := False;");
       Put_New_Line;
 
-      S_Put
+      S_Put_Line
         (3,
          "function Starts_With (Str : String; "
          & "Prefix : String) return Boolean;");
       Put_New_Line;
-      Put_New_Line;
 
-      S_Put
+      S_Put_Line
         (3,
          "function Starts_With (Str : String; "
          & "Prefix : String) return Boolean is");
-      Put_New_Line;
-      S_Put (3, "begin");
-      Put_New_Line;
-      S_Put (6, "if Str'Length < Prefix'Length then");
-      Put_New_Line;
-      S_Put (9, "return False;");
-      Put_New_Line;
-      S_Put (6, "end if;");
-      Put_New_Line;
-      S_Put
+      S_Put_Line (3, "begin");
+      S_Put_Line (6, "if Str'Length < Prefix'Length then");
+      S_Put_Line (9, "return False;");
+      S_Put_Line (6, "end if;");
+      S_Put_Line
         (6,
          "return Str (Str'First .. Str'First + Prefix'Length - 1) = Prefix;");
-      Put_New_Line;
-      S_Put (3, "end Starts_With;");
-      Put_New_Line;
+      S_Put_Line (3, "end Starts_With;");
       Put_New_Line;
 
-      S_Put (3, "procedure Set_Selection_Mode (Filter : in out GT_Filter) is");
-      Put_New_Line;
-      S_Put (3, "begin");
-      Put_New_Line;
-      S_Put (6, "if Selection_Mode then");
-      Put_New_Line;
-      S_Put (9, "return;");
-      Put_New_Line;
-      S_Put (6, "end if;");
-      Put_New_Line;
-      S_Put (6, "Selection_Mode := True;");
-      Put_New_Line;
-      S_Put (6, "for J in Filter.Selection'Range loop");
-      Put_New_Line;
-      S_Put (9, "Filter.Selection (J) := False;");
-      Put_New_Line;
-      S_Put (6, "end loop;");
-      Put_New_Line;
-      S_Put (3, "end Set_Selection_Mode;");
-      Put_New_Line;
+      S_Put_Line
+        (3, "procedure Set_Selection_Mode (Filter : in out GT_Filter) is");
+      S_Put_Line (3, "begin");
+      S_Put_Line (6, "if Selection_Mode then");
+      S_Put_Line (9, "return;");
+      S_Put_Line (6, "end if;");
+      S_Put_Line (6, "Selection_Mode := True;");
+      S_Put_Line (6, "for J in Filter.Selection'Range loop");
+      S_Put_Line (9, "Filter.Selection (J) := False;");
+      S_Put_Line (6, "end loop;");
+      S_Put_Line (3, "end Set_Selection_Mode;");
       Put_New_Line;
 
-      S_Put (3, "function Is_Active");
+      S_Put_Line (3, "function Is_Active");
+      S_Put_Line (6, "(Filter : GT_Filter;");
+      S_Put_Line (7, "T      : AUnit.Tests.Test'Class) return Boolean is");
+      S_Put_Line (3, "begin");
       Put_New_Line;
-      S_Put (6, "(Filter : GT_Filter;");
-      Put_New_Line;
-      S_Put (7, "T      : AUnit.Tests.Test'Class) return Boolean is");
-      Put_New_Line;
-      S_Put (3, "begin");
-      Put_New_Line;
-      Put_New_Line;
-      S_Put (6, "if not Selection_Mode then");
-      Put_New_Line;
-      S_Put (9, "return True;");
-      Put_New_Line;
-      S_Put (6, "end if;");
-      Put_New_Line;
-      S_Put (6, "if T not in AUnit.Simple_Test_Cases.Test_Case'Class");
-      Put_New_Line;
-      S_Put
+      S_Put_Line (6, "if not Selection_Mode then");
+      S_Put_Line (9, "return True;");
+      S_Put_Line (6, "end if;");
+      S_Put_Line (6, "if T not in AUnit.Simple_Test_Cases.Test_Case'Class");
+      S_Put_Line
         (8,
          "or else Location (AUnit.Simple_Test_Cases.Test_Case'Class (T))."
          & "Tested_File = null");
-      Put_New_Line;
-      S_Put (6, "then");
-      Put_New_Line;
-      S_Put (9, "return False;");
-      Put_New_Line;
-      S_Put (6, "end if;");
-      Put_New_Line;
+      S_Put_Line (6, "then");
+      S_Put_Line (9, "return False;");
+      S_Put_Line (6, "end if;");
       Put_New_Line;
 
-      S_Put (6, "declare");
-      Put_New_Line;
-      S_Put (9, "Loc : constant AUnit.Test_Info.Tested_Location :=");
-      Put_New_Line;
-      S_Put (11, "Location (AUnit.Simple_Test_Cases.Test_Case'Class (T));");
-      Put_New_Line;
-      S_Put (9, "SLOC : constant String :=");
-      Put_New_Line;
-      S_Put
+      S_Put_Line (6, "declare");
+      S_Put_Line (9, "Loc : constant AUnit.Test_Info.Tested_Location :=");
+      S_Put_Line
+        (11, "Location (AUnit.Simple_Test_Cases.Test_Case'Class (T));");
+      S_Put_Line (9, "SLOC : constant String :=");
+      S_Put_Line
         (11,
          "Loc.Tested_File.all & "":"" & "
          & "Trim(Integer'image(Loc.Tested_Line), Left)"
          & " & "":"";");
-      Put_New_Line;
-      S_Put (6, "begin");
-      Put_New_Line;
+      S_Put_Line (6, "begin");
       Put_New_Line;
       Generate_Is_Active_For_Filter;
       Put_New_Line;
       Put_New_Line;
-      S_Put (6, "end;");
+      S_Put_Line (6, "end;");
       Put_New_Line;
-      Put_New_Line;
-      S_Put (6, "return False;");
-      Put_New_Line;
-      S_Put (3, "end Is_Active;");
-      Put_New_Line;
+      S_Put_Line (6, "return False;");
+      S_Put_Line (3, "end Is_Active;");
       Put_New_Line;
 
-      S_Put (3, "procedure Set_From_SLOC");
-      Put_New_Line;
-      S_Put (6, "(Filter : in out GT_Filter;");
-      Put_New_Line;
-      S_Put (7, "SLOC   : String;");
-      Put_New_Line;
-      S_Put (7, "Found  : out Boolean) is");
-      Put_New_Line;
-      S_Put (3, "begin");
-      Put_New_Line;
-      S_Put (6, "Found := True;");
-      Put_New_Line;
+      S_Put_Line (3, "procedure Set_From_SLOC");
+      S_Put_Line (6, "(Filter : in out GT_Filter;");
+      S_Put_Line (7, "SLOC   : String;");
+      S_Put_Line (7, "Found  : out Boolean) is");
+      S_Put_Line (3, "begin");
+      S_Put_Line (6, "Found := True;");
       Put_New_Line;
       Generate_Set_Active_For_Filter;
       Put_New_Line;
-      S_Put (3, "end Set_From_SLOC;");
-      Put_New_Line;
+      S_Put_Line (3, "end Set_From_SLOC;");
       Put_New_Line;
 
       Put_New_Line;
-      S_Put (0, "end " & Filter_Package_Name & ";");
-      Put_New_Line;
-      S_Put (0, GT_Marker_End);
-      Put_New_Line;
+      S_Put_Line (0, "end " & Filter_Package_Name & ";");
+      S_Put_Line (0, GT_Marker_End);
 
       Close_File;
    end Generate_Filtering_Map;
@@ -985,22 +862,16 @@ package body Test.Harness is
          & Spec_Suffix.all);
 
       Put_Harness_Header;
-      S_Put (0, GT_Marker_Begin);
-      Put_New_Line;
+      S_Put_Line (0, GT_Marker_Begin);
 
-      S_Put (0, "with AUnit.Test_Suites; use AUnit.Test_Suites;");
+      S_Put_Line (0, "with AUnit.Test_Suites; use AUnit.Test_Suites;");
       Put_New_Line;
+      S_Put_Line (0, "package " & Main_Suite_Name & " is");
       Put_New_Line;
-      S_Put (0, "package " & Main_Suite_Name & " is");
+      S_Put_Line (3, "function Suite return Access_Test_Suite;");
       Put_New_Line;
-      Put_New_Line;
-      S_Put (3, "function Suite return Access_Test_Suite;");
-      Put_New_Line;
-      Put_New_Line;
-      S_Put (0, "end " & Main_Suite_Name & ";");
-      Put_New_Line;
-      S_Put (0, GT_Marker_End);
-      Put_New_Line;
+      S_Put_Line (0, "end " & Main_Suite_Name & ";");
+      S_Put_Line (0, GT_Marker_End);
       Close_File;
 
       --  creating main suite body
@@ -1019,36 +890,27 @@ package body Test.Harness is
       end loop;
 
       Put_New_Line;
-      S_Put (0, "package body " & Main_Suite_Name & " is");
+      S_Put_Line (0, "package body " & Main_Suite_Name & " is");
       Put_New_Line;
+      S_Put_Line (3, "Result : aliased AUnit.Test_Suites.Test_Suite;");
       Put_New_Line;
-      S_Put (3, "Result : aliased AUnit.Test_Suites.Test_Suite;");
-      Put_New_Line;
-      Put_New_Line;
-      S_Put
+      S_Put_Line
         (3,
          "function Suite return AUnit.Test_Suites." & "Access_Test_Suite is");
-      Put_New_Line;
-      S_Put (3, "begin");
-      Put_New_Line;
+      S_Put_Line (3, "begin");
       Put_New_Line;
 
       for Suit of Suit_List loop
-         S_Put (6, "Add_Test (Result'Access, " & Suit & ".Suite);");
-         Put_New_Line;
+         S_Put_Line (6, "Add_Test (Result'Access, " & Suit & ".Suite);");
       end loop;
 
       Put_New_Line;
-      S_Put (6, "return Result'Access;");
+      S_Put_Line (6, "return Result'Access;");
       Put_New_Line;
+      S_Put_Line (3, "end Suite;");
       Put_New_Line;
-      S_Put (3, "end Suite;");
-      Put_New_Line;
-      Put_New_Line;
-      S_Put (0, "end " & Main_Suite_Name & ";");
-      Put_New_Line;
-      S_Put (0, GT_Marker_End);
-      Put_New_Line;
+      S_Put_Line (0, "end " & Main_Suite_Name & ";");
+      S_Put_Line (0, GT_Marker_End);
       Close_File;
 
       --  creating test runner body
@@ -1058,182 +920,128 @@ package body Test.Harness is
          & Body_Suffix.all);
 
       Put_Harness_Header;
-      S_Put (0, GT_Marker_Begin);
-      Put_New_Line;
+      S_Put_Line (0, GT_Marker_Begin);
 
-      S_Put (0, "pragma Ada_2005;");
-      Put_New_Line;
-      S_Put (0, "with AUnit.Reporter." & Reporter_Name'Image & ";");
-      Put_New_Line;
-      S_Put (0, "with AUnit.Run;");
-      Put_New_Line;
-      S_Put (0, "with AUnit.Options; use AUnit.Options;");
-      Put_New_Line;
-      S_Put (0, "with " & Main_Suite_Name & "; use " & Main_Suite_Name & ";");
-      Put_New_Line;
+      S_Put_Line (0, "pragma Ada_2005;");
+      S_Put_Line (0, "with AUnit.Reporter." & Reporter_Name'Image & ";");
+      S_Put_Line (0, "with AUnit.Run;");
+      S_Put_Line (0, "with AUnit.Options; use AUnit.Options;");
+      S_Put_Line
+        (0, "with " & Main_Suite_Name & "; use " & Main_Suite_Name & ";");
       Put_New_Line;
       if not No_Command_Line then
-         S_Put (0, "with AUnit; use AUnit;");
-         Put_New_Line;
-         S_Put (0, "with Ada.Command_Line;");
-         Put_New_Line;
+         S_Put_Line (0, "with AUnit; use AUnit;");
+         S_Put_Line (0, "with Ada.Command_Line;");
          if not Harness_Only and then Test_Filtering then
-            S_Put (0, "with AUnit.IO;");
-            Put_New_Line;
+            S_Put_Line (0, "with AUnit.IO;");
             if Text_IO_Present then
-               S_Put (0, "with Ada.Text_IO;");
-               Put_New_Line;
+               S_Put_Line (0, "with Ada.Text_IO;");
             end if;
             if GNAT_OS_Lib_Present then
-               S_Put (0, "with GNAT.OS_Lib;");
-               Put_New_Line;
+               S_Put_Line (0, "with GNAT.OS_Lib;");
             end if;
-            S_Put (0, "with Gnattest_Generated.Mapping;");
-            Put_New_Line;
+            S_Put_Line (0, "with Gnattest_Generated.Mapping;");
          end if;
          if not Harness_Only and then Test.Common.Instrument then
-            S_Put (0, "with TGen.Instr_Support;");
-            Put_New_Line;
+            S_Put_Line (0, "with TGen.Instr_Support;");
          end if;
       end if;
-      S_Put (0, "with Gnattest_Generated.Persistent;");
-      Put_New_Line;
+      S_Put_Line (0, "with Gnattest_Generated.Persistent;");
       if not No_Command_Line then
-         S_Put (0, "with GNAT.Command_Line; use GNAT.Command_Line;");
-         Put_New_Line;
+         S_Put_Line (0, "with GNAT.Command_Line; use GNAT.Command_Line;");
          Put_New_Line;
          if not Harness_Only then
-            S_Put (0, "with Gnattest_Generated;");
-            Put_New_Line;
+            S_Put_Line (0, "with Gnattest_Generated;");
             Put_New_Line;
          end if;
       end if;
-      S_Put (0, "procedure " & Test_Runner_Name & " is");
-      Put_New_Line;
+      S_Put_Line (0, "procedure " & Test_Runner_Name & " is");
       if No_Command_Line then
-         S_Put (3, "procedure Runner is new AUnit.Run.Test_Runner (Suite);");
+         S_Put_Line
+           (3, "procedure Runner is new AUnit.Run.Test_Runner (Suite);");
       else
-         S_Put
+         S_Put_Line
            (3,
             "function Runner is new "
             & "AUnit.Run.Test_Runner_With_Status (Suite);");
-         Put_New_Line;
-         S_Put (3, "Exit_Status : AUnit.Status;");
-         Put_New_Line;
+         S_Put_Line (3, "Exit_Status : AUnit.Status;");
          if Add_Exit_Status then
-            S_Put (3, "Use_Exit_Status : Boolean := True;");
+            S_Put_Line (3, "Use_Exit_Status : Boolean := True;");
          else
-            S_Put (3, "Use_Exit_Status : Boolean := False;");
+            S_Put_Line (3, "Use_Exit_Status : Boolean := False;");
          end if;
       end if;
-      Put_New_Line;
-      S_Put (3, "Reporter : " & Reporter_Full_Name & ";");
-      Put_New_Line;
-      S_Put (3, "GT_Options : AUnit_Options := Default_Options;");
-      Put_New_Line;
+      S_Put_Line (3, "Reporter : " & Reporter_Full_Name & ";");
+      S_Put_Line (3, "GT_Options : AUnit_Options := Default_Options;");
 
       if not No_Command_Line and then not Harness_Only and then Test_Filtering
       then
-         S_Put (3, "Fil : aliased Gnattest_Generated.Mapping.GT_Filter;");
-         Put_New_Line;
-         S_Put (3, "SLOC_Found : Boolean;");
-         Put_New_Line;
+         S_Put_Line (3, "Fil : aliased Gnattest_Generated.Mapping.GT_Filter;");
+         S_Put_Line (3, "SLOC_Found : Boolean;");
 
          if Text_IO_Present then
-            S_Put
+            S_Put_Line
               (3,
                "procedure Process_Routines "
                & "(File : String; SLOC_Found : out Boolean);");
-            Put_New_Line;
-            S_Put
+            S_Put_Line
               (3,
                "procedure Process_Routines "
                & "(File : String; SLOC_Found : out Boolean) is");
-            Put_New_Line;
-            S_Put (6, "use Ada.Text_IO;");
-            Put_New_Line;
-            S_Put (6, "F : File_Type;");
-            Put_New_Line;
-            S_Put (3, "begin");
+            S_Put_Line (6, "use Ada.Text_IO;");
+            S_Put_Line (6, "F : File_Type;");
+            S_Put_Line (3, "begin");
             if GNAT_OS_Lib_Present then
-               Put_New_Line;
-               S_Put
+               S_Put_Line
                  (6,
                   "Open (F, In_File, GNAT.OS_Lib.Normalize_Pathname (File));");
             else
-               Put_New_Line;
-               S_Put (6, "Open (F, In_File, File);");
+               S_Put_Line (6, "Open (F, In_File, File);");
             end if;
-            Put_New_Line;
-            S_Put (6, "while not End_Of_File (F) loop");
-            Put_New_Line;
-            S_Put (9, "declare");
-            Put_New_Line;
-            S_Put (12, "Line : constant String := Get_Line (F);");
-            Put_New_Line;
-            S_Put (9, "begin");
-            Put_New_Line;
-            S_Put
+            S_Put_Line (6, "while not End_Of_File (F) loop");
+            S_Put_Line (9, "declare");
+            S_Put_Line (12, "Line : constant String := Get_Line (F);");
+            S_Put_Line (9, "begin");
+            S_Put_Line
               (12,
                "if Line'Length < 2 or else (Line (Line'First .. Line'First"
                & " + 1)) /= ""--"" then");
-            Put_New_Line;
-            S_Put
+            S_Put_Line
               (15,
                "Gnattest_Generated.Mapping.Set_From_SLOC "
                & "(Fil, Line, SLOC_Found);");
-            Put_New_Line;
-            S_Put (15, "if not SLOC_Found then");
-            Put_New_Line;
-            S_Put (21, "AUnit.IO.Put_Line");
-            Put_New_Line;
-            S_Put (24, "(AUnit.IO.Standard_Output.all,");
-            Put_New_Line;
-            S_Put
+            S_Put_Line (15, "if not SLOC_Found then");
+            S_Put_Line (21, "AUnit.IO.Put_Line");
+            S_Put_Line (24, "(AUnit.IO.Standard_Output.all,");
+            S_Put_Line
               (25,
                """no subprogram corresponds to sloc "" & Line & "";"
                & " aborting"");");
-            Put_New_Line;
-            S_Put (18, "return;");
-            Put_New_Line;
-            S_Put (15, "end if;");
-            Put_New_Line;
-            S_Put (12, "end if;");
-            Put_New_Line;
-            S_Put (9, "end;");
-            Put_New_Line;
-            S_Put (6, "end loop;");
-            Put_New_Line;
-            S_Put (6, "Close (F);");
-            Put_New_Line;
-            S_Put (3, "exception");
-            Put_New_Line;
-            S_Put (6, "when others =>");
-            Put_New_Line;
-            S_Put (9, "AUnit.IO.Put_Line");
-            Put_New_Line;
-            S_Put (12, "(AUnit.IO.Standard_Output.all,");
+            S_Put_Line (18, "return;");
+            S_Put_Line (15, "end if;");
+            S_Put_Line (12, "end if;");
+            S_Put_Line (9, "end;");
+            S_Put_Line (6, "end loop;");
+            S_Put_Line (6, "Close (F);");
+            S_Put_Line (3, "exception");
+            S_Put_Line (6, "when others =>");
+            S_Put_Line (9, "AUnit.IO.Put_Line");
+            S_Put_Line (12, "(AUnit.IO.Standard_Output.all,");
             if GNAT_OS_Lib_Present then
-               Put_New_Line;
-               S_Put
+               S_Put_Line
                  (13,
                   """error opening "" & "
                   & "GNAT.OS_Lib.Normalize_Pathname (File));");
             else
-               Put_New_Line;
-               S_Put (13, """error opening "" & File);");
+               S_Put_Line (13, """error opening "" & File);");
             end if;
-            Put_New_Line;
-            S_Put (12, "raise;");
-            Put_New_Line;
-            S_Put (3, "end Process_Routines;");
-            Put_New_Line;
+            S_Put_Line (12, "raise;");
+            S_Put_Line (3, "end Process_Routines;");
          end if;
 
       end if;
 
-      S_Put (0, "begin");
-      Put_New_Line;
+      S_Put_Line (0, "begin");
       Put_New_Line;
 
       if Reporter_Name in Xml_Reporters then
@@ -1244,216 +1052,148 @@ package body Test.Harness is
       end if;
       --  Redirect stdout and stderr to include them in the junit xml report.
       Put_New_Line;
-      if Show_Passed_Tests then
-         S_Put (3, "GT_Options.Report_Successes := True;");
-      else
-         S_Put (3, "GT_Options.Report_Successes := False;");
-      end if;
-      Put_New_Line;
+
+      S_Put_Line
+        (3, "GT_Options.Report_Successes := " & Show_Passed_Tests'Image & ";");
+
       Print_Test_Case_Timer;
 
       if not No_Command_Line then
-         S_Put (3, "begin");
-         Put_New_Line;
-         S_Put (6, "Initialize_Option_Scan;");
-         Put_New_Line;
-         S_Put (6, "loop");
-         Put_New_Line;
-         S_Put (9, "case GNAT.Command_Line.Getopt");
-         Put_New_Line;
+         S_Put_Line (3, "begin");
+         S_Put_Line (6, "Initialize_Option_Scan;");
+         S_Put_Line (6, "loop");
+         S_Put_Line (9, "case GNAT.Command_Line.Getopt");
          if Harness_Only then
             --  No point in --skeleton-default in --harness-only mode.
-            S_Put (11, "(""-passed-tests= -exit-status="")");
+            S_Put_Line (11, "(""-passed-tests= -exit-status="")");
          else
-            S_Put
+            S_Put_Line
               (11,
                "(""-skeleton-default= -passed-tests= -exit-status="
                & (if Test_Filtering then " -routines=" else "")
                & (if Test.Common.Instrument then " o:" else "")
                & """)");
          end if;
-         Put_New_Line;
-         S_Put (9, "is");
-         Put_New_Line;
-         S_Put (12, "when ASCII.NUL =>");
-         Put_New_Line;
-         S_Put (15, "exit;");
-         Put_New_Line;
-         S_Put (12, "when '-' =>");
-         Put_New_Line;
+         S_Put_Line (9, "is");
+         S_Put_Line (12, "when ASCII.NUL =>");
+         S_Put_Line (15, "exit;");
+         S_Put_Line (12, "when '-' =>");
 
          if not Harness_Only then
             --  --skeleton-default
-            S_Put (15, "if Full_Switch = ""-skeleton-default"" then");
-            Put_New_Line;
-            S_Put (18, "if Parameter = ""pass"" then");
-            Put_New_Line;
-            S_Put (21, "Gnattest_Generated.Default_Assert_Value := True;");
-            Put_New_Line;
-            S_Put (18, "elsif Parameter = ""fail"" then");
-            Put_New_Line;
-            S_Put (21, "Gnattest_Generated.Default_Assert_Value := False;");
-            Put_New_Line;
-            S_Put (18, "end if;");
-            Put_New_Line;
-            S_Put (15, "end if;");
-            Put_New_Line;
+            S_Put_Line (15, "if Full_Switch = ""-skeleton-default"" then");
+            S_Put_Line (18, "if Parameter = ""pass"" then");
+            S_Put_Line
+              (21, "Gnattest_Generated.Default_Assert_Value := True;");
+            S_Put_Line (18, "elsif Parameter = ""fail"" then");
+            S_Put_Line
+              (21, "Gnattest_Generated.Default_Assert_Value := False;");
+            S_Put_Line (18, "end if;");
+            S_Put_Line (15, "end if;");
 
             --  --routines
             if Test_Filtering then
-               S_Put (15, "if Full_Switch = ""-routines"" then");
-               Put_New_Line;
+               S_Put_Line (15, "if Full_Switch = ""-routines"" then");
 
-               S_Put
+               S_Put_Line
                  (18, "Gnattest_Generated.Mapping.Set_Selection_Mode (Fil);");
-               Put_New_Line;
 
                if Text_IO_Present then
-                  S_Put (18, "if Parameter (Parameter'First) = '@' then");
-                  Put_New_Line;
-                  S_Put
+                  S_Put_Line (18, "if Parameter (Parameter'First) = '@' then");
+                  S_Put_Line
                     (21,
                      "Process_Routines (Parameter (Parameter'First + 1 .. "
                      & "Parameter'Last), SLOC_Found);");
-                  Put_New_Line;
-                  S_Put (18, "else");
-                  Put_New_Line;
-                  S_Put
+                  S_Put_Line (18, "else");
+                  S_Put_Line
                     (21,
                      "Gnattest_Generated.Mapping.Set_From_SLOC "
                      & "(Fil, Parameter, SLOC_Found);");
-                  Put_New_Line;
-                  S_Put (21, "if not SLOC_Found then");
-                  Put_New_Line;
-                  S_Put (24, "AUnit.IO.Put_Line");
-                  Put_New_Line;
-                  S_Put (27, "(AUnit.IO.Standard_Output.all,");
-                  Put_New_Line;
-                  S_Put
+                  S_Put_Line (21, "if not SLOC_Found then");
+                  S_Put_Line (24, "AUnit.IO.Put_Line");
+                  S_Put_Line (27, "(AUnit.IO.Standard_Output.all,");
+                  S_Put_Line
                     (28,
                      """no subprogram corresponds to sloc "" & Parameter & "";"
                      & " aborting"");");
-                  Put_New_Line;
-                  S_Put (21, "end if;");
-                  Put_New_Line;
+                  S_Put_Line (21, "end if;");
                   S_Put (18, "end if;");
                else
-                  S_Put
+                  S_Put_Line
                     (18,
                      "Gnattest_Generated.Mapping.Set_From_SLOC "
                      & "(Fil, Parameter, SLOC_Found);");
-                  Put_New_Line;
-                  S_Put (18, "if not SLOC_Found then");
-                  Put_New_Line;
-                  S_Put (21, "AUnit.IO.Put_Line");
-                  Put_New_Line;
-                  S_Put (24, "(AUnit.IO.Standard_Output.all,");
-                  Put_New_Line;
-                  S_Put
+                  S_Put_Line (18, "if not SLOC_Found then");
+                  S_Put_Line (21, "AUnit.IO.Put_Line");
+                  S_Put_Line (24, "(AUnit.IO.Standard_Output.all,");
+                  S_Put_Line
                     (25,
                      """no subprogram corresponds to sloc "" & Parameter & "";"
                      & " aborting"");");
-                  Put_New_Line;
-                  S_Put (18, "end if;");
-                  Put_New_Line;
+                  S_Put_Line (18, "end if;");
                end if;
                Put_New_Line;
 
-               S_Put (18, "if not SLOC_Found then");
-               Put_New_Line;
-               S_Put (21, "return;");
-               Put_New_Line;
-               S_Put (18, "end if;");
-               Put_New_Line;
+               S_Put_Line (18, "if not SLOC_Found then");
+               S_Put_Line (21, "return;");
+               S_Put_Line (18, "end if;");
 
-               S_Put (15, "end if;");
-               Put_New_Line;
+               S_Put_Line (15, "end if;");
             end if;
          end if;
 
          --  --passed-tests
-         S_Put (15, "if Full_Switch = ""-passed-tests"" then");
-         Put_New_Line;
-         S_Put (18, "if Parameter = ""show"" then");
-         Put_New_Line;
-         S_Put (21, "GT_Options.Report_Successes := True;");
-         Put_New_Line;
-         S_Put (18, "elsif Parameter = ""hide"" then");
-         Put_New_Line;
-         S_Put (21, "GT_Options.Report_Successes := False;");
-         Put_New_Line;
-         S_Put (18, "end if;");
-         Put_New_Line;
-         S_Put (15, "end if;");
-         Put_New_Line;
+         S_Put_Line (15, "if Full_Switch = ""-passed-tests"" then");
+         S_Put_Line (18, "if Parameter = ""show"" then");
+         S_Put_Line (21, "GT_Options.Report_Successes := True;");
+         S_Put_Line (18, "elsif Parameter = ""hide"" then");
+         S_Put_Line (21, "GT_Options.Report_Successes := False;");
+         S_Put_Line (18, "end if;");
+         S_Put_Line (15, "end if;");
+
          --  --exit-status
-         S_Put (15, "if Full_Switch = ""-exit-status"" then");
-         Put_New_Line;
-         S_Put (18, "if Parameter = ""on"" then");
-         Put_New_Line;
-         S_Put (21, "Use_Exit_Status := True;");
-         Put_New_Line;
-         S_Put (18, "elsif Parameter = ""off"" then");
-         Put_New_Line;
-         S_Put (21, "Use_Exit_Status := False;");
-         Put_New_Line;
-         S_Put (18, "end if;");
-         Put_New_Line;
-         S_Put (15, "end if;");
-         Put_New_Line;
+         S_Put_Line (15, "if Full_Switch = ""-exit-status"" then");
+         S_Put_Line (18, "if Parameter = ""on"" then");
+         S_Put_Line (21, "Use_Exit_Status := True;");
+         S_Put_Line (18, "elsif Parameter = ""off"" then");
+         S_Put_Line (21, "Use_Exit_Status := False;");
+         S_Put_Line (18, "end if;");
+         S_Put_Line (15, "end if;");
+
          --  -o
          if not Harness_Only and then Test.Common.Instrument then
-            S_Put (12, "when 'o' =>");
-            Put_New_Line;
-            S_Put (15, "TGen.Instr_Support.Set_Output_Dir (Parameter);");
-            Put_New_Line;
+            S_Put_Line (12, "when 'o' =>");
+            S_Put_Line (15, "TGen.Instr_Support.Set_Output_Dir (Parameter);");
          end if;
-         S_Put (12, "when others => null;");
-         Put_New_Line;
-         S_Put (9, "end case;");
-         Put_New_Line;
-         S_Put (6, "end loop;");
-         Put_New_Line;
-         S_Put (3, "exception");
-         Put_New_Line;
-         S_Put (6, "when GNAT.Command_Line.Invalid_Switch => null;");
-         Put_New_Line;
-         S_Put (3, "end;");
-         Put_New_Line;
+         S_Put_Line (12, "when others => null;");
+         S_Put_Line (9, "end case;");
+         S_Put_Line (6, "end loop;");
+         S_Put_Line (3, "exception");
+         S_Put_Line (6, "when GNAT.Command_Line.Invalid_Switch => null;");
+         S_Put_Line (3, "end;");
          Put_New_Line;
       end if;
 
       if No_Command_Line then
-         S_Put (3, "Gnattest_Generated.Persistent.Global_Set_Up;");
-         Put_New_Line;
-         S_Put (3, "Runner (Reporter, GT_Options);");
-         Put_New_Line;
-         S_Put (3, "Gnattest_Generated.Persistent.Global_Tear_Down;");
-         Put_New_Line;
+         S_Put_Line (3, "Gnattest_Generated.Persistent.Global_Set_Up;");
+         S_Put_Line (3, "Runner (Reporter, GT_Options);");
+         S_Put_Line (3, "Gnattest_Generated.Persistent.Global_Tear_Down;");
       else
          if not Harness_Only and then Test_Filtering then
-            S_Put (3, "GT_Options.Filter := Fil'Unchecked_Access;");
-            Put_New_Line;
+            S_Put_Line (3, "GT_Options.Filter := Fil'Unchecked_Access;");
          end if;
-         S_Put (3, "Gnattest_Generated.Persistent.Global_Set_Up;");
-         Put_New_Line;
-         S_Put (3, "Exit_Status := Runner (Reporter, GT_Options);");
-         Put_New_Line;
-         S_Put (3, "Gnattest_Generated.Persistent.Global_Tear_Down;");
-         Put_New_Line;
-         S_Put
+         S_Put_Line (3, "Gnattest_Generated.Persistent.Global_Set_Up;");
+         S_Put_Line (3, "Exit_Status := Runner (Reporter, GT_Options);");
+         S_Put_Line (3, "Gnattest_Generated.Persistent.Global_Tear_Down;");
+         S_Put_Line
            (3, "if Use_Exit_Status and then Exit_Status = AUnit.Failure then");
-         Put_New_Line;
-         S_Put
+         S_Put_Line
            (6, "Ada.Command_Line.Set_Exit_Status (Ada.Command_Line.Failure);");
-         Put_New_Line;
          S_Put (3, "end if;");
       end if;
       Put_New_Line;
-      S_Put (0, "end " & Test_Runner_Name & ";");
-      Put_New_Line;
-      S_Put (0, GT_Marker_End);
-      Put_New_Line;
+      S_Put_Line (0, "end " & Test_Runner_Name & ";");
+      S_Put_Line (0, GT_Marker_End);
       Close_File;
 
       if not No_Command_Line and then not Harness_Only and then Test_Filtering
@@ -1475,26 +1215,21 @@ package body Test.Harness is
       Create (Harness_Dir.all & "test_driver.gpr");
 
       if Tmp_Test_Prj /= null then
-         S_Put (0, "with """ & Base_Name (Tmp_Test_Prj.all) & """;");
-         Put_New_Line;
+         S_Put_Line (0, "with """ & Base_Name (Tmp_Test_Prj.all) & """;");
       end if;
 
       if Harness_Only then
-         S_Put (0, "with """ & Source_Prj & """;");
-         Put_New_Line;
+         S_Put_Line (0, "with """ & Source_Prj & """;");
       end if;
 
       if Additional_Tests_Prj /= null then
-         S_Put (0, "with """ & Additional_Tests_Prj.all & """;");
-         Put_New_Line;
+         S_Put_Line (0, "with """ & Additional_Tests_Prj.all & """;");
       end if;
 
-      S_Put (0, "with ""gnattest_common.gpr"";");
-      Put_New_Line;
+      S_Put_Line (0, "with ""gnattest_common.gpr"";");
 
       Put_New_Line;
-      S_Put (0, "project Test_Driver is");
-      Put_New_Line;
+      S_Put_Line (0, "project Test_Driver is");
       Put_New_Line;
 
       --  When using the test minimization features, do not emit an origin
@@ -1502,42 +1237,32 @@ package body Test.Harness is
       --  project at all.
 
       if not Test.Common.Minimize then
-         S_Put
+         S_Put_Line
            (3,
             "for Origin_Project use """
             & (+Relative_Path
                   (Create (+Source_Prj), Create (+Harness_Dir.all)))
             & """;");
          Put_New_Line;
-         Put_New_Line;
       end if;
-      S_Put (3, "for Target use Gnattest_Common'Target;");
+      S_Put_Line (3, "for Target use Gnattest_Common'Target;");
       Put_New_Line;
-      Put_New_Line;
-      S_Put
+      S_Put_Line
         (3, "for Runtime (""Ada"") use Gnattest_Common'Runtime (""Ada"");");
       Put_New_Line;
-      Put_New_Line;
-      S_Put (3, "for Languages use (""Ada"");");
-      Put_New_Line;
-      S_Put (3, "for Main use (""test_runner" & Body_Suffix.all & """);");
-      Put_New_Line;
+      S_Put_Line (3, "for Languages use (""Ada"");");
+      S_Put_Line (3, "for Main use (""test_runner" & Body_Suffix.all & """);");
 
       if Harness_Only and then not Gnattest_Generated_Present then
-         S_Put (3, "for Source_Dirs use (""."", ""common"");");
-         Put_New_Line;
+         S_Put_Line (3, "for Source_Dirs use (""."", ""common"");");
       end if;
 
-      S_Put (3, "for Exec_Dir use ""."";");
-      Put_New_Line;
+      S_Put_Line (3, "for Exec_Dir use ""."";");
       Put_New_Line;
 
-      S_Put (3, "package Builder renames Gnattest_Common.Builder;");
-      Put_New_Line;
-      S_Put (3, "package Linker renames Gnattest_Common.Linker;");
-      Put_New_Line;
-      S_Put (3, "package Binder renames Gnattest_Common.Binder;");
-      Put_New_Line;
+      S_Put_Line (3, "package Builder renames Gnattest_Common.Builder;");
+      S_Put_Line (3, "package Linker renames Gnattest_Common.Linker;");
+      S_Put_Line (3, "package Binder renames Gnattest_Common.Binder;");
 
       Test.Common.Write_Additional_Compiler_Flags (Harness_Dir.all);
 
@@ -1545,42 +1270,34 @@ package body Test.Harness is
       Put_New_Line;
 
       if IDE_Package_Present then
-         S_Put
+         S_Put_Line
            (3,
             "package Ide renames "
             & Test_Prj_Prefix
             & Base_Name (Source_Prj, File_Extension (Source_Prj))
             & ".Ide;");
          Put_New_Line;
-         Put_New_Line;
       end if;
 
       if Make_Package_Present then
-         S_Put
+         S_Put_Line
            (3,
             "package Make renames "
             & Test_Prj_Prefix
             & Base_Name (Source_Prj, File_Extension (Source_Prj))
             & ".Make;");
          Put_New_Line;
-         Put_New_Line;
       end if;
 
-      S_Put (3, "package Coverage is");
-      Put_New_Line;
-      S_Put (6, "for Units use ();");
-      Put_New_Line;
-      S_Put (3, "end Coverage;");
-      Put_New_Line;
+      S_Put_Line (3, "package Coverage is");
+      S_Put_Line (6, "for Units use ();");
+      S_Put_Line (3, "end Coverage;");
       Put_New_Line;
 
       if not Harness_Only then
-         S_Put (3, "package GNATtest is");
-         Put_New_Line;
-         S_Put (6, "for GNATTest_Mapping_File use ""gnattest.xml"";");
-         Put_New_Line;
-         S_Put (3, "end GNATtest;");
-         Put_New_Line;
+         S_Put_Line (3, "package GNATtest is");
+         S_Put_Line (6, "for GNATTest_Mapping_File use ""gnattest.xml"";");
+         S_Put_Line (3, "end GNATtest;");
          Put_New_Line;
       end if;
 
@@ -1588,11 +1305,10 @@ package body Test.Harness is
         or else Spec_Suffix.all /= ".ads"
         or else (Shorten_Package and then not Suite_Name_Mapping.Is_Empty)
       then
-         S_Put (3, "package Naming is");
-         Put_New_Line;
+         S_Put_Line (3, "package Naming is");
          if Shorten_Package then
             for C in Suite_Name_Mapping.Iterate loop
-               S_Put
+               S_Put_Line
                  (6,
                   "for Body ("""
                   & Key (C)
@@ -1600,8 +1316,7 @@ package body Test.Harness is
                   & Element (C)
                   & Body_Suffix.all
                   & """;");
-               Put_New_Line;
-               S_Put
+               S_Put_Line
                  (6,
                   "for Spec ("""
                   & Key (C)
@@ -1609,21 +1324,17 @@ package body Test.Harness is
                   & Element (C)
                   & Spec_Suffix.all
                   & """;");
-               Put_New_Line;
             end loop;
          end if;
          if Body_Suffix.all /= ".adb" or else Spec_Suffix.all /= ".ads" then
-            S_Put
+            S_Put_Line
               (6,
                "for Spec_Suffix (""Ada"") use """ & Spec_Suffix.all & """;");
-            Put_New_Line;
-            S_Put
+            S_Put_Line
               (6,
                "for Body_Suffix (""Ada"") use """ & Body_Suffix.all & """;");
-            Put_New_Line;
          end if;
-         S_Put (3, "end Naming;");
-         Put_New_Line;
+         S_Put_Line (3, "end Naming;");
          Put_New_Line;
       end if;
 
@@ -1679,41 +1390,38 @@ package body Test.Harness is
          & Spec_Suffix.all);
 
       Put_Harness_Header;
-      S_Put (0, GT_Marker_Begin);
-      Put_New_Line;
+      S_Put_Line (0, GT_Marker_Begin);
 
       S_Put (0, "with AUnit.Test_Suites;");
       if Data.Generic_Kind then
-         S_Put (1, "use AUnit.Test_Suites;");
-         Put_New_Line;
+         S_Put_Line (1, "use AUnit.Test_Suites;");
          S_Put (0, "with AUnit.Test_Caller;");
       end if;
       Put_New_Line;
       Put_New_Line;
 
       if Data.Generic_Kind then
-         S_Put (0, "generic");
-         Put_New_Line;
-         S_Put (3, "Instance_Name : String;");
-         Put_New_Line;
+         S_Put_Line (0, "generic");
+         S_Put_Line (3, "Instance_Name : String;");
       end if;
 
-      S_Put (0, "package " & New_Unit_Name.all & " is");
+      S_Put_Line (0, "package " & New_Unit_Name.all & " is");
       Put_New_Line;
-      Put_New_Line;
-      S_Put (3, "function Suite return AUnit.Test_Suites.Access_Test_Suite;");
-      Put_New_Line;
+      S_Put_Line
+        (3, "function Suite return AUnit.Test_Suites.Access_Test_Suite;");
       Put_New_Line;
 
       if Data.Generic_Kind then
 
          for I in Data.Test_Types.First_Index .. Data.Test_Types.Last_Index
          loop
-            S_Put (3, "package Runner_" & Positive_Image (I));
-            S_Put (0, " is new AUnit.Test_Caller");
-            Put_New_Line;
+            S_Put_Line
+              (3,
+               "package Runner_"
+               & Positive_Image (I)
+               & " is new AUnit.Test_Caller");
 
-            S_Put
+            S_Put_Line
               (5,
                "("
                & Data.Test_Unit_Full_Name.all
@@ -1721,12 +1429,11 @@ package body Test.Harness is
                & Data.Test_Types.Element (I).Test_Type_Name.all
                & ");");
             Put_New_Line;
-            Put_New_Line;
          end loop;
 
          for K in Data.TR_List.First_Index .. Data.TR_List.Last_Index loop
 
-            S_Put
+            S_Put_Line
               (3,
                Data.TR_List.Element (K).TR_Text_Name.all
                & "_"
@@ -1734,15 +1441,14 @@ package body Test.Harness is
                & "_Access : constant Runner_"
                & Positive_Image (Data.TR_List.Element (K).Test_Type_Numb)
                & ".Test_Method :=");
-            Put_New_Line;
-            S_Put (5, Data.TR_List.Element (K).TR_Text_Name.all & "'Access;");
-            Put_New_Line;
+            S_Put_Line
+              (5, Data.TR_List.Element (K).TR_Text_Name.all & "'Access;");
 
          end loop;
 
          for K in Data.ITR_List.First_Index .. Data.ITR_List.Last_Index loop
 
-            S_Put
+            S_Put_Line
               (3,
                Data.ITR_List.Element (K).TR_Text_Name.all
                & "_"
@@ -1750,9 +1456,8 @@ package body Test.Harness is
                & "_Access : constant Runner_"
                & Positive_Image (Data.ITR_List.Element (K).Test_Type_Numb)
                & ".Test_Method :=");
-            Put_New_Line;
-            S_Put (5, Data.ITR_List.Element (K).TR_Text_Name.all & "'Access;");
-            Put_New_Line;
+            S_Put_Line
+              (5, Data.ITR_List.Element (K).TR_Text_Name.all & "'Access;");
 
          end loop;
 
@@ -1760,10 +1465,8 @@ package body Test.Harness is
 
       end if;
 
-      S_Put (0, "end " & New_Unit_Name.all & ";");
-      Put_New_Line;
-      S_Put (0, GT_Marker_End);
-      Put_New_Line;
+      S_Put_Line (0, "end " & New_Unit_Name.all & ";");
+      S_Put_Line (0, GT_Marker_End);
       Close_File;
 
       --  Creating test suite body
@@ -1773,25 +1476,19 @@ package body Test.Harness is
          & Body_Suffix.all);
 
       Put_Harness_Header;
-      S_Put (0, GT_Marker_Begin);
-      Put_New_Line;
+      S_Put_Line (0, GT_Marker_Begin);
 
       if not Data.Generic_Kind then
          S_Put (0, "with AUnit.Test_Caller;");
       end if;
       Put_New_Line;
-      S_Put (0, "with AUnit;");
+      S_Put_Line (0, "with AUnit;");
+      S_Put_Line (0, "with Gnattest_Generated;");
+      S_Put_Line (0, "with AUnit.Test_Info; use AUnit.Test_Info;");
       Put_New_Line;
-      S_Put (0, "with Gnattest_Generated;");
+      S_Put_Line (0, "package body " & New_Unit_Name.all & " is");
       Put_New_Line;
-      S_Put (0, "with AUnit.Test_Info; use AUnit.Test_Info;");
-      Put_New_Line;
-      Put_New_Line;
-      S_Put (0, "package body " & New_Unit_Name.all & " is");
-      Put_New_Line;
-      Put_New_Line;
-      S_Put (3, "use AUnit.Test_Suites;");
-      Put_New_Line;
+      S_Put_Line (3, "use AUnit.Test_Suites;");
       Put_New_Line;
 
       if not Data.Generic_Kind then
@@ -1800,15 +1497,18 @@ package body Test.Harness is
          loop
             Current_Type := Data.Test_Types.Element (I);
 
-            S_Put (3, "package Runner_" & Positive_Image (I));
-            S_Put (0, " is new AUnit.Test_Caller");
+            S_Put_Line
+              (3,
+               "package Runner_"
+               & Positive_Image (I)
+               & " is new AUnit.Test_Caller");
             Put_New_Line;
 
             if Nesting_Difference
                  (Current_Type.Nesting.all, Data.Test_Unit_Full_Name.all)
               = ""
             then
-               S_Put
+               S_Put_Line
                  (5,
                   "(GNATtest_Generated.GNATtest_Standard."
                   & Data.Test_Unit_Full_Name.all
@@ -1816,7 +1516,7 @@ package body Test.Harness is
                   & Current_Type.Test_Type_Name.all
                   & ");");
             else
-               S_Put
+               S_Put_Line
                  (5,
                   "(GNATtest_Generated.GNATtest_Standard."
                   & Data.Test_Unit_Full_Name.all
@@ -1829,12 +1529,10 @@ package body Test.Harness is
             end if;
 
             Put_New_Line;
-            Put_New_Line;
          end loop;
 
-         S_Put (3, "Result : aliased AUnit.Test_Suites.Test_Suite;");
+         S_Put_Line (3, "Result : aliased AUnit.Test_Suites.Test_Suite;");
 
-         Put_New_Line;
          Put_New_Line;
 
       end if;
@@ -1847,10 +1545,8 @@ package body Test.Harness is
       --  nested packages.
 
       for K in Data.TR_List.First_Index .. Data.TR_List.Last_Index loop
-
          if Data.Generic_Kind then
-
-            S_Put
+            S_Put_Line
               (3,
                Test_Case_Prefix
                & Positive_Image (Data.TR_List.Element (K).Test_Type_Numb)
@@ -1860,8 +1556,7 @@ package body Test.Harness is
                & Positive_Image (Data.TR_List.Element (K).Test_Type_Numb)
                & ".Test_Case_Access;");
          else
-
-            S_Put
+            S_Put_Line
               (3,
                Test_Case_Prefix
                & Positive_Image (K)
@@ -1873,16 +1568,13 @@ package body Test.Harness is
                & Positive_Image (Data.TR_List.Element (K).Test_Type_Numb)
                & ".Test_Case;");
          end if;
-
-         Put_New_Line;
       end loop;
 
       --  Declaring test cases for inherited test routines
       for K in Data.ITR_List.First_Index .. Data.ITR_List.Last_Index loop
 
          if Data.Generic_Kind then
-
-            S_Put
+            S_Put_Line
               (3,
                Test_Case_Prefix
                & Positive_Image (Data.ITR_List.Element (K).Test_Type_Numb)
@@ -1892,8 +1584,7 @@ package body Test.Harness is
                & Positive_Image (Data.ITR_List.Element (K).Test_Type_Numb)
                & ".Test_Case_Access;");
          else
-
-            S_Put
+            S_Put_Line
               (3,
                Test_Case_Prefix
                & Positive_Image (K)
@@ -1905,29 +1596,22 @@ package body Test.Harness is
                & Positive_Image (Data.ITR_List.Element (K).Test_Type_Numb)
                & ".Test_Case;");
          end if;
-
-         Put_New_Line;
-
       end loop;
 
       Put_New_Line;
-      S_Put
+      S_Put_Line
         (3, "function Suite return AUnit.Test_Suites.Access_Test_Suite is");
-      Put_New_Line;
       if Data.Generic_Kind then
-         S_Put (6, "Result : constant Access_Test_Suite := new Test_Suite;");
-         Put_New_Line;
+         S_Put_Line
+           (6, "Result : constant Access_Test_Suite := new Test_Suite;");
       end if;
-      S_Put (3, "begin");
-      Put_New_Line;
+      S_Put_Line (3, "begin");
       Put_New_Line;
 
       --  Creating test cases for test routines
       for K in Data.TR_List.First_Index .. Data.TR_List.Last_Index loop
-
          if Data.Generic_Kind then
-
-            S_Put
+            S_Put_Line
               (6,
                Test_Case_Prefix
                & Positive_Image (K)
@@ -1936,7 +1620,6 @@ package body Test.Harness is
                & "_"
                & Data.TR_List.Element (K).TR_Text_Name.all
                & " :=");
-            Put_New_Line;
             Print_Create_Function
               (Indent              => 8,
                Create_Package_Name =>
@@ -1956,9 +1639,7 @@ package body Test.Harness is
                  & "_"
                  & Positive_Image (Data.TR_List.Element (K).Test_Type_Numb)
                  & "_Access");
-
          else
-
             Print_Create_Function
               (Indent              => 6,
                Create_Package_Name =>
@@ -2001,7 +1682,7 @@ package body Test.Harness is
 
          if Data.Generic_Kind then
 
-            S_Put
+            S_Put_Line
               (6,
                Test_Case_Prefix
                & Positive_Image (K)
@@ -2010,7 +1691,6 @@ package body Test.Harness is
                & "_"
                & Data.ITR_List.Element (K).TR_Text_Name.all
                & " :=");
-            Put_New_Line;
 
             Print_Create_Function
               (Indent              => 8,
@@ -2074,9 +1754,8 @@ package body Test.Harness is
 
       --  Adding test cases to the suite
       for K in Data.TR_List.First_Index .. Data.TR_List.Last_Index loop
-
          if Data.Generic_Kind then
-            S_Put
+            S_Put_Line
               (6,
                "Add_Test (Result'Access, "
                & Test_Case_Prefix
@@ -2087,7 +1766,7 @@ package body Test.Harness is
                & Data.TR_List.Element (K).TR_Text_Name.all
                & ");");
          else
-            S_Put
+            S_Put_Line
               (6,
                "Add_Test (Result'Access, "
                & Test_Case_Prefix
@@ -2098,16 +1777,12 @@ package body Test.Harness is
                & Data.TR_List.Element (K).TR_Text_Name.all
                & "'Access);");
          end if;
-
-         Put_New_Line;
-
       end loop;
 
       --  Adding inherited test cases to the suite
       for K in Data.ITR_List.First_Index .. Data.ITR_List.Last_Index loop
-
          if Data.Generic_Kind then
-            S_Put
+            S_Put_Line
               (6,
                "Add_Test (Result'Access, "
                & Test_Case_Prefix
@@ -2118,7 +1793,7 @@ package body Test.Harness is
                & Data.ITR_List.Element (K).TR_Text_Name.all
                & ");");
          else
-            S_Put
+            S_Put_Line
               (6,
                "Add_Test (Result'Access, "
                & Test_Case_Prefix
@@ -2129,38 +1804,30 @@ package body Test.Harness is
                & Data.ITR_List.Element (K).TR_Text_Name.all
                & "'Access);");
          end if;
-
-         Put_New_Line;
-
       end loop;
 
       Put_New_Line;
 
       for K in Data.TC_List.First_Index .. Data.TC_List.Last_Index loop
-         S_Put
+         S_Put_Line
            (6,
             "Add_Test (Result'Access, new "
             & Data.TC_List.Element (K).Nesting.all
             & "."
             & Data.TC_List.Element (K).Name.all
             & ");");
-         Put_New_Line;
       end loop;
 
       if Data.Generic_Kind then
-         S_Put (6, "return Result;");
+         S_Put_Line (6, "return Result;");
       else
-         S_Put (6, "return Result'Access;");
+         S_Put_Line (6, "return Result'Access;");
       end if;
       Put_New_Line;
+      S_Put_Line (3, "end Suite;");
       Put_New_Line;
-      S_Put (3, "end Suite;");
-      Put_New_Line;
-      Put_New_Line;
-      S_Put (0, "end " & New_Unit_Name.all & ";");
-      Put_New_Line;
-      S_Put (0, GT_Marker_End);
-      Put_New_Line;
+      S_Put_Line (0, "end " & New_Unit_Name.all & ";");
+      S_Put_Line (0, GT_Marker_End);
       Close_File;
 
       if not Data.Generic_Kind then
@@ -2362,34 +2029,24 @@ package body Test.Harness is
             & Body_Suffix.all);
 
          Put_Harness_Header;
-         S_Put (0, GT_Marker_Begin);
-         Put_New_Line;
+         S_Put_Line (0, GT_Marker_Begin);
 
-         S_Put (0, "with AUnit.Test_Suites; use AUnit.Test_Suites;");
-         Put_New_Line;
+         S_Put_Line (0, "with AUnit.Test_Suites; use AUnit.Test_Suites;");
          if not Stub_Mode_ON then
-            S_Put (0, "with AUnit.Test_Caller;");
-            Put_New_Line;
+            S_Put_Line (0, "with AUnit.Test_Caller;");
          end if;
-         S_Put (0, "with Gnattest_Generated;");
-         Put_New_Line;
-         S_Put (0, "with Gnattest_Generated.Persistent;");
-         Put_New_Line;
-         S_Put (0, "with AUnit.Reporter." & Reporter_Name'Image & ";");
-         Put_New_Line;
-         S_Put (0, "with AUnit.Run;");
-         Put_New_Line;
-         S_Put (0, "with AUnit.Options; use AUnit.Options;");
-         Put_New_Line;
+         S_Put_Line (0, "with Gnattest_Generated;");
+         S_Put_Line (0, "with Gnattest_Generated.Persistent;");
+         S_Put_Line (0, "with AUnit.Reporter." & Reporter_Name'Image & ";");
+         S_Put_Line (0, "with AUnit.Run;");
+         S_Put_Line (0, "with AUnit.Options; use AUnit.Options;");
          if Add_Exit_Status and then not No_Command_Line then
-            S_Put (0, "with AUnit; use AUnit;");
-            Put_New_Line;
-            S_Put (0, "with Ada.Command_Line;");
-            Put_New_Line;
+            S_Put_Line (0, "with AUnit; use AUnit;");
+            S_Put_Line (0, "with Ada.Command_Line;");
          end if;
          Put_New_Line;
          if Data.Good_For_Substitution then
-            S_Put
+            S_Put_Line
               (0,
                "with "
                & Data.Test_Unit_Full_Name.all
@@ -2400,38 +2057,31 @@ package body Test.Harness is
                & "."
                & Substitution_Suite_Name
                & ";");
-            Put_New_Line;
          end if;
 
-         S_Put (0, "procedure " & New_Unit_Name & " is");
-         Put_New_Line;
+         S_Put_Line (0, "procedure " & New_Unit_Name & " is");
          Put_New_Line;
 
          if Data.Good_For_Substitution then
-            S_Put
+            S_Put_Line
               (3,
                "function Suite return AUnit.Test_Suites.Access_Test_Suite;");
             Put_New_Line;
+            S_Put_Line (3, "Result : aliased AUnit.Test_Suites.Test_Suite;");
             Put_New_Line;
-            S_Put (3, "Result : aliased AUnit.Test_Suites.Test_Suite;");
-            Put_New_Line;
-            Put_New_Line;
-            S_Put
+            S_Put_Line
               (3,
                "function Suite return AUnit.Test_Suites.Access_Test_Suite is");
+            S_Put_Line (3, "begin");
             Put_New_Line;
-            S_Put (3, "begin");
-            Put_New_Line;
-            Put_New_Line;
-            S_Put
+            S_Put_Line
               (6,
                "Add_Test (Result'Access, "
                & Data.Test_Unit_Full_Name.all
                & "."
                & Common_Suite_Name
                & ".Suite);");
-            Put_New_Line;
-            S_Put
+            S_Put_Line
               (6,
                "Add_Test (Result'Access, "
                & Data.Test_Unit_Full_Name.all
@@ -2439,77 +2089,58 @@ package body Test.Harness is
                & Substitution_Suite_Name
                & ".Suite);");
             Put_New_Line;
+            S_Put_Line (6, "return Result'Unchecked_Access;");
             Put_New_Line;
-            S_Put (6, "return Result'Unchecked_Access;");
-            Put_New_Line;
-            Put_New_Line;
-            S_Put (3, "end Suite;");
-            Put_New_Line;
+            S_Put_Line (3, "end Suite;");
             Put_New_Line;
 
          end if;
 
          if Add_Exit_Status and then not No_Command_Line then
-            S_Put
+            S_Put_Line
               (3,
                "function Runner is new "
                & "AUnit.Run.Test_Runner_With_Status (Suite);");
          else
-            S_Put
+            S_Put_Line
               (3, "procedure Runner is new AUnit.Run.Test_Runner (Suite);");
          end if;
-         Put_New_Line;
-         S_Put (3, "Reporter : " & Reporter_Full_Name & ";");
-         Put_New_Line;
-         S_Put (3, "GT_Options : AUnit_Options := Default_Options;");
-         Put_New_Line;
+         S_Put_Line (3, "Reporter : " & Reporter_Full_Name & ";");
+         S_Put_Line (3, "GT_Options : AUnit_Options := Default_Options;");
          if Add_Exit_Status and then not No_Command_Line then
             Put_New_Line;
             S_Put (3, "Exit_Status : AUnit.Status;");
          end if;
          Put_New_Line;
 
-         S_Put (0, "begin");
-         Put_New_Line;
-         S_Put (3, "GT_Options.Global_Timer := True;");
-         Put_New_Line;
-         if Show_Passed_Tests then
-            S_Put (3, "GT_Options.Report_Successes := True;");
-         else
-            S_Put (3, "GT_Options.Report_Successes := False;");
-         end if;
-         Put_New_Line;
+         S_Put_Line (0, "begin");
+         S_Put_Line (3, "GT_Options.Global_Timer := True;");
+
+         S_Put_Line
+           (3,
+            "GT_Options.Report_Successes := " & Show_Passed_Tests'Image & ";");
+
          Print_Test_Case_Timer;
 
-         S_Put (3, "Gnattest_Generated.Persistent.Global_Set_Up;");
-         Put_New_Line;
+         S_Put_Line (3, "Gnattest_Generated.Persistent.Global_Set_Up;");
 
          if Add_Exit_Status and then not No_Command_Line then
-            S_Put (3, "Exit_Status := Runner (Reporter, GT_Options);");
+            S_Put_Line (3, "Exit_Status := Runner (Reporter, GT_Options);");
+            S_Put_Line (3, "Gnattest_Generated.Persistent.Global_Tear_Down;");
             Put_New_Line;
-            S_Put (3, "Gnattest_Generated.Persistent.Global_Tear_Down;");
-            Put_New_Line;
-            Put_New_Line;
-            S_Put (3, "if Exit_Status = AUnit.Failure then");
-            Put_New_Line;
-            S_Put
+            S_Put_Line (3, "if Exit_Status = AUnit.Failure then");
+            S_Put_Line
               (6,
                "Ada.Command_Line.Set_Exit_Status (Ada.Command_Line.Failure);");
-            Put_New_Line;
-            S_Put (3, "end if;");
-            Put_New_Line;
+            S_Put_Line (3, "end if;");
          else
 
-            S_Put (3, "Runner (Reporter, GT_Options);");
-            Put_New_Line;
-            S_Put (3, "Gnattest_Generated.Persistent.Global_Tear_Down;");
-            Put_New_Line;
+            S_Put_Line (3, "Runner (Reporter, GT_Options);");
+            S_Put_Line (3, "Gnattest_Generated.Persistent.Global_Tear_Down;");
          end if;
 
-         S_Put (0, "end " & New_Unit_Name & ";");
-         Put_New_Line;
-         S_Put (0, GT_Marker_End);
-         Put_New_Line;
+         S_Put_Line (0, "end " & New_Unit_Name & ";");
+         S_Put_Line (0, GT_Marker_End);
          Close_File;
 
       end Process_Test_Package;
@@ -2565,73 +2196,53 @@ package body Test.Harness is
             & Body_Suffix.all);
 
          Put_Harness_Header;
-         S_Put (0, GT_Marker_Begin);
-         Put_New_Line;
+         S_Put_Line (0, GT_Marker_Begin);
 
-         S_Put (0, "pragma Ada_2005;");
+         S_Put_Line (0, "pragma Ada_2005;");
          Put_New_Line;
-         Put_New_Line;
-         S_Put (0, "with AUnit.Test_Suites; use AUnit.Test_Suites;");
-         Put_New_Line;
+         S_Put_Line (0, "with AUnit.Test_Suites; use AUnit.Test_Suites;");
          if not Stub_Mode_ON then
-            S_Put (0, "with AUnit.Test_Caller;");
-            Put_New_Line;
+            S_Put_Line (0, "with AUnit.Test_Caller;");
          end if;
-         S_Put (0, "with AUnit;");
-         Put_New_Line;
-         S_Put (0, "with Gnattest_Generated;");
-         Put_New_Line;
-         S_Put (0, "with AUnit.Test_Info; use AUnit.Test_Info;");
-         Put_New_Line;
-         S_Put (0, "with Gnattest_Generated.Persistent;");
-         Put_New_Line;
-         S_Put (0, "with AUnit.Reporter." & Reporter_Name'Image & ";");
-         Put_New_Line;
-         S_Put (0, "with AUnit.Run;");
-         Put_New_Line;
-         S_Put (0, "with AUnit.Options; use AUnit.Options;");
-         Put_New_Line;
+         S_Put_Line (0, "with AUnit;");
+         S_Put_Line (0, "with Gnattest_Generated;");
+         S_Put_Line (0, "with AUnit.Test_Info; use AUnit.Test_Info;");
+         S_Put_Line (0, "with Gnattest_Generated.Persistent;");
+         S_Put_Line (0, "with AUnit.Reporter." & Reporter_Name'Image & ";");
+         S_Put_Line (0, "with AUnit.Run;");
+         S_Put_Line (0, "with AUnit.Options; use AUnit.Options;");
          if Add_Exit_Status and then not No_Command_Line then
-            S_Put (0, "use AUnit;");
-            Put_New_Line;
-            S_Put (0, "with Ada.Command_Line;");
-            Put_New_Line;
+            S_Put_Line (0, "use AUnit;");
+            S_Put_Line (0, "with Ada.Command_Line;");
          end if;
          Put_New_Line;
          Put_New_Line;
 
-         S_Put (0, "procedure " & New_Unit_Name.all & " is");
-         Put_New_Line;
+         S_Put_Line (0, "procedure " & New_Unit_Name.all & " is");
          Put_New_Line;
 
-         S_Put
+         S_Put_Line
            (3, "function Suite return AUnit.Test_Suites.Access_Test_Suite;");
          Put_New_Line;
-         Put_New_Line;
 
-         S_Put (3, "Result : aliased AUnit.Test_Suites.Test_Suite;");
-         Put_New_Line;
+         S_Put_Line (3, "Result : aliased AUnit.Test_Suites.Test_Suite;");
          if not Stub_Mode_ON then
-            S_Put (3, "package Caller is new AUnit.Test_Caller");
-            Put_New_Line;
-            S_Put
+            S_Put_Line (3, "package Caller is new AUnit.Test_Caller");
+            S_Put_Line
               (5,
                "(GNATtest_Generated.GNATtest_Standard."
                & Data.Test_Unit_Full_Name.all
                & "."
                & Current_Type.Test_Type_Name.all
                & ");");
-            Put_New_Line;
          end if;
-         S_Put (3, "Local_Test_Case : aliased Caller.Test_Case;");
-         Put_New_Line;
+         S_Put_Line (3, "Local_Test_Case : aliased Caller.Test_Case;");
          Put_New_Line;
 
-         S_Put
+         S_Put_Line
            (3, "function Suite return AUnit.Test_Suites.Access_Test_Suite is");
-         Put_New_Line;
-         S_Put (3, "begin");
-         Put_New_Line;
+         S_Put_Line (3, "begin");
+
          Print_Create_Function
            (Indent              => 6,
             Create_Package_Name => "Caller",
@@ -2642,78 +2253,59 @@ package body Test.Harness is
             Test_Method         => Current_TR.TR_Text_Name.all & "'Access");
          Put_New_Line;
          Put_New_Line;
-         S_Put (6, "Add_Test (Result'Access, Local_Test_Case'Access);");
+         S_Put_Line (6, "Add_Test (Result'Access, Local_Test_Case'Access);");
          Put_New_Line;
-         Put_New_Line;
-         S_Put (6, "return Result'Unchecked_Access;");
-         Put_New_Line;
-         S_Put (3, "end Suite;");
-         Put_New_Line;
+         S_Put_Line (6, "return Result'Unchecked_Access;");
+         S_Put_Line (3, "end Suite;");
          Put_New_Line;
 
          if Add_Exit_Status and then not No_Command_Line then
-            S_Put
+            S_Put_Line
               (3,
                "function Runner is new "
                & "AUnit.Run.Test_Runner_With_Status (Suite);");
          else
-            S_Put
+            S_Put_Line
               (3, "procedure Runner is new AUnit.Run.Test_Runner (Suite);");
          end if;
-         Put_New_Line;
 
-         S_Put (3, "Reporter : " & Reporter_Full_Name & ";");
-         Put_New_Line;
-         S_Put (3, "GT_Options : AUnit_Options := Default_Options;");
+         S_Put_Line (3, "Reporter : " & Reporter_Full_Name & ";");
+         S_Put_Line (3, "GT_Options : AUnit_Options := Default_Options;");
 
-         Put_New_Line;
          if Add_Exit_Status and then not No_Command_Line then
             Put_New_Line;
             S_Put (3, "Exit_Status : AUnit.Status;");
          end if;
          Put_New_Line;
 
-         S_Put (0, "begin");
-         Put_New_Line;
-         S_Put (3, "GT_Options.Global_Timer := True;");
-         Put_New_Line;
-         if Show_Passed_Tests then
-            S_Put (3, "GT_Options.Report_Successes := True;");
-         else
-            S_Put (3, "GT_Options.Report_Successes := False;");
-         end if;
-         Put_New_Line;
+         S_Put_Line (0, "begin");
+         S_Put_Line (3, "GT_Options.Global_Timer := True;");
+
+         S_Put_Line
+           (3,
+            "GT_Options.Report_Successes := " & Show_Passed_Tests'Image & ";");
+
          Print_Test_Case_Timer;
 
-         S_Put (3, "Gnattest_Generated.Persistent.Global_Set_Up;");
-         Put_New_Line;
+         S_Put_Line (3, "Gnattest_Generated.Persistent.Global_Set_Up;");
          if Add_Exit_Status and then not No_Command_Line then
-            S_Put (3, "Exit_Status := Runner (Reporter, GT_Options);");
+            S_Put_Line (3, "Exit_Status := Runner (Reporter, GT_Options);");
+            S_Put_Line (3, "Gnattest_Generated.Persistent.Global_Tear_Down;");
             Put_New_Line;
-            S_Put (3, "Gnattest_Generated.Persistent.Global_Tear_Down;");
-            Put_New_Line;
-            Put_New_Line;
-            S_Put (3, "if Exit_Status = AUnit.Failure then");
-            Put_New_Line;
-            S_Put
+            S_Put_Line (3, "if Exit_Status = AUnit.Failure then");
+            S_Put_Line
               (6,
                "Ada.Command_Line.Set_Exit_Status (Ada.Command_Line.Failure);");
-            Put_New_Line;
-            S_Put (3, "end if;");
-            Put_New_Line;
+            S_Put_Line (3, "end if;");
          else
 
-            S_Put (3, "Runner (Reporter, GT_Options);");
-            Put_New_Line;
-            S_Put (3, "Gnattest_Generated.Persistent.Global_Tear_Down;");
-            Put_New_Line;
+            S_Put_Line (3, "Runner (Reporter, GT_Options);");
+            S_Put_Line (3, "Gnattest_Generated.Persistent.Global_Tear_Down;");
          end if;
          Put_New_Line;
 
-         S_Put (0, "end " & New_Unit_Name.all & ";");
-         Put_New_Line;
-         S_Put (0, GT_Marker_End);
-         Put_New_Line;
+         S_Put_Line (0, "end " & New_Unit_Name.all & ";");
+         S_Put_Line (0, GT_Marker_End);
          Close_File;
 
          Separate_Projects.Append
@@ -2911,37 +2503,23 @@ package body Test.Harness is
             & Body_Suffix.all);
 
          Put_Harness_Header;
-         S_Put (0, GT_Marker_Begin);
-         Put_New_Line;
+         S_Put_Line (0, GT_Marker_Begin);
 
-         S_Put (0, "pragma Ada_2005;");
+         S_Put_Line (0, "pragma Ada_2005;");
          Put_New_Line;
-         Put_New_Line;
-         S_Put (0, "with AUnit.Test_Suites; use AUnit.Test_Suites;");
-         Put_New_Line;
-         S_Put (0, "with AUnit.Test_Caller;");
-         Put_New_Line;
-         S_Put (0, "with AUnit;");
-         Put_New_Line;
-         S_Put (0, "with Gnattest_Generated;");
-         Put_New_Line;
-         S_Put (0, "with AUnit.Test_Info; use AUnit.Test_Info;");
-         Put_New_Line;
-         S_Put (0, "with Gnattest_Generated.Persistent;");
-         Put_New_Line;
-         S_Put (0, "with AUnit.Reporter." & Reporter_Name'Image & ";");
-         Put_New_Line;
-         S_Put (0, "with AUnit.Run;");
-         Put_New_Line;
-         S_Put (0, "with AUnit.Options; use AUnit.Options;");
-         Put_New_Line;
-         S_Put (0, "with Ada.Unchecked_Conversion;");
-         Put_New_Line;
+         S_Put_Line (0, "with AUnit.Test_Suites; use AUnit.Test_Suites;");
+         S_Put_Line (0, "with AUnit.Test_Caller;");
+         S_Put_Line (0, "with AUnit;");
+         S_Put_Line (0, "with Gnattest_Generated;");
+         S_Put_Line (0, "with AUnit.Test_Info; use AUnit.Test_Info;");
+         S_Put_Line (0, "with Gnattest_Generated.Persistent;");
+         S_Put_Line (0, "with AUnit.Reporter." & Reporter_Name'Image & ";");
+         S_Put_Line (0, "with AUnit.Run;");
+         S_Put_Line (0, "with AUnit.Options; use AUnit.Options;");
+         S_Put_Line (0, "with Ada.Unchecked_Conversion;");
          if Add_Exit_Status and then not No_Command_Line then
-            S_Put (0, "use AUnit;");
-            Put_New_Line;
-            S_Put (0, "with Ada.Command_Line;");
-            Put_New_Line;
+            S_Put_Line (0, "use AUnit;");
+            S_Put_Line (0, "with Ada.Command_Line;");
          end if;
          Put_New_Line;
          Put_New_Line;
@@ -2950,69 +2528,61 @@ package body Test.Harness is
 
          for I in 1 .. Current_Type.Max_Inheritance_Depth loop
             Type_Ancestor := Parent_Type_Declaration (Type_Ancestor);
-            S_Put (0, "with " & Type_Test_Package (Type_Ancestor) & ";");
-            Put_New_Line;
+            S_Put_Line
+              (0, "with " & FQ_Type_Test_Package (Type_Ancestor) & ";");
          end loop;
 
          Put_New_Line;
 
-         S_Put (0, "procedure " & New_Unit_Name.all & " is");
-         Put_New_Line;
+         S_Put_Line (0, "procedure " & New_Unit_Name.all & " is");
          Put_New_Line;
 
          Type_Ancestor := Current_Type.Tested_Type.As_Base_Type_Decl;
 
          for I in 1 .. Current_Type.Max_Inheritance_Depth loop
             Type_Ancestor := Parent_Type_Declaration (Type_Ancestor);
-            S_Put
+            S_Put_Line
               (3,
                "type Test_Method_"
                & Trim (Integer'Image (I), Both)
                & " is access procedure");
             Put_New_Line;
-            Put_New_Line;
-            S_Put
+            S_Put_Line
               (5,
                "(T : in out "
-               & Type_Test_Package (Type_Ancestor)
+               & FQ_Type_Test_Package (Type_Ancestor)
                & ".Test_"
                & Type_Name (Type_Ancestor)
                & ");");
             Put_New_Line;
          end loop;
 
-         S_Put
+         S_Put_Line
            (3, "function Suite return AUnit.Test_Suites.Access_Test_Suite;");
          Put_New_Line;
-         Put_New_Line;
 
-         S_Put (3, "Result : aliased AUnit.Test_Suites.Test_Suite;");
-         Put_New_Line;
-         S_Put (3, "package Caller is new AUnit.Test_Caller");
-         Put_New_Line;
-         S_Put
+         S_Put_Line (3, "Result : aliased AUnit.Test_Suites.Test_Suite;");
+         S_Put_Line (3, "package Caller is new AUnit.Test_Caller");
+         S_Put_Line
            (5,
             "(GNATtest_Generated.GNATtest_Standard."
             & Data.Test_Unit_Full_Name.all
             & "."
             & Current_Type.Test_Type_Name.all
             & ");");
-         Put_New_Line;
 
          for I in 1 .. Current_Type.Max_Inheritance_Depth loop
-            S_Put
+            S_Put_Line
               (3,
                "Local_Test_Case_"
                & Trim (Integer'Image (I), Both)
                & " : aliased Caller.Test_Case;");
-            Put_New_Line;
          end loop;
 
          Put_New_Line;
 
-         S_Put
+         S_Put_Line
            (3, "function Suite return AUnit.Test_Suites.Access_Test_Suite is");
-         Put_New_Line;
          Put_New_Line;
 
          for I in 1 .. Current_Type.Max_Inheritance_Depth loop
@@ -3020,17 +2590,15 @@ package body Test.Harness is
               (6,
                "function Convert is new Gnattest_Generated."
                & "Gnattest_Standard.Ada.Unchecked_Conversion");
-            S_Put
+            S_Put_Line
               (8,
                "(Test_Method_"
                & Trim (Integer'Image (I), Both)
                & ", Caller.Test_Method);");
-            Put_New_Line;
          end loop;
          Put_New_Line;
 
-         S_Put (3, "begin");
-         Put_New_Line;
+         S_Put_Line (3, "begin");
 
          Type_Ancestor := Current_Type.Tested_Type.As_Base_Type_Decl;
 
@@ -3047,7 +2615,7 @@ package body Test.Harness is
                Test_Info           => Test_Routine_Info (Current_TR),
                Test_Method         =>
                  "Convert ("
-                 & Type_Test_Package (Type_Ancestor)
+                 & FQ_Type_Test_Package (Type_Ancestor)
                  & "."
                  & Current_TR.TR_Text_Name.all
                  & "'Access)");
@@ -3056,83 +2624,65 @@ package body Test.Harness is
 
          Put_New_Line;
          for I in 1 .. Current_Type.Max_Inheritance_Depth loop
-            S_Put
+            S_Put_Line
               (6,
                "Add_Test (Result'Access, Local_Test_Case_"
                & Trim (Integer'Image (I), Both)
                & "'Access);");
-            Put_New_Line;
          end loop;
 
          Put_New_Line;
-         S_Put (6, "return Result'Unchecked_Access;");
-         Put_New_Line;
-         S_Put (3, "end Suite;");
-         Put_New_Line;
+         S_Put_Line (6, "return Result'Unchecked_Access;");
+         S_Put_Line (3, "end Suite;");
          Put_New_Line;
 
          if Add_Exit_Status and then not No_Command_Line then
-            S_Put
+            S_Put_Line
               (3,
                "function Runner is new "
                & "AUnit.Run.Test_Runner_With_Status (Suite);");
          else
-            S_Put
+            S_Put_Line
               (3, "procedure Runner is new AUnit.Run.Test_Runner (Suite);");
          end if;
-         Put_New_Line;
 
-         S_Put (3, "Reporter : " & Reporter_Full_Name & ";");
-         Put_New_Line;
-         S_Put (3, "GT_Options : AUnit_Options := Default_Options;");
-         Put_New_Line;
+         S_Put_Line (3, "Reporter : " & Reporter_Full_Name & ";");
+         S_Put_Line (3, "GT_Options : AUnit_Options := Default_Options;");
+
          if Add_Exit_Status and then not No_Command_Line then
             Put_New_Line;
             S_Put (3, "Exit_Status : AUnit.Status;");
          end if;
          Put_New_Line;
 
-         S_Put (0, "begin");
-         Put_New_Line;
-         S_Put (3, "GT_Options.Global_Timer := True;");
-         Put_New_Line;
-         if Show_Passed_Tests then
-            S_Put (3, "GT_Options.Report_Successes := True;");
-         else
-            S_Put (3, "GT_Options.Report_Successes := False;");
-         end if;
-         Put_New_Line;
+         S_Put_Line (0, "begin");
+         S_Put_Line (3, "GT_Options.Global_Timer := True;");
+
+         S_Put_Line
+           (3,
+            "GT_Options.Report_Successes := " & Show_Passed_Tests'Image & ";");
+
          Print_Test_Case_Timer;
 
-         S_Put (3, "Gnattest_Generated.Persistent.Global_Set_Up;");
-         Put_New_Line;
+         S_Put_Line (3, "Gnattest_Generated.Persistent.Global_Set_Up;");
          if Add_Exit_Status and then not No_Command_Line then
-            S_Put (3, "Exit_Status := Runner (Reporter, GT_Options);");
+            S_Put_Line (3, "Exit_Status := Runner (Reporter, GT_Options);");
+            S_Put_Line (3, "Gnattest_Generated.Persistent.Global_Tear_Down;");
             Put_New_Line;
-            S_Put (3, "Gnattest_Generated.Persistent.Global_Tear_Down;");
-            Put_New_Line;
-            Put_New_Line;
-            S_Put (3, "if Exit_Status = AUnit.Failure then");
-            Put_New_Line;
-            S_Put
+            S_Put_Line (3, "if Exit_Status = AUnit.Failure then");
+            S_Put_Line
               (6,
                "Ada.Command_Line.Set_Exit_Status (Ada.Command_Line.Failure);");
-            Put_New_Line;
-            S_Put (3, "end if;");
-            Put_New_Line;
+            S_Put_Line (3, "end if;");
          else
 
-            S_Put (3, "Runner (Reporter, GT_Options);");
-            Put_New_Line;
-            S_Put (3, "Gnattest_Generated.Persistent.Global_Tear_Down;");
-            Put_New_Line;
+            S_Put_Line (3, "Runner (Reporter, GT_Options);");
+            S_Put_Line (3, "Gnattest_Generated.Persistent.Global_Tear_Down;");
          end if;
          Put_New_Line;
 
-         S_Put (0, "end " & New_Unit_Name.all & ";");
-         Put_New_Line;
-         S_Put (0, GT_Marker_End);
-         Put_New_Line;
+         S_Put_Line (0, "end " & New_Unit_Name.all & ";");
+         S_Put_Line (0, GT_Marker_End);
          Close_File;
 
          Separate_Projects.Append
@@ -3179,17 +2729,15 @@ package body Test.Harness is
 
          Create (P.Path_TD.all);
 
-         S_Put (0, "with ""aunit"";");
-         Put_New_Line;
-         S_Put
+         S_Put_Line (0, "with ""aunit"";");
+         S_Put_Line
            (0,
             "with """
             & (+Relative_Path
                   (Create (+Tmp_Test_Prj.all),
                    Create (+Dir_Name (P.Path_TD.all))))
             & """;");
-         Put_New_Line;
-         S_Put
+         S_Put_Line
            (0,
             "with """
             & (+Relative_Path
@@ -3197,10 +2745,8 @@ package body Test.Harness is
                    Create (+Dir_Name (P.Path_TD.all))))
             & """;");
          Put_New_Line;
-         Put_New_Line;
 
-         S_Put (0, "project " & P.Name_TD.all & " is");
-         Put_New_Line;
+         S_Put_Line (0, "project " & P.Name_TD.all & " is");
          Put_New_Line;
 
          --  When using the test minimization features, do not emit an origin
@@ -3229,42 +2775,30 @@ package body Test.Harness is
          Put_New_Line;
          Put_New_Line;
 
-         S_Put (3, "for Target use Gnattest_Common'Target;");
+         S_Put_Line (3, "for Target use Gnattest_Common'Target;");
          Put_New_Line;
-         Put_New_Line;
-         S_Put
+         S_Put_Line
            (3, "for Runtime (""Ada"") use Gnattest_Common'Runtime (""Ada"");");
          Put_New_Line;
+
+         S_Put_Line (3, "package Ide renames Gnattest_Common.Ide;");
+         Put_New_Line;
+         S_Put_Line (3, "package Make renames Gnattest_Common.Make;");
          Put_New_Line;
 
-         S_Put (3, "package Ide renames Gnattest_Common.Ide;");
-         Put_New_Line;
-         Put_New_Line;
-         S_Put (3, "package Make renames Gnattest_Common.Make;");
-         Put_New_Line;
+         S_Put_Line
+           (3, "for Languages use Gnattest_Common'Languages & (""Ada"");");
+
+         S_Put_Line (3, "for Main use (""" & P.Main_File_Name.all & """);");
+         S_Put_Line (3, "for Exec_Dir use ""."";");
+         S_Put_Line (3, "for Source_Dirs use (""."");");
+         S_Put_Line (3, "for Object_Dir use """ & P.Name_TD.all & "_obj"";");
          Put_New_Line;
 
-         S_Put (3, "for Languages use Gnattest_Common'Languages & (""Ada"");");
-         Put_New_Line;
-
-         S_Put (3, "for Main use (""" & P.Main_File_Name.all & """);");
-         Put_New_Line;
-         S_Put (3, "for Exec_Dir use ""."";");
-         Put_New_Line;
-         S_Put (3, "for Source_Dirs use (""."");");
-         Put_New_Line;
-         S_Put (3, "for Object_Dir use """ & P.Name_TD.all & "_obj"";");
-         Put_New_Line;
-         Put_New_Line;
-
-         S_Put (3, "package Builder renames Gnattest_Common.Builder;");
-         Put_New_Line;
-         S_Put (3, "package Linker renames Gnattest_Common.Linker;");
-         Put_New_Line;
-         S_Put (3, "package Binder renames Gnattest_Common.Binder;");
-         Put_New_Line;
-         S_Put (3, "package Compiler renames Gnattest_Common.Compiler;");
-         Put_New_Line;
+         S_Put_Line (3, "package Builder renames Gnattest_Common.Builder;");
+         S_Put_Line (3, "package Linker renames Gnattest_Common.Linker;");
+         S_Put_Line (3, "package Binder renames Gnattest_Common.Binder;");
+         S_Put_Line (3, "package Compiler renames Gnattest_Common.Compiler;");
          Put_New_Line;
 
          S_Put (0, "end " & P.Name_TD.all & ";");
@@ -3290,6 +2824,18 @@ package body Test.Harness is
 
       use String_Set;
 
+      procedure Put_Filename
+        (Fname  : String;
+         Prefix : String := "";
+         Suffix : String := ",";
+         Indent : Natural := 6);
+      --  Print to the current file the given Fname, prepending prefix and
+      --  appending suffix.
+
+      procedure Put_Unit
+        (Unit : String; Last : Boolean := False; Indent : Natural := 6);
+      --  Call Put_Filename twice, for the body and spec files of Unit
+
       procedure Add_Nesting_Hierarchy_Dummies (S : String; Short_S : String);
       --  For nested packages corresponding test packages are children to a
       --  dummy hierarchy replicating the original package nesting and
@@ -3298,6 +2844,39 @@ package body Test.Harness is
       --  Analyzes test package name and acts accordingly.
       --  S is the full Ada unit name; Short_S is the shortened file-stem name
       --  used when creating the physical files on disk.
+
+      ------------------
+      -- Put_Filename --
+      ------------------
+
+      procedure Put_Filename
+        (Fname  : String;
+         Prefix : String := "";
+         Suffix : String := ",";
+         Indent : Natural := 6) is
+      begin
+         S_Put_Line (Indent, Prefix & """" & Fname & """" & Suffix);
+      end Put_Filename;
+
+      --------------
+      -- Put_Unit --
+      --------------
+
+      procedure Put_Unit
+        (Unit : String; Last : Boolean := False; Indent : Natural := 6)
+      is
+         Fname_Base : constant String := Unit_To_File_Name (Unit);
+      begin
+         Put_Filename (Fname_Base & Body_Suffix.all, Indent => Indent);
+         Put_Filename
+           (Fname_Base & Spec_Suffix.all,
+            Suffix => (if Last then ");" else ","),
+            Indent => Indent);
+      end Put_Unit;
+
+      -----------------------------------
+      -- Add_Nesting_Hierarchy_Dummies --
+      -----------------------------------
 
       procedure Add_Nesting_Hierarchy_Dummies (S : String; Short_S : String) is
          Idx, Idx2 : Integer;
@@ -3317,58 +2896,38 @@ package body Test.Harness is
          end if;
 
          Idx2 := Index (S, ".", Idx);
-         if not Excluded_Test_Package_Bodies.Contains
-                  (Unit_To_File_Name
-                     (Short_S (Short_S'First .. Idx2 - 1 - Diff))
-                   & Body_Suffix.all)
-         then
-            S_Put
-              (6,
-               """"
-               & Unit_To_File_Name (Short_S (Short_S'First .. Idx2 - 1 - Diff))
-               & Body_Suffix.all
-               & """,");
-            Put_New_Line;
-         end if;
-         S_Put
-           (6,
-            """"
-            & Unit_To_File_Name (Short_S (Short_S'First .. Idx2 - 1 - Diff))
-            & Spec_Suffix.all
-            & """,");
-         Put_New_Line;
+         declare
+            Unit       : constant String :=
+              Short_S (Short_S'First .. Idx2 - 1 - Diff);
+            Fname_Base : constant String := Unit_To_File_Name (Unit);
+         begin
+            if not Excluded_Test_Package_Bodies.Contains
+                     (Fname_Base & Body_Suffix.all)
+            then
+               Put_Filename (Fname_Base & Body_Suffix.all);
+            end if;
+            Put_Filename (Fname_Base & Spec_Suffix.all);
+         end;
 
          Idx2 := Index (S, ".", Idx2 + 1);
-         if not Excluded_Test_Package_Bodies.Contains
-                  (Unit_To_File_Name
-                     (Short_S (Short_S'First .. Idx2 - 1 - Diff))
-                   & Body_Suffix.all)
-         then
-            S_Put
-              (6,
-               """"
-               & Unit_To_File_Name (Short_S (Short_S'First .. Idx2 - 1 - Diff))
-               & Body_Suffix.all
-               & """,");
-            Put_New_Line;
-         end if;
-         S_Put
-           (6,
-            """"
-            & Unit_To_File_Name (Short_S (Short_S'First .. Idx2 - 1 - Diff))
-            & Spec_Suffix.all
-            & """,");
-         Put_New_Line;
+         declare
+            Unit       : constant String :=
+              Short_S (Short_S'First .. Idx2 - 1 - Diff);
+            Fname_Base : constant String := Unit_To_File_Name (Unit);
+         begin
+            if not Excluded_Test_Package_Bodies.Contains
+                     (Fname_Base & Body_Suffix.all)
+            then
+               Put_Filename (Fname_Base & Body_Suffix.all);
+            end if;
+            Put_Filename (Fname_Base & Spec_Suffix.all);
+         end;
 
          loop
             Idx2 := Index (S, ".", Idx2 + 1);
-            S_Put
-              (6,
-               """"
-               & Unit_To_File_Name (Short_S (Short_S'First .. Idx2 - 1 - Diff))
-               & Spec_Suffix.all
-               & """,");
-            Put_New_Line;
+            Put_Filename
+              (Unit_To_File_Name (Short_S (Short_S'First .. Idx2 - 1 - Diff))
+               & Spec_Suffix.all);
 
             if Index (S, ".", Idx2 + 1)
               > Index (S, Test_Data_Unit_Name, Idx2 + 1)
@@ -3432,13 +2991,12 @@ package body Test.Harness is
                        (Create (+Imported_Stubbed_Path),
                         Create (+Dir_Name (P.Path_Extending.all)));
                begin
-                  S_Put (0, "with """ & Relative_P & """;");
-                  Put_New_Line;
+                  S_Put_Line (0, "with """ & Relative_P & """;");
                end;
             end if;
          end loop;
 
-         S_Put
+         S_Put_Line
            (0,
             "with """
             & (+Relative_Path
@@ -3446,36 +3004,29 @@ package body Test.Harness is
                    Create (+Dir_Name (P.Path_Extending.all))))
             & """;");
          Put_New_Line;
-         Put_New_Line;
-         S_Put (0, "with ""aunit"";");
-         Put_New_Line;
+         S_Put_Line (0, "with ""aunit"";");
          Put_New_Line;
 
-         S_Put
+         S_Put_Line
            (0,
             "project "
             & P.Name_Extending.all
             & " extends """
             & P.Path_Of_Extended.all
             & """ is");
-         Put_New_Line;
 
-         S_Put (3, "for Target use Gnattest_Common'Target;");
+         S_Put_Line (3, "for Target use Gnattest_Common'Target;");
          Put_New_Line;
-         Put_New_Line;
-         S_Put
+         S_Put_Line
            (3, "for Runtime (""Ada"") use Gnattest_Common'Runtime (""Ada"");");
          Put_New_Line;
+         S_Put_Line (3, "package Ide renames Gnattest_Common.Ide;");
          Put_New_Line;
-         S_Put (3, "package Ide renames Gnattest_Common.Ide;");
-         Put_New_Line;
-         Put_New_Line;
-         S_Put (3, "package Make renames Gnattest_Common.Make;");
-         Put_New_Line;
+         S_Put_Line (3, "package Make renames Gnattest_Common.Make;");
          Put_New_Line;
 
-         S_Put (3, "for Languages use Gnattest_Common'Languages & (""Ada"");");
-         Put_New_Line;
+         S_Put_Line
+           (3, "for Languages use Gnattest_Common'Languages & (""Ada"");");
 
          declare
             Dir : File_Array_Access;
@@ -3505,28 +3056,25 @@ package body Test.Harness is
          if Test.Skeleton.Source_Table.Project_Is_Library
               (P.Name_Of_Extended.all)
          then
-            S_Put
+            S_Put_Line
               (3, "for Library_Dir use """ & P.Name_Extending.all & "_lib"";");
-            Put_New_Line;
          end if;
 
-         S_Put (3, "for Object_Dir use """ & P.Name_Extending.all & "_obj"";");
+         S_Put_Line
+           (3, "for Object_Dir use """ & P.Name_Extending.all & "_obj"";");
          Put_New_Line;
-         Put_New_Line;
-         if P.Stub_Source_Dir = null then
-            S_Put (3, "for Source_Dirs use ();");
-         else
 
-            S_Put
+         if P.Stub_Source_Dir = null then
+            S_Put_Line (3, "for Source_Dirs use ();");
+         else
+            S_Put_Line
               (3, "for Source_Dirs use (""" & P.Stub_Source_Dir.all & """);");
          end if;
-         Put_New_Line;
          Put_New_Line;
 
          Me.Trace ("PRINTING SOURCE LIST: " & P.Sources_List.Length'Image);
          if not P.Sources_List.Is_Empty then
-            S_Put (3, "for Source_Files use (");
-            Put_New_Line;
+            S_Put_Line (3, "for Source_Files use (");
 
             for S_Cur in P.Sources_List.Iterate loop
                declare
@@ -3537,8 +3085,8 @@ package body Test.Harness is
                   Sources_Names.Include (Source_Name);
                end;
 
-               S_Put (0, (if S_Cur = P.Sources_List.Last then ");" else ","));
-               Put_New_Line;
+               S_Put_Line
+                 (0, (if S_Cur = P.Sources_List.Last then ");" else ","));
             end loop;
          end if;
          Put_New_Line;
@@ -3561,28 +3109,23 @@ package body Test.Harness is
          Put_New_Line;
          Put_New_Line;
 
-         S_Put (3, "package Compiler renames Gnattest_Common.Compiler;");
+         S_Put_Line (3, "package Compiler renames Gnattest_Common.Compiler;");
 
          Put_New_Line;
-         Put_New_Line;
 
-         S_Put (3, "package Coverage is");
-         Put_New_Line;
+         S_Put_Line (3, "package Coverage is");
          if not P.Units_List.Is_Empty then
-            S_Put (6, "for Excluded_Units use (");
-            Put_New_Line;
+            S_Put_Line (6, "for Excluded_Units use (");
             for S_Cur in P.Units_List.Iterate loop
-               S_Put
+               S_Put_Line
                  (9,
                   """"
                   & List_Of_Strings.Element (S_Cur)
                   & """"
                   & (if S_Cur = P.Units_List.Last then ");" else ","));
-               Put_New_Line;
             end loop;
          end if;
-         S_Put (3, "end Coverage;");
-         Put_New_Line;
+         S_Put_Line (3, "end Coverage;");
          Put_New_Line;
 
          S_Put (0, "end " & P.Name_Extending.all & ";");
@@ -3591,22 +3134,18 @@ package body Test.Harness is
          --  Test driver project
          Create (P.Path_TD.all);
 
-         S_Put (0, "with ""aunit"";");
-         Put_New_Line;
-         S_Put
+         S_Put_Line (0, "with ""aunit"";");
+         S_Put_Line
            (0,
             "with """
             & (+Relative_Path
                   (Create (+Gnattest_Common_Prj_Name),
                    Create (+Dir_Name (P.Path_TD.all))))
             & """;");
-         Put_New_Line;
-         S_Put (0, "with """ & Base_Name (P.Path_Extending.all) & """;");
-         Put_New_Line;
+         S_Put_Line (0, "with """ & Base_Name (P.Path_Extending.all) & """;");
          Put_New_Line;
 
-         S_Put (0, "project " & P.Name_TD.all & " is");
-         Put_New_Line;
+         S_Put_Line (0, "project " & P.Name_TD.all & " is");
 
          --  When using the test minimization features, do not emit an origin
          --  project attribute, otherwise gnatcov will not process the harness
@@ -3634,27 +3173,21 @@ package body Test.Harness is
          Put_New_Line;
          Put_New_Line;
 
-         S_Put (3, "for Languages use Gnattest_Common'Languages & (""Ada"");");
-         Put_New_Line;
+         S_Put_Line
+           (3, "for Languages use Gnattest_Common'Languages & (""Ada"");");
 
-         S_Put (3, "for Target use Gnattest_Common'Target;");
+         S_Put_Line (3, "for Target use Gnattest_Common'Target;");
          Put_New_Line;
-         Put_New_Line;
-         S_Put
+         S_Put_Line
            (3, "for Runtime (""Ada"") use Gnattest_Common'Runtime (""Ada"");");
          Put_New_Line;
+         S_Put_Line (3, "package Ide renames Gnattest_Common.Ide;");
          Put_New_Line;
-         S_Put (3, "package Ide renames Gnattest_Common.Ide;");
-         Put_New_Line;
-         Put_New_Line;
-         S_Put (3, "package Make renames Gnattest_Common.Make;");
-         Put_New_Line;
+         S_Put_Line (3, "package Make renames Gnattest_Common.Make;");
          Put_New_Line;
 
-         S_Put (3, "for Main use (""" & P.Main_File_Name.all & """);");
-         Put_New_Line;
-         S_Put (3, "for Exec_Dir use ""."";");
-         Put_New_Line;
+         S_Put_Line (3, "for Main use (""" & P.Main_File_Name.all & """);");
+         S_Put_Line (3, "for Exec_Dir use ""."";");
 
          declare
             Dir : File_Array_Access;
@@ -3674,8 +3207,7 @@ package body Test.Harness is
                   & P.Path_TD.all);
          end;
 
-         S_Put (3, "for Object_Dir use """ & P.Name_TD.all & "_obj"";");
-         Put_New_Line;
+         S_Put_Line (3, "for Object_Dir use """ & P.Name_TD.all & "_obj"";");
 
          Test.Skeleton.Source_Table.Reset_Source_Iterator;
          loop
@@ -3692,101 +3224,54 @@ package body Test.Harness is
             Free (Tmp);
          end loop;
 
-         S_Put (3, "for Source_Dirs use");
-         Put_New_Line;
+         S_Put_Line (3, "for Source_Dirs use");
 
          if Out_Dirs.Is_Empty then
-            S_Put (5, "(""../common"", ""."");");
+            S_Put_Line (5, "(""../common"", ""."");");
 
-            Put_New_Line;
             Put_New_Line;
          else
             S_Put (5, "(");
             for Out_Dir of Out_Dirs loop
-               S_Put (6, """");
-               S_Put
-                 (0,
-                  +Relative_Path
-                     (Create (+Out_Dir), Create (+Dir_Name (P.Path_TD.all)))
-                  & """");
-               S_Put (0, ",");
-               Put_New_Line;
+               S_Put_Line
+                 (6,
+                  """"
+                  & (+Relative_Path
+                        (Create (+Out_Dir),
+                         Create (+Dir_Name (P.Path_TD.all))))
+                  & """,");
             end loop;
-            S_Put (6, """../common"", ""."");");
-            Put_New_Line;
+            S_Put_Line (6, """../common"", ""."");");
             Put_New_Line;
          end if;
 
          if Stub_Mode_ON then
-            S_Put (3, "for Source_Files use");
-            Put_New_Line;
-            S_Put (5, "(""gnattest_generated" & Spec_Suffix.all & """,");
-            Put_New_Line;
-            S_Put
-              (6, """gnattest_generated-persistent" & Spec_Suffix.all & """,");
-            Put_New_Line;
-            S_Put
-              (6, """gnattest_generated-persistent" & Body_Suffix.all & """,");
-            Put_New_Line;
-            S_Put (6, """" & P.Main_File_Name.all & """,");
-            Put_New_Line;
+            S_Put_Line (3, "for Source_Files use");
+
+            Put_Filename
+              ("gnattest_generated" & Spec_Suffix.all,
+               Prefix => "(",
+               Indent => 5);
+            Put_Filename ("gnattest_generated-persistent" & Spec_Suffix.all);
+            Put_Filename ("gnattest_generated-persistent" & Body_Suffix.all);
+            Put_Filename (P.Main_File_Name.all);
+
             Add_Nesting_Hierarchy_Dummies
               (P.Test_Package.all, P.Test_Package_Short.all);
-            S_Put
-              (6,
-               """"
-               & Unit_To_File_Name (P.Test_Package_Short.all)
-               & Body_Suffix.all
-               & """,");
-            Put_New_Line;
-            S_Put
-              (6,
-               """"
-               & Unit_To_File_Name (P.Test_Package_Short.all)
-               & Spec_Suffix.all
-               & """,");
-            Put_New_Line;
+
+            Put_Unit (Unit => P.Test_Package_Short.all);
             if Driver_Per_Unit then
-               S_Put
-                 (6,
-                  """"
-                  & Unit_To_File_Name (P.Test_Package_Short.all & ".Suite")
-                  & Body_Suffix.all
-                  & """,");
-               Put_New_Line;
-               S_Put
-                 (6,
-                  """"
-                  & Unit_To_File_Name (P.Test_Package_Short.all & ".Suite")
-                  & Spec_Suffix.all
-                  & """,");
-               Put_New_Line;
+               Put_Unit (Unit => P.Test_Package_Short.all & ".Suite");
             end if;
-            S_Put
-              (6,
-               """"
-               & Unit_To_File_Name (P.Test_Data_Short.all)
-               & Body_Suffix.all
-               & """,");
-            Put_New_Line;
-            S_Put
-              (6,
-               """"
-               & Unit_To_File_Name (P.Test_Data_Short.all)
-               & Spec_Suffix.all
-               & """);");
-            Put_New_Line;
+            Put_Unit (Unit => P.Test_Data_Short.all, Last => True);
+
             Put_New_Line;
          end if;
 
-         S_Put (3, "package Builder renames Gnattest_Common.Builder;");
-         Put_New_Line;
-         S_Put (3, "package Linker renames Gnattest_Common.Linker;");
-         Put_New_Line;
-         S_Put (3, "package Binder renames Gnattest_Common.Binder;");
-         Put_New_Line;
-         S_Put (3, "package Compiler renames Gnattest_Common.Compiler;");
-         Put_New_Line;
+         S_Put_Line (3, "package Builder renames Gnattest_Common.Builder;");
+         S_Put_Line (3, "package Linker renames Gnattest_Common.Linker;");
+         S_Put_Line (3, "package Binder renames Gnattest_Common.Binder;");
+         S_Put_Line (3, "package Compiler renames Gnattest_Common.Compiler;");
          Put_New_Line;
 
          S_Put (0, "end " & P.Name_TD.all & ";");
@@ -3830,13 +3315,10 @@ package body Test.Harness is
       begin
          Create (Harness_Dir.all & "test_drivers.gpr");
 
-         S_Put (0, "with ""gnattest_common.gpr"";");
+         S_Put_Line (0, "with ""gnattest_common.gpr"";");
          Put_New_Line;
-         Put_New_Line;
-         S_Put (0, "aggregate project Test_Drivers is");
-         Put_New_Line;
-         S_Put (3, "for Project_Files use");
-         Put_New_Line;
+         S_Put_Line (0, "aggregate project Test_Drivers is");
+         S_Put_Line (3, "for Project_Files use");
 
          if Separate_Projects.Length = Ada.Containers.Count_Type (1) then
             P := Separate_Projects.First_Element;
@@ -3846,9 +3328,8 @@ package body Test.Harness is
                  +Relative_Path
                     (Create (+P.Path_TD.all), Create (+Harness_Dir.all));
             begin
-               S_Put (5, "(""" & Pth & """);");
+               S_Put_Line (5, "(""" & Pth & """);");
             end;
-            Put_New_Line;
          else
             for K in
               Separate_Projects.First_Index .. Separate_Projects.Last_Index
@@ -3860,14 +3341,13 @@ package body Test.Harness is
                        (Create (+P.Path_TD.all), Create (+Harness_Dir.all));
                begin
                   if K = Separate_Projects.First_Index then
-                     S_Put (5, "(""" & Pth & """,");
+                     S_Put_Line (5, "(""" & Pth & """,");
                   elsif K = Separate_Projects.Last_Index then
-                     S_Put (6, """" & Pth & """);");
+                     S_Put_Line (6, """" & Pth & """);");
                   else
-                     S_Put (6, """" & Pth & """,");
+                     S_Put_Line (6, """" & Pth & """,");
                   end if;
                end;
-               Put_New_Line;
             end loop;
          end if;
 
@@ -3878,14 +3358,14 @@ package body Test.Harness is
          if not Test.Common.Minimize then
             Put_New_Line;
             if Relocatable_Harness then
-               S_Put
+               S_Put_Line
                  (3,
                   "for Origin_Project use external "
                   & "(""ORIGIN_PROJECT_DIR"", """") & """
                   & Base_Name (Source_Prj)
                   & """;");
             else
-               S_Put
+               S_Put_Line
                  (3,
                   "for Origin_Project use """
                   & (+Relative_Path
@@ -3895,22 +3375,15 @@ package body Test.Harness is
             end if;
          end if;
          Put_New_Line;
-         Put_New_Line;
-         S_Put (3, "for Target use Gnattest_Common'Target;");
-         Put_New_Line;
-         S_Put
+         S_Put_Line (3, "for Target use Gnattest_Common'Target;");
+         S_Put_Line
            (3, "for Runtime (""Ada"") use Gnattest_Common'Runtime (""Ada"");");
          Put_New_Line;
+         S_Put_Line (3, "package Builder renames Gnattest_Common.Builder;");
          Put_New_Line;
-         S_Put (3, "package Builder renames Gnattest_Common.Builder;");
-         Put_New_Line;
-         Put_New_Line;
-         S_Put (3, "package GNATtest is");
-         Put_New_Line;
-         S_Put (3, "for GNATTest_Mapping_File use ""gnattest.xml"";");
-         Put_New_Line;
-         S_Put (3, "end GNATtest;");
-         Put_New_Line;
+         S_Put_Line (3, "package GNATtest is");
+         S_Put_Line (3, "for GNATTest_Mapping_File use ""gnattest.xml"";");
+         S_Put_Line (3, "end GNATtest;");
          Put_New_Line;
 
          S_Put (0, "end Test_Drivers;");
@@ -4029,30 +3502,25 @@ package body Test.Harness is
 
       if not File_Exists (Harness_Dir.all & "coverage_settings.mk") then
          Create (Harness_Dir.all & "coverage_settings.mk");
-         S_Put
+         S_Put_Line
            (0,
             "# Settings in this file were extracted from the source"
             & " project");
-         Put_New_Line;
-         S_Put
+         S_Put_Line
            (0,
             "# or are gnattest default values if they weren't specified"
             & " in the source project.");
-         Put_New_Line;
-         S_Put
+         S_Put_Line
            (0,
             "# They may need adjustments to fit your particular"
             & " coverage needs.");
-         Put_New_Line;
-         S_Put
+         S_Put_Line
            (0,
             "# This file won't be overwritten when regenerating the"
             & " harness.");
          Put_New_Line;
-         Put_New_Line;
 
-         S_Put (0, "# Switches for the various gnatcov commands");
-         Put_New_Line;
+         S_Put_Line (0, "# Switches for the various gnatcov commands");
 
          if Root_Prj.Check_Attribute
               (Coverage_Switches,
@@ -4075,11 +3543,10 @@ package body Test.Harness is
 
             procedure Default_Instrument_Switches is
             begin
-               S_Put
+               S_Put_Line
                  (0,
                   "# The instrument switches are default ones, they may"
                   & " need to be adjusted to fit your coverage needs.");
-               Put_New_Line;
                if Is_Cross_Target then
                   S_Put
                     (0,
@@ -4106,11 +3573,10 @@ package body Test.Harness is
 
             procedure Default_Run_Switches is
             begin
-               S_Put
+               S_Put_Line
                  (0,
                   "# The run switches are default ones, they may"
                   & " need to be adjusted to fit your coverage needs.");
-               Put_New_Line;
                S_Put (0, "SWITCHES_RUN=-cstmt");
             end Default_Run_Switches;
          begin
@@ -4128,11 +3594,10 @@ package body Test.Harness is
 
             procedure Default_Coverage_Switches is
             begin
-               S_Put
+               S_Put_Line
                  (0,
                   "# The coverage switches are default ones, they may"
                   & " need to be adjusted to fit your coverage needs.");
-               Put_New_Line;
                S_Put
                  (0,
                   "SWITCHES_COVERAGE=-cstmt -axcov+,dhtml "
@@ -4149,35 +3614,29 @@ package body Test.Harness is
          --  incompatibilities.
 
          if Switches_From_Default and then Switches_From_Prj then
-            S_Put
+            S_Put_Line
               (0,
                "$(warning Some of the switches defined for the various"
                & "  gnatcov commands come from the source project while"
                & " others are gnattest default. There may be "
                & " incompatibilities.)");
             Put_New_Line;
-            Put_New_Line;
          end if;
 
-         S_Put (0, "# Path to the installed gnatcov rts project file.");
-         Put_New_Line;
-         S_Put
+         S_Put_Line (0, "# Path to the installed gnatcov rts project file.");
+         S_Put_Line
            (0,
             "# No need to specify it if the project file path was added"
             & " to the GPR_PROJECT_PATH environment variable.");
-         Put_New_Line;
-         S_Put (0, "GNATCOV_RTS=");
-         Put_New_Line;
+         S_Put_Line (0, "GNATCOV_RTS=");
          Put_New_Line;
 
          --  Cross-config specific options
 
          if Is_Cross_Target then
             Put_New_Line;
-            S_Put (0, "# Target and RTS for cross build");
-            Put_New_Line;
-            S_Put (0, "TARGET=" & String (Project_Tree.Target));
-            Put_New_Line;
+            S_Put_Line (0, "# Target and RTS for cross build");
+            S_Put_Line (0, "TARGET=" & String (Project_Tree.Target));
             if RTS_Attribute_Val /= null then
                S_Put (0, "RTSFLAG=--RTS=" & RTS_Attribute_Val.all);
             end if;
@@ -4185,13 +3644,12 @@ package body Test.Harness is
             if Root_Prj.Check_Attribute
                  (Utils.Projects.Emulator_Board, Result => Attr_Value)
             then
-               S_Put (0, "GNATEMU_BOARD=" & String (Attr_Value.Value.Text));
+               S_Put_Line
+                 (0, "GNATEMU_BOARD=" & String (Attr_Value.Value.Text));
             else
-               S_Put (0, "# Couldn't determine board from project file");
-               Put_New_Line;
-               S_Put (0, "# GNATEMU_BOARD=...");
+               S_Put_Line (0, "# Couldn't determine board from project file");
+               S_Put_Line (0, "# GNATEMU_BOARD=...");
             end if;
-            Put_New_Line;
          end if;
          Close_File;
 
@@ -4203,49 +3661,38 @@ package body Test.Harness is
         and then not File_Exists (Harness_Dir.all & "run-cross.sh")
       then
          Create (Harness_Dir.all & "run-cross.sh");
-         S_Put
+         S_Put_Line
            (0,
             "# This script is meant to execute the various test drivers in");
-         Put_New_Line;
-         S_Put
+         S_Put_Line
            (0,
             "# a cross environment, where gnattest does not necessarily have");
+         S_Put_Line (0, "# the knowledge to do it properly.");
          Put_New_Line;
-         S_Put (0, "# the knowledge to do it properly.");
-         Put_New_Line;
-         Put_New_Line;
-         S_Put (0, "# It is invoked by the Makefile, with the path to the");
-         Put_New_Line;
-         S_Put
+         S_Put_Line
+           (0, "# It is invoked by the Makefile, with the path to the");
+         S_Put_Line
            (0, "# executable as first argument, and the path to where the");
-         Put_New_Line;
-         S_Put
+         S_Put_Line
            (0, "# gnatcov trace file must be created as second argument, so");
-         Put_New_Line;
-         S_Put
+         S_Put_Line
            (0,
             "# that the rest of the Makefile execution proceeds correctly.");
          Put_New_Line;
-         Put_New_Line;
-         S_Put
+         S_Put_Line
            (0,
             "# When first generated, the script executes the program through");
-         Put_New_Line;
-         S_Put
+         S_Put_Line
            (0,
             "# gnatemu, assuming a base64 encoded trace being output on the");
+         S_Put_Line (0, "# serial port, then converts it to a proper trace.");
          Put_New_Line;
-         S_Put (0, "# serial port, then converts it to a proper trace.");
-         Put_New_Line;
-         Put_New_Line;
-         S_Put
+         S_Put_Line
            (0,
             "# It can be modified by the user, gnattest will not overwrite");
+         S_Put_Line (0, "# it once it has been generated once.");
          Put_New_Line;
-         S_Put (0, "# it once it has been generated once.");
-         Put_New_Line;
-         Put_New_Line;
-         S_Put
+         S_Put_Line
            (0,
             String (Project_Tree.Target)
             & "-gnatemu"
@@ -4257,88 +3704,63 @@ package body Test.Harness is
                  & String (Root_Prj.Attribute (Emulator_Board).Value.Text)
                else "")
             & " $1");
-         Put_New_Line;
 
          --  Also output the contents of the file to the terminal so that
          --  GNATstudio can parse the test results and display them.
-         S_Put (0, "cat $2.b64");
-         Put_New_Line;
+         S_Put_Line (0, "cat $2.b64");
 
-         S_Put (0, "gnatcov" & Exe_Ext & " extract-base64-trace $2.b64 $2");
-         Put_New_Line;
+         S_Put_Line
+           (0, "gnatcov" & Exe_Ext & " extract-base64-trace $2.b64 $2");
          Close_File;
       end if;
 
       --  Generate actual Makefile no matter what
 
       Create (Harness_Dir.all & "Makefile");
-      S_Put (0, "# Check if we are running on Windows");
+      S_Put_Line (0, "# Check if we are running on Windows");
+      S_Put_Line (0, "ifeq ($(OS),Windows_NT)");
+      S_Put_Line (0, ASCII.HT & "EXE_EXT=.exe");
+      S_Put_Line (0, "else");
+      S_Put_Line (0, ASCII.HT & "EXE_EXT=");
+      S_Put_Line (0, "endif");
       Put_New_Line;
-      S_Put (0, "ifeq ($(OS),Windows_NT)");
-      Put_New_Line;
-      S_Put (0, ASCII.HT & "EXE_EXT=.exe");
-      Put_New_Line;
-      S_Put (0, "else");
-      Put_New_Line;
-      S_Put (0, ASCII.HT & "EXE_EXT=");
-      Put_New_Line;
-      S_Put (0, "endif");
-      Put_New_Line;
-      Put_New_Line;
-      S_Put
+      S_Put_Line
         (0,
          "# Persistent settings for coverage commands, these will not"
          & " be overwritten when regenerating the harness");
+      S_Put_Line (0, "include coverage_settings.mk");
       Put_New_Line;
-      S_Put (0, "include coverage_settings.mk");
+      S_Put_Line (0, "# Executables");
+      S_Put_Line (0, "GPRBUILD=gprbuild");
+      S_Put_Line (0, "GPRCLEAN=gprclean");
+      S_Put_Line (0, "GNATCOV=gnatcov");
       Put_New_Line;
+      S_Put_Line (0, "# Number of processes used to build");
+      S_Put_Line (0, "# (default 0 is using maximum available cores)");
+      S_Put_Line (0, "NUMPROC=0");
       Put_New_Line;
-      S_Put (0, "# Executables");
-      Put_New_Line;
-      S_Put (0, "GPRBUILD=gprbuild");
-      Put_New_Line;
-      S_Put (0, "GPRCLEAN=gprclean");
-      Put_New_Line;
-      S_Put (0, "GNATCOV=gnatcov");
-      Put_New_Line;
-      Put_New_Line;
-      S_Put (0, "# Number of processes used to build");
-      Put_New_Line;
-      S_Put (0, "# (default 0 is using maximum available cores)");
-      Put_New_Line;
-      S_Put (0, "NUMPROC=0");
-      Put_New_Line;
-      Put_New_Line;
-      S_Put (0, "# Switches for gprbuild");
-      Put_New_Line;
-      S_Put
+      S_Put_Line (0, "# Switches for gprbuild");
+      S_Put_Line
         (0,
          "# To be defined if there is a specific target and/or runtime, etc");
+      S_Put_Line (0, "BUILDERFLAGS=");
       Put_New_Line;
-      S_Put (0, "BUILDERFLAGS=");
-      Put_New_Line;
-      Put_New_Line;
-      S_Put (0, "# Project-specific switches");
-      Put_New_Line;
-      S_Put
+      S_Put_Line (0, "# Project-specific switches");
+      S_Put_Line
         (0,
          "# To be defined to customize the build. TARGET and RTSFLAGS are"
          & " defined in coverage_settings.mk");
-      Put_New_Line;
       if Is_Cross_Target then
-         S_Put (0, "GPRFLAGS?=--target=$(TARGET) $(RTSFLAGS)");
+         S_Put_Line (0, "GPRFLAGS?=--target=$(TARGET) $(RTSFLAGS)");
       else
-         S_Put (0, "GPRFLAGS=");
+         S_Put_Line (0, "GPRFLAGS=");
       end if;
       Put_New_Line;
-      Put_New_Line;
 
-      S_Put (0, "# List of projects to build");
-      Put_New_Line;
+      S_Put_Line (0, "# List of projects to build");
 
       if Separate_Drivers or else Stub_Mode_ON then
-         S_Put (0, "PRJS = \");
-         Put_New_Line;
+         S_Put_Line (0, "PRJS = \");
          for K in Separate_Projects.First_Index .. Separate_Projects.Last_Index
          loop
             P := Separate_Projects.Element (K);
@@ -4351,59 +3773,50 @@ package body Test.Harness is
                  Rel_Pth (Rel_Pth'First .. Rel_Pth'Last - 4);
                --  Remove the .gpr file extension
             begin
-               S_Put
+               S_Put_Line
                  (0,
                   ASCII.HT
                   & Path_To_Unix (Pth)
                   & (if K = Separate_Projects.Last_Index then "" else " \"));
             end;
-            Put_New_Line;
          end loop;
 
       else
-         S_Put (0, "PRJS=");
          S_Put
            (0,
-            Path_To_Unix
-              (+Relative_Path
-                  (GNATCOLL.VFS.Create (+"test_driver"),
-                   GNATCOLL.VFS.Create (+Harness_Dir.all))));
+            "PRJS="
+            & Path_To_Unix
+                (+Relative_Path
+                    (GNATCOLL.VFS.Create (+"test_driver"),
+                     GNATCOLL.VFS.Create (+Harness_Dir.all))));
       end if;
 
       Put_New_Line;
-      S_Put (0, "CKPTS = $(patsubst %,%-gnatcov-cov-inst,$(PRJS))");
-      Put_New_Line;
-      S_Put (0, "BIN_CKPTS = $(patsubst %,%-gnatcov-cov,$(PRJS))");
-      Put_New_Line;
-      S_Put (0, "INSTR_TARGETS = $(patsubst %,%-gnatcov-inst,$(PRJS))");
-      Put_New_Line;
-      S_Put (0, "INSTR_BUILD_TARGETS = $(patsubst %,%-cov-build,$(PRJS))");
-      Put_New_Line;
+      S_Put_Line (0, "CKPTS = $(patsubst %,%-gnatcov-cov-inst,$(PRJS))");
+      S_Put_Line (0, "BIN_CKPTS = $(patsubst %,%-gnatcov-cov,$(PRJS))");
+      S_Put_Line (0, "INSTR_TARGETS = $(patsubst %,%-gnatcov-inst,$(PRJS))");
+      S_Put_Line
+        (0, "INSTR_BUILD_TARGETS = $(patsubst %,%-cov-build,$(PRJS))");
       Put_New_Line;
 
       --  Simple build, no coverage
 
-      S_Put (0, ".PHONY: all");
-      Put_New_Line;
-      Put_New_Line;
-
-      S_Put (0, "all: $(patsubst %,%-build,$(PRJS))");
-      Put_New_Line;
+      S_Put_Line (0, ".PHONY: all");
       Put_New_Line;
 
-      S_Put (0, "%-build: %.gpr");
+      S_Put_Line (0, "all: $(patsubst %,%-build,$(PRJS))");
       Put_New_Line;
-      S_Put
+
+      S_Put_Line (0, "%-build: %.gpr");
+      S_Put_Line
         (0,
          ASCII.HT
          & "$(GPRBUILD) $(BUILDERFLAGS) -P$< $(GPRFLAGS) -gargs -j$(NUMPROC)");
-      Put_New_Line;
 
       if Test.Common.Instrument then
          Put_New_Line;
-         S_Put (0, "%-build-inst: %.gpr");
-         Put_New_Line;
-         S_Put
+         S_Put_Line (0, "%-build-inst: %.gpr");
+         S_Put_Line
            (0,
             ASCII.HT
             & "$(GPRBUILD) $(BUILDERFLAGS) -P$< $(GPRFLAGS) "
@@ -4413,7 +3826,6 @@ package body Test.Harness is
             & Dir_Sep
             & "tgen_support.gpr"
             & " -gargs -j$(NUMPROC)");
-         Put_New_Line;
       end if;
 
       Put_New_Line;
@@ -4427,27 +3839,21 @@ package body Test.Harness is
       --  Non-Instrumented
       --  Build
 
-      S_Put (0, "# Bin-trace coverage rules:");
-      Put_New_Line;
-      S_Put (0, "%-build-cov: %.gpr");
-      Put_New_Line;
-      S_Put (0, ASCII.HT & "@echo -e '\n'Building $*.gpr:");
-      Put_New_Line;
-      S_Put
+      S_Put_Line (0, "# Bin-trace coverage rules:");
+      S_Put_Line (0, "%-build-cov: %.gpr");
+      S_Put_Line (0, ASCII.HT & "@echo -e '\n'Building $*.gpr:");
+      S_Put_Line
         (0,
          ASCII.HT
          & "$(GPRBUILD) $(BUILDERFLAGS) -P$< $(GPRFLAGS)"
          & " -o $(notdir $*)$(EXE_EXT) -gargs -j$(NUMPROC) -cargs -g"
          & " -fdump-scos -fpreserve-control-flow");
       Put_New_Line;
-      Put_New_Line;
 
       --  Run
 
-      S_Put (0, "%-gnatcov-run: %-build-cov");
-      Put_New_Line;
-      S_Put (0, ASCII.HT & "@echo -e '\n'Running $*.gpr:");
-      Put_New_Line;
+      S_Put_Line (0, "%-gnatcov-run: %-build-cov");
+      S_Put_Line (0, ASCII.HT & "@echo -e '\n'Running $*.gpr:");
       S_Put
         (0,
          ASCII.HT
@@ -4456,16 +3862,14 @@ package body Test.Harness is
       if Stub_Mode_ON or else Separate_Drivers then
          S_Put (0, " --units=@$(dir $*)units.list");
       end if;
-      S_Put (0, " $*$(EXE_EXT)");
-      Put_New_Line;
+      S_Put_Line (0, " $*$(EXE_EXT)");
       Put_New_Line;
 
       --  Checkpoint-creation
 
-      S_Put (0, "%-gnatcov-cov: %-gnatcov-run");
-      Put_New_Line;
-      S_Put (0, ASCII.HT & "@echo -e '\n'Creating checkpoint for $*.gpr:");
-      Put_New_Line;
+      S_Put_Line (0, "%-gnatcov-cov: %-gnatcov-run");
+      S_Put_Line
+        (0, ASCII.HT & "@echo -e '\n'Creating checkpoint for $*.gpr:");
       S_Put
         (0,
          ASCII.HT
@@ -4480,15 +3884,13 @@ package body Test.Harness is
 
       --  Consolidation and report
 
-      S_Put (0, "bin-gnatcov-consolidate: $(BIN_CKPTS)");
-      Put_New_Line;
-      S_Put (0, ASCII.HT & "@echo -e '\n'Creating coverage report:");
-      Put_New_Line;
+      S_Put_Line (0, "bin-gnatcov-consolidate: $(BIN_CKPTS)");
+      S_Put_Line (0, ASCII.HT & "@echo -e '\n'Creating coverage report:");
       declare
          Pth : constant String :=
            +Relative_Path (Create (+Source_Prj), Create (+Harness_Dir.all));
       begin
-         S_Put
+         S_Put_Line
            (0,
             ASCII.HT
             & "$(GNATCOV) coverage -P"
@@ -4497,17 +3899,13 @@ package body Test.Harness is
             & " %-gnattest.ckpt,$(PRJS)) $(SWITCHES_COVERAGE)");
       end;
       Put_New_Line;
-      Put_New_Line;
 
       --  Instrumented
       --  Instrument
 
-      S_Put (0, "# src-trace coverage rules");
-      Put_New_Line;
-      S_Put (0, "%-gnatcov-inst: %.gpr");
-      Put_New_Line;
-      S_Put (0, ASCII.HT & "@echo -e '\n'Instrumenting project $*.gpr:");
-      Put_New_Line;
+      S_Put_Line (0, "# src-trace coverage rules");
+      S_Put_Line (0, "%-gnatcov-inst: %.gpr");
+      S_Put_Line (0, ASCII.HT & "@echo -e '\n'Instrumenting project $*.gpr:");
       S_Put
         (0,
          ASCII.HT
@@ -4520,11 +3918,9 @@ package body Test.Harness is
 
       --  Build
 
-      S_Put (0, "%-cov-build: %-gnatcov-inst");
-      Put_New_Line;
-      S_Put (0, ASCII.HT & "@echo -e '\n'Building $*.gpr:");
-      Put_New_Line;
-      S_Put
+      S_Put_Line (0, "%-cov-build: %-gnatcov-inst");
+      S_Put_Line (0, ASCII.HT & "@echo -e '\n'Building $*.gpr:");
+      S_Put_Line
         (0,
          ASCII.HT
          & "$(GPRBUILD) $(BUILDERFLAGS) -P$*.gpr $(GPRFLAGS)"
@@ -4532,14 +3928,11 @@ package body Test.Harness is
          & " --implicit-with=$(if $(GNATCOV_RTS),$(GNATCOV_RTS),"
          & "gnatcov_rts.gpr)");
       Put_New_Line;
-      Put_New_Line;
 
       --  Run
 
-      S_Put (0, "%-inst-run: %-cov-build");
-      Put_New_Line;
-      S_Put (0, ASCII.HT & "@echo -e '\n'Running $*.gpr:");
-      Put_New_Line;
+      S_Put_Line (0, "%-inst-run: %-cov-build");
+      S_Put_Line (0, ASCII.HT & "@echo -e '\n'Running $*.gpr:");
 
       --  For source traces, we can't rely on a "gnatcov run" executable to
       --  handle both the native and cross case. For cross applications, defer
@@ -4547,11 +3940,11 @@ package body Test.Harness is
       --  (and not overwritten by gnattest)
 
       if Is_Cross_Target then
-         S_Put
+         S_Put_Line
            (0,
             ASCII.HT & "sh run-cross.sh $*$(EXE_EXT) $*-gnattest_td.srctrace");
       else
-         S_Put
+         S_Put_Line
            (0,
             ASCII.HT
             & "GNATCOV_TRACE_FILE=$*-gnattest_td.srctrace"
@@ -4560,14 +3953,12 @@ package body Test.Harness is
       end if;
 
       Put_New_Line;
-      Put_New_Line;
 
       --  Checkpoint creation
 
-      S_Put (0, "%-gnatcov-cov-inst: %-inst-run");
-      Put_New_Line;
-      S_Put (0, ASCII.HT & "@echo -e '\n'Creating checkpoint for $*.gpr:");
-      Put_New_Line;
+      S_Put_Line (0, "%-gnatcov-cov-inst: %-inst-run");
+      S_Put_Line
+        (0, ASCII.HT & "@echo -e '\n'Creating checkpoint for $*.gpr:");
       S_Put
         (0,
          ASCII.HT
@@ -4582,15 +3973,13 @@ package body Test.Harness is
 
       --  Consolidation and report
 
-      S_Put (0, "gnatcov-consolidate: $(CKPTS)");
-      Put_New_Line;
-      S_Put (0, ASCII.HT & "@echo -e '\n'Creating coverage report:");
-      Put_New_Line;
+      S_Put_Line (0, "gnatcov-consolidate: $(CKPTS)");
+      S_Put_Line (0, ASCII.HT & "@echo -e '\n'Creating coverage report:");
       declare
          Pth : constant String :=
            +Relative_Path (Create (+Source_Prj), Create (+Harness_Dir.all));
       begin
-         S_Put
+         S_Put_Line
            (0,
             ASCII.HT
             & "$(GNATCOV) coverage -P"
@@ -4599,63 +3988,46 @@ package body Test.Harness is
             & "%-gnattest.ckpt,$(PRJS)) $(SWITCHES_COVERAGE)");
       end;
       Put_New_Line;
-      Put_New_Line;
 
-      S_Put (0, "bin-coverage: bin-gnatcov-consolidate");
-      Put_New_Line;
+      S_Put_Line (0, "bin-coverage: bin-gnatcov-consolidate");
       Put_New_Line;
 
       if Is_Cross_Target then
-         S_Put (0, "# Specific settings for non-instrumented cross runs");
-         Put_New_Line;
-         S_Put
+         S_Put_Line (0, "# Specific settings for non-instrumented cross runs");
+         S_Put_Line
            (0,
             "bin-coverage-cross: BUILDERFLAGS+=--target=$(TARGET)"
             & " $(RTSFLAG)");
-         Put_New_Line;
-         S_Put
+         S_Put_Line
            (0,
             "bin-coverage-cross: SWITCHES_RUN+="
             & "--target=$(TARGET),$(GNATEMU_BOARD) $(RTSFLAG)");
-         Put_New_Line;
-         S_Put
+         S_Put_Line
            (0,
             "bin-coverage-cross: SWITCHES_COVERAGE+="
             & "--target=$(TARGET) $(RTSFLAG)");
-         Put_New_Line;
-         S_Put (0, "bin-coverage-cross: bin-gnatcov-consolidate");
-         Put_New_Line;
+         S_Put_Line (0, "bin-coverage-cross: bin-gnatcov-consolidate");
          Put_New_Line;
       end if;
 
-      S_Put (0, "coverage: gnatcov-consolidate");
-      Put_New_Line;
-      Put_New_Line;
-
-      S_Put (0, "instrument-all: $(INSTR_TARGETS)");
-      Put_New_Line;
+      S_Put_Line (0, "coverage: gnatcov-consolidate");
       Put_New_Line;
 
-      S_Put (0, "instr-build-all: $(INSTR_BUILD_TARGETS)");
-      Put_New_Line;
-      Put_New_Line;
-
-      S_Put (0, "clean: $(patsubst %,%-clean,$(PRJS))");
-      Put_New_Line;
+      S_Put_Line (0, "instrument-all: $(INSTR_TARGETS)");
       Put_New_Line;
 
-      S_Put (0, "%-clean: %.gpr");
+      S_Put_Line (0, "instr-build-all: $(INSTR_BUILD_TARGETS)");
       Put_New_Line;
-      S_Put (0, ASCII.HT & "$(GPRCLEAN) $(BUILDERFLAGS) -P$<");
+
+      S_Put_Line (0, "clean: $(patsubst %,%-clean,$(PRJS))");
       Put_New_Line;
-      S_Put (0, ASCII.HT & "rm -f $(dir $*)*.trace");
-      Put_New_Line;
-      S_Put (0, ASCII.HT & "rm -f $(dir $*)*.srctrace");
-      Put_New_Line;
-      S_Put (0, ASCII.HT & "rm -f $(dir $*)*.b64trace");
-      Put_New_Line;
-      S_Put (0, ASCII.HT & "rm -f $(dir $*)*.ckpt");
-      Put_New_Line;
+
+      S_Put_Line (0, "%-clean: %.gpr");
+      S_Put_Line (0, ASCII.HT & "$(GPRCLEAN) $(BUILDERFLAGS) -P$<");
+      S_Put_Line (0, ASCII.HT & "rm -f $(dir $*)*.trace");
+      S_Put_Line (0, ASCII.HT & "rm -f $(dir $*)*.srctrace");
+      S_Put_Line (0, ASCII.HT & "rm -f $(dir $*)*.b64trace");
+      S_Put_Line (0, ASCII.HT & "rm -f $(dir $*)*.ckpt");
 
       Close_File;
 
@@ -4671,8 +4043,7 @@ package body Test.Harness is
    begin
       Create (Harness_Dir.all & ".gnattest-config.json");
       Config.Set_Field ("dump_test_inputs", Test.Common.Instrument);
-      S_Put (0, Config.Write);
-      Put_New_Line;
+      S_Put_Line (0, Config.Write);
       Close_File;
    end Generate_Config;
 
@@ -5234,25 +4605,19 @@ package body Test.Harness is
          & Spec_Suffix.all);
 
       Put_Harness_Header;
-      S_Put (0, GT_Marker_Begin);
-      Put_New_Line;
+      S_Put_Line (0, GT_Marker_Begin);
 
-      S_Put (0, "with AUnit.Test_Suites;");
+      S_Put_Line (0, "with AUnit.Test_Suites;");
       Put_New_Line;
+      S_Put_Line (0, "package " & New_Unit_Name & " is");
       Put_New_Line;
-      S_Put (0, "package " & New_Unit_Name & " is");
+      S_Put_Line (0, "use AUnit.Test_Suites;");
       Put_New_Line;
+      S_Put_Line
+        (3, "function Suite return AUnit.Test_Suites.Access_Test_Suite;");
       Put_New_Line;
-      S_Put (0, "use AUnit.Test_Suites;");
-      Put_New_Line;
-      Put_New_Line;
-      S_Put (3, "function Suite return AUnit.Test_Suites.Access_Test_Suite;");
-      Put_New_Line;
-      Put_New_Line;
-      S_Put (0, "end " & New_Unit_Name & ";");
-      Put_New_Line;
-      S_Put (0, GT_Marker_End);
-      Put_New_Line;
+      S_Put_Line (0, "end " & New_Unit_Name & ";");
+      S_Put_Line (0, GT_Marker_End);
 
       Close_File;
 
@@ -5279,13 +4644,7 @@ package body Test.Harness is
 
             if Type_Ns.all = PUnit_Im.all then
                Include_Units.Include
-                 (PUnit_Im.all
-                  & "."
-                  & Type_Name (Type_Ancestor)
-                  & Test_Data_Unit_Name_Suff
-                  & "."
-                  & Type_Name (Type_Ancestor)
-                  & Test_Unit_Name_Suff);
+                 (PUnit_Im.all & "." & Type_Test_Package (Type_Ancestor));
             else
                Include_Units.Include
                  (PUnit_Im.all
@@ -5296,11 +4655,7 @@ package body Test.Harness is
                   & "."
                   & Nesting_Difference (Type_Ns.all, PUnit_Im.all)
                   & "."
-                  & Type_Name (Type_Ancestor)
-                  & Test_Data_Unit_Name_Suff
-                  & "."
-                  & Type_Name (Type_Ancestor)
-                  & Test_Unit_Name_Suff);
+                  & Type_Test_Package (Type_Ancestor));
             end if;
 
          end loop;
@@ -5313,42 +4668,33 @@ package body Test.Harness is
          & Body_Suffix.all);
 
       Put_Harness_Header;
-      S_Put (0, GT_Marker_Begin);
-      Put_New_Line;
+      S_Put_Line (0, GT_Marker_Begin);
 
-      S_Put (0, "with AUnit;");
-      Put_New_Line;
-      S_Put (0, "with AUnit.Test_Caller;");
-      Put_New_Line;
-      S_Put (0, "with Ada.Unchecked_Conversion;");
-      Put_New_Line;
-      S_Put (0, "with Gnattest_Generated;");
-      Put_New_Line;
-      S_Put (0, "with AUnit.Test_Info; use AUnit.Test_Info;");
-      Put_New_Line;
+      S_Put_Line (0, "with AUnit;");
+      S_Put_Line (0, "with AUnit.Test_Caller;");
+      S_Put_Line (0, "with Ada.Unchecked_Conversion;");
+      S_Put_Line (0, "with Gnattest_Generated;");
+      S_Put_Line (0, "with AUnit.Test_Info; use AUnit.Test_Info;");
       Put_New_Line;
 
       --  Adding dependency units
 
       for Include_Unit of Include_Units loop
-         S_Put (0, "with " & Include_Unit & ";");
-         Put_New_Line;
+         S_Put_Line (0, "with " & Include_Unit & ";");
       end loop;
 
       Put_New_Line;
-      S_Put (0, "package body " & New_Unit_Name & " is");
-      Put_New_Line;
+      S_Put_Line (0, "package body " & New_Unit_Name & " is");
       Put_New_Line;
 
       for I in Data.Test_Types.First_Index .. Data.Test_Types.Last_Index loop
-         S_Put
+         S_Put_Line
            (3,
             "package Runner_"
             & Positive_Image (I)
             & " is new AUnit.Test_Caller");
-         Put_New_Line;
 
-         S_Put
+         S_Put_Line
            (5,
             "(GNATtest_Generated.GNATtest_Standard."
             & Data.Test_Unit_Full_Name.all
@@ -5356,7 +4702,6 @@ package body Test.Harness is
             & Data.Test_Types.Element (I).Test_Type_Name.all
             & ");");
 
-         Put_New_Line;
       end loop;
 
       Put_New_Line;
@@ -5375,19 +4720,17 @@ package body Test.Harness is
                Type_Ancestor := Parent_Type_Declaration (Type_Ancestor);
                Type_Im :=
                  new String'(Test_Routine_Prefix & Type_Name (Type_Ancestor));
-               PUnit_Im := new String'(Type_Test_Package (Type_Ancestor));
+               PUnit_Im := new String'(FQ_Type_Test_Package (Type_Ancestor));
 
-               S_Put
+               S_Put_Line
                  (3,
                   "type Test_Method_"
                   & Positive_Image (Current_TT_Number)
                   & "_"
                   & Trim (Integer'Image (K), Both)
                   & " is access procedure");
-               Put_New_Line;
-               S_Put
+               S_Put_Line
                  (5, "(T : in out " & PUnit_Im.all & "." & Type_Im.all & ");");
-               Put_New_Line;
 
                Free (Type_Im);
                Free (PUnit_Im);
@@ -5397,8 +4740,7 @@ package body Test.Harness is
       end loop;
 
       Put_New_Line;
-      S_Put (3, "Result : aliased AUnit.Test_Suites.Test_Suite;");
-      Put_New_Line;
+      S_Put_Line (3, "Result : aliased AUnit.Test_Suites.Test_Suite;");
       Put_New_Line;
 
       --  Declaring test cases
@@ -5407,7 +4749,7 @@ package body Test.Harness is
          Set_Current_TT (Data.LTR_List.Element (K).Tested_Type);
 
          for Depth in 1 .. Data.LTR_List.Element (K).Inheritance_Depth loop
-            S_Put
+            S_Put_Line
               (3,
                Test_Case_Prefix
                & Positive_Image (Current_TT_Number)
@@ -5418,15 +4760,13 @@ package body Test.Harness is
                & " : aliased Runner_"
                & Positive_Image (Current_TT_Number)
                & ".Test_Case;");
-            Put_New_Line;
          end loop;
 
       end loop;
 
       Put_New_Line;
-      S_Put
+      S_Put_Line
         (3, "function Suite return AUnit.Test_Suites.Access_Test_Suite is");
-      Put_New_Line;
       Put_New_Line;
 
       --  Instantinating test type converters
@@ -5434,12 +4774,11 @@ package body Test.Harness is
 
          for I in 1 .. Data.Test_Types.Element (K).Max_Inheritance_Depth loop
 
-            S_Put
+            S_Put_Line
               (6,
                "function Convert is new Gnattest_Generated."
                & "Gnattest_Standard.Ada.Unchecked_Conversion");
-            Put_New_Line;
-            S_Put
+            S_Put_Line
               (8,
                "(Test_Method_"
                & Positive_Image (K)
@@ -5448,13 +4787,11 @@ package body Test.Harness is
                & ", Runner_"
                & Positive_Image (K)
                & ".Test_Method);");
-            Put_New_Line;
          end loop;
       end loop;
 
       Put_New_Line;
-      S_Put (3, "begin");
-      Put_New_Line;
+      S_Put_Line (3, "begin");
       Put_New_Line;
 
       --  Creating test cases
@@ -5467,7 +4804,7 @@ package body Test.Harness is
          for Depth in 1 .. Data.LTR_List.Element (K).Inheritance_Depth loop
 
             Type_Ancestor := Parent_Type_Declaration (Type_Ancestor);
-            PUnit_Im := new String'(Type_Test_Package (Type_Ancestor));
+            PUnit_Im := new String'(FQ_Type_Test_Package (Type_Ancestor));
 
             Print_Create_Function
               (Indent              => 6,
@@ -5524,16 +4861,12 @@ package body Test.Harness is
       end loop;
 
       Put_New_Line;
-      S_Put (6, "return Result'Access;");
+      S_Put_Line (6, "return Result'Access;");
       Put_New_Line;
+      S_Put_Line (3, "end Suite;");
       Put_New_Line;
-      S_Put (3, "end Suite;");
-      Put_New_Line;
-      Put_New_Line;
-      S_Put (0, "end " & New_Unit_Name & ";");
-      Put_New_Line;
-      S_Put (0, GT_Marker_End);
-      Put_New_Line;
+      S_Put_Line (0, "end " & New_Unit_Name & ";");
+      S_Put_Line (0, GT_Marker_End);
       Close_File;
 
       List_Of_Strings.Append (Suit_List, New_Unit_Name);
@@ -5544,19 +4877,12 @@ package body Test.Harness is
    -- Type_Test_Package --
    -----------------------
 
-   function Type_Test_Package (Elem : Base_Type_Decl) return String is
+   function FQ_Type_Test_Package (Elem : Base_Type_Decl) return String is
       Type_Nesting : constant String := Get_Nesting (Elem);
       Package_Name : constant String := Enclosing_Unit_Name (Elem);
    begin
       if Type_Nesting = Package_Name then
-         return
-           Package_Name
-           & "."
-           & Type_Name (Elem)
-           & Test_Data_Unit_Name_Suff
-           & "."
-           & Type_Name (Elem)
-           & Test_Unit_Name_Suff;
+         return Package_Name & "." & Type_Test_Package (Elem);
       end if;
 
       return
@@ -5568,11 +4894,7 @@ package body Test.Harness is
         & "."
         & Nesting_Difference (Type_Nesting, Package_Name)
         & "."
-        & Type_Name (Elem)
-        & Test_Data_Unit_Name_Suff
-        & "."
-        & Type_Name (Elem)
-        & Test_Unit_Name_Suff;
-   end Type_Test_Package;
+        & Type_Test_Package (Elem);
+   end FQ_Type_Test_Package;
 
 end Test.Harness;

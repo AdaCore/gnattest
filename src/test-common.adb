@@ -871,6 +871,16 @@ package body Test.Common is
       end loop;
    end S_Put;
 
+   ----------------
+   -- S_Put_Line --
+   ----------------
+
+   procedure S_Put_Line (Span : Natural; Text : String) is
+   begin
+      S_Put (Span, Text);
+      Put_New_Line;
+   end S_Put_Line;
+
    ------------
    -- Create --
    ------------
