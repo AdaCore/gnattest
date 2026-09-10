@@ -165,6 +165,19 @@ package body Test.Skeleton.Source_Table is
          .Owning_View);
    --  Helper function. Return a GPR2 owned project view for a given name.
 
+   procedure Set_Body (SFR : in out SF_Record; Unit_Name : Optional_Name_Type);
+   --  Helper function to set Corresponding_Body or Theoretical_Body in SFR
+
+   procedure Set_Stub_Data_Unit
+     (SFR            : in out SF_Record;
+      P              : GPR2.Project.View.Object;
+      Stub_Unit_Name : Name_Type);
+   --  Helper function to set Stub_Data_Base_(Spec|Copy) in SFR
+
+   procedure Set_Inst_Dir
+     (SFR : in out SF_Record; P : GPR2.Project.View.Object);
+   --  Helper function to set Inst_Dir in SFR
+
    ---------------------------
    -- Normalize_Source_Name --
    ---------------------------
@@ -246,6 +259,55 @@ package body Test.Skeleton.Source_Table is
 
       end loop;
    end Extract_Last_Name_Index;
+
+   --------------
+   -- Set_Body --
+   --------------
+
+   procedure Set_Body (SFR : in out SF_Record; Unit_Name : Optional_Name_Type)
+   is
+      Unit : constant GPR2.Build.Compilation_Unit.Object :=
+        Unit_Name_To_Unit (String (Unit_Name));
+   begin
+      if Unit.Has_Part (S_Body) then
+         SFR.Corresponding_Body :=
+           new String'(Unit.Main_Body.Source.String_Value);
+      else
+         SFR.Theoretical_Body :=
+           new String'
+             (String (Unit.Owning_View.Filename_For_Unit (Unit_Name, S_Body)));
+      end if;
+   end Set_Body;
+
+   -----------------------------
+   -- Populate_Stub_Data_Base --
+   -----------------------------
+
+   procedure Set_Stub_Data_Unit
+     (SFR            : in out SF_Record;
+      P              : GPR2.Project.View.Object;
+      Stub_Unit_Name : Name_Type) is
+   begin
+      SFR.Stub_Data_Base_Spec :=
+        new String'(String (P.Filename_For_Unit (Stub_Unit_Name, S_Spec)));
+      SFR.Stub_Data_Base_Body :=
+        new String'(String (P.Filename_For_Unit (Stub_Unit_Name, S_Body)));
+   end Set_Stub_Data_Unit;
+
+   ------------------
+   -- Set_Inst_Dir --
+   ------------------
+
+   procedure Set_Inst_Dir
+     (SFR : in out SF_Record; P : GPR2.Project.View.Object) is
+   begin
+      SFR.Inst_Dir :=
+        new String'
+          (P.Object_Directory.String_Value
+           & Dir_Sep
+           & To_Lower (String (P.Name))
+           & Instr_Suffix);
+   end Set_Inst_Dir;
 
    procedure Generate_Stub_Extension_Project
      (Proj             : String;
@@ -343,74 +405,32 @@ package body Test.Skeleton.Source_Table is
 
       New_SF_Record.Status := Waiting;
 
-      if Stub_Mode_ON then
+      if Instrument or else Stub_Mode_ON then
          declare
             Unit_Name : constant Optional_Name_Type :=
               Project_Tree.Root_Project.Visible_Source
-                (GPR2.Path_Name.Create
-                   (GNATCOLL.VFS.Create (GNATCOLL.VFS."+" (Fname))))
+                (GPR2.Path_Name.Create (GNATCOLL.VFS.Create (+Fname)))
                 .Unit
                 .Name;
             Unit      : constant GPR2.Build.Compilation_Unit.Object :=
               Unit_Name_To_Unit (String (Unit_Name));
+
+            P : GPR2.Project.View.Object := Unit.Owning_View;
 
             Stub_Unit_Name : constant Name_Type :=
               Name_Type (String (Unit_Name) & "." & Stub_Data_Unit_Name);
-
-            P : GPR2.Project.View.Object := Unit.Owning_View;
          begin
-            if Unit.Has_Part (S_Body) then
-               New_SF_Record.Corresponding_Body :=
-                 new String'(Unit.Main_Body.Source.String_Value);
-            else
-
-               --  Add a theoritical body name in case it is required for
-               --  stubbing
-
-               New_SF_Record.Theoretical_Body :=
-                 new String'(String (P.Filename_For_Unit (Unit_Name, S_Body)));
+            if Instrument then
+               Set_Inst_Dir (New_SF_Record, P);
             end if;
 
-            New_SF_Record.Stub_Data_Base_Spec :=
-              new String'
-                (String (P.Filename_For_Unit (Stub_Unit_Name, S_Spec)));
+            Set_Body (New_SF_Record, Unit_Name);
 
-            New_SF_Record.Stub_Data_Base_Body :=
-              new String'
-                (String (P.Filename_For_Unit (Stub_Unit_Name, S_Body)));
+            if Stub_Mode_ON then
+               Set_Stub_Data_Unit (New_SF_Record, P, Stub_Unit_Name);
 
-            P := Outermost_Extending (P);
-            New_SF_Record.Project_Name := new String'(String (P.Name));
-         end;
-
-      end if;
-
-      if Instrument then
-         declare
-            Unit_Name : constant Optional_Name_Type :=
-              Project_Tree.Root_Project.Visible_Source
-                (GPR2.Path_Name.Create
-                   (GNATCOLL.VFS.Create (GNATCOLL.VFS."+" (Fname))))
-                .Unit
-                .Name;
-            Unit      : constant GPR2.Build.Compilation_Unit.Object :=
-              Unit_Name_To_Unit (String (Unit_Name));
-
-            P : constant GPR2.Project.View.Object := Unit.Owning_View;
-         begin
-            New_SF_Record.Inst_Dir :=
-              new String'
-                (P.Object_Directory.String_Value
-                 & Dir_Sep
-                 & To_Lower (String (P.Name))
-                 & Instr_Suffix);
-
-            if Unit.Has_Part (S_Body) then
-               New_SF_Record.Corresponding_Body :=
-                 new String'(Unit.Main_Body.Source.String_Value);
-            else
-               New_SF_Record.Theoretical_Body :=
-                 new String'(String (P.Filename_For_Unit (Unit_Name, S_Body)));
+               P := Outermost_Extending (P);
+               New_SF_Record.Project_Name := new String'(String (P.Name));
             end if;
          end;
       end if;
@@ -512,22 +532,9 @@ package body Test.Skeleton.Source_Table is
 
          P : GPR2.Project.View.Object := Unit.Owning_View;
       begin
-         if Unit.Has_Part (S_Body) then
-            New_SF_Record.Corresponding_Body :=
-              new String'(Unit.Main_Body.Source.String_Value);
-         else
+         Set_Body (New_SF_Record, Unit_Name);
 
-            --  Add a theoritical body name in case it is required for
-            --  stubbing
-
-            New_SF_Record.Theoretical_Body :=
-              new String'(String (P.Filename_For_Unit (Unit_Name, S_Body)));
-         end if;
-
-         New_SF_Record.Stub_Data_Base_Spec :=
-           new String'(String (P.Filename_For_Unit (Stub_Unit_Name, S_Spec)));
-         New_SF_Record.Stub_Data_Base_Body :=
-           new String'(String (P.Filename_For_Unit (Stub_Unit_Name, S_Body)));
+         Set_Stub_Data_Unit (New_SF_Record, P, Stub_Unit_Name);
 
          P := Outermost_Extending (P);
 
@@ -563,18 +570,12 @@ package body Test.Skeleton.Source_Table is
         new String'(Full_Source_Name_String.all);
 
       declare
-         Given_File : constant GNATCOLL.VFS.Virtual_File := Create (+Fname);
-         Src        : constant GPR2.Build.Source.Object :=
+         Src : constant GPR2.Build.Source.Object :=
            Project_Tree.Root_Project.Visible_Source
-             (GPR2.Path_Name.Create (Given_File));
-         P          : constant GPR2.Project.View.Object := Src.Owning_View;
+             (GPR2.Path_Name.Create (GNATCOLL.VFS.Create (+Fname)));
+         P   : constant GPR2.Project.View.Object := Src.Owning_View;
       begin
-         New_SF_Record.Inst_Dir :=
-           new String'
-             (P.Object_Directory.String_Value
-              & Dir_Sep
-              & To_Lower (String (P.Name))
-              & Instr_Suffix);
+         Set_Inst_Dir (New_SF_Record, P);
       end;
       Insert (SF_Table, Full_Source_Name_String.all, New_SF_Record);
       Free (Full_Source_Name_String);
@@ -585,10 +586,10 @@ package body Test.Skeleton.Source_Table is
    ----------------------
 
    function SF_Table_Empty return Boolean is
-      Empty : constant Boolean := Is_Empty (SF_Table);
    begin
       return
-        Empty or else (for all SF of SF_Table => SF.Status = To_Stub_Body);
+        Is_Empty (SF_Table)
+        or else (for all SF of SF_Table => SF.Status = To_Stub_Body);
    end SF_Table_Empty;
 
    ---------------------------
@@ -1236,26 +1237,22 @@ package body Test.Skeleton.Source_Table is
    -------------------------
 
    procedure Set_Subdir_Output is
-      SF_Rec     : SF_Record;
-      Tmp_Str    : String_Access;
-      SF_Rec_Key : String_Access;
+      SF_Rec : SF_Record;
    begin
       Increase_Indent (Me, "Set_Subdir_Output");
 
       for Cur in SF_Table.Iterate loop
          SF_Rec := Source_File_Table.Element (Cur);
-         SF_Rec_Key := new String'(Key (Cur));
 
-         Trace (Me, "processing: " & SF_Rec_Key.all);
-
-         Tmp_Str := new String'(Dir_Name (SF_Rec.Full_Source_Name.all));
+         Trace (Me, "processing: " & Key (Cur));
 
          SF_Rec.Test_Destination :=
-           new String'(Tmp_Str.all & Test_Subdir_Name.all & Dir_Sep);
+           new String'
+             (Dir_Name (SF_Rec.Full_Source_Name.all)
+              & Test_Subdir_Name.all
+              & Dir_Sep);
 
-         Replace (SF_Table, SF_Rec_Key.all, SF_Rec);
-         Free (SF_Rec_Key);
-         Free (Tmp_Str);
+         Replace (SF_Table, Key (Cur), SF_Rec);
       end loop;
 
       Decrease_Indent (Me);
@@ -1267,9 +1264,8 @@ package body Test.Skeleton.Source_Table is
    -------------------------
 
    procedure Set_Separate_Root (Max_Common_Root : String) is
-      SF_Rec     : SF_Record;
-      Tmp_Str    : String_Access;
-      SF_Rec_Key : String_Access;
+      SF_Rec  : SF_Record;
+      Tmp_Str : String_Access;
 
       Idx : Integer;
    begin
@@ -1277,9 +1273,8 @@ package body Test.Skeleton.Source_Table is
 
       for Cur in SF_Table.Iterate loop
          SF_Rec := Source_File_Table.Element (Cur);
-         SF_Rec_Key := new String'(Key (Cur));
 
-         Trace (Me, "processing: " & SF_Rec_Key.all);
+         Trace (Me, "processing: " & Key (Cur));
 
          Tmp_Str := new String'(Dir_Name (SF_Rec.Full_Source_Name.all));
 
@@ -1291,9 +1286,8 @@ package body Test.Skeleton.Source_Table is
               & Dir_Sep
               & Tmp_Str.all (Idx .. Tmp_Str.all'Last));
 
-         Replace (SF_Table, SF_Rec_Key.all, SF_Rec);
+         Replace (SF_Table, Key (Cur), SF_Rec);
 
-         Free (SF_Rec_Key);
          Free (Tmp_Str);
       end loop;
 
@@ -1458,6 +1452,9 @@ package body Test.Skeleton.Source_Table is
          Sources_Names : String_Set.Set := String_Set.Empty_Set;
          --  Used to store the names of all sources of this project to be able
          --  to add those needed in the interface if the project is a library.
+
+         Stub_Prj_Name : constant String :=
+           Stub_Project_Prefix & Current_Infix & Proj;
       begin
          if Processed_Projects.Contains (Proj) then
             return;
@@ -1481,8 +1478,7 @@ package body Test.Skeleton.Source_Table is
                   GNATCOLL.VFS.Create
                     (+(Arg_Proj.Stub_Dir.all
                        & Dir_Sep
-                       & Unit_To_File_Name
-                           (Stub_Project_Prefix & Current_Infix & Proj))));
+                       & Unit_To_File_Name (Stub_Prj_Name))));
 
                if Arg_Proj.Is_Library then
                   Append
@@ -1490,11 +1486,7 @@ package body Test.Skeleton.Source_Table is
                      GNATCOLL.VFS.Create
                        (+(Arg_Proj.Stub_Dir.all
                           & Dir_Sep
-                          & Unit_To_File_Name
-                              (Stub_Project_Prefix
-                               & Current_Infix
-                               & Proj
-                               & "_lib"))));
+                          & Unit_To_File_Name (Stub_Prj_Name & "_lib"))));
                end if;
                Create_Dirs (F);
             end;
@@ -1510,12 +1502,12 @@ package body Test.Skeleton.Source_Table is
                "Creating "
                & Arg_Proj.Stub_Dir.all
                & Dir_Sep
-               & Unit_To_File_Name (Stub_Project_Prefix & Current_Infix & Proj)
+               & Unit_To_File_Name (Stub_Prj_Name)
                & ".gpr");
             Create
               (Arg_Proj.Stub_Dir.all
                & Dir_Sep
-               & Unit_To_File_Name (Stub_Project_Prefix & Current_Infix & Proj)
+               & Unit_To_File_Name (Stub_Prj_Name)
                & ".gpr");
 
             --  Generate the list of stubbed projects on which Proj depends.
@@ -1534,19 +1526,14 @@ package body Test.Skeleton.Source_Table is
                        & To_Lower (Stub_Project_Prefix & Current_Infix & P)
                        & ".gpr";
                   begin
-                     if P = Generate_Stub_Extension_Project.Proj then
-                        Relative_I_Path :=
-                          new String'
-                            (+Relative_Path
-                                (Create (+Subroot_Stub_Prj),
-                                 Create (+Arg_Proj.Stub_Dir.all)));
-                     else
-                        Relative_I_Path :=
-                          new String'
-                            (+Relative_Path
-                                (Create (+Imported_Sub_Project),
-                                 Create (+Arg_Proj.Stub_Dir.all)));
-                     end if;
+                     Relative_I_Path :=
+                       new String'
+                         (+Relative_Path
+                             (Create
+                                (+(if P = Generate_Stub_Extension_Project.Proj
+                                   then Subroot_Stub_Prj
+                                   else Imported_Sub_Project)),
+                              Create (+Arg_Proj.Stub_Dir.all)));
                   end;
                   if Arg_Proj.Aggregate_Lib then
                      Resolved_Dep_List.Append
@@ -1567,42 +1554,34 @@ package body Test.Skeleton.Source_Table is
 
             if not Arg_Proj.Aggregate_Lib then
                for Str of Resolved_Dep_List loop
-                  S_Put (0, Str);
-                  Put_New_Line;
+                  S_Put_Line (0, Str);
                end loop;
             end if;
 
-            S_Put (0, "with ""aunit"";");
-            Put_New_Line;
+            S_Put_Line (0, "with ""aunit"";");
             Put_New_Line;
 
             if Arg_Proj.Aggregate_Lib then
                S_Put (0, "aggregate library ");
             end if;
 
-            S_Put
+            S_Put_Line
               (0,
                "project "
-               & Stub_Project_Prefix
-               & Current_Infix
-               & Proj
+               & Stub_Prj_Name
                & " extends """
                & Relative_P_Path.all
                & """ is");
-            Put_New_Line;
 
             if not Arg_Proj.Aggregate_Lib then
-               S_Put (3, "for Source_Dirs use (""."");");
-               Put_New_Line;
+               S_Put_Line (3, "for Source_Dirs use (""."");");
 
                Get_Sources (Proj, Current_Proj_Present_Sources);
 
                if Current_Proj_Present_Sources.Is_Empty then
-                  S_Put (3, "for Source_Files use ();");
-                  Put_New_Line;
+                  S_Put_Line (3, "for Source_Files use ();");
                else
-                  S_Put (3, "for Source_Files use (");
-                  Put_New_Line;
+                  S_Put_Line (3, "for Source_Files use (");
                end if;
 
                for Cur in Current_Proj_Present_Sources.Iterate loop
@@ -1616,35 +1595,33 @@ package body Test.Skeleton.Source_Table is
                   begin
                      if not Excluded_Test_Data_Files.Contains (Stub_Data_Spec)
                      then
-                        S_Put (6, """" & Base_Name (Stub_Data_Spec) & """,");
+                        S_Put_Line
+                          (6, """" & Base_Name (Stub_Data_Spec) & """,");
                         Sources_Names.Include (Base_Name (Stub_Data_Spec));
-                        Put_New_Line;
                      end if;
 
                      if not Excluded_Test_Data_Files.Contains (Stub_Data_Body)
                      then
-                        S_Put (6, """" & Base_Name (Stub_Data_Body) & """,");
+                        S_Put_Line
+                          (6, """" & Base_Name (Stub_Data_Body) & """,");
                         Sources_Names.Include (Base_Name (Stub_Data_Body));
-                        Put_New_Line;
                      end if;
 
                      S_Put
                        (6, """" & Base_Name (Get_Source_Body (Source)) & """");
 
                      if Source_Spec_Rewritten (Source) then
-                        S_Put (0, ",");
-                        Put_New_Line;
+                        S_Put_Line (0, ",");
                         S_Put (6, """" & Base_Name (Source) & """");
                      end if;
 
                      Sources_Names.Include (Base_Name (Source));
 
-                     S_Put
+                     S_Put_Line
                        (0,
                         (if Cur = Current_Proj_Present_Sources.Last
                          then ");"
                          else ","));
-                     Put_New_Line;
                   end;
                end loop;
             end if;
@@ -1653,83 +1630,69 @@ package body Test.Skeleton.Source_Table is
             --  project.
 
             if Arg_Proj.Aggregate_Lib then
-               S_Put (3, "for Project_Files use (");
-               Put_New_Line;
+               S_Put_Line (3, "for Project_Files use (");
                for I_Cur in Resolved_Dep_List.Iterate loop
                   S_Put (6, Element (I_Cur));
                   if I_Cur = Resolved_Dep_List.Last then
-                     S_Put (0, ");");
+                     S_Put_Line (0, ");");
                   else
-                     S_Put (0, ",");
+                     S_Put_Line (0, ",");
                   end if;
-                  Put_New_Line;
                end loop;
                Put_New_Line;
             end if;
 
-            S_Put
+            S_Put_Line
               (3,
                "for Object_Dir use """
-               & Unit_To_File_Name (Stub_Project_Prefix & Current_Infix & Proj)
+               & Unit_To_File_Name (Stub_Prj_Name)
                & """;");
-            Put_New_Line;
             if Arg_Proj.Is_Library then
-               S_Put
+               S_Put_Line
                  (3,
                   "for Library_Dir use """
-                  & Unit_To_File_Name
-                      (Stub_Project_Prefix & Current_Infix & Proj & "_lib")
+                  & Unit_To_File_Name (Stub_Prj_Name & "_lib")
                   & """;");
-               Put_New_Line;
-               S_Put
+               S_Put_Line
                  (3,
                   "for Library_Name use """
-                  & Unit_To_File_Name
-                      (Stub_Project_Prefix & Current_Infix & Proj)
+                  & Unit_To_File_Name (Stub_Prj_Name)
                   & """;");
-               Put_New_Line;
 
                Put_Interface_For_Project (Proj, Sources_Names);
 
             end if;
             Put_New_Line;
 
-            if not Arg_Proj.Aggregate_Lib then
-               if not Current_Proj_Present_Sources.Is_Empty then
-                  S_Put (3, "package Coverage is");
-                  Put_New_Line;
-                  S_Put (6, "for Excluded_Units use (");
-                  Put_New_Line;
+            if not Arg_Proj.Aggregate_Lib
+              and then not Current_Proj_Present_Sources.Is_Empty
+            then
+               S_Put_Line (3, "package Coverage is");
+               S_Put_Line (6, "for Excluded_Units use (");
 
-                  for Cur in Current_Proj_Present_Sources.Iterate loop
-                     declare
-                        Existing_Body : constant String :=
-                          Get_Source_Existing_Body
-                            (Current_Proj_Present_Sources.Constant_Reference
-                               (Cur));
-                     begin
-                        if Existing_Body /= "" then
-                           S_Put
-                             (9,
-                              """"
-                              & Get_Source_Unit_Name (Existing_Body)
-                              & """");
-                        end if;
-                     end;
-                     if Cur = Current_Proj_Present_Sources.Last then
-                        S_Put (0, ");");
-                     else
-                        S_Put (0, ",");
+               for Cur in Current_Proj_Present_Sources.Iterate loop
+                  declare
+                     Existing_Body : constant String :=
+                       Get_Source_Existing_Body
+                         (Current_Proj_Present_Sources.Constant_Reference
+                            (Cur));
+                  begin
+                     if Existing_Body /= "" then
+                        S_Put
+                          (9,
+                           """" & Get_Source_Unit_Name (Existing_Body) & """");
                      end if;
-                     Put_New_Line;
-                  end loop;
-                  S_Put (3, "end Coverage;");
-                  Put_New_Line;
-               end if;
+                  end;
+                  if Cur = Current_Proj_Present_Sources.Last then
+                     S_Put_Line (0, ");");
+                  else
+                     S_Put_Line (0, ",");
+                  end if;
+               end loop;
+               S_Put_Line (3, "end Coverage;");
             end if;
 
-            S_Put
-              (0, "end " & Stub_Project_Prefix & Current_Infix & Proj & ";");
+            S_Put (0, "end " & Stub_Prj_Name & ";");
 
             Close_File;
          end if;
