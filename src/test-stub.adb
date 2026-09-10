@@ -1110,24 +1110,17 @@ package body Test.Stub is
          then "_" & Node_Image (Elem.F_Name.As_Attribute_Ref.F_Attribute)
          else "");
 
+      Decl_Name : constant String :=
+        (if Get_Nesting (Decl) = "Standard"
+         then Node_Image (Decl.P_Defining_Name)
+         else
+           Encode
+             (Decl.P_Defining_Name.P_Fully_Qualified_Name,
+              Decl.Unit.Get_Charset));
    begin
-      if Get_Nesting (Decl) = "Standard" then
-         return
-           Utils.String_Utilities.Replace_Char
-             (Node_Image (Decl.P_Defining_Name) & Attr_Suff & "_Access",
-              From => '.',
-              To   => '_');
-      else
-         return
-           Utils.String_Utilities.Replace_Char
-             (Encode
-                (Decl.P_Defining_Name.P_Fully_Qualified_Name,
-                 Decl.Unit.Get_Charset)
-              & Attr_Suff
-              & "_Access",
-              From => '.',
-              To   => '_');
-      end if;
+      return
+        Utils.String_Utilities.Replace_Char
+          (Decl_Name & Attr_Suff & "_Access", From => '.', To => '_');
 
    end Get_Access_Type_Name;
 
@@ -1609,8 +1602,9 @@ package body Test.Stub is
 
    procedure Generate_Default_Setter_Spec (Node : Element_Node) is
 
-      ID     : constant Markered_Data_Id := Generate_MD_Id (Node.Spec);
-      Suffix : constant String := Hash_Suffix (ID);
+      ID        : constant Markered_Data_Id := Generate_MD_Id (Node.Spec);
+      Suffix    : constant String := Hash_Suffix (ID);
+      Stub_Name : constant String := Node.Spec_Name.all & Suffix;
 
       Param_List : Stubbed_Parameter_Lists.List :=
         Filter_Private_Parameters (Get_Args_List (Node));
@@ -1640,41 +1634,29 @@ package body Test.Stub is
       Empty_Case := Param_List.Is_Empty;
 
       --  Stub type
-      S_Put
-        (3,
-         "type "
-         & Stub_Type_Prefix
-         & Node.Spec_Name.all
-         & Suffix
-         & " is record");
-      New_Line_Count;
+      S_Put_Line_C (3, "type " & Stub_Type_Prefix & Stub_Name & " is record");
 
       for SP of Param_List loop
-         S_Put (6, SP.Name.all & " : " & SP.Type_Full_Name_Image.all & ";");
-         New_Line_Count;
+         S_Put_Line_C
+           (6, SP.Name.all & " : " & SP.Type_Full_Name_Image.all & ";");
       end loop;
 
       New_Line_Count;
-      S_Put (6, Stub_Counter_Var & " : Natural := 0;");
-      New_Line_Count;
-      S_Put (3, "end record;");
-      New_Line_Count;
+      S_Put_Line_C (6, Stub_Counter_Var & " : Natural := 0;");
+      S_Put_Line_C (3, "end record;");
 
       --  stub object
-      S_Put
+      S_Put_Line_C
         (3,
          Stub_Object_Prefix
-         & Node.Spec_Name.all
-         & Suffix
+         & Stub_Name
          & " : "
          & Stub_Type_Prefix
-         & Node.Spec_Name.all
-         & Suffix
+         & Stub_Name
          & ";");
-      New_Line_Count;
 
       --  Setter
-      S_Put (3, "procedure " & Setter_Prefix & Node.Spec_Name.all & Suffix);
+      S_Put (3, "procedure " & Setter_Prefix & Stub_Name);
       if not Empty_Case then
          New_Line_Count;
          S_Put (5, "(");
@@ -1688,23 +1670,20 @@ package body Test.Stub is
                & SP.Type_Full_Name_Image.all
                & " := "
                & Stub_Object_Prefix
-               & Node.Spec_Name.all
-               & Suffix
+               & Stub_Name
                & "."
                & SP.Name.all);
 
             if Count = Natural (Param_List.Length) then
-               S_Put (0, ");");
+               S_Put_Line_C (0, ");");
             else
-               S_Put (0, ";");
+               S_Put_Line_C (0, ";");
             end if;
-            New_Line_Count;
 
             Count := Count + 1;
          end loop;
       else
-         S_Put (0, ";");
-         New_Line_Count;
+         S_Put_Line_C (0, ";");
       end if;
 
       Param_List.Clear;
@@ -1717,8 +1696,9 @@ package body Test.Stub is
 
    procedure Generate_Default_Setter_Body (Node : Element_Node) is
 
-      ID     : constant Markered_Data_Id := Generate_MD_Id (Node.Spec);
-      Suffix : constant String := Hash_Suffix (ID);
+      ID        : constant Markered_Data_Id := Generate_MD_Id (Node.Spec);
+      Suffix    : constant String := Hash_Suffix (ID);
+      Stub_Name : constant String := Node.Spec_Name.all & Suffix;
 
       Param_List : Stubbed_Parameter_Lists.List :=
         Filter_Private_Parameters (Get_Args_List (Node));
@@ -1751,7 +1731,7 @@ package body Test.Stub is
       end if;
       Empty_Case := Param_List.Is_Empty;
 
-      S_Put (3, "procedure " & Setter_Prefix & Node.Spec_Name.all & Suffix);
+      S_Put (3, "procedure " & Setter_Prefix & Stub_Name);
       if not Empty_Case then
          New_Line_Count;
          S_Put (5, "(");
@@ -1767,38 +1747,33 @@ package body Test.Stub is
                & SP.Type_Full_Name_Image.all
                & " := "
                & Stub_Object_Prefix
-               & Node.Spec_Name.all
-               & Suffix
+               & Stub_Name
                & "."
                & SP.Name.all);
 
             if Count = Natural (Param_List.Length) then
-               S_Put (0, ") is");
+               S_Put_Line_C (0, ") is");
             else
-               S_Put (0, ";");
+               S_Put_Line_C (0, ";");
             end if;
-            New_Line_Count;
             Count := Count + 1;
          end loop;
 
-         S_Put (3, "begin");
-         New_Line_Count;
+         S_Put_Line_C (3, "begin");
 
          --  Params setting
 
          for SP of Param_List loop
             if not Is_Limited (SP.Type_Elem.As_Type_Expr) then
-               S_Put
+               S_Put_Line_C
                  (6,
                   Stub_Object_Prefix
-                  & Node.Spec_Name.all
-                  & Suffix
+                  & Stub_Name
                   & "."
                   & SP.Name.all
                   & " := "
                   & SP.Name.all
                   & ";");
-               New_Line_Count;
 
                Non_Limited_Parameters := True;
             end if;
@@ -1807,18 +1782,14 @@ package body Test.Stub is
             S_Put (6, "null;");
          end if;
       else
-         S_Put (1, " is");
-         New_Line_Count;
-         S_Put (3, "begin");
-         New_Line_Count;
-         S_Put (6, "null;");
-         New_Line_Count;
+         S_Put_Line_C (1, " is");
+         S_Put_Line_C (3, "begin");
+         S_Put_Line_C (6, "null;");
       end if;
 
       New_Line_Count;
 
-      S_Put (3, "end " & Setter_Prefix & Node.Spec_Name.all & Suffix & ";");
-      New_Line_Count;
+      S_Put_Line_C (3, "end " & Setter_Prefix & Stub_Name & ";");
       New_Line_Count;
 
       Param_List.Clear;
