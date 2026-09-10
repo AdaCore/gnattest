@@ -7696,44 +7696,25 @@ package body Test.Skeleton is
       Subp    : Subp_Info;
       TR_Line : Natural := 1)
    is
-      Subp_Span : constant Source_Location_Range :=
-        Subp.Subp_Declaration.Sloc_Range;
+      Span    : constant Source_Location_Range :=
+        (if Subp.Has_TC_Info
+         then Subp.TC_Info.Elem.Sloc_Range
+         else Subp.Subp_Declaration.Sloc_Range);
+      TC_Name : constant String :=
+        (if Subp.Has_TC_Info then Subp.TC_Info.Name.all else "test case");
    begin
-      if Subp.Has_TC_Info then
-         declare
-            TC_Span : constant Source_Location_Range :=
-              Subp.TC_Info.Elem.Sloc_Range;
-         begin
-            Add_TR
-              (TP_List           => TP_List,
-               TPtarg            => TPtarg,
-               Test_Case_Name    => Subp.TC_Info.Name.all,
-               Test_Routine_Name => Subp.Subp_Mangle_Name.all,
-               Test_Case_Line    => Natural (TC_Span.Start_Line),
-               Test_Case_Column  => Natural (TC_Span.Start_Column),
-               Test_Rout_Line    => TR_Line,
-               Test_File         => Test_F,
-               Test_Time         => Test_T,
-               Origin            => Test_Case_Pragma,
-               Subp              => Subp);
-         end;
-      else
-         Add_TR
-           (TP_List           => TP_List,
-            TPtarg            => TPtarg,
-
-            --  Let's give this test an arbitrary but generic name
-
-            Test_Case_Name    => "test case",
-            Test_Routine_Name => Subp.Subp_Mangle_Name.all,
-            Test_Case_Line    => Natural (Subp_Span.Start_Line),
-            Test_Case_Column  => Natural (Subp_Span.Start_Column),
-            Test_Rout_Line    => TR_Line,
-            Test_File         => Test_F,
-            Test_Time         => Test_T,
-            Origin            => Gnattest_Generated,
-            Subp              => Subp);
-      end if;
+      Add_TR
+        (TP_List           => TP_List,
+         TPtarg            => TPtarg,
+         Test_Case_Name    => TC_Name,
+         Test_Routine_Name => Subp.Subp_Mangle_Name.all,
+         Test_Case_Line    => Natural (Span.Start_Line),
+         Test_Case_Column  => Natural (Span.Start_Column),
+         Test_Rout_Line    => TR_Line,
+         Test_File         => Test_F,
+         Test_Time         => Test_T,
+         Origin            => Test_Case_Pragma,
+         Subp              => Subp);
    end Add_TR;
 
    -------------------------------
@@ -8560,18 +8541,7 @@ package body Test.Skeleton is
 
          --  we cannot relate to any sloc in case of a dangling test
 
-         if not Omit_Sloc then
-            S_Put_Line_C
-              (3,
-               "--  "
-               & Base_Name (Subp.Subp_Declaration.Unit.Get_Filename)
-               & ":"
-               & Trim (First_Line_Number (Subp.Subp_Declaration)'Img, Both)
-               & ":"
-               & Trim (First_Column_Number (Subp.Subp_Declaration)'Img, Both)
-               & ":"
-               & Subp.Subp_Name_Image.all);
-         end if;
+         Print_Comment_Declaration (Subp, 3);
 
          if Subp.Has_TC_Info then
             Put_Wrapper_Rename (6, Subp);
