@@ -1644,9 +1644,17 @@ package body TGen.JSON is
    ----------
 
    function Hash (Val : JSON_Value) return UTF8_String is
-      Ctx : GNAT.SHA1.Context;
+      Ctx        : GNAT.SHA1.Context;
+      Encoded    : constant Unbounded_String := Write (Val, Compact => True);
+      Len        : constant Natural := Length (Encoded);
+      Chunk_Size : constant Positive := 1024;
+      Cur        : Positive := 1;
    begin
-      GNAT.SHA1.Update (Ctx, Val.Write (Compact => True));
+      while Cur + Chunk_Size <= Len loop
+         GNAT.SHA1.Update (Ctx, Slice (Encoded, Cur, Cur + Chunk_Size - 1));
+         Cur := Cur + Chunk_Size;
+      end loop;
+      GNAT.SHA1.Update (Ctx, Slice (Encoded, Cur, Len));
       return GNAT.SHA1.Digest (Ctx);
    end Hash;
 
