@@ -1,0 +1,12 @@
+description:
+    Test basic enumerated generation for scalar types as well as non
+    discriminated record types.
+
+driver: gnattest_tgen
+
+suppress_test_dump: True
+
+extra_gnattest_args: ['--enum-strat', '--gen-test-num=0']
+
+control:
+  - [SKIP, "not native", "Enum strat on unconstrained array results in value too large for embedded targets"]

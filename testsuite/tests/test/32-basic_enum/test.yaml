@@ -1,9 +1,13 @@
 description:
     Test basic enumerated generation for scalar types as well as non
-    discriminated record types.
+    discriminated record types. This excludes unconstrained arrays to
+    make the testcase compatible with embedded platforms.
 
 driver: gnattest_tgen
 
 suppress_test_dump: True
 
 extra_gnattest_args: ['--enum-strat', '--gen-test-num=0']
+
+control:
+  - [XFAIL, "'riscv64-elf' in suite_discs", "Code too large to fit in polarfiresoc memory"]

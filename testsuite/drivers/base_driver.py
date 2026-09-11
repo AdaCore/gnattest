@@ -90,6 +90,9 @@ class BaseDriver(DiffTestDriver):
                 and ("light" in self.env.main_options.RTS),
                 "rts_embedded": self.env.main_options.RTS
                 and ("embedded" in self.env.main_options.RTS),
+                # The predefined discriminants can be used by adding
+                # "'disc_name' in suite_discs"
+                "suite_discs" : self.env.discriminants
             }
         )
 

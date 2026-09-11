@@ -1,0 +1,11 @@
+pkg.ads:11:4: info: corresponding test PASSED
+pkg.ads:11:4: info: corresponding test PASSED
+pkg.ads:11:4: info: corresponding test PASSED
+pkg.ads:17:4: info: corresponding test PASSED
+pkg.ads:5:4: info: corresponding test PASSED
+pkg.ads:5:4: info: corresponding test PASSED
+pkg.ads:5:4: info: corresponding test PASSED
+pkg.ads:5:4: error: corresponding test FAILED: Test not implemented.pkg-test_data-tests.adb:<line_number>
+pkg.ads:11:4: error: corresponding test FAILED: Test not implemented.pkg-test_data-tests.adb:<line_number>
+pkg.ads:17:4: error: corresponding test FAILED: Test not implemented.pkg-test_data-tests.adb:<line_number>
+10 tests run: 7 passed; 3 failed; 0 crashed.

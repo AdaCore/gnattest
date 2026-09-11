@@ -5,3 +5,6 @@ description: |
 driver: gnattest_tgen
 
 suppress_test_dump: True
+
+control:
+  - [SKIP, "not native", "Test allocates big arrays, not suitable for embedded targets"]
