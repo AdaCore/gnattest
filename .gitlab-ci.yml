@@ -35,6 +35,22 @@ include:
       save-component: true
       save-anod-logs: true
 
+  # Build documentation
+  - component: $CI_SERVER_FQDN/eng/gitlab-templates/build@~latest
+    inputs:
+      stage: build
+      rules:
+        - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+          changes:
+            paths:
+              - doc/**/*
+            compare_to: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME
+      job-name: doc
+      # Always use master gnatcov, to make sure we test against the most recent
+      # version of the doc. Same for gnatfuzz.
+      generic-anod-ci-args: --add-dep eng/das/cov/gnatcoverage --add-dep eng/das/fuzz/gnatfuzz
+      anod-args: build gnatdas-doc -Qwarn-errors
+
   # Testing
   - component: $CI_SERVER_FQDN/eng/gitlab-templates/test@~latest
     inputs:
@@ -148,3 +164,17 @@ gnattest-cross-embedded:linux:
   <<: *test_before_script
   <<: *test_after_script
   <<: *artifacts
+
+# Gather artifacts from the doc build job
+doc:linux:
+  after_script:
+    - cat /tmp/ci_env.sh
+    - . /tmp/ci_env.sh
+    - DOC_BSN=$(anod eval gnatdas-doc -Qwarn-errors build_space_name)
+    - mv $ANOD_DEFAULT_SANDBOX_DIR/x86_64-linux/$DOC_BSN/install/share/doc/gnatdas/ $CI_PROJECT_DIR
+  artifacts:
+    when:
+      always
+    paths:
+      - gnatdas/pdf/gnatdas.pdf
+      - gnatdas/html
