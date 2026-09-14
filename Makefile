@@ -263,3 +263,23 @@ install-aunit:
 	mkdir -p "$(DESTDIR)/share/aunit"
 	cp -r "$(AUNIT_SRC)/include" "$(DESTDIR)/share/aunit/"
 	cp -r "$(AUNIT_SRC)/lib"     "$(DESTDIR)/share/aunit/"
+
+# Path to the Google Test source tree shipped with gnattest. When the
+# submodule is wired up this points to share/googletest. Override via
+# GTEST_SRC to build against a local checkout during development.
+GTEST_SRC ?= share/googletest
+
+.PHONY: install-gtest
+install-gtest:
+	@if [ ! -f "$(GTEST_SRC)/googletest/src/gtest-all.cc" ] ; then \
+		echo "error: Google Test sources not found at $(GTEST_SRC)" ; \
+		echo "Either initialize the submodule:" ; \
+		echo "    git submodule update --init $(GTEST_SRC)" ; \
+		echo "or point GTEST_SRC at a local googletest checkout:" ; \
+		echo "    make install-gtest GTEST_SRC=/path/to/googletest DESTDIR=..." ; \
+		exit 1 ; \
+	fi
+	mkdir -p "$(DESTDIR)/share/gtest"
+	cp -r "$(GTEST_SRC)/googletest/include" "$(DESTDIR)/share/gtest/"
+	cp -r "$(GTEST_SRC)/googletest/src"     "$(DESTDIR)/share/gtest/"
+	cp "$(GTEST_SRC)/LICENSE" "$(DESTDIR)/share/gtest/"

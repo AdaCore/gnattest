@@ -183,6 +183,25 @@ package body Test.Setup is
    procedure Run_Install_TGen (Opts : Setup_Options; Build_Dir : String);
    --  Install the TGen library built at Build_Dir
 
+   function Source_GTest_Dir return String;
+   --  Read-only Google Test source tree shipped with gnattest, at
+   --  <gnattest_prefix>/share/gtest (populated by "make install-gtest").
+
+   function GTest_Supported
+     (Opts : Setup_Options; Profile : Setup_Profile_Type) return Boolean;
+   --  True when Google Test can be built for this configuration: native mode,
+   --  the full runtime profile (gtest needs a hosted C++ runtime), and the
+   --  sources actually shipped with this gnattest.
+
+   function Run_Build_GTest
+     (Opts : Setup_Options; Build_Dir : String) return Boolean;
+   --  Build libgtest.a from the source drop staged in Build_Dir. Return
+   --  whether it succeeded: a C toolchain may lack the C++ compiler.
+
+   procedure Install_GTest (Opts : Setup_Options; Build_Dir : String);
+   --  Install the gtest headers, library and its gtest.gpr project under the
+   --  chosen prefix, so the generated harness can "with" it.
+
    --  Controlled wrapper that creates a unique build directory under the
    --  system temp dir and removes it on scope exit (unless Save_Temps was
    --  requested).
@@ -230,8 +249,9 @@ package body Test.Setup is
       Put_Line ("Usage: gnattest setup [options]");
       New_Line;
       Put_Line ("Build and install the bundled AUnit library for a given");
-      Put_Line ("target / RTS combination. In native mode, also build and");
-      Put_Line ("install the TGen runtime.");
+      Put_Line ("target / RTS combination. In native mode with the full");
+      Put_Line ("runtime, also build and install the TGen runtime and the");
+      Put_Line ("Google Test library used by the C/C++ test harness.");
       New_Line;
       Put_Line ("Options:");
       Put_Line ("  --target=<triplet>  Cross-compilation target");
@@ -724,6 +744,157 @@ package body Test.Setup is
         (Opts, Build_TGen_GPR (Build_Dir, "tgen_marshalling_rts"), No_Args);
    end Run_Install_TGen;
 
+   ----------------------
+   -- Source_GTest_Dir --
+   ----------------------
+
+   function Source_GTest_Dir return String is
+      use Ada.Directories;
+      Share : constant String := Compose (Gnattest_Prefix, "share");
+   begin
+      return Compose (Share, "gtest");
+   end Source_GTest_Dir;
+
+   --------------------
+   -- GTest_Supported --
+   --------------------
+
+   function GTest_Supported
+     (Opts : Setup_Options; Profile : Setup_Profile_Type) return Boolean
+   is (Is_Native (Opts)
+       and then Profile = Profile_Full
+       and then
+         Ada.Directories.Exists
+           (Ada.Directories.Compose
+              (Ada.Directories.Compose (Source_GTest_Dir, "src"),
+               "gtest-all",
+               Extension => "cc")));
+
+   ---------------------
+   -- Run_Build_GTest --
+   ---------------------
+
+   --  Google Test is shipped as a "source drop": gtest-all.cc #includes the
+   --  rest of the implementation, so only that one file is compiled, with
+   --  the source root (for its "src/..." includes) and include/ on the
+   --  search path. We write a throwaway library project into the staged
+   --  tree rather than shipping one, since it is never installed as-is.
+
+   function Run_Build_GTest
+     (Opts : Setup_Options; Build_Dir : String) return Boolean
+   is
+      use Ada.Directories;
+      Staged   : constant String := Compose (Build_Dir, "gtest");
+      GPR_Path : constant String :=
+        Compose (Staged, "gtest_build", Extension => "gpr");
+      Cmd      : GNATCOLL.OS.Process.Argument_List;
+   begin
+      declare
+         use Ada.Text_IO;
+         F : File_Type;
+      begin
+         Create (F, Out_File, GPR_Path);
+         Put_Line (F, "library project GTest_Build is");
+         Put_Line (F, "   for Languages use (""C++"");");
+         Put_Line (F, "   for Source_Dirs use (""."", ""src"", ""include"");");
+         Put_Line (F, "   for Source_Files use (""gtest-all.cc"");");
+         Put_Line (F, "   for Object_Dir use ""obj"";");
+         Put_Line (F, "   for Library_Name use ""gtest"";");
+         Put_Line (F, "   for Library_Dir use ""lib"";");
+         Put_Line (F, "   for Library_Kind use ""static"";");
+         --  gtest uses the .cc body suffix, which gprbuild's default C++
+         --  configuration does not necessarily recognize.
+         Put_Line (F, "   package Naming is");
+         Put_Line (F, "      for Body_Suffix (""C++"") use "".cc"";");
+         Put_Line (F, "   end Naming;");
+         Put_Line (F, "   package Compiler is");
+         Put_Line
+           (F,
+            "      for Default_Switches (""C++"") use "
+            & "(""-std=c++17"", ""-DGTEST_HAS_PTHREAD=1"");");
+         Put_Line (F, "   end Compiler;");
+         Put_Line (F, "end GTest_Build;");
+         Close (F);
+      end;
+
+      Cmd.Append ("gprbuild");
+      Cmd.Append ("-p");
+      Cmd.Append ("-P");
+      Cmd.Append (GPR_Path);
+      if Opts.Quiet then
+         Cmd.Append ("-q");
+      end if;
+      if Length (Opts.Config) > 0 then
+         Cmd.Append ("--config=" & To_String (Opts.Config));
+      end if;
+      for G of Opts.Gargs loop
+         Cmd.Append (G);
+      end loop;
+      return Test.Subprocess.Run_Status (Cmd) = 0;
+   end Run_Build_GTest;
+
+   ------------------
+   -- Install_GTest --
+   ------------------
+
+   procedure Install_GTest (Opts : Setup_Options; Build_Dir : String) is
+      use Ada.Directories;
+      Prefix     : constant String :=
+        (if Length (Opts.Prefix) > 0
+         then To_String (Opts.Prefix)
+         else Gnattest_Prefix);
+      Staged     : constant String := Compose (Build_Dir, "gtest");
+      Dest_Share : constant String :=
+        Compose (Compose (Prefix, "share"), "gtest");
+      Dest_GPR   : constant String :=
+        Compose
+          (Compose (Compose (Prefix, "share"), "gpr"),
+           "gtest",
+           Extension => "gpr");
+   begin
+      --  Install the headers verbatim (gprinstall would flatten the
+      --  gtest/ and gtest/internal/ prefixes that #include <gtest/gtest.h>
+      --  relies on) and the freshly built library.
+
+      if Exists (Compose (Dest_Share, "include")) then
+         Delete_Tree (Compose (Dest_Share, "include"));
+      end if;
+      if Exists (Compose (Dest_Share, "lib")) then
+         Delete_Tree (Compose (Dest_Share, "lib"));
+      end if;
+      Create_Path (Dest_Share);
+      Create_Path (Containing_Directory (Dest_GPR));
+
+      Copy_Sources
+        (Src => Compose (Staged, "include"), Dst_Parent => Dest_Share);
+      Copy_Sources (Src => Compose (Staged, "lib"), Dst_Parent => Dest_Share);
+
+      --  Externally-built library project, discovered by the harness through
+      --  GPR_PROJECT_PATH like aunit.gpr / tgen_rts.gpr. Its source dir gives
+      --  consumers the include path for <gtest/gtest.h>; its Linker_Options
+      --  pull in the C++ runtime and pthreads needed by the Ada-main harness.
+
+      declare
+         use Ada.Text_IO;
+         F : File_Type;
+      begin
+         Create (F, Out_File, Dest_GPR);
+         Put_Line (F, "library project GTest is");
+         Put_Line (F, "   for Languages use (""C++"");");
+         Put_Line (F, "   for Source_Dirs use (""../gtest/include"");");
+         Put_Line (F, "   for Library_Name use ""gtest"";");
+         Put_Line (F, "   for Library_Dir use ""../gtest/lib"";");
+         Put_Line (F, "   for Library_Kind use ""static"";");
+         Put_Line (F, "   for Externally_Built use ""True"";");
+         Put_Line (F, "   package Linker is");
+         Put_Line
+           (F, "      for Linker_Options use (""-lstdc++"", ""-pthread"");");
+         Put_Line (F, "   end Linker;");
+         Put_Line (F, "end GTest;");
+         Close (F);
+      end;
+   end Install_GTest;
+
    ---------
    -- Run --
    ---------
@@ -900,6 +1071,36 @@ package body Test.Setup is
                   Run_Install_TGen (Opts, Build_Dir);
                end if;
             end;
+
+            --  Google Test, for C++ tests. Native + full runtime only: it
+            --  needs a hosted C++ runtime. Optional, as no C++ test can be
+            --  generated yet.
+
+            if GTest_Supported (Opts, Profile) then
+               if Opts.Verbose then
+                  Ada.Text_IO.Put_Line
+                    ("gnattest setup: also building Google Test");
+               end if;
+               Copy_Sources (Src => Source_GTest_Dir, Dst_Parent => Build_Dir);
+               if Run_Build_GTest (Opts, Build_Dir) then
+                  Install_GTest (Opts, Build_Dir);
+               elsif not Opts.Quiet then
+                  Ada.Text_IO.Put_Line
+                    ("gnattest setup: could not build Google Test, which"
+                     & " needs a C++ compiler; skipping it.");
+               end if;
+            elsif not Ada.Directories.Exists (Source_GTest_Dir) then
+               if Opts.Verbose then
+                  Ada.Text_IO.Put_Line
+                    ("gnattest setup: Google Test sources not shipped with"
+                     & " this gnattest; skipping (C/C++ tests will need a"
+                     & " system gtest).");
+               end if;
+            elsif Opts.Verbose then
+               Ada.Text_IO.Put_Line
+                 ("gnattest setup: skipping Google Test (only supported for"
+                  & " the native full runtime).");
+            end if;
          end;
 
          --  Remove Tool_Temp_Dir

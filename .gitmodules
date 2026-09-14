@@ -2,3 +2,7 @@
 	path = share/aunit
 	url = https://github.com/AdaCore/aunit
 	branch = master
+[submodule "share/googletest"]
+	path = share/googletest
+	url = https://github.com/google/googletest
+	branch = main
