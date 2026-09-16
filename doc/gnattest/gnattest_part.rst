@@ -473,9 +473,19 @@ gnattest rejects cases of using both options with the same granularity level.
   .. index:: --reporter (gnattest)
 
 :switch:`--reporter={val}`
-  Use specified reporter in the test driver. ``val`` is expected to be a name
-  of child package of AUnit.Reporter. Test drivers generated with non-default
-  reporter specified cannot be properly processed by test execution mode of ``gnattest``.
+  Use the specified reporter to output the test results. ``val`` must be one of
+  ``gnattest`` (the default), ``text``, ``xml`` or ``junit``; any other value is
+  rejected. The deprecated value ``xml_deprecated`` selects the legacy XML
+  output and emits a warning; use ``xml`` instead.
+
+  The ``xml`` and ``junit`` reporters need the name of the tested subprogram in
+  their output, so they imply :switch:`--include-subp-name`.
+
+  This switch has **no effect** when combined with :switch:`--stub` or
+  :switch:`--separate-drivers`, and ``gnattest`` emits a warning saying so.
+  Since the :ref:`test execution mode <Test_Execution_Mode>` only applies to
+  the individual test drivers produced by those two switches, the test drivers
+  it runs always use the default reporter.
 
 
 :switch:`--tests-root`, :switch:`--subdirs` and :switch:`--tests-dir` switches are mutually exclusive.
