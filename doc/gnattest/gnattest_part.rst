@@ -1485,9 +1485,18 @@ Test input generation strategies
 Input value generation currently follows a simple strategy for each input
 parameter of the subprogram under test. Parameters of scalar types, and scalar
 components of composite types have their values uniformly generated. For
-unconstrained array types, a length is randomly chosen between 0 and 10
-elements, then the low bound is randomly chosen and the high bound computed
+unconstrained array types, a total number of elements is randomly chosen
+between 0 and 10 for each dimension, with thus an upper limit of ``10 ** n``
+elements, where ``n`` is the number of dimensions of the array (so between 0
+and 10 elements for the common case of a one-dimensional array), then, for each
+dimension, the low bound is randomly chosen and the high bound computed
 accordingly to those two first points.
+
+Independently of this, the marshallers refuse to read back an array with more
+than 1000 elements per dimension, to avoid allocating overly large arrays on
+the stack. This limit can be changed through the ``TGEN_ARRAY_LIMIT``
+environment variable; array types whose number of elements is statically known
+to exceed this value (all dimensions combined) are reported as unsupported.
 
 For record discriminants, different strategies are chosen depending on the use
 of the discriminant within the record: If the discriminant constraints a array
