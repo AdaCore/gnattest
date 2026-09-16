@@ -607,8 +607,29 @@ package ``Gnattest``. Here is the list of attributes:
      ``--exclude-from-stubbing:spec=filename``.
 
 Each of those attributes can be overridden from the command line if needed.
-Other ``gnattest`` switches can also be passed via the project
-file as an attribute list called ``Gnattest_Switches``.
+
+Other ``gnattest`` switches can be passed via the project file using the two
+following attributes, both of which take a list of switches:
+
+* ``Default_Switches``
+     switches to pass to every ``gnattest`` invocation on this project.
+
+* ``Switches ("source_file")``
+     switches to pass to ``gnattest`` when it is invoked on ``source_file``.
+     This attribute is only taken into account when exactly one file name is
+     given on the command line, and, when it applies, it **replaces**
+     ``Default_Switches`` rather than adding to it.
+
+For instance:
+
+  ::
+
+      project My_Project is
+         package Gnattest is
+            for Default_Switches use ("--passed-tests=hide", "--exit-status=on");
+            for Switches ("tricky_unit.ads") use ("--exit-status=on", "--omit-sloc");
+         end Gnattest;
+      end My_Project;
 
 
 .. _Simple_gnattest_Example:
