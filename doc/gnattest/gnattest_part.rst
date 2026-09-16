@@ -211,15 +211,29 @@ Switches for ``gnattest`` in framework generation mode
 
   .. index:: -q (gnattest)
 
-:switch:`-q`
+:switch:`-q, --quiet`
   Quiet mode: suppresses noncritical output messages.
 
 
   .. index:: -v (gnattest)
 
-:switch:`-v`
-  Verbose mode: produces additional output about the execution of the tool.
-  When specified alone on the command line, prints tool version and exits.
+:switch:`-v, --verbose`
+  Verbose mode: produces additional output about the execution of the tool,
+  starting with the tool version banner. Note that this does not stop
+  ``gnattest`` from running; use :switch:`--version` to print the version and
+  exit.
+
+
+  .. index:: --version (gnattest)
+
+:switch:`--version`
+  Print the tool version and exit.
+
+
+  .. index:: --help (gnattest)
+
+:switch:`--help`
+  Print a usage summary and exit.
 
 
   .. index:: -U (gnattest)
