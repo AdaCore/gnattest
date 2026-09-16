@@ -1097,7 +1097,7 @@ layout, using the default object-directory locations, looks like this::
       units.list                   regenerated   unit(s) under test, per driver
       test_drivers.list            regenerated   list of driver executables
     tests/                         <- test code
-      <u>-test_data.ad[bs]         body owned    Set_Up / Tear_Down
+      <u>-test_data.ad[bs]         owned         Set_Up / Tear_Down, fixture type
       <u>-test_data-tests.ads      regenerated   test package spec
       <u>-test_data-tests.adb      owned         your test routine bodies
 
@@ -1208,9 +1208,9 @@ under version control:
      - Yes
      - Yes
    * - ``*-test_data.ads``
+     - No (preserved)
      - Yes
-     - No
-     - No
+     - Yes
    * - ``*-test_data-tests.adb``
      - No (preserved)
      - Yes
@@ -1235,10 +1235,17 @@ of code, test skeletons and harness. With the exception of the two user-owned
 files noted below, the harness is generated completely automatically each time,
 does not require manual changes and therefore should not be put under version
 control.
-It makes sense to put under version control files containing test data packages
-bodies, and files containing bodies of test packages. Note that
-test package specs, as well as test data packages specs, are also generated
-automatically each time and should not be put under version control.
+It makes sense to put under version control the test data packages, both their
+specs and their bodies, and the bodies of the test packages. Note that the test
+package specs (:file:`*-test_data-tests.ads`) are the only part of the test code
+that is regenerated on every run, and should not be put under version control.
+
+Test data package specs (:file:`*-test_data.ads`) are created once and never
+overwritten afterwards, except for the sections surrounded by ``read only``
+markers. They are meant to be edited, since this is where the components of the
+test fixture type are declared (see
+:ref:`Setting_Up_and_Tearing_Down_the_Testing_Environment`), so they belong
+under version control together with their bodies.
 
 Additionally, if stubbing is enabled with ``--stub``, it also makes sense to
 put the stubbed bodies, as well as the stub-data bodies under source control,
