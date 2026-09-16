@@ -1442,20 +1442,42 @@ copy and modify it, and feed the modified mapping to GNATtest using the
 Supported types
 """""""""""""""
 
-``gnattest`` can natively generate test cases for any type unless any of the
-following are true:
+``gnattest`` can natively generate test cases for a subprogram when it can
+generate a value for every one of its parameters, and for the global inputs
+listed in its ``Global`` aspect, if it has one. Note that this applies to
+parameters of *every* mode, ``out`` parameters included: ``gnattest`` needs a
+representation of the type in order to marshall the value back, so an
+unsupported type disables generation for the subprogram whichever mode it
+appears in.
 
-1. Any of the subprogram's "in" or "in out" mode parameters are of an
-   Access type or contain a sub-component of an Access type.
-2. Any of the subprogram's "in" or "in out" mode parameters are Subprogram
-   Access Types.
-3. Any of the subprogram's "in" or "in out" mode parameters are Limited types.
-4. Any of the subprogram's "in" or "out" mode parameters are tagged types.
-5. Any of the subprogram's "in" or "out" mode parameters is a private type of
-   a nested package.
+A type is not natively supported when it is, or has a subcomponent that is,
+one of the following:
+
+* an access type, including a subprogram access type;
+* a class-wide type, or a type derived from an abstract type;
+* an anonymous array or anonymous access type;
+* a private type declared in a nested package;
+* a type derived from a private type that is unconstrained;
+* a generic formal type;
+* a type declared in a generic package instantiation that is a library item;
+* a task type or a protected type;
+* ``System.Address``;
+* an array type whose number of elements exceeds the configured array size
+  limit, which defaults to 1000 and can be changed with the
+  ``TGEN_ARRAY_LIMIT`` environment variable.
+
+Note that concrete tagged types and limited types are supported.
+
+``gnattest`` reports the reason why it cannot generate values for a given
+parameter, so the diagnostics it prints are the authoritative answer for a
+given subprogram. For instance:
+
+  ::
+
+      pkg.print_acc.A: pkg.int_acc is not supported (Access types are not supported)
 
 For types not respecting the above restrictions, it is possible to generate
-test inputs using a :ref:`proxy generation function<proxy_generation>`
+test inputs using a :ref:`proxy generation function <proxy_generation>`.
 
 Test input generation strategies
 """"""""""""""""""""""""""""""""
@@ -1517,10 +1539,30 @@ A proxy subprogram can be designated explicitly, by using the ``TGen_Proxy =>
 <Proxy Name>`` aspect on the type definition, or gnattest can automatically
 identify one for types that are not natively supported.
 
-When searching for a proxy subprogram, GNATtest will inspect first the unit in
-which the target type is declared, then, if enabled through
-``--detect-tgen-proxies``, the entire codebase. This switch can also be used to
-disable automatic proxy subprogram detection.
+The ``--detect-tgen-proxies={policy}`` switch controls how far GNATtest looks
+when automatically identifying a proxy for a type that is not natively
+supported. ``policy`` must be one of:
+
+* ``none``
+     no automatic search is performed at all. Only the proxies designated
+     explicitly with the ``TGen_Proxy`` aspect are used.
+
+* ``unit`` (the default)
+     only the unit in which the target type is declared is searched.
+
+* ``all_refs``
+     the unit in which the target type is declared is searched first; if that
+     yields nothing, GNATtest then inspects the references to the target type
+     across the units of the project to find a suitable proxy function.
+
+Note that this switch has no effect on proxies designated explicitly with the
+``TGen_Proxy`` aspect, which are always honored.
+
+A proxy cannot be used for every unsupported type. Types for which no
+type-compatible helper subprogram can be declared, namely anonymous array and
+access types, generic formal types, private types declared in a nested package,
+and types declared in a library-level generic package instantiation, are
+rejected regardless of any proxy.
 
 Once a proxy is defined for a given type, GNATtest will generate test inputs
 for the proxy. These test inputs are written to the serialized test files. When
