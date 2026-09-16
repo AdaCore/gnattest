@@ -206,7 +206,14 @@ Switches for ``gnattest`` in framework generation mode
   .. index:: --strict (gnattest)
 
 :switch:`--strict`
-  Return error exit code if there are any compilation errors.
+  Return a failure exit status if ``gnattest`` failed to process one of the
+  argument sources, either because the source has diagnostics when it is
+  analyzed, or because an error occurred while generating its test package,
+  its stub or its instrumented version. Without this switch, ``gnattest``
+  reports such failures and skips the offending sources.
+
+  ``--strict`` also makes ``gnattest`` print the exception name and a symbolic
+  traceback for each of those failures, which is useful when reporting a bug.
 
 
   .. index:: -q (gnattest)
