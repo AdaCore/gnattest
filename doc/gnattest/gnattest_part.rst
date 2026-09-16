@@ -1173,23 +1173,57 @@ for, and in particular which ones are *regenerated* on every run versus
 harness and for deciding what to put under version control.
 
 The artifacts fall into two broad families: the **harness** (the test driver
-infrastructure) and the **test code** (the skeletons you fill in). A typical
-layout, using the default object-directory locations, looks like this::
+infrastructure) and the **test code** (the skeletons you fill in). With the
+default object-directory locations and a single test driver, the layout looks
+like this, where ``<u>`` stands for the name of a unit under test, ``<U>`` for
+its Ada unit name and ``<prj>`` for the name of the project::
 
   <object-dir>/gnattest/
-    harness/                       <- test driver infrastructure
-      test_driver.gpr              regenerated   project to build/run the driver
-      gnattest_common.gpr          created once  shared build options (user-owned)
-      test_runner.adb              regenerated   driver main
-      suite_*.ad[bs]               regenerated   AUnit suite aggregation
-      Makefile                     regenerated   GNATcoverage integration driver
-      coverage_settings.mk         created once  gnatcov switches (user-owned)
-      units.list                   regenerated   unit(s) under test, per driver
-      test_drivers.list            regenerated   list of driver executables
-    tests/                         <- test code
-      <u>-test_data.ad[bs]         owned         Set_Up / Tear_Down, fixture type
-      <u>-test_data-tests.ads      regenerated   test package spec
-      <u>-test_data-tests.adb      owned         your test routine bodies
+    harness/                             <- test driver infrastructure
+      test_driver.gpr                    regenerated   project to build/run the driver
+      test_<prj>.gpr                     regenerated   project compiling the test skeletons
+      gnattest_common.gpr                created once  shared build options (user-owned)
+      test_runner.adb                    regenerated   driver main
+      gnattest_main_suite.ad[bs]         regenerated   top-level AUnit suite
+      <u>-test_data-tests-suite.ad[bs]   regenerated   per-unit AUnit suite
+
+      common/
+        gnattest_generated.ads           regenerated   support unit shared by the drivers
+        gnattest_generated-persistent.ad[bs]
+                                         created once  setup/teardown shared by the drivers (user owned)
+      gnattest.xml                       regenerated   test/source mapping file
+      suppress.adc,                      created once  global configuration pragmas (user owned)
+        suppress_no_ghost.adc
+      preprocessor.def                   regenerated   preprocessor symbol definitions
+      .gnattest-config.json              regenerated   internal harness configuration
+      Makefile                           regenerated   GNATcoverage integration driver
+      coverage_settings.mk               created once  gnatcov switches (user-owned)
+    tests/                               <- test code
+      <u>-test_data.ad[bs]               owned         Set_Up / Tear_Down, fixture type
+      <u>-test_data-tests.ads            regenerated   test package spec
+      <u>-test_data-tests.adb            owned         your test routine bodies
+
+With ``--separate-drivers`` (and hence with ``--stub``), the per-driver files
+move into one subdirectory per unit, or per test, under test, and two more
+files appear at the top of the harness directory::
+
+  <object-dir>/gnattest/
+    harness/
+      <U>.Test_Data.Tests/             <- one such directory per driver
+        test_driver.gpr                regenerated   project to build/run this driver
+        <u>-test_data-tests-suite-test_runner.adb
+                                       regenerated   this driver's main
+        <u>-test_data-tests-suite.ad[bs]
+                                       regenerated   this driver's AUnit suite
+        units.list                     regenerated   unit under test, for gnatcov
+      test_drivers.gpr                 regenerated   aggregate project building them all
+      test_drivers.list                regenerated   list of driver executables
+      ...                              the files listed above, except test_driver.gpr,
+                                       test_runner.adb and the suite units
+
+Only the files described in the next section have a stable interest for the
+user; the others are internal to the harness, regenerated on every run, and
+should not be edited.
 
 Responsibilities of the harness components
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1209,9 +1243,21 @@ Responsibilities of the harness components
     :ref:`gnattest_spark_instrument` for using it to pass a configuration pragma
     file for SPARK code.
 
-* *test_runner* and *suite_\** files
-    The generated main and the AUnit suite-aggregation packages. They are fully
-    automatic, regenerated on every run, and should not be edited.
+* *test_runner* and the suite units
+    The generated main (:file:`test_runner.adb`, or
+    :file:`<u>-test_data-tests-suite-test_runner.adb` with separate drivers)
+    and the AUnit suite-aggregation packages (:file:`gnattest_main_suite.ad[bs]`
+    and :file:`<u>-test_data-tests-suite.ad[bs]`). They are fully automatic,
+    regenerated on every run, and should not be edited.
+
+* *test_drivers.gpr*
+    An aggregate project, generated with ``--separate-drivers``, that builds all
+    the individual test driver projects at once. Regenerated on every run.
+
+* *gnattest.xml*
+    The mapping between the sources under test and the generated test
+    artifacts, used by IDEs to navigate between a subprogram and its tests.
+    Regenerated on every run.
 
 * *Makefile*
     Automates the production of a coverage report with GNATcoverage (see
@@ -1227,15 +1273,17 @@ Responsibilities of the harness components
     :ref:`Gnattest_Makefile` for details.
 
 * *units.list*
-    Generated alongside each ``test_driver.gpr`` (with separate drivers); lists
-    the unit under test so that ``gnatcov`` can be told which unit is of interest
-    and avoid incidental coverage. Regenerated on every run.
+    Generated alongside each ``test_driver.gpr``, and therefore only with
+    separate drivers; lists the unit under test so that ``gnatcov`` can be told
+    which unit is of interest and avoid incidental coverage. Regenerated on
+    every run.
 
 * *test_drivers.list*
     The list of test driver executables consumed by the
-    :ref:`test execution mode <Test_Execution_Mode>`. It is generated
-    automatically but may be hand-edited to add or remove tests; it is also safe
-    to let ``gnattest`` regenerate it.
+    :ref:`test execution mode <Test_Execution_Mode>`. Like ``units.list`` it is
+    only generated with separate drivers, since that mode is what the test
+    execution mode runs. It is generated automatically but may be hand-edited to
+    add or remove tests; it is also safe to let ``gnattest`` regenerate it.
 
 Files the user is expected to modify
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1273,7 +1321,19 @@ under version control:
      - No (created once)
      - Yes
      - Yes
-   * - ``test_runner``, ``suite_*``
+   * - ``gnattest_generated-persistent.ad[bs]``
+     - No (created once)
+     - Yes
+     - Yes
+   * - ``test_runner``, suite units
+     - Yes
+     - No
+     - No
+   * - ``test_drivers.gpr`` (separate drivers)
+     - Yes
+     - No
+     - No
+   * - ``gnattest.xml``
      - Yes
      - No
      - No
@@ -1285,11 +1345,11 @@ under version control:
      - No (created once)
      - Yes
      - Yes (with GNATcov integration)
-   * - ``units.list``
+   * - ``units.list`` (separate drivers)
      - Yes
      - No
      - No
-   * - ``test_drivers.list``
+   * - ``test_drivers.list`` (separate drivers)
      - Yes
      - Yes (optional)
      - Optional
