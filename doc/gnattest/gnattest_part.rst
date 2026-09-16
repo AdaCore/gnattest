@@ -1152,13 +1152,36 @@ Integration with GNATcoverage
 In addition to the harness, ``gnattest`` generates a Makefile. This Makefile
 provides targets for building the test drivers and also the targets for
 computing the coverage information using GNATcoverage framework when this
-coverage analysis tool is available. The target ``coverage`` fully automates
-the process: it will first build all test drivers, then run them under
-GNATcoverage, analyze individual trace files, and finally aggregate them:
+coverage analysis tool is available.
+
+The target ``coverage`` fully automates the process using **source traces**:
+it instruments the test driver projects with ``gnatcov instrument``, builds
+them against the instrumented sources, runs them, turns each resulting source
+trace into a checkpoint and finally consolidates the checkpoints into a
+report:
 
   ::
 
       make coverage
+
+The Makefile also provides the following targets:
+
+* ``all``
+     builds all the test drivers, without any coverage instrumentation.
+
+* ``instrument-all``
+     runs ``gnatcov instrument`` on all the test driver projects, without
+     building them.
+
+* ``instr-build-all``
+     same, and builds the instrumented drivers.
+
+* ``clean``
+     runs ``gprclean`` on every test driver project and removes the trace files.
+
+The switches passed to the various ``gnatcov`` commands are held in
+``coverage_settings.mk``, which is generated once and then owned by the user;
+see :ref:`Harness_Structure`.
 
 For more details about using GNATtest with GNATcoverage see :ref:`Integration_Part`.
 
