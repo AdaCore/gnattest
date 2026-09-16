@@ -374,7 +374,7 @@ Switches for ``gnattest`` in framework generation mode
   corresponding spec files, one per line.
 
 
-:switch:`--exclude-from-stubbing:{spec}={filename}`
+:switch:`--exclude-from-stubbing={spec}:{filename}`
   Same as above, but corresponding units will not be stubbed only when testing
   unit whose specification is declared in specified ``spec`` file.
 
@@ -385,14 +385,14 @@ Switches for ``gnattest`` in framework generation mode
   Enables stubbing of units listed in ``filename``. The file should contain
   corresponding spec files, one per line.
 
-:switch:`--include-for-stubbing:{spec}={filename}`
+:switch:`--include-for-stubbing={spec}:{filename}`
   Same as above, but corresponding units will be stubbed only when testing unit
   whose specification is declared in specified ``spec`` file.
 
-Note: in case of using both include-for-stubbing and excluded-from-stubbing,
+Note: in case of using both include-for-stubbing and exclude-from-stubbing,
 local configuration will override the global configuration, e.g. if one unit
 is excluded by default from stubbing, and then included for a specific unit by
-using the {spec}={filename} variant, then it shall be included for this specific
+using the {spec}:{filename} variant, then it shall be included for this specific
 unit.
 
 gnattest rejects cases of using both options with the same granularity level.
@@ -604,7 +604,7 @@ package ``Gnattest``. Here is the list of attributes:
 * ``Stub_Exclusion_List ("spec")``
      is used to specify the file with list of units whose bodies should not
      be stubbed when testing "spec", otherwise specified by
-     ``--exclude-from-stubbing:spec=filename``.
+     ``--exclude-from-stubbing=spec:filename``.
 
 Each of those attributes can be overridden from the command line if needed.
 
