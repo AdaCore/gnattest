@@ -123,10 +123,11 @@ In this mode ``gnattest`` has the following command-line interface:
 where
 
 * :switch:`-P{projname}`
-    specifies the project defining the location of source files. When no
-    file names are provided on the command line, all sources in the project
-    are used as input. This switch is required.
-    
+    specifies the project defining the location of source files. This switch
+    is required. See :ref:`Selecting_the_Sources_to_Process` for the rules
+    that determine which of the project's sources are processed when no file
+    name is given on the command line.
+
     For the semantics of aggregate project processing by gnattest, see the
     :ref:`aggregate_projects` section.
 
@@ -225,7 +226,10 @@ Switches for ``gnattest`` in framework generation mode
   .. index:: -r (gnattest)
 
 :switch:`-r, -U`
-  Recursively considers all sources from all projects.
+  Process all the sources visible from the root project, that is to say its own
+  sources plus those of the projects it imports. This overrides the default
+  selection based on the project's mains; see
+  :ref:`Selecting_the_Sources_to_Process`.
 
 
   .. index:: -U (gnattest)
@@ -475,6 +479,45 @@ gnattest rejects cases of using both options with the same granularity level.
 
 
 :switch:`--tests-root`, :switch:`--subdirs` and :switch:`--tests-dir` switches are mutually exclusive.
+
+
+.. _Selecting_the_Sources_to_Process:
+
+Selecting the sources to process
+--------------------------------
+
+The set of sources ``gnattest`` processes is determined as follows.
+
+If one or more file names are given on the command line, or with one or more
+:switch:`-files={filename}` switches, only those sources are processed.
+
+Otherwise, the sources are taken from the project, and the selection depends on
+whether the root project defines mains:
+
+* if the root project has at least one ``Main`` and all of its mains are Ada
+  sources, only the units in the **closure of those mains** are processed;
+
+* otherwise, all the sources visible from the root project, that is to say its
+  own sources plus those of the projects it imports, are processed. Sources
+  belonging to externally built projects are never processed.
+
+Note in particular that, for a project that defines a ``Main``, the default is
+*not* to process every source of the project: units that the main does not
+depend on are left out. Use :switch:`-U` to process them as well.
+
+The following switches change this selection:
+
+* :switch:`-U` processes all the sources visible from the root project,
+  regardless of any ``Main`` the project may define.
+
+* :switch:`-U {source_file}` processes the closure of ``source_file``. Note
+  that this switch expects a source file name, not an Ada unit name.
+
+* :switch:`--no-subprojects` processes only the sources of the root project,
+  leaving out those of the imported projects.
+
+* :switch:`--ignore={filename}` removes from the selection the sources listed
+  in ``filename``, whichever way the selection was made.
 
 
 .. _Switches_for_gnattest_in_test_execution_mode:
