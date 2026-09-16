@@ -201,11 +201,13 @@ where
     A test skeleton for each visible subprogram is created in a separate file, if it
     doesn't exist already. By default, those separate test files are located in a
     "gnattest/tests" directory that is created in the object directory of
-    corresponding project file. For example, if a source file my_unit.ads in
-    directory src contains a visible subprogram Proc, then the corresponding unit
-    test will be found in file src/tests/my_unit-test_data-tests.adb and will be
-    called Test_Proc_<code>. <code> is a signature encoding used to differentiate
-    test names in case of overloading.
+    corresponding project file. For example, if a source file my_unit.ads
+    contains a visible subprogram Proc, then the corresponding unit test will be
+    found in file <object-dir>/gnattest/tests/my_unit-test_data-tests.adb and
+    will be called Test_Proc_<code>. <code> is a signature encoding used to
+    differentiate test names in case of overloading. The
+    :switch:`--tests-dir`, :switch:`--subdirs` and :switch:`--tests-root`
+    switches select other locations.
 
     Note that if the project already has both my_unit.ads and my_unit-test_data.ads,
     this will cause a name conflict with the generated test package.
