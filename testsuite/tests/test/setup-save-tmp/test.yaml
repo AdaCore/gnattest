@@ -1,0 +1,7 @@
+description: Check that --save-temps does preserve build artifacts when
+  invoking gnattest setup.
+
+driver: python_script
+
+control:
+  - [SKIP, "not native", "Bypasses automatic target/rts switches"]

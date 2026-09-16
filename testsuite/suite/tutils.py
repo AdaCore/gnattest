@@ -68,8 +68,8 @@ def run_command(
     current test, to handle cross generation for example.
     """
     test_args = [command, f"-P{gpr}"]
-    options = thistest.options
 
+    options = thistest.options
     if options:
         if options.RTS:
             test_args.append("--RTS=" + options.RTS)

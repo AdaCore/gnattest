@@ -69,21 +69,23 @@ library, the following command should be run once per toolchain installation.
 
   ::
 
-    $ gnattest setup [--prefix=dir] [--compiler-prefix] [--target=target [--RTS=runtime]]
+    $ gnattest setup [options] [-gargs gprbuild-options]
 
-where
+where the options are:
 
   .. index:: --prefix (gnattest)
 
 * :switch:`--prefix={dir}`
-    specifies the directory in which the libraries should be installed.
+    specifies the directory in which the libraries should be installed. It
+    defaults to the install prefix of ``gnattest`` itself.
 
   .. index:: --compiler-prefix (gnattest)
 
 * :switch:`--compiler-prefix`
     instructs gnattest to install the runtime libraries in the toolchain
     installation directory. This removes the need for adding the installation
-    directory to the GPR_PROJECT_PATH environment variable.
+    directory to the GPR_PROJECT_PATH environment variable. It overrides
+    :switch:`--prefix`.
 
 * :switch:`--target={target}`
     Specifies the target for which the runtime libraries should be compiled
@@ -91,6 +93,40 @@ where
 * :switch:`--RTS={runtime}`
     Specifies the Ada runtime library name or profile to use for compiling the
     test runtime libraries.
+
+  .. index:: --rts-profile (gnattest)
+
+* :switch:`--rts-profile={profile}`
+    Specifies the AUnit runtime profile to build against. ``profile`` must be
+    one of ``auto``, ``full``, ``zfp``, ``zfp-cross``, ``ravenscar``,
+    ``ravenscar-cert`` or ``cert``. It defaults to ``auto``, in which case the
+    profile is inferred from :switch:`--RTS` and :switch:`--target`.
+
+  .. index:: --config (gnattest)
+
+* :switch:`--config={file}`
+    Passes ``file`` to ``gprbuild`` as its configuration project.
+
+  .. index:: --tgen (gnattest)
+
+* :switch:`--tgen`, :switch:`--no-tgen`
+    Force or skip building the test generation runtime. See below for the
+    default.
+
+* :switch:`-q`, :switch:`-v`
+    Quiet mode, and verbose mode, which echoes the commands being run.
+
+* :switch:`-gargs {gprbuild-options}`
+    Passes all the remaining arguments to ``gprbuild``.
+
+The AUnit library is always built and installed. The test generation runtime is
+additionally built when the Ada runtime profile in use is ``full``,
+``embedded`` or ``ravenscar`` and the compiler supports Ada 2022, which
+``gnattest setup`` probes for; otherwise it is skipped. Pass :switch:`--tgen`
+to build it without probing the compiler, or :switch:`--no-tgen` to skip it
+altogether. Since test input generation needs that runtime, skipping it means
+the :ref:`automatic test case generation <Automatic_testcase_generation>`
+features will not be usable.
 
 If ``--compiler-prefix`` is not passed to the gnattest setup invocation, it is
 then necessary to add ``<installation_dir>/share/gpr`` to the
