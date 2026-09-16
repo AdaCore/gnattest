@@ -320,6 +320,8 @@ Switches for ``gnattest`` in framework generation mode
   than a single executable incorporating all tests. ``val`` can be "unit" or
   "test", or may be omitted, which defaults to "unit".
 
+  ``--separate-drivers=test`` is not supported on light runtime profiles.
+
 
   .. index:: --stub (gnattest)
 
