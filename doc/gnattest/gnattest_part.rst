@@ -69,21 +69,23 @@ library, the following command should be run once per toolchain installation.
 
   ::
 
-    $ gnattest setup [--prefix=dir] [--compiler-prefix] [--target=target [--RTS=runtime]]
+    $ gnattest setup [options] [-gargs gprbuild-options]
 
-where
+where the options are:
 
   .. index:: --prefix (gnattest)
 
 * :switch:`--prefix={dir}`
-    specifies the directory in which the libraries should be installed.
+    specifies the directory in which the libraries should be installed. It
+    defaults to the install prefix of ``gnattest`` itself.
 
   .. index:: --compiler-prefix (gnattest)
 
 * :switch:`--compiler-prefix`
     instructs gnattest to install the runtime libraries in the toolchain
     installation directory. This removes the need for adding the installation
-    directory to the GPR_PROJECT_PATH environment variable.
+    directory to the GPR_PROJECT_PATH environment variable. It overrides
+    :switch:`--prefix`.
 
 * :switch:`--target={target}`
     Specifies the target for which the runtime libraries should be compiled
@@ -91,6 +93,40 @@ where
 * :switch:`--RTS={runtime}`
     Specifies the Ada runtime library name or profile to use for compiling the
     test runtime libraries.
+
+  .. index:: --rts-profile (gnattest)
+
+* :switch:`--rts-profile={profile}`
+    Specifies the AUnit runtime profile to build against. ``profile`` must be
+    one of ``auto``, ``full``, ``zfp``, ``zfp-cross``, ``ravenscar``,
+    ``ravenscar-cert`` or ``cert``. It defaults to ``auto``, in which case the
+    profile is inferred from :switch:`--RTS` and :switch:`--target`.
+
+  .. index:: --config (gnattest)
+
+* :switch:`--config={file}`
+    Passes ``file`` to ``gprbuild`` as its configuration project.
+
+  .. index:: --tgen (gnattest)
+
+* :switch:`--tgen`, :switch:`--no-tgen`
+    Force or skip building the test generation runtime. See below for the
+    default.
+
+* :switch:`-q`, :switch:`-v`
+    Quiet mode, and verbose mode, which echoes the commands being run.
+
+* :switch:`-gargs {gprbuild-options}`
+    Passes all the remaining arguments to ``gprbuild``.
+
+The AUnit library is always built and installed. The test generation runtime is
+additionally built when the Ada runtime profile in use is ``full``,
+``embedded`` or ``ravenscar`` and the compiler supports Ada 2022, which
+``gnattest setup`` probes for; otherwise it is skipped. Pass :switch:`--tgen`
+to build it without probing the compiler, or :switch:`--no-tgen` to skip it
+altogether. Since test input generation needs that runtime, skipping it means
+the :ref:`automatic test case generation <Automatic_testcase_generation>`
+features will not be usable.
 
 If ``--compiler-prefix`` is not passed to the gnattest setup invocation, it is
 then necessary to add ``<installation_dir>/share/gpr`` to the
@@ -123,10 +159,11 @@ In this mode ``gnattest`` has the following command-line interface:
 where
 
 * :switch:`-P{projname}`
-    specifies the project defining the location of source files. When no
-    file names are provided on the command line, all sources in the project
-    are used as input. This switch is required.
-    
+    specifies the project defining the location of source files. This switch
+    is required. See :ref:`Selecting_the_Sources_to_Process` for the rules
+    that determine which of the project's sources are processed when no file
+    name is given on the command line.
+
     For the semantics of aggregate project processing by gnattest, see the
     :ref:`aggregate_projects` section.
 
@@ -164,11 +201,13 @@ where
     A test skeleton for each visible subprogram is created in a separate file, if it
     doesn't exist already. By default, those separate test files are located in a
     "gnattest/tests" directory that is created in the object directory of
-    corresponding project file. For example, if a source file my_unit.ads in
-    directory src contains a visible subprogram Proc, then the corresponding unit
-    test will be found in file src/tests/my_unit-test_data-tests.adb and will be
-    called Test_Proc_<code>. <code> is a signature encoding used to differentiate
-    test names in case of overloading.
+    corresponding project file. For example, if a source file my_unit.ads
+    contains a visible subprogram Proc, then the corresponding unit test will be
+    found in file <object-dir>/gnattest/tests/my_unit-test_data-tests.adb and
+    will be called Test_Proc_<code>. <code> is a signature encoding used to
+    differentiate test names in case of overloading. The
+    :switch:`--tests-dir`, :switch:`--subdirs` and :switch:`--tests-root`
+    switches select other locations.
 
     Note that if the project already has both my_unit.ads and my_unit-test_data.ads,
     this will cause a name conflict with the generated test package.
@@ -205,27 +244,51 @@ Switches for ``gnattest`` in framework generation mode
   .. index:: --strict (gnattest)
 
 :switch:`--strict`
-  Return error exit code if there are any compilation errors.
+  Return a failure exit status if ``gnattest`` failed to process one of the
+  argument sources, either because the source has diagnostics when it is
+  analyzed, or because an error occurred while generating its test package,
+  its stub or its instrumented version. Without this switch, ``gnattest``
+  reports such failures and skips the offending sources.
+
+  ``--strict`` also makes ``gnattest`` print the exception name and a symbolic
+  traceback for each of those failures, which is useful when reporting a bug.
 
 
   .. index:: -q (gnattest)
 
-:switch:`-q`
+:switch:`-q, --quiet`
   Quiet mode: suppresses noncritical output messages.
 
 
   .. index:: -v (gnattest)
 
-:switch:`-v`
-  Verbose mode: produces additional output about the execution of the tool.
-  When specified alone on the command line, prints tool version and exits.
+:switch:`-v, --verbose`
+  Verbose mode: produces additional output about the execution of the tool,
+  starting with the tool version banner. Note that this does not stop
+  ``gnattest`` from running; use :switch:`--version` to print the version and
+  exit.
+
+
+  .. index:: --version (gnattest)
+
+:switch:`--version`
+  Print the tool version and exit.
+
+
+  .. index:: --help (gnattest)
+
+:switch:`--help`
+  Print a usage summary and exit.
 
 
   .. index:: -U (gnattest)
   .. index:: -r (gnattest)
 
 :switch:`-r, -U`
-  Recursively considers all sources from all projects.
+  Process all the sources visible from the root project, that is to say its own
+  sources plus those of the projects it imports. This overrides the default
+  selection based on the project's mains; see
+  :ref:`Selecting_the_Sources_to_Process`.
 
 
   .. index:: -U (gnattest)
@@ -294,6 +357,8 @@ Switches for ``gnattest`` in framework generation mode
   Generates a separate test driver for each test or unit under test, rather
   than a single executable incorporating all tests. ``val`` can be "unit" or
   "test", or may be omitted, which defaults to "unit".
+
+  ``--separate-drivers=test`` is not supported on light runtime profiles.
 
 
   .. index:: --stub (gnattest)
@@ -370,7 +435,7 @@ Switches for ``gnattest`` in framework generation mode
   corresponding spec files, one per line.
 
 
-:switch:`--exclude-from-stubbing:{spec}={filename}`
+:switch:`--exclude-from-stubbing={spec}:{filename}`
   Same as above, but corresponding units will not be stubbed only when testing
   unit whose specification is declared in specified ``spec`` file.
 
@@ -381,14 +446,14 @@ Switches for ``gnattest`` in framework generation mode
   Enables stubbing of units listed in ``filename``. The file should contain
   corresponding spec files, one per line.
 
-:switch:`--include-for-stubbing:{spec}={filename}`
+:switch:`--include-for-stubbing={spec}:{filename}`
   Same as above, but corresponding units will be stubbed only when testing unit
   whose specification is declared in specified ``spec`` file.
 
-Note: in case of using both include-for-stubbing and excluded-from-stubbing,
+Note: in case of using both include-for-stubbing and exclude-from-stubbing,
 local configuration will override the global configuration, e.g. if one unit
 is excluded by default from stubbing, and then included for a specific unit by
-using the {spec}={filename} variant, then it shall be included for this specific
+using the {spec}:{filename} variant, then it shall be included for this specific
 unit.
 
 gnattest rejects cases of using both options with the same granularity level.
@@ -469,12 +534,61 @@ gnattest rejects cases of using both options with the same granularity level.
   .. index:: --reporter (gnattest)
 
 :switch:`--reporter={val}`
-  Use specified reporter in the test driver. ``val`` is expected to be a name
-  of child package of AUnit.Reporter. Test drivers generated with non-default
-  reporter specified cannot be properly processed by test execution mode of ``gnattest``.
+  Use the specified reporter to output the test results. ``val`` must be one of
+  ``gnattest`` (the default), ``text``, ``xml`` or ``junit``; any other value is
+  rejected. The deprecated value ``xml_deprecated`` selects the legacy XML
+  output and emits a warning; use ``xml`` instead.
+
+  The ``xml`` and ``junit`` reporters need the name of the tested subprogram in
+  their output, so they imply :switch:`--include-subp-name`.
+
+  This switch has **no effect** when combined with :switch:`--stub` or
+  :switch:`--separate-drivers`, and ``gnattest`` emits a warning saying so.
+  Since the :ref:`test execution mode <Test_Execution_Mode>` only applies to
+  the individual test drivers produced by those two switches, the test drivers
+  it runs always use the default reporter.
 
 
 :switch:`--tests-root`, :switch:`--subdirs` and :switch:`--tests-dir` switches are mutually exclusive.
+
+
+.. _Selecting_the_Sources_to_Process:
+
+Selecting the sources to process
+--------------------------------
+
+The set of sources ``gnattest`` processes is determined as follows.
+
+If one or more file names are given on the command line, or with one or more
+:switch:`-files={filename}` switches, only those sources are processed.
+
+Otherwise, the sources are taken from the project, and the selection depends on
+whether the root project defines mains:
+
+* if the root project has at least one ``Main`` and all of its mains are Ada
+  sources, only the units in the **closure of those mains** are processed;
+
+* otherwise, all the sources visible from the root project, that is to say its
+  own sources plus those of the projects it imports, are processed. Sources
+  belonging to externally built projects are never processed.
+
+Note in particular that, for a project that defines a ``Main``, the default is
+*not* to process every source of the project: units that the main does not
+depend on are left out. Use :switch:`-U` to process them as well.
+
+The following switches change this selection:
+
+* :switch:`-U` processes all the sources visible from the root project,
+  regardless of any ``Main`` the project may define.
+
+* :switch:`-U {source_file}` processes the closure of ``source_file``. Note
+  that this switch expects a source file name, not an Ada unit name.
+
+* :switch:`--no-subprojects` processes only the sources of the root project,
+  leaving out those of the imported projects.
+
+* :switch:`--ignore={filename}` removes from the selection the sources listed
+  in ``filename``, whichever way the selection was made.
 
 
 .. _Switches_for_gnattest_in_test_execution_mode:
@@ -561,11 +675,32 @@ package ``Gnattest``. Here is the list of attributes:
 * ``Stub_Exclusion_List ("spec")``
      is used to specify the file with list of units whose bodies should not
      be stubbed when testing "spec", otherwise specified by
-     ``--exclude-from-stubbing:spec=filename``.
+     ``--exclude-from-stubbing=spec:filename``.
 
 Each of those attributes can be overridden from the command line if needed.
-Other ``gnattest`` switches can also be passed via the project
-file as an attribute list called ``Gnattest_Switches``.
+
+Other ``gnattest`` switches can be passed via the project file using the two
+following attributes, both of which take a list of switches:
+
+* ``Default_Switches``
+     switches to pass to every ``gnattest`` invocation on this project.
+
+* ``Switches ("source_file")``
+     switches to pass to ``gnattest`` when it is invoked on ``source_file``.
+     This attribute is only taken into account when exactly one file name is
+     given on the command line, and, when it applies, it **replaces**
+     ``Default_Switches`` rather than adding to it.
+
+For instance:
+
+  ::
+
+      project My_Project is
+         package Gnattest is
+            for Default_Switches use ("--passed-tests=hide", "--exit-status=on");
+            for Switches ("tricky_unit.ads") use ("--exit-status=on", "--omit-sloc");
+         end Gnattest;
+      end My_Project;
 
 
 .. _Simple_gnattest_Example:
@@ -1019,13 +1154,36 @@ Integration with GNATcoverage
 In addition to the harness, ``gnattest`` generates a Makefile. This Makefile
 provides targets for building the test drivers and also the targets for
 computing the coverage information using GNATcoverage framework when this
-coverage analysis tool is available. The target ``coverage`` fully automates
-the process: it will first build all test drivers, then run them under
-GNATcoverage, analyze individual trace files, and finally aggregate them:
+coverage analysis tool is available.
+
+The target ``coverage`` fully automates the process using **source traces**:
+it instruments the test driver projects with ``gnatcov instrument``, builds
+them against the instrumented sources, runs them, turns each resulting source
+trace into a checkpoint and finally consolidates the checkpoints into a
+report:
 
   ::
 
       make coverage
+
+The Makefile also provides the following targets:
+
+* ``all``
+     builds all the test drivers, without any coverage instrumentation.
+
+* ``instrument-all``
+     runs ``gnatcov instrument`` on all the test driver projects, without
+     building them.
+
+* ``instr-build-all``
+     same, and builds the instrumented drivers.
+
+* ``clean``
+     runs ``gprclean`` on every test driver project and removes the trace files.
+
+The switches passed to the various ``gnatcov`` commands are held in
+``coverage_settings.mk``, which is generated once and then owned by the user;
+see :ref:`Harness_Structure`.
 
 For more details about using GNATtest with GNATcoverage see :ref:`Integration_Part`.
 
@@ -1040,23 +1198,57 @@ for, and in particular which ones are *regenerated* on every run versus
 harness and for deciding what to put under version control.
 
 The artifacts fall into two broad families: the **harness** (the test driver
-infrastructure) and the **test code** (the skeletons you fill in). A typical
-layout, using the default object-directory locations, looks like this::
+infrastructure) and the **test code** (the skeletons you fill in). With the
+default object-directory locations and a single test driver, the layout looks
+like this, where ``<u>`` stands for the name of a unit under test, ``<U>`` for
+its Ada unit name and ``<prj>`` for the name of the project::
 
   <object-dir>/gnattest/
-    harness/                       <- test driver infrastructure
-      test_driver.gpr              regenerated   project to build/run the driver
-      gnattest_common.gpr          created once  shared build options (user-owned)
-      test_runner.adb              regenerated   driver main
-      suite_*.ad[bs]               regenerated   AUnit suite aggregation
-      Makefile                     regenerated   GNATcoverage integration driver
-      coverage_settings.mk         created once  gnatcov switches (user-owned)
-      units.list                   regenerated   unit(s) under test, per driver
-      test_drivers.list            regenerated   list of driver executables
-    tests/                         <- test code
-      <u>-test_data.ad[bs]         body owned    Set_Up / Tear_Down
-      <u>-test_data-tests.ads      regenerated   test package spec
-      <u>-test_data-tests.adb      owned         your test routine bodies
+    harness/                             <- test driver infrastructure
+      test_driver.gpr                    regenerated   project to build/run the driver
+      test_<prj>.gpr                     regenerated   project compiling the test skeletons
+      gnattest_common.gpr                created once  shared build options (user-owned)
+      test_runner.adb                    regenerated   driver main
+      gnattest_main_suite.ad[bs]         regenerated   top-level AUnit suite
+      <u>-test_data-tests-suite.ad[bs]   regenerated   per-unit AUnit suite
+
+      common/
+        gnattest_generated.ads           regenerated   support unit shared by the drivers
+        gnattest_generated-persistent.ad[bs]
+                                         created once  setup/teardown shared by the drivers (user owned)
+      gnattest.xml                       regenerated   test/source mapping file
+      suppress.adc,                      created once  global configuration pragmas (user owned)
+        suppress_no_ghost.adc
+      preprocessor.def                   regenerated   preprocessor symbol definitions
+      .gnattest-config.json              regenerated   internal harness configuration
+      Makefile                           regenerated   GNATcoverage integration driver
+      coverage_settings.mk               created once  gnatcov switches (user-owned)
+    tests/                               <- test code
+      <u>-test_data.ad[bs]               owned         Set_Up / Tear_Down, fixture type
+      <u>-test_data-tests.ads            regenerated   test package spec
+      <u>-test_data-tests.adb            owned         your test routine bodies
+
+With ``--separate-drivers`` (and hence with ``--stub``), the per-driver files
+move into one subdirectory per unit, or per test, under test, and two more
+files appear at the top of the harness directory::
+
+  <object-dir>/gnattest/
+    harness/
+      <U>.Test_Data.Tests/             <- one such directory per driver
+        test_driver.gpr                regenerated   project to build/run this driver
+        <u>-test_data-tests-suite-test_runner.adb
+                                       regenerated   this driver's main
+        <u>-test_data-tests-suite.ad[bs]
+                                       regenerated   this driver's AUnit suite
+        units.list                     regenerated   unit under test, for gnatcov
+      test_drivers.gpr                 regenerated   aggregate project building them all
+      test_drivers.list                regenerated   list of driver executables
+      ...                              the files listed above, except test_driver.gpr,
+                                       test_runner.adb and the suite units
+
+Only the files described in the next section have a stable interest for the
+user; the others are internal to the harness, regenerated on every run, and
+should not be edited.
 
 Responsibilities of the harness components
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1076,9 +1268,21 @@ Responsibilities of the harness components
     :ref:`gnattest_spark_instrument` for using it to pass a configuration pragma
     file for SPARK code.
 
-* *test_runner* and *suite_\** files
-    The generated main and the AUnit suite-aggregation packages. They are fully
-    automatic, regenerated on every run, and should not be edited.
+* *test_runner* and the suite units
+    The generated main (:file:`test_runner.adb`, or
+    :file:`<u>-test_data-tests-suite-test_runner.adb` with separate drivers)
+    and the AUnit suite-aggregation packages (:file:`gnattest_main_suite.ad[bs]`
+    and :file:`<u>-test_data-tests-suite.ad[bs]`). They are fully automatic,
+    regenerated on every run, and should not be edited.
+
+* *test_drivers.gpr*
+    An aggregate project, generated with ``--separate-drivers``, that builds all
+    the individual test driver projects at once. Regenerated on every run.
+
+* *gnattest.xml*
+    The mapping between the sources under test and the generated test
+    artifacts, used by IDEs to navigate between a subprogram and its tests.
+    Regenerated on every run.
 
 * *Makefile*
     Automates the production of a coverage report with GNATcoverage (see
@@ -1094,15 +1298,17 @@ Responsibilities of the harness components
     :ref:`Gnattest_Makefile` for details.
 
 * *units.list*
-    Generated alongside each ``test_driver.gpr`` (with separate drivers); lists
-    the unit under test so that ``gnatcov`` can be told which unit is of interest
-    and avoid incidental coverage. Regenerated on every run.
+    Generated alongside each ``test_driver.gpr``, and therefore only with
+    separate drivers; lists the unit under test so that ``gnatcov`` can be told
+    which unit is of interest and avoid incidental coverage. Regenerated on
+    every run.
 
 * *test_drivers.list*
     The list of test driver executables consumed by the
-    :ref:`test execution mode <Test_Execution_Mode>`. It is generated
-    automatically but may be hand-edited to add or remove tests; it is also safe
-    to let ``gnattest`` regenerate it.
+    :ref:`test execution mode <Test_Execution_Mode>`. Like ``units.list`` it is
+    only generated with separate drivers, since that mode is what the test
+    execution mode runs. It is generated automatically but may be hand-edited to
+    add or remove tests; it is also safe to let ``gnattest`` regenerate it.
 
 Files the user is expected to modify
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1140,7 +1346,19 @@ under version control:
      - No (created once)
      - Yes
      - Yes
-   * - ``test_runner``, ``suite_*``
+   * - ``gnattest_generated-persistent.ad[bs]``
+     - No (created once)
+     - Yes
+     - Yes
+   * - ``test_runner``, suite units
+     - Yes
+     - No
+     - No
+   * - ``test_drivers.gpr`` (separate drivers)
+     - Yes
+     - No
+     - No
+   * - ``gnattest.xml``
      - Yes
      - No
      - No
@@ -1152,11 +1370,11 @@ under version control:
      - No (created once)
      - Yes
      - Yes (with GNATcov integration)
-   * - ``units.list``
+   * - ``units.list`` (separate drivers)
      - Yes
      - No
      - No
-   * - ``test_drivers.list``
+   * - ``test_drivers.list`` (separate drivers)
      - Yes
      - Yes (optional)
      - Optional
@@ -1165,9 +1383,9 @@ under version control:
      - Yes
      - Yes
    * - ``*-test_data.ads``
+     - No (preserved)
      - Yes
-     - No
-     - No
+     - Yes
    * - ``*-test_data-tests.adb``
      - No (preserved)
      - Yes
@@ -1192,10 +1410,17 @@ of code, test skeletons and harness. With the exception of the two user-owned
 files noted below, the harness is generated completely automatically each time,
 does not require manual changes and therefore should not be put under version
 control.
-It makes sense to put under version control files containing test data packages
-bodies, and files containing bodies of test packages. Note that
-test package specs, as well as test data packages specs, are also generated
-automatically each time and should not be put under version control.
+It makes sense to put under version control the test data packages, both their
+specs and their bodies, and the bodies of the test packages. Note that the test
+package specs (:file:`*-test_data-tests.ads`) are the only part of the test code
+that is regenerated on every run, and should not be put under version control.
+
+Test data package specs (:file:`*-test_data.ads`) are created once and never
+overwritten afterwards, except for the sections surrounded by ``read only``
+markers. They are meant to be edited, since this is where the components of the
+test fixture type are declared (see
+:ref:`Setting_Up_and_Tearing_Down_the_Testing_Environment`), so they belong
+under version control together with their bodies.
 
 Additionally, if stubbing is enabled with ``--stub``, it also makes sense to
 put the stubbed bodies, as well as the stub-data bodies under source control,
@@ -1338,20 +1563,42 @@ copy and modify it, and feed the modified mapping to GNATtest using the
 Supported types
 """""""""""""""
 
-``gnattest`` can natively generate test cases for any type unless any of the
-following are true:
+``gnattest`` can natively generate test cases for a subprogram when it can
+generate a value for every one of its parameters, and for the global inputs
+listed in its ``Global`` aspect, if it has one. Note that this applies to
+parameters of *every* mode, ``out`` parameters included: ``gnattest`` needs a
+representation of the type in order to marshall the value back, so an
+unsupported type disables generation for the subprogram whichever mode it
+appears in.
 
-1. Any of the subprogram's "in" or "in out" mode parameters are of an
-   Access type or contain a sub-component of an Access type.
-2. Any of the subprogram's "in" or "in out" mode parameters are Subprogram
-   Access Types.
-3. Any of the subprogram's "in" or "in out" mode parameters are Limited types.
-4. Any of the subprogram's "in" or "out" mode parameters are tagged types.
-5. Any of the subprogram's "in" or "out" mode parameters is a private type of
-   a nested package.
+A type is not natively supported when it is, or has a subcomponent that is,
+one of the following:
+
+* an access type, including a subprogram access type;
+* a class-wide type, or a type derived from an abstract type;
+* an anonymous array or anonymous access type;
+* a private type declared in a nested package;
+* a type derived from a private type that is unconstrained;
+* a generic formal type;
+* a type declared in a generic package instantiation that is a library item;
+* a task type or a protected type;
+* ``System.Address``;
+* an array type whose number of elements exceeds the configured array size
+  limit, which defaults to 1000 and can be changed with the
+  ``TGEN_ARRAY_LIMIT`` environment variable.
+
+Note that concrete tagged types and limited types are supported.
+
+``gnattest`` reports the reason why it cannot generate values for a given
+parameter, so the diagnostics it prints are the authoritative answer for a
+given subprogram. For instance:
+
+  ::
+
+      pkg.print_acc.A: pkg.int_acc is not supported (Access types are not supported)
 
 For types not respecting the above restrictions, it is possible to generate
-test inputs using a :ref:`proxy generation function<proxy_generation>`
+test inputs using a :ref:`proxy generation function <proxy_generation>`.
 
 Test input generation strategies
 """"""""""""""""""""""""""""""""
@@ -1359,9 +1606,18 @@ Test input generation strategies
 Input value generation currently follows a simple strategy for each input
 parameter of the subprogram under test. Parameters of scalar types, and scalar
 components of composite types have their values uniformly generated. For
-unconstrained array types, a length is randomly chosen between 0 and 10
-elements, then the low bound is randomly chosen and the high bound computed
+unconstrained array types, a total number of elements is randomly chosen
+between 0 and 10 for each dimension, with thus an upper limit of ``10 ** n``
+elements, where ``n`` is the number of dimensions of the array (so between 0
+and 10 elements for the common case of a one-dimensional array), then, for each
+dimension, the low bound is randomly chosen and the high bound computed
 accordingly to those two first points.
+
+Independently of this, the marshallers refuse to read back an array with more
+than 1000 elements per dimension, to avoid allocating overly large arrays on
+the stack. This limit can be changed through the ``TGEN_ARRAY_LIMIT``
+environment variable; array types whose number of elements is statically known
+to exceed this value (all dimensions combined) are reported as unsupported.
 
 For record discriminants, different strategies are chosen depending on the use
 of the discriminant within the record: If the discriminant constraints a array
@@ -1413,10 +1669,30 @@ A proxy subprogram can be designated explicitly, by using the ``TGen_Proxy =>
 <Proxy Name>`` aspect on the type definition, or gnattest can automatically
 identify one for types that are not natively supported.
 
-When searching for a proxy subprogram, GNATtest will inspect first the unit in
-which the target type is declared, then, if enabled through
-``--detect-tgen-proxies``, the entire codebase. This switch can also be used to
-disable automatic proxy subprogram detection.
+The ``--detect-tgen-proxies={policy}`` switch controls how far GNATtest looks
+when automatically identifying a proxy for a type that is not natively
+supported. ``policy`` must be one of:
+
+* ``none``
+     no automatic search is performed at all. Only the proxies designated
+     explicitly with the ``TGen_Proxy`` aspect are used.
+
+* ``unit`` (the default)
+     only the unit in which the target type is declared is searched.
+
+* ``all_refs``
+     the unit in which the target type is declared is searched first; if that
+     yields nothing, GNATtest then inspects the references to the target type
+     across the units of the project to find a suitable proxy function.
+
+Note that this switch has no effect on proxies designated explicitly with the
+``TGen_Proxy`` aspect, which are always honored.
+
+A proxy cannot be used for every unsupported type. Types for which no
+type-compatible helper subprogram can be declared, namely anonymous array and
+access types, generic formal types, private types declared in a nested package,
+and types declared in a library-level generic package instantiation, are
+rejected regardless of any proxy.
 
 Once a proxy is defined for a given type, GNATtest will generate test inputs
 for the proxy. These test inputs are written to the serialized test files. When

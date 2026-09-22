@@ -1,0 +1,6 @@
+description:
+    Check that --separate-drivers, given without a value, generates one test
+    driver per unit under test, as --separate-drivers=unit does. This used to
+    silently fall back to a single monolithic driver.
+
+driver: python_script

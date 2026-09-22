@@ -805,6 +805,7 @@ package body Test.Setup is
             Opts.Prefix :=
               To_Unbounded_String (Compiler_Install_Prefix (Opts));
          end if;
+         Build.Save_Temps := Arg (Cmd, Save_Temps);
 
          Profile :=
            (if Opts.Profile = Auto
@@ -903,7 +904,9 @@ package body Test.Setup is
 
          --  Remove Tool_Temp_Dir
 
-         Utils.Environment.Clean_Up;
+         if not Build.Save_Temps then
+            Utils.Environment.Clean_Up;
+         end if;
       end;
    end Run;
 

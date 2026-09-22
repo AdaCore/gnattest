@@ -1008,19 +1008,28 @@ package body Utils.Command_Lines is
                   --  or:
                   --
                   --     command --switch
-                  --     (where the syntax is '?' and the arg is defaulted).
+                  --     (where the syntax is '?', so the parameter is
+                  --     optional).
 
                   if Text = Allowed then
                      if Syntax (Descriptor, Switch) = '?' then
-                        goto Use_Default;
-                     end if;
 
-                     Bump;
-                     First := 1;
+                        --  The switch was given without a parameter. Record an
+                        --  empty parameter, so that the switch is still seen
+                        --  as present: leaving the default value in place
+                        --  would make "--switch" indistinguishable from the
+                        --  switch being absent altogether.
 
-                     if Cur > Text_Args.Last_Index then
-                        Raise_Cmd_Error
-                          ("missing switch parameter for: " & Text);
+                        First := Allowed'Length + 1;
+
+                     else
+                        Bump;
+                        First := 1;
+
+                        if Cur > Text_Args.Last_Index then
+                           Raise_Cmd_Error
+                             ("missing switch parameter for: " & Text);
+                        end if;
                      end if;
 
                   --  The case of:
@@ -1095,8 +1104,6 @@ package body Utils.Command_Lines is
                            raise Program_Error;
                      end case;
                   end;
-
-                  <<Use_Default>>
                end;
          end case;
       end Parse_One_Switch;
