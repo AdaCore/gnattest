@@ -1545,7 +1545,7 @@ The number of generated test cases can be configured through the
 As mentioned in section :ref:`Tgen_Env`, test input generation requires
 executing code to determine some of the characteristics of the types at hand.
 This means that for both native and cross targets, a GNAT Pro toolchain for the
-corresponding target must be available in the environment. 
+corresponding target must be available in the environment.
 
 For cross targets, the test input generation harness will be executed through
 GNATemulator. GNATtest may thus compile it against a different runtime than the
@@ -1651,7 +1651,7 @@ switch more than once, unless the goal is to generate additional test inputs.
 Test input generation through a proxy subprogram
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-It is possible to assign to each type, even those not natively supported, a 
+It is possible to assign to each type, even those not natively supported, a
 *proxy function*, which GNATtest will use every time it need to generate a
 value for the return type of the proxy function. For a given type ``T``, a
 subprogram is eligible to be the proxy of ``T`` if it meets the following
@@ -1664,7 +1664,7 @@ conditions:
   or have a proxy subprogram themselves;
 * The proxy subprogram must be visible from the package in which ``T`` is
   declared.
- 
+
 A proxy subprogram can be designated explicitly, by using the ``TGen_Proxy =>
 <Proxy Name>`` aspect on the type definition, or gnattest can automatically
 identify one for types that are not natively supported.
