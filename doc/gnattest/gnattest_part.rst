@@ -374,6 +374,19 @@ Switches for ``gnattest`` in framework generation mode
   Used along --stub, indicates gnattest to generate stubs for all the packages
   that are withed by the stubbed units, recursively.
 
+  .. index:: --external-stub (gnattest)
+
+:switch:`--external-stub`
+  Enable external stubbing: When a spec file is stubbed, subprogram
+  declarations with an `Import` pragma or aspect are stubbed like regular
+  subprograms. *This is the default behavior*.
+
+  .. index:: --no-external-stub (gnattest)
+
+:switch:`--no-external-stub`
+  Disable external stubbing.
+
+
 
   .. index:: --harness-dir (gnattest)
 
@@ -1121,11 +1134,10 @@ For each package under consideration all the packages it is directly depending
 on are stubbed, excluding the generic packages and package instantiations.
 The stubs are shared for each package under test. The specs of packages to stub
 remain intact, while their bodies are replaced, and hide the original bodies by
-means of extending projects. Also, for each stubbed
-package, a child package with setter routines for each subprogram declaration
-is created. These setters are meant to be used to set the behavior of
-stubbed subprograms from within test cases.
-
+means of extending projects. Also, for each stubbed package, a child package
+with setter routines for each subprogram declaration is created. These setters
+are meant to be used to set the behavior of stubbed subprograms from within
+test cases.
 Note that subprograms belonging to the same package as the subprogram under
 test are not stubbed. This guarantees that the sources being tested are
 exactly the sources used for production, which is an important property for
@@ -1144,6 +1156,17 @@ test.
    ``simple_stubbing`` and ``advanced_stubbing`` provided
    under :file:`<install_prefix>/share/examples/gnattest` before
    attempting to use this powerful feature.
+
+.. _External_Stubbing:
+
+External Stubbing
+^^^^^^^^^^^^^^^^^
+
+When a subprogram in a stubbed unit happens to be *imported* (via an
+``Import`` aspect or pragma, or a legacy ``interface`` pragma), gnattest also
+replaces the spec file to remove the said aspect or pragma, and creates a stub
+subprogram for it. This can be disabled using the ``--no-external-stub``
+flag.
 
 
 .. _Gnatcov_Integration:
