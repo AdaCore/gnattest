@@ -72,12 +72,20 @@ package TGen.Types is
       Supports_Wrappers : Boolean := True;
       --  Whether the type supports wrapper generation.
 
+      Wrapper_Not_Supported_Reason : Unbounded_String := Null_Unbounded_String;
+      --  Reason why wrappers are not supported. Empty when wrapper generation
+      --  is supported.
+
    end record
    with
      Dynamic_Predicate =>
        --  A top level generic instantiation is a generic itself
        --  (Top_Level_Generic implies Is_Generic).
-       (if Top_Level_Generic then Top_Level_Generic and Is_Generic else True);
+       (if Top_Level_Generic then Top_Level_Generic and Is_Generic else True)
+       and
+         (if Supports_Wrappers
+          then Wrapper_Not_Supported_Reason = Null_Unbounded_String
+          else Wrapper_Not_Supported_Reason /= Null_Unbounded_String);
 
    type Typ_Kind is
      (Invalid_Kind,

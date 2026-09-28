@@ -4687,7 +4687,9 @@ package body TGen.Types.Translation is
                 (To_Unbounded_Text (To_Text ("Pre")))
                 .Value;
          begin
-            F_Typ.Supports_Wrappers := TGen.Wrappers.Is_Expr_Supported (A);
+            F_Typ.Supports_Wrappers :=
+              TGen.Wrappers.Is_Expr_Supported
+                (A, F_Typ.Wrapper_Not_Supported_Reason);
          end;
       end if;
 

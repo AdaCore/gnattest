@@ -2360,11 +2360,14 @@ package body TGen.Libgen is
    -- Supports_Wrappers --
    -----------------------
 
-   function Supports_Wrappers (Subp : LAL.Basic_Decl'Class) return Boolean is
+   function Supports_Wrappers
+     (Subp : LAL.Basic_Decl'Class; Reason : out Unbounded_String)
+      return Boolean
+   is
       A : constant Libadalang.Analysis.Expr'Class :=
         Subp.P_Get_Aspect (To_Unbounded_Text (To_Text ("Pre"))).Value;
    begin
-      return A.Is_Null or else TGen.Wrappers.Is_Expr_Supported (A);
+      return A.Is_Null or else TGen.Wrappers.Is_Expr_Supported (A, Reason);
    end Supports_Wrappers;
 
 end TGen.Libgen;

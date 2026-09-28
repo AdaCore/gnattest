@@ -49,8 +49,11 @@ package TGen.Wrappers is
    function "<" (L, R : Subp_Information) return Boolean
    is (L.UID < R.UID);
 
-   function Is_Expr_Supported (E : Expr'Class) return Boolean;
+   function Is_Expr_Supported
+     (E : Expr'Class; Reason : out Unbounded_String) return Boolean;
    --  Return if the expression `E` is suitable for wrapper generation.
+   --  If the expression is not supported, a `Reason` is set. The reason is
+   --  set to an empty string otherwise.
 
    procedure Generate_Wrapper_For_Subprogram
      (F_Spec, F_Body     : File_Type;
