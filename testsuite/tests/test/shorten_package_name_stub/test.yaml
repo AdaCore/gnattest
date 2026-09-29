@@ -1,0 +1,5 @@
+description:
+    Check that --shorten-package also shortens the files and directories
+    generated in stub mode, and that the resulting harness builds.
+
+driver: python_script

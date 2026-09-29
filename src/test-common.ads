@@ -77,6 +77,52 @@ package Test.Common is
 
    subtype Unbounded_String_Vector is Unbounded_String_Vectors.Vector;
 
+   type Naming_Owner is (Skeleton_Unit, Harness_Unit);
+   --  Which part of GNATtest generated a unit, and thus which project
+   --  (test_<project>.gpr or the harness test_driver.gpr) holds its sources
+   --  in the default, non-separate drivers mode.
+
+   type Unit_Naming_Info is record
+      File_Stem : Unbounded_String;
+      Owner     : Naming_Owner;
+      Has_Spec  : Boolean;
+      Has_Body  : Boolean;
+   end record;
+
+   package Unit_Naming_Maps is new
+     Ada.Containers.Indefinite_Ordered_Maps (String, Unit_Naming_Info);
+
+   Unit_Naming_Map : Unit_Naming_Maps.Map;
+   --  Maps a full Ada unit name to the shortened file-name stem GNATtest
+   --  actually used for it, for every unit that Shorten_Name shortened.
+   --  Used by every generated project that needs a `package Naming`
+   --  override for such a unit.
+
+   procedure Register_Short_Name
+     (Full_Name       : String;
+      Short_File_Stem : String;
+      Owner           : Naming_Owner;
+      Has_Spec        : Boolean := True;
+      Has_Body        : Boolean := True);
+   --  Associate Full_Name to Short_File_Stem in Unit_Naming_Map, unless
+   --  Short_File_Stem is the default file name of Full_Name, in which case
+   --  no naming exception is needed. Has_Spec/Has_Body indicate whether
+   --  Full_Name actually has a spec/body file, so Put_Unit_Naming_Map does
+   --  not emit an exception for a file that was never created.
+
+   function Has_Unit_Naming (Owner : Naming_Owner) return Boolean;
+   function Has_Unit_Naming (Unit_Prefix : String) return Boolean;
+   --  Whether the corresponding Put_Unit_Naming_Map would output anything
+
+   procedure Put_Unit_Naming_Map (Owner : Naming_Owner);
+   --  Outputs the "for Body" and "for Spec" attributes, to be put inside a
+   --  project's package Naming, for each entry of Unit_Naming_Map
+   --  registered by Owner.
+
+   procedure Put_Unit_Naming_Map (Unit_Prefix : String);
+   --  Same, for each entry whose unit is Unit_Prefix or one of its children
+   --  (whatever its owner).
+
    function Mangle_Hash_Full
      (Subp           : Ada_Node'Class;
       Case_Sensitive : Boolean := False;

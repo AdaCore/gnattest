@@ -195,12 +195,6 @@ package body Test.Skeleton is
      Ada.Containers.Indefinite_Ordered_Maps (String, Natural);
    use Name_Frequency;
 
-   package Package_Mapping is new
-     Ada.Containers.Indefinite_Ordered_Maps (String, String);
-   use Package_Mapping;
-
-   Package_Name_Mapping : Package_Mapping.Map;
-
    type Data_Holder (Data_Kind : Data_Kind_Type := Declaration_Data) is record
 
       Unit : Compilation_Unit;
@@ -3780,6 +3774,12 @@ package body Test.Skeleton is
               & S_Suffix;
          begin
             if Data.Unit_Full_Name.all /= S then
+               Test.Common.Register_Short_Name
+                 (S_Pack,
+                  Unit_To_File_Name (S_Pack_File),
+                  Skeleton_Unit,
+                  Has_Body => False);
+
                Create
                  (Output_Dir
                   & Dir_Sep
@@ -3813,6 +3813,12 @@ package body Test.Skeleton is
             F_Type    : File_Type;
 
          begin
+            Test.Common.Register_Short_Name
+              (Data.Unit_Full_Name.all,
+               Unit_To_File_Name (Data.Unit_Short_Name.all),
+               Skeleton_Unit,
+               Has_Body => False);
+
             if Create (+File_Name).Is_Readable then
                return;
             end if;
@@ -4235,7 +4241,8 @@ package body Test.Skeleton is
                  & Current_Type.Main_Type_Text_Name.all
                  & Test_Data_Unit_Name_Suff));
 
-         Package_Name_Mapping.Insert (Data_Unit_Name.all, Test_File_Name.all);
+         Test.Common.Register_Short_Name
+           (Data_Unit_Name.all, Test_File_Name.all, Skeleton_Unit);
 
          --  saving test data package name for further reference
          Test_Data_Package_Name := new String'(Data_Unit_Name.all);
@@ -4797,7 +4804,6 @@ package body Test.Skeleton is
                  & Test_Unit_Name_Suff));
 
          Free (Short_Pref);
-         Package_Name_Mapping.Insert (Unit_Name.all, Test_File_Name.all);
 
          ----------------------------------
          --  Creating test package spec  --
@@ -4918,6 +4924,12 @@ package body Test.Skeleton is
                Subp_Data_List.Next (Subp_Cur);
             end loop;
          end if;
+
+         Test.Common.Register_Short_Name
+           (Unit_Name.all,
+            Test_File_Name.all,
+            Skeleton_Unit,
+            Has_Body => Actual_Test);
 
          if Stub_Mode_ON then
             S_Put_Line
@@ -5645,7 +5657,8 @@ package body Test.Skeleton is
            new String'
              (Unit_To_File_Name (Data.Unit_Short_Name.all & Package_Base.all));
 
-         Package_Name_Mapping.Insert (Data_Unit_Name.all, Test_File_Name.all);
+         Test.Common.Register_Short_Name
+           (Data_Unit_Name.all, Test_File_Name.all, Skeleton_Unit);
 
          Free (Package_Base);
 
@@ -5883,7 +5896,6 @@ package body Test.Skeleton is
          Test_File_Name :=
            new String'
              (Unit_To_File_Name (Data.Unit_Short_Name.all & Package_Base.all));
-         Package_Name_Mapping.Insert (Unit_Name.all, Test_File_Name.all);
 
          Free (Package_Base);
          Actual_Test := False;
@@ -5971,6 +5983,12 @@ package body Test.Skeleton is
                Subp_Data_List.Next (Subp_Cur);
             end loop;
          end if;
+
+         Test.Common.Register_Short_Name
+           (Unit_Name.all,
+            Test_File_Name.all,
+            Skeleton_Unit,
+            Has_Body => Actual_Test);
 
          if Stub_Mode_ON then
             S_Put_Line (3, "package Caller is new AUnit.Test_Caller (Test);");
@@ -8841,28 +8859,11 @@ package body Test.Skeleton is
 
       if Body_Suffix.all /= ".adb"
         or else Spec_Suffix.all /= ".ads"
-        or else Shorten_Package
+        or else (Shorten_Package and then Has_Unit_Naming (Skeleton_Unit))
       then
          S_Put_Line (3, "package Naming is");
          if Shorten_Package then
-            for C in Package_Name_Mapping.Iterate loop
-               S_Put_Line
-                 (6,
-                  "for Body ("""
-                  & Key (C)
-                  & """) use """
-                  & Element (C)
-                  & Body_Suffix.all
-                  & """;");
-               S_Put_Line
-                 (6,
-                  "for Spec ("""
-                  & Key (C)
-                  & """) use """
-                  & Element (C)
-                  & Spec_Suffix.all
-                  & """;");
-            end loop;
+            Test.Common.Put_Unit_Naming_Map (Skeleton_Unit);
          end if;
          if Body_Suffix.all /= ".adb" or else Spec_Suffix.all /= ".ads" then
             S_Put_Line

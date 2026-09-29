@@ -54,6 +54,119 @@ package body Test.Common is
    --  According to operator symbols returns their literal names to make the
    --  names of the testing routines correct.
 
+   -------------------------
+   -- Register_Short_Name --
+   -------------------------
+
+   procedure Register_Short_Name
+     (Full_Name       : String;
+      Short_File_Stem : String;
+      Owner           : Naming_Owner;
+      Has_Spec        : Boolean := True;
+      Has_Body        : Boolean := True) is
+   begin
+      if Short_File_Stem /= Unit_To_File_Name (Full_Name) then
+         Unit_Naming_Map.Include
+           (Full_Name,
+            (File_Stem => To_Unbounded_String (Short_File_Stem),
+             Owner     => Owner,
+             Has_Spec  => Has_Spec,
+             Has_Body  => Has_Body));
+      end if;
+   end Register_Short_Name;
+
+   function Is_Unit_Or_Child (Unit_Name, Parent : String) return Boolean
+   is (Unit_Name = Parent
+       or else
+         (Unit_Name'Length > Parent'Length
+          and then
+            Unit_Name (Unit_Name'First .. Unit_Name'First + Parent'Length - 1)
+            = Parent
+          and then Unit_Name (Unit_Name'First + Parent'Length) = '.'));
+   --  Whether Unit_Name is Parent or one of its (possibly nested) children
+
+   procedure Put_Unit_Naming_Entry (C : Unit_Naming_Maps.Cursor);
+   --  Outputs the naming exceptions for the entry pointed to by C
+
+   ---------------------------
+   -- Put_Unit_Naming_Entry --
+   ---------------------------
+
+   procedure Put_Unit_Naming_Entry (C : Unit_Naming_Maps.Cursor) is
+      use Unit_Naming_Maps;
+      Info : constant Unit_Naming_Info := Element (C);
+   begin
+      if Info.Has_Body then
+         S_Put_Line
+           (6,
+            "for Body ("""
+            & Key (C)
+            & """) use """
+            & To_String (Info.File_Stem)
+            & Body_Suffix.all
+            & """;");
+      end if;
+      if Info.Has_Spec then
+         S_Put_Line
+           (6,
+            "for Spec ("""
+            & Key (C)
+            & """) use """
+            & To_String (Info.File_Stem)
+            & Spec_Suffix.all
+            & """;");
+      end if;
+   end Put_Unit_Naming_Entry;
+
+   ---------------------
+   -- Has_Unit_Naming --
+   ---------------------
+
+   function Has_Unit_Naming (Owner : Naming_Owner) return Boolean is
+   begin
+      for Info of Unit_Naming_Map loop
+         if Info.Owner = Owner then
+            return True;
+         end if;
+      end loop;
+      return False;
+   end Has_Unit_Naming;
+
+   function Has_Unit_Naming (Unit_Prefix : String) return Boolean is
+      use Unit_Naming_Maps;
+   begin
+      for C in Unit_Naming_Map.Iterate loop
+         if Is_Unit_Or_Child (Key (C), Unit_Prefix) then
+            return True;
+         end if;
+      end loop;
+      return False;
+   end Has_Unit_Naming;
+
+   -------------------------
+   -- Put_Unit_Naming_Map --
+   -------------------------
+
+   procedure Put_Unit_Naming_Map (Owner : Naming_Owner) is
+      use Unit_Naming_Maps;
+   begin
+      for C in Unit_Naming_Map.Iterate loop
+         if Element (C).Owner = Owner then
+            Put_Unit_Naming_Entry (C);
+         end if;
+      end loop;
+   end Put_Unit_Naming_Map;
+
+   procedure Put_Unit_Naming_Map (Unit_Prefix : String) is
+      use Unit_Naming_Maps;
+   begin
+      for C in Unit_Naming_Map.Iterate loop
+         if Is_Unit_Or_Child (Key (C), Unit_Prefix) then
+            Put_Unit_Naming_Entry (C);
+         end if;
+      end loop;
+   end Put_Unit_Naming_Map;
+
    -----------------
    -- Create_Dirs --
    -----------------
