@@ -1,0 +1,18 @@
+=== harness dirs ===
+A_Very_Lon548c7.Test_Data.Tests
+Dep.Test_Data.Tests
+common
+=== UUT harness files ===
+a_very_lon548c7-test_data-tests-suite-test_runner.adb
+a_very_lon548c7-test_data-tests-suite.adb
+a_very_lon548c7-test_data-tests-suite.ads
+=== UUT test_driver.gpr ===
+   package Naming is
+      for Body ("A_Very_Long_Package_Name.Test_Data") use "a_very_lon548c7-test_data.adb";
+      for Spec ("A_Very_Long_Package_Name.Test_Data") use "a_very_lon548c7-test_data.ads";
+      for Body ("A_Very_Long_Package_Name.Test_Data.Tests") use "a_very_lon548c7-test_data-tests.adb";
+      for Spec ("A_Very_Long_Package_Name.Test_Data.Tests") use "a_very_lon548c7-test_data-tests.ads";
+      for Body ("A_Very_Long_Package_Name.Test_Data.Tests.Suite") use "a_very_lon548c7-test_data-tests-suite.adb";
+      for Spec ("A_Very_Long_Package_Name.Test_Data.Tests.Suite") use "a_very_lon548c7-test_data-tests-suite.ads";
+      for Body ("A_Very_Long_Package_Name.Test_Data.Tests.Suite.Test_Runner") use "a_very_lon548c7-test_data-tests-suite-test_runner.adb";
+   end Naming;

@@ -1,0 +1,6 @@
+description:
+    Check that --shorten-package still produces a buildable harness when a
+    package with no test routine of its own hosts a nested package that does,
+    i.e. GNATtest has to generate a spec-only hosting test package.
+
+driver: python_script

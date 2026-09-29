@@ -24,7 +24,6 @@
 with Ada.Directories;
 with Ada.Characters.Handling; use Ada.Characters.Handling;
 with Ada.Containers;          use Ada.Containers;
-with Ada.Containers.Indefinite_Ordered_Maps;
 with Ada.Containers.Vectors;
 with Ada.Strings;             use Ada.Strings;
 with Ada.Strings.Fixed;       use Ada.Strings.Fixed;
@@ -63,13 +62,6 @@ package body Test.Harness is
    use List_Of_Strings;
    Suit_List : List_Of_Strings.List;
    --  Storing the names of all suits
-
-   package Suite_Name_Mapping_Package is new
-     Ada.Containers.Indefinite_Ordered_Maps (String, String);
-   use Suite_Name_Mapping_Package;
-
-   Suite_Name_Mapping : Suite_Name_Mapping_Package.Map;
-   --  Maps Ada suite package name to the shortened base file name.
 
    type Separate_Project_Info is record
       Name_TD            : String_Access := null;
@@ -1385,28 +1377,11 @@ package body Test.Harness is
 
       if Body_Suffix.all /= ".adb"
         or else Spec_Suffix.all /= ".ads"
-        or else (Shorten_Package and then not Suite_Name_Mapping.Is_Empty)
+        or else (Shorten_Package and then Has_Unit_Naming (Harness_Unit))
       then
          S_Put_Line (3, "package Naming is");
          if Shorten_Package then
-            for C in Suite_Name_Mapping.Iterate loop
-               S_Put_Line
-                 (6,
-                  "for Body ("""
-                  & Key (C)
-                  & """) use """
-                  & Element (C)
-                  & Body_Suffix.all
-                  & """;");
-               S_Put_Line
-                 (6,
-                  "for Spec ("""
-                  & Key (C)
-                  & """) use """
-                  & Element (C)
-                  & Spec_Suffix.all
-                  & """;");
-            end loop;
+            Test.Common.Put_Unit_Naming_Map (Harness_Unit);
          end if;
          if Body_Suffix.all /= ".adb" or else Spec_Suffix.all /= ".ads" then
             S_Put_Line
@@ -1461,8 +1436,10 @@ package body Test.Harness is
               else Common_Suite_Name));
 
       if Data.Test_Unit_Short_Name.all /= Data.Test_Unit_Full_Name.all then
-         Suite_Name_Mapping.Insert
-           (New_Unit_Name.all, Unit_To_File_Name (New_File_Name.all));
+         Test.Common.Register_Short_Name
+           (New_Unit_Name.all,
+            Unit_To_File_Name (New_File_Name.all),
+            Harness_Unit);
       end if;
 
       --  Creating test suite spec
@@ -2086,10 +2063,14 @@ package body Test.Harness is
 
       procedure Process_Test_Package is
          New_Unit_Dir : constant String :=
-           Harness_Dir.all & Data.Test_Unit_Full_Name.all & Dir_Sep;
+           Harness_Dir.all & Data.Test_Unit_Short_Name.all & Dir_Sep;
 
          New_Unit_Name : constant String :=
            (Data.Test_Unit_Full_Name.all & ".Suite.Test_Runner");
+
+         New_File_Name : constant String :=
+           (Data.Test_Unit_Short_Name.all & ".Suite.Test_Runner");
+
       begin
          Trace (Me, "processing package " & Data.Test_Unit_Full_Name.all);
 
@@ -2104,10 +2085,18 @@ package body Test.Harness is
                  ("gnattest: cannot create directory " & New_Unit_Dir);
          end;
 
+         if Data.Test_Unit_Short_Name.all /= Data.Test_Unit_Full_Name.all then
+            Test.Common.Register_Short_Name
+              (New_Unit_Name,
+               Unit_To_File_Name (New_File_Name),
+               Harness_Unit,
+               Has_Spec => False);
+         end if;
+
          --  Creating test driver procedure
          Create
            (New_Unit_Dir
-            & Unit_To_File_Name (New_Unit_Name)
+            & Unit_To_File_Name (New_File_Name)
             & Body_Suffix.all);
 
          Put_Harness_Header;
@@ -2258,7 +2247,7 @@ package body Test.Harness is
          --  with names corresponding to UUTs.
          New_Unit_Dir :=
            new String'
-             (Harness_Dir.all & Data.Test_Unit_Full_Name.all & Dir_Sep);
+             (Harness_Dir.all & Data.Test_Unit_Short_Name.all & Dir_Sep);
 
          declare
             Dir : File_Array_Access;
@@ -2415,19 +2404,20 @@ package body Test.Harness is
          end if;
          Generate_Suite
            (Local_Data_Holder,
-            Harness_Dir.all & Data.Test_Unit_Full_Name.all & Dir_Sep);
+            Harness_Dir.all & Data.Test_Unit_Short_Name.all & Dir_Sep);
          if not Stub_Mode_ON and then Data.Good_For_Substitution then
             Generate_Substitution_Suite_From_Tested
               (Local_Data_Holder,
-               Harness_Dir.all & Data.Test_Unit_Full_Name.all & Dir_Sep);
+               Harness_Dir.all & Data.Test_Unit_Short_Name.all & Dir_Sep);
          end if;
 
          declare
             S1 : constant String_Access :=
               new String'
-                (Harness_Dir.all & Data.Test_Unit_Full_Name.all & Dir_Sep);
+                (Harness_Dir.all & Data.Test_Unit_Short_Name.all & Dir_Sep);
             S2 : constant String_Access :=
-              new String'(Data.Test_Unit_Full_Name.all & ".Suite.Test_Runner");
+              new String'
+                (Data.Test_Unit_Short_Name.all & ".Suite.Test_Runner");
          begin
             --  We may reuse the regular way of gathering data for separate
             --  drivers. Just need to override the names and paths for
@@ -2460,7 +2450,7 @@ package body Test.Harness is
 
          Create
            (Harness_Dir.all
-            & Data.Test_Unit_Full_Name.all
+            & Data.Test_Unit_Short_Name.all
             & Dir_Sep
             & "units.list");
          S_Put (0, Unit_Name);
@@ -2487,7 +2477,7 @@ package body Test.Harness is
 
       Create
         (Harness_Dir.all
-         & Data.Test_Unit_Full_Name.all
+         & Data.Test_Unit_Short_Name.all
          & Dir_Sep
          & "units.list");
       S_Put (0, Unit_Name);
@@ -2565,7 +2555,7 @@ package body Test.Harness is
          --  with names corresponding to UUTs.
          New_Unit_Dir :=
            new String'
-             (Harness_Dir.all & Data.Test_Unit_Full_Name.all & Dir_Sep);
+             (Harness_Dir.all & Data.Test_Unit_Short_Name.all & Dir_Sep);
 
          declare
             Dir : File_Array_Access;
@@ -2880,12 +2870,18 @@ package body Test.Harness is
          S_Put_Line (3, "for Object_Dir use """ & P.Name_TD.all & "_obj"";");
          Put_New_Line;
 
+         if Shorten_Package and then Has_Unit_Naming (P.Test_Data.all) then
+            S_Put_Line (3, "package Naming is");
+            Test.Common.Put_Unit_Naming_Map (P.Test_Data.all);
+            S_Put_Line (3, "end Naming;");
+            Put_New_Line;
+         end if;
+
          S_Put_Line (3, "package Builder renames Gnattest_Common.Builder;");
          S_Put_Line (3, "package Linker renames Gnattest_Common.Linker;");
          S_Put_Line (3, "package Binder renames Gnattest_Common.Binder;");
          S_Put_Line (3, "package Compiler renames Gnattest_Common.Compiler;");
          Put_New_Line;
-
          S_Put (0, "end " & P.Name_TD.all & ";");
          Close_File;
       end loop;
@@ -3351,6 +3347,13 @@ package body Test.Harness is
             end if;
             Put_Unit (Unit => P.Test_Data_Short.all, Last => True);
 
+            Put_New_Line;
+         end if;
+
+         if Shorten_Package and then Has_Unit_Naming (P.Test_Data.all) then
+            S_Put_Line (3, "package Naming is");
+            Test.Common.Put_Unit_Naming_Map (P.Test_Data.all);
+            S_Put_Line (3, "end Naming;");
             Put_New_Line;
          end if;
 
@@ -4680,8 +4683,8 @@ package body Test.Harness is
    begin
 
       if Data.Test_Unit_Short_Name.all /= Data.Test_Unit_Full_Name.all then
-         Suite_Name_Mapping.Insert
-           (New_Unit_Name, Unit_To_File_Name (New_File_Name));
+         Test.Common.Register_Short_Name
+           (New_Unit_Name, Unit_To_File_Name (New_File_Name), Harness_Unit);
       end if;
 
       --  Creating overridden test suite spec
