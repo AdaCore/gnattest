@@ -4,6 +4,7 @@ with "simple.gpr";
 project test_simple is
 
    for Source_Dirs use
+     Gnattest_Common.Additional_Source_Dirs &
      ("gnattest/tests",
       "common");
 
