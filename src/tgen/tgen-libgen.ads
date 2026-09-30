@@ -314,8 +314,17 @@ package TGen.Libgen is
       return Boolean;
    --  Returns whether the given package is a top level generic instantiation
 
-   function Supports_Wrappers (Subp : LAL.Basic_Decl'Class) return Boolean;
+   function Supports_Wrappers
+     (Subp : LAL.Basic_Decl'Class; Reason : out Unbounded_String)
+      return Boolean
+   with
+     Post =>
+       (if not Supports_Wrappers'Result
+        then Reason /= Null_Unbounded_String
+        else Reason = Null_Unbounded_String);
    --  Does `Subp` declaration supports TGen wrappers?
+   --  When wrappers are not supported, `Reason` is set, otherwise it is set
+   --  to an empty string.
 
    JSON_Start_Prefix : constant String := "__TGEN_JSON_BEGIN__ ";
    JSON_End_Marker   : constant String := "__TGEN_JSON_END__";
