@@ -1,0 +1,9 @@
+== Invalid entries are reported one by one
+warning: (gnattest) mixed_list.txt: b.adb is not a spec file of the project, ignoring it
+warning: (gnattest) mixed_list.txt: z.ads is not a spec file of the project, ignoring it
+warning: (gnattest) mixed_list.txt: ./c.ads is not a spec file of the project, ignoring it
+== A file with no valid entry is reported as a whole
+warning: (gnattest) b.adb does not list any spec file of the project, ignoring it
+== The spec of a UUT-specific list must be a project spec
+warning: (gnattest) z.ads is not a spec file of the project, ignoring valid_list.txt
+== Valid lists do not warn

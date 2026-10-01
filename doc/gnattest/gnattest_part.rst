@@ -500,7 +500,10 @@ Switches for ``gnattest`` in framework generation mode
 
 :switch:`--exclude-from-stubbing={filename}`
   Disables stubbing of units listed in ``filename``. The file should contain
-  corresponding spec files, one per line.
+  the simple names of the corresponding spec files (e.g. ``foo.ads``), one
+  per line. Lines starting with ``--`` are comments. Entries that do not name a
+  spec file of the project are ignored with a warning, and so is the whole
+  file if none of its entries does.
 
 
 :switch:`--exclude-from-stubbing={spec}:{filename}`
@@ -512,7 +515,10 @@ Switches for ``gnattest`` in framework generation mode
 
 :switch:`--include-for-stubbing={filename}`
   Enables stubbing of units listed in ``filename``. The file should contain
-  corresponding spec files, one per line.
+  the simple names of the corresponding spec files (e.g. ``foo.ads``), one
+  per line. Lines starting with ``--`` are comments. Entries that do not name a
+  spec file of the project are ignored with a warning, and so is the whole
+  file if none of its entries does.
 
 :switch:`--include-for-stubbing={spec}:{filename}`
   Same as above, but corresponding units will be stubbed only when testing unit

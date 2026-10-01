@@ -1,0 +1,6 @@
+-- Only b.ads is a valid entry
+b.ads
+
+b.adb
+z.ads
+./c.ads

@@ -1,0 +1,4 @@
+description: Check that gnattest warns about stub list entries that do not
+  name a spec of the project, and about lists with no valid entry.
+
+driver: python_script
