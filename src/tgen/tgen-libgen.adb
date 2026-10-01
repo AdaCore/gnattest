@@ -2367,7 +2367,14 @@ package body TGen.Libgen is
       A : constant Libadalang.Analysis.Expr'Class :=
         Subp.P_Get_Aspect (To_Unbounded_Text (To_Text ("Pre"))).Value;
    begin
-      return A.Is_Null or else TGen.Wrappers.Is_Expr_Supported (A, Reason);
+      --  No pre-condition, so there's no need to generate wrappers here.
+      if A.Is_Null then
+         Reason := Null_Unbounded_String;
+         return True;
+      end if;
+
+      return TGen.Wrappers.Is_Expr_Supported (A, Reason);
+
    end Supports_Wrappers;
 
 end TGen.Libgen;
