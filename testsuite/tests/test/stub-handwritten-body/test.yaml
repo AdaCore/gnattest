@@ -1,0 +1,6 @@
+description:
+  Check that gnattest keeps a stub body it did not generate and warns about
+  it, while still regenerating its own stub bodies with their user edits.
+  It used to overwrite such a body silently.
+
+driver: python_script

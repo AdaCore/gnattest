@@ -214,6 +214,9 @@ package Test.Common is
    procedure Report_Err (Message : String);
    --  Prints its argument to the standard error output
 
+   procedure Report_Warning (Message : String);
+   --  Print its argument to the standard output
+
    procedure Report_Std (Message : String; Offset : Integer := 0);
    --  Prints its argument to the standard output. Silent in quiet mode
 
