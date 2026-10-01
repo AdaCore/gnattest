@@ -367,8 +367,27 @@ package body TGen.Wrappers is
    -- Is_Expr_Supported --
    -----------------------
 
-   function Is_Expr_Supported (E : Expr'Class) return Boolean
-   is (not TGen.LAL_Utils.Is_Formal_Expression (E)
-       and then not TGen.LAL_Utils.Is_Ghost_Expression (E));
+   function Is_Expr_Supported
+     (E : Expr'Class; Reason : out Unbounded_String) return Boolean is
+   begin
+      if TGen.LAL_Utils.Is_Formal_Expression (E) then
+         Reason :=
+           To_Unbounded_String
+             ("Formal expressions are not supported in wrappers");
+         return False;
+      end if;
+
+      if TGen.LAL_Utils.Is_Ghost_Expression (E) then
+         Reason :=
+           To_Unbounded_String
+             ("Ghost expressions are not supported in wrappers");
+         return False;
+      end if;
+
+      Reason := Ada.Strings.Unbounded.Null_Unbounded_String;
+
+      return True;
+
+   end Is_Expr_Supported;
 
 end TGen.Wrappers;
