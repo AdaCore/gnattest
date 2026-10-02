@@ -27,7 +27,7 @@ with GNAT.OS_Lib; use GNAT.OS_Lib;
 
 with GNATCOLL.VFS; use GNATCOLL.VFS;
 
-with GPR2; use GPR2;
+with GPR2;
 with GPR2.Build.Compilation_Unit;
 with GPR2.Build.Source;
 with GPR2.Path_Name;
@@ -46,8 +46,10 @@ package Utils.Projects is
    package PAI renames GPR2.Project.Attribute_Index;
    package PRA renames GPR2.Project.Registry.Attribute;
 
-   GPR2_GT_Package : constant Package_Id :=
-     +Name_Type (Test.Common.GT_Package);
+   use type GPR2.Optional_Name_Type;
+
+   GPR2_GT_Package : constant GPR2.Package_Id :=
+     +GPR2.Name_Type (Test.Common.GT_Package);
 
    type Attribute is
      (Harness_Dir_Attr,
@@ -100,12 +102,12 @@ package Utils.Projects is
    --  Remove the _Attr suffix
 
    function "+" (A : Attribute) return String;
-   function "+" (A : Attribute) return Q_Attribute_Id;
+   function "+" (A : Attribute) return GPR2.Q_Attribute_Id;
 
-   function Coverage_Switches return Q_Attribute_Id;
+   function Coverage_Switches return GPR2.Q_Attribute_Id;
    --  Return the Coverage.Switches project attribute
 
-   function Emulator_Board return Q_Attribute_Id;
+   function Emulator_Board return GPR2.Q_Attribute_Id;
    --  Return the Emulator.Board project attribute
 
    function Outermost_Extending
@@ -116,17 +118,17 @@ package Utils.Projects is
    function Recursive_Source_Dirs return GPR2.Path_Name.Set.Object;
    --  Return every source directory in the project tree
 
-   function Attr_Id (Pack : String; Attr : String) return Q_Attribute_Id
+   function Attr_Id (Pack : String; Attr : String) return GPR2.Q_Attribute_Id
    is ((Pack => GPR2."+" (GPR2.Name_Type (Pack)),
         Attr => GPR2."+" (GPR2.Name_Type (Attr))));
 
-   function Root_Attribute (Attr : String) return Q_Attribute_Id
-   is ((Pack => Project_Level_Scope,
+   function Root_Attribute (Attr : String) return GPR2.Q_Attribute_Id
+   is ((Pack => GPR2.Project_Level_Scope,
         Attr => GPR2."+" (GPR2.Name_Type (Attr))));
    --  Return the given attribute id for Attr at the project level scope
 
    function Attr_Value
-     (V : GPR2.Project.View.Object; Attr : Q_Attribute_Id) return String
+     (V : GPR2.Project.View.Object; Attr : GPR2.Q_Attribute_Id) return String
    with
      Pre =>
        V.Has_Attribute (Attr) and then V.Attribute (Attr).Count_Values = 1;
@@ -167,7 +169,7 @@ package Utils.Projects is
    function Has_Runtime_Source (Source : String) return Boolean
    is (Project_Tree.Has_Runtime_Project
        and then
-         Project_Tree.Runtime_Project.Has_Source (Simple_Name (Source)));
+         Project_Tree.Runtime_Project.Has_Source (GPR2.Simple_Name (Source)));
    --  If the project has a defined runtime, check whether the given source is
    --  part of it.
 
