@@ -915,6 +915,16 @@ package body Test.Common is
       Ada.Text_IO.Put_Line (Ada.Text_IO.Standard_Error, Message);
    end Report_Err;
 
+   --------------------
+   -- Report_Warning --
+   --------------------
+
+   procedure Report_Warning (Message : String) is
+   begin
+      Ada.Text_IO.Put_Line
+        (Ada.Text_IO.Standard_Output, " warning: (gnattest) " & Message);
+   end Report_Warning;
+
    ----------------
    -- Report_Std --
    ----------------
