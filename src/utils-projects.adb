@@ -62,6 +62,8 @@ package body Utils.Projects is
        Test_String_Switches,
        Test_String_Seq_Switches;
 
+   use type GPR2.Project_Kind, GPR2.Language_Id;
+
    package Source_Vectors is new
      Ada.Containers.Vectors
        (Element_Type => GPR2.Build.Source.Object,
@@ -184,7 +186,8 @@ package body Utils.Projects is
    ----------------
 
    function Attr_Value
-     (V : GPR2.Project.View.Object; Attr : Q_Attribute_Id) return String is
+     (V : GPR2.Project.View.Object; Attr : GPR2.Q_Attribute_Id) return String
+   is
    begin
       return String (V.Attribute (Attr).Value.Text);
    end Attr_Value;
@@ -353,7 +356,7 @@ package body Utils.Projects is
       procedure Load_Tool_Project is
       begin
          Prj_Tree := Load_Project_File (Cmd, Arg (Cmd, Project_File).all);
-         if Prj_Tree.Root_Project.Kind = K_Aggregate then
+         if Prj_Tree.Root_Project.Kind = GPR2.K_Aggregate then
             Aggregate.Collect_Aggregated_Projects (Prj_Tree);
          end if;
       end Load_Tool_Project;
@@ -393,12 +396,12 @@ package body Utils.Projects is
       --  Error out if this is the root project is an abstract (i.e. without
       --  sources) project.
 
-      if Prj_Tree.Root_Project.Kind = K_Abstract then
+      if Prj_Tree.Root_Project.Kind = GPR2.K_Abstract then
          Cmd_Error
            ("gnattest does not support abstract projects (without sources)");
       end if;
 
-      if Prj_Tree.Root_Project.Kind = K_Aggregate then
+      if Prj_Tree.Root_Project.Kind = GPR2.K_Aggregate then
 
          if Num_File_Names (Cmd) /= 0 then
             Cmd_Error
@@ -534,7 +537,7 @@ package body Utils.Projects is
       CU : GPR2.Build.Compilation_Unit.Object;
    begin
       for View of Project_Tree.Ordered_Views loop
-         CU := View.Own_Unit (Name_Type (Unit_Name));
+         CU := View.Own_Unit (GPR2.Name_Type (Unit_Name));
          if CU.Is_Defined then
             return CU;
          end if;
@@ -646,7 +649,7 @@ package body Utils.Projects is
                declare
                   Res : constant GPR2.Build.Source.Object :=
                     Global_Project_Tree.Root_Project.Visible_Source
-                      (Simple_Name
+                      (GPR2.Simple_Name
                          (Ada.Directories.Simple_Name (File_Name.all)));
                begin
                   if not Res.Is_Defined then
@@ -679,7 +682,7 @@ package body Utils.Projects is
 
             Global_Project_Tree := Load_CLI_Project (Cmd);
 
-            if Global_Project_Tree.Root_Project.Kind /= K_Aggregate then
+            if Global_Project_Tree.Root_Project.Kind /= GPR2.K_Aggregate then
 
                --  Extract gnattest arguments from project file
 
@@ -764,10 +767,10 @@ package body Utils.Projects is
    -- Coverage_Switches --
    -----------------------
 
-   function Coverage_Switches return Q_Attribute_Id is
+   function Coverage_Switches return GPR2.Q_Attribute_Id is
    begin
       return
-        Q_Attribute_Id'
+        GPR2.Q_Attribute_Id'
           (Pack => GPR2."+" (GPR2.Name_Type'("coverage")),
            Attr => GPR2."+" (GPR2.Optional_Name_Type'("switches")));
    end Coverage_Switches;
@@ -776,10 +779,10 @@ package body Utils.Projects is
    -- Emulator_Board --
    --------------------
 
-   function Emulator_Board return Q_Attribute_Id is
+   function Emulator_Board return GPR2.Q_Attribute_Id is
    begin
       return
-        Q_Attribute_Id'
+        GPR2.Q_Attribute_Id'
           (Pack => GPR2."+" (GPR2.Name_Type'("emulator")),
            Attr => GPR2."+" (GPR2.Optional_Name_Type'("board")));
    end Emulator_Board;
@@ -801,7 +804,7 @@ package body Utils.Projects is
         and then
           (for all Main of Mains =>
              Prj.Root_Project.Visible_Source (Main.Source).Language
-             = Ada_Language);
+             = GPR2.Ada_Language);
    end Has_Mains_And_Ada_Only;
 
    --------------------
@@ -819,7 +822,7 @@ package body Utils.Projects is
          for F of CLI_Mains loop
             Result.Append
               (Global_Project_Tree.Root_Project.Visible_Source
-                 (Simple_Name (F.all)));
+                 (GPR2.Simple_Name (F.all)));
          end loop;
       else
          for Main of Prj.Root_Project.Mains loop
@@ -863,11 +866,11 @@ package body Utils.Projects is
       --  accordingly.
 
       procedure Process_CU
-        (Kind     : Unit_Kind;
+        (Kind     : GPR2.Unit_Kind;
          View     : GPR2.Project.View.Object;
-         Path     : Path_Name.Object;
-         Index    : Unit_Index;
-         Sep_Name : Optional_Name_Type);
+         Path     : GPR2.Path_Name.Object;
+         Index    : GPR2.Unit_Index;
+         Sep_Name : GPR2.Optional_Name_Type);
       --  Callback for GPR2.Build.Compilation_Unit.For_All_Part calling
       --  Update_Closure on the given CU.
 
@@ -932,11 +935,11 @@ package body Utils.Projects is
       ----------------
 
       procedure Process_CU
-        (Kind     : Unit_Kind;
+        (Kind     : GPR2.Unit_Kind;
          View     : GPR2.Project.View.Object;
-         Path     : Path_Name.Object;
-         Index    : Unit_Index;
-         Sep_Name : Optional_Name_Type)
+         Path     : GPR2.Path_Name.Object;
+         Index    : GPR2.Unit_Index;
+         Sep_Name : GPR2.Optional_Name_Type)
       is
          pragma Unreferenced (Kind, Index, Sep_Name);
       begin
@@ -1039,7 +1042,7 @@ package body Utils.Projects is
          begin
             for S of Sources loop
                if not S.Owning_View.Is_Externally_Built
-                 and then S.Language = Ada_Language
+                 and then S.Language = GPR2.Ada_Language
                then
                   Utils.Command_Lines.String_Ref_Vectors.Append
                     (CLI_Filenames, new String'(S.Path_Name.String_Value));
@@ -1085,7 +1088,7 @@ package body Utils.Projects is
      (Prj : GPR2.Project.Tree.Object; Cmd : Command_Line) return String_Vector
    is
       function Process_Attr
-        (Id    : Q_Attribute_Id;
+        (Id    : GPR2.Q_Attribute_Id;
          Index : GPR2.Project.Attribute_Index.Object :=
            GPR2.Project.Attribute_Index.Undefined) return String_Vector;
       --  Return the list values for the given attribute Id with the given
@@ -1097,7 +1100,7 @@ package body Utils.Projects is
       ------------------
 
       function Process_Attr
-        (Id    : Q_Attribute_Id;
+        (Id    : GPR2.Q_Attribute_Id;
          Index : GPR2.Project.Attribute_Index.Object :=
            GPR2.Project.Attribute_Index.Undefined) return String_Vector
       is

@@ -34,7 +34,7 @@ with GNAT.OS_Lib;
 with GNATCOLL.OS.Process;
 with GNATCOLL.VFS; use GNATCOLL.VFS;
 
-with GPR2; use GPR2;
+with GPR2;
 with GPR2.Options;
 with GPR2.Project.Attribute;
 with GPR2.Project.Attribute_Index;

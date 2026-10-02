@@ -33,7 +33,7 @@ with GNATCOLL.OS.FS;
 with GNATCOLL.OS.Process;
 with GNATCOLL.VFS; use GNATCOLL.VFS;
 
-with GPR2; use GPR2;
+with GPR2;
 with GPR2.Containers;
 with GPR2.Project.Attribute;
 with GPR2.Project.View;
@@ -664,7 +664,7 @@ package body Test.Suite_Min is
 
       User_Prj           : constant GPR2.Project.View.Object :=
         Project_Tree.Root_Project;
-      Switches_Attribute : constant Q_Attribute_Id :=
+      Switches_Attribute : constant GPR2.Q_Attribute_Id :=
         Utils.Projects.Coverage_Switches;
       Switches_Value     : GPR2.Project.Attribute.Object;
 

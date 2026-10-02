@@ -35,7 +35,7 @@ with GNATCOLL.JSON;
 with GNATCOLL.VFS;    use GNATCOLL.VFS;
 with GNATCOLL.Traces; use GNATCOLL.Traces;
 
-with GPR2; use GPR2;
+with GPR2;
 with GPR2.Containers;
 with GPR2.Path_Name;
 with GPR2.Project.Attribute;

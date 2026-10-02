@@ -30,7 +30,7 @@ with GNAT.Directory_Operations; use GNAT.Directory_Operations;
 with GNATCOLL.VFS;    use GNATCOLL.VFS;
 with GNATCOLL.Traces; use GNATCOLL.Traces;
 
-with GPR2; use GPR2;
+with GPR2;
 with GPR2.Build.Compilation_Unit;
 with GPR2.Build.Source;
 with GPR2.Path_Name;
@@ -159,19 +159,20 @@ package body Test.Skeleton.Source_Table is
    --  Last_Idx is the index pointing to the end of the last name.
 
    function Get_GPR2_Owning_View_From_Name
-     (Name : String_Access) return Project.View.Object
+     (Name : String_Access) return GPR2.Project.View.Object
    is (Project_Tree.Root_Project.Visible_Source
          (GPR2.Path_Name.Create (GNATCOLL.VFS.Create (+Name.all)))
          .Owning_View);
    --  Helper function. Return a GPR2 owned project view for a given name.
 
-   procedure Set_Body (SFR : in out SF_Record; Unit_Name : Optional_Name_Type);
+   procedure Set_Body
+     (SFR : in out SF_Record; Unit_Name : GPR2.Optional_Name_Type);
    --  Helper function to set Corresponding_Body or Theoretical_Body in SFR
 
    procedure Set_Stub_Data_Unit
      (SFR            : in out SF_Record;
       P              : GPR2.Project.View.Object;
-      Stub_Unit_Name : Name_Type);
+      Stub_Unit_Name : GPR2.Name_Type);
    --  Helper function to set Stub_Data_Base_(Spec|Copy) in SFR
 
    procedure Set_Inst_Dir
@@ -264,18 +265,20 @@ package body Test.Skeleton.Source_Table is
    -- Set_Body --
    --------------
 
-   procedure Set_Body (SFR : in out SF_Record; Unit_Name : Optional_Name_Type)
+   procedure Set_Body
+     (SFR : in out SF_Record; Unit_Name : GPR2.Optional_Name_Type)
    is
       Unit : constant GPR2.Build.Compilation_Unit.Object :=
         Unit_Name_To_Unit (String (Unit_Name));
    begin
-      if Unit.Has_Part (S_Body) then
+      if Unit.Has_Part (GPR2.S_Body) then
          SFR.Corresponding_Body :=
            new String'(Unit.Main_Body.Source.String_Value);
       else
          SFR.Theoretical_Body :=
            new String'
-             (String (Unit.Owning_View.Filename_For_Unit (Unit_Name, S_Body)));
+             (String
+                (Unit.Owning_View.Filename_For_Unit (Unit_Name, GPR2.S_Body)));
       end if;
    end Set_Body;
 
@@ -286,12 +289,14 @@ package body Test.Skeleton.Source_Table is
    procedure Set_Stub_Data_Unit
      (SFR            : in out SF_Record;
       P              : GPR2.Project.View.Object;
-      Stub_Unit_Name : Name_Type) is
+      Stub_Unit_Name : GPR2.Name_Type) is
    begin
       SFR.Stub_Data_Base_Spec :=
-        new String'(String (P.Filename_For_Unit (Stub_Unit_Name, S_Spec)));
+        new String'
+          (String (P.Filename_For_Unit (Stub_Unit_Name, GPR2.S_Spec)));
       SFR.Stub_Data_Base_Body :=
-        new String'(String (P.Filename_For_Unit (Stub_Unit_Name, S_Body)));
+        new String'
+          (String (P.Filename_For_Unit (Stub_Unit_Name, GPR2.S_Body)));
    end Set_Stub_Data_Unit;
 
    ------------------
@@ -407,7 +412,7 @@ package body Test.Skeleton.Source_Table is
 
       if Instrument or else Stub_Mode_ON then
          declare
-            Unit_Name : constant Optional_Name_Type :=
+            Unit_Name : constant GPR2.Optional_Name_Type :=
               Project_Tree.Root_Project.Visible_Source
                 (GPR2.Path_Name.Create (GNATCOLL.VFS.Create (+Fname)))
                 .Unit
@@ -417,8 +422,8 @@ package body Test.Skeleton.Source_Table is
 
             P : GPR2.Project.View.Object := Unit.Owning_View;
 
-            Stub_Unit_Name : constant Name_Type :=
-              Name_Type (String (Unit_Name) & "." & Stub_Data_Unit_Name);
+            Stub_Unit_Name : constant GPR2.Name_Type :=
+              GPR2.Name_Type (String (Unit_Name) & "." & Stub_Data_Unit_Name);
          begin
             if Instrument then
                Set_Inst_Dir (New_SF_Record, P);
@@ -519,7 +524,7 @@ package body Test.Skeleton.Source_Table is
       New_SF_Record.Status := Body_Reference;
 
       declare
-         Unit_Name      : constant Optional_Name_Type :=
+         Unit_Name      : constant GPR2.Optional_Name_Type :=
            Project_Tree.Root_Project.Visible_Source
              (GPR2.Path_Name.Create
                 (GNATCOLL.VFS.Create (GNATCOLL.VFS."+" (Fname))))
@@ -527,8 +532,8 @@ package body Test.Skeleton.Source_Table is
              .Name;
          Unit           : constant GPR2.Build.Compilation_Unit.Object :=
            Unit_Name_To_Unit (String (Unit_Name));
-         Stub_Unit_Name : constant Name_Type :=
-           Name_Type (String (Unit_Name) & "." & Stub_Data_Unit_Name);
+         Stub_Unit_Name : constant GPR2.Name_Type :=
+           GPR2.Name_Type (String (Unit_Name) & "." & Stub_Data_Unit_Name);
 
          P : GPR2.Project.View.Object := Unit.Owning_View;
       begin
@@ -812,6 +817,8 @@ package body Test.Skeleton.Source_Table is
 
          declare
             PR : Project_Record;
+
+            use type GPR2.Project_Kind;
          begin
             if View.Is_Externally_Built then
                PR.Is_Externally_Built := True;
@@ -820,8 +827,8 @@ package body Test.Skeleton.Source_Table is
                goto Add_Project;
             end if;
             PR.Is_Externally_Built := False;
-            PR.Aggregate_Lib := View.Kind = K_Aggregate_Library;
-            PR.Is_Library := View.Kind in Library_Kind;
+            PR.Aggregate_Lib := View.Kind = GPR2.K_Aggregate_Library;
+            PR.Is_Library := View.Kind in GPR2.Library_Kind;
 
             if View.Is_Namespace_Root then
                PR.Needed_For_Extension := True;
@@ -831,7 +838,7 @@ package body Test.Skeleton.Source_Table is
             if Is_Absolute_Path (Stub_Dir_Name.all) then
                PR.Stub_Dir :=
                  new String'(Stub_Dir_Name.all & Dir_Sep & String (View.Name));
-            elsif View.Kind in With_Object_Dir_Kind then
+            elsif View.Kind in GPR2.With_Object_Dir_Kind then
                PR.Stub_Dir :=
                  new String'
                    (Normalize_Pathname
@@ -854,7 +861,7 @@ package body Test.Skeleton.Source_Table is
 
             --  .. also add the aggregated projects to the imported list
 
-            if View.Kind in Aggregate_Kind then
+            if View.Kind in GPR2.Aggregate_Kind then
                for Aggr of View.Aggregated loop
                   PR.Imported_List.Append (String (Aggr.Name));
                end loop;
@@ -1858,7 +1865,7 @@ package body Test.Skeleton.Source_Table is
                      """"
                      & String
                          (View.Filename_For_Unit
-                            (Name_Type (Unit.Text), S_Spec))
+                            (GPR2.Name_Type (Unit.Text), GPR2.S_Spec))
                      & """,");
                end loop;
             end if;

@@ -37,7 +37,7 @@ with GNAT.OS_Lib;
 
 with GNATCOLL.VFS; use GNATCOLL.VFS;
 
-with GPR2; use GPR2;
+with GPR2;
 with GPR2.Project.Tree;
 
 with Libadalang.Analysis; use Libadalang.Analysis;

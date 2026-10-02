@@ -41,7 +41,7 @@ with Langkit_Support.Diagnostics;
 with Langkit_Support.Errors;
 with Langkit_Support.Text;
 
-with GPR2; use GPR2;
+with GPR2;
 pragma Warnings (Off);
 with GPR2.Build.Source.Sets;
 pragma Warnings (On);
@@ -81,6 +81,11 @@ with Utils.String_Utilities; use Utils.String_Utilities;
 with Utils_Debug;
 
 package body Test.Actions is
+
+   use type GPR2.Project_Kind,
+            GPR2.Language_Id,
+            GPR2.Unit_Kind,
+            GPR2.Optional_Name_Type;
 
    Dir_Sep : Character renames GNAT.OS_Lib.Directory_Separator;
 
@@ -359,7 +364,7 @@ package body Test.Actions is
       --  processed as regular projects.
 
       if Project_Tree.Is_Defined
-        and then Project_Tree.Root_Project.Kind = K_Aggregate
+        and then Project_Tree.Root_Project.Kind = GPR2.K_Aggregate
       then
          return;
       end if;
@@ -486,7 +491,7 @@ package body Test.Actions is
 
       Test.Common.Target_Val := new String'(String (Project_Tree.Target));
       Test.Common.RTS_Attribute_Val :=
-        new String'(String (Project_Tree.Runtime (Ada_Language)));
+        new String'(String (Project_Tree.Runtime (GPR2.Ada_Language)));
       Test.Common.Is_Cross_Target := Project_Tree.Is_Cross_Target;
 
       Root_Prj := Project_Tree.Root_Project;
@@ -511,12 +516,12 @@ package body Test.Actions is
          package Naming_Attr renames GPR2.Project.Registry.Attribute.Naming;
 
          function Get_String_Attribute
-           (Attr : Q_Attribute_Id; Default_Value : String) return String;
+           (Attr : GPR2.Q_Attribute_Id; Default_Value : String) return String;
          --  Get an attribute string value from the root project.
          --  Return Default value if the searched attribute is not present.
 
          function Get_String_Attribute
-           (Attr : Q_Attribute_Id; Default_Value : String) return String
+           (Attr : GPR2.Q_Attribute_Id; Default_Value : String) return String
          is
             Ada_Index : constant GPR2.Project.Attribute_Index.Object :=
               GPR2.Project.Attribute_Index.Create (GPR2.Ada_Language);
@@ -539,7 +544,7 @@ package body Test.Actions is
       begin
          if Root_Prj.Check_Attribute
               (Root_Attribute ("runtime"),
-               GPR2.Project.Attribute_Index.Create (Ada_Language),
+               GPR2.Project.Attribute_Index.Create (GPR2.Ada_Language),
                Result => Attr_Value)
          then
             Test.Common.RTS_Attribute_Val :=
@@ -555,8 +560,8 @@ package body Test.Actions is
          Clear_File_Names (Cmd);
          for S of Project_Tree.Root_Project.Visible_Sources loop
             if not Ignored.Contains (String (S.Path_Name.Simple_Name))
-              and then S.Language = Ada_Language
-              and then S.Unit.Kind = S_Spec
+              and then S.Language = GPR2.Ada_Language
+              and then S.Unit.Kind = GPR2.S_Spec
               and then not S.Owning_View.Is_Externally_Built
             then
                Append_File_Name (Cmd, S.Path_Name.String_Value);
@@ -785,7 +790,7 @@ package body Test.Actions is
             if not Contains (Ignored, Ada.Directories.Simple_Name (File.all))
             then
                Source := Src (File.all);
-               if Source.Unit.Kind = S_Spec then
+               if Source.Unit.Kind = GPR2.S_Spec then
                   if Test.Common.Harness_Only then
                      Test.Harness.Source_Table.Add_Source_To_Process
                        (Source.Path_Name.String_Value);
@@ -1007,11 +1012,11 @@ package body Test.Actions is
          end;
 
          for F of Project_Tree.Root_Project.Visible_Sources loop
-            if F.Language = Ada_Language
+            if F.Language = GPR2.Ada_Language
               and then not F.Owning_View.Is_Externally_Built
             then
                case F.Unit.Kind is
-                  when S_Body =>
+                  when GPR2.S_Body =>
                      declare
                         View : GPR2.Project.View.Object := F.Owning_View;
                      begin
@@ -1028,11 +1033,11 @@ package body Test.Actions is
                            String (F.Unit.Name));
                      end;
 
-                  when S_Spec =>
+                  when GPR2.S_Spec =>
                      Test.Skeleton.Source_Table.Add_Body_Reference
                        (F.Path_Name.String_Value);
 
-                  when others =>
+                  when others      =>
                      null;
                end case;
             end if;
@@ -1111,10 +1116,10 @@ package body Test.Actions is
 
       if Arg (Cmd, Dump_Test_Inputs) then
          for F of Project_Tree.Root_Project.Visible_Sources loop
-            if F.Language = Ada_Language
+            if F.Language = GPR2.Ada_Language
               and then not F.Owning_View.Is_Externally_Built
             then
-               if F.Unit.Kind = S_Body then
+               if F.Unit.Kind = GPR2.S_Body then
                   Test.Skeleton.Source_Table.Add_Body_For_Instrumentation
                     (F.Path_Name.String_Value);
                end if;
@@ -1133,7 +1138,7 @@ package body Test.Actions is
                     & "test_obj"
                     & Dir_Sep
                     & Test.Common.Test_Prj_Prefix
-                    & To_Lower (Project_Tree.Root_Project.Name)
+                    & GPR2.To_Lower (Project_Tree.Root_Project.Name)
                     & Test.Common.Instr_Suffix)));
             Test.Common.Create_Dirs (F);
             Unchecked_Free (F);
@@ -1772,7 +1777,7 @@ package body Test.Actions is
       use Libadalang.Project_Provider;
    begin
       for Src of Additional_Tests_Project.Root_Project.Sources loop
-         if Src.Unit.Kind = S_Spec then
+         if Src.Unit.Kind = GPR2.S_Spec then
             Test.Harness.Source_Table.Add_Source_To_Process
               (Src.Path_Name.String_Value);
          end if;
@@ -1977,7 +1982,7 @@ package body Test.Actions is
          Append (Future_Dirs, GNATCOLL.VFS.Create (+Test_Dir_Name.all));
       else
          for View of Project_Tree.Ordered_Views loop
-            if View.Kind in With_Object_Dir_Kind then
+            if View.Kind in GPR2.With_Object_Dir_Kind then
                Append
                  (Future_Dirs,
                   GNATCOLL.VFS.Create
@@ -2210,7 +2215,8 @@ package body Test.Actions is
 
             --  Skip externally built and abstract projects
 
-            if View.Is_Externally_Built or else View.Kind = K_Abstract then
+            if View.Is_Externally_Built or else View.Kind = GPR2.K_Abstract
+            then
                goto Next;
             end if;
 
@@ -2295,7 +2301,7 @@ package body Test.Actions is
                     Case_Sensitive => False));
 
             for F of Files loop
-               if F.Unit.Kind = S_Spec
+               if F.Unit.Kind = GPR2.S_Spec
                  and then
                    Test.Skeleton.Source_Table.Source_Present
                      (F.Path_Name.String_Value)
@@ -2358,7 +2364,7 @@ package body Test.Actions is
          Append (Future_Dirs, GNATCOLL.VFS.Create (+Test_Dir_Name.all));
       else
          for View of Project_Tree.Ordered_Views loop
-            if View.Kind in With_Object_Dir_Kind then
+            if View.Kind in GPR2.With_Object_Dir_Kind then
                Append
                  (Future_Dirs,
                   GNATCOLL.VFS.Create

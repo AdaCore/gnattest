@@ -1,4 +1,4 @@
-with GPR2; use GPR2;
+with GPR2;
 with GPR2.Project.Registry.Attribute;
 with GPR2.Project.Registry.Attribute.Description;
 with GPR2.Project.Registry.Pack;
@@ -7,6 +7,8 @@ with GPR2.Project.Registry.Pack.Description;
 with Utils.Projects; use Utils.Projects;
 
 package body Test is
+
+   use type GPR2.Package_Id;
 
    ----------------------------------
    -- Register_Specific_Attributes --
@@ -153,7 +155,8 @@ package body Test is
       --  inherit makefile attribute in test driver.
 
       declare
-         GPR2_Make_Package : constant GPR2.Package_Id := +Name_Type'("make");
+         GPR2_Make_Package : constant GPR2.Package_Id :=
+           +GPR2.Name_Type'("make");
       begin
          GPR2_RP.Add (GPR2_Make_Package, GPR2_RP.Everywhere);
          GPR2_RA.Add
@@ -168,7 +171,7 @@ package body Test is
 
       --  Needed for gnatcov integration
 
-      GPR2_RP.Add (+Name_Type'("coverage"), GPR2_RP.Everywhere);
+      GPR2_RP.Add (+GPR2.Name_Type'("coverage"), GPR2_RP.Everywhere);
       GPR2_RA.Add
         (Name                 => Coverage_Switches,
          Index_Type           => GPR2_RA.File_Index,
@@ -176,7 +179,7 @@ package body Test is
          Value_Case_Sensitive => True,
          Is_Allowed_In        => GPR2_RA.Everywhere);
 
-      GPR2_RP.Add (+Name_Type'("emulator"), GPR2_RP.Everywhere);
+      GPR2_RP.Add (+GPR2.Name_Type'("emulator"), GPR2_RP.Everywhere);
       GPR2_RA.Add
         (Name                 => Emulator_Board,
          Index_Type           => GPR2_RA.No_Index,
