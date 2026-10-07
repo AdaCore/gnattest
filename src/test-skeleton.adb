@@ -6961,7 +6961,7 @@ package body Test.Skeleton is
                      if TGen_JSON_TC.Subprogram_Parameter_Vector_Has_Element
                           (Param_Values, I + 1)
                      then
-                        Put (F, ", ");
+                        Put (F, "," & ASCII.LF & Com & Pad_Str & "  ");
                      end if;
                   end;
                end loop;

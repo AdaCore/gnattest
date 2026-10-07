@@ -1,0 +1,8 @@
+description: Check TGen and gnattest harness generation with a subprogram
+  having a large number of parameters.
+
+driver: gnattest_tgen
+
+extra_gnattest_args: ["--gen-wrappers"]
+
+suppress_test_dump: True
