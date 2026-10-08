@@ -1,0 +1,6 @@
+description: |
+  Check that a unit with only the spec is correctly handled by stubbing:configs:
+    - If the spec is *MISSING* a body, stub the subprogram
+    - If the spec is a null procedure or an expression function, do not stub
+
+driver: python_script
