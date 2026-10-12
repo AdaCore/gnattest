@@ -1,0 +1,6 @@
+description:
+    Test that --gen-test-vectors removes the per-subprogram test package
+    generated for a previous profile of a subprogram once that profile
+    changes, instead of leaving a stale file that no longer compiles.
+
+driver: shell_script

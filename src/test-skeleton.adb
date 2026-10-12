@@ -3927,6 +3927,12 @@ package body Test.Skeleton is
 
       TR_SLOC_Buffer : TR_SLOC_Buffer_Lists.List;
 
+      procedure Handle_Subprogram;
+      --  Factorize the handling of test subprograms.
+      --  Remove it from the map if the test is unused (for example, if
+      --  the tested function changed signature).
+      --  Load the text in the marked data otherwise.
+
       procedure Add_Buffered_TR_Slocs
         (TP_List : in out TP_Mapping_List.List; Common_Time : String);
       --  Pushes buffered test routine slocs into main mapping container.
@@ -3956,6 +3962,33 @@ package body Test.Skeleton is
       procedure Put_Stub_Data_Import;
       --  Put with and use clauses for Stub_Data packages of units stubbed
       --  for current UUT.
+
+      procedure Handle_Subprogram is
+      begin
+         if MD_Cur /= Markered_Data_Maps.No_Element then
+            if Is_Unimplemented_Test
+                 (Markered_Data_Maps.Element (MD_Cur).TR_Text)
+            then
+               --  The old subprogram was not implemented
+               --  so it can be removed.
+               Markered_Data_Map.Delete (MD_Cur);
+            else
+               --  Using corresponding dangling test
+
+               MD.TR_Text.Clear;
+               MD.TR_Text := Markered_Data_Maps.Element (MD_Cur).TR_Text;
+
+               --  also need to copy Commented_Out since
+               --  the test can be dangling for a long time
+               --  or just become dangling
+               MD.Commented_Out :=
+                 Markered_Data_Maps.Element (MD_Cur).Commented_Out;
+
+               Markered_Data_Map.Delete (MD_Cur);
+               MD.Issue_Warning := True;
+            end if;
+         end if;
+      end Handle_Subprogram;
 
       procedure Put_Persistent_Section (PS_Type : Persistent_Section_Type) is
          UH     : Unique_Hash;
@@ -4069,17 +4102,17 @@ package body Test.Skeleton is
       end Is_Unimplemented_Test;
 
       function Markered_Data_Map_Is_Empty return Boolean is
-         use Ada.Containers;
       begin
-         if Markered_Data_Map.Is_Empty then
-            return True;
-         elsif Markered_Data_Map.Length = 1
-           and then Markered_Data_Map.First_Key.Hash.all = "02"
-         then
-            return True;
-         else
-            return False;
-         end if;
+         for Cur in Markered_Data_Map.Iterate loop
+            if Markered_Data_Maps.Key (Cur).Hash.all /= "02"
+              and then
+                not Is_Unimplemented_Test
+                      (Markered_Data_Maps.Element (Cur).TR_Text)
+            then
+               return False;
+            end if;
+         end loop;
+         return True;
       end Markered_Data_Map_Is_Empty;
 
       procedure Put_Test_Data_Header is
@@ -5241,22 +5274,7 @@ package body Test.Skeleton is
                           Find_Same_Short_Name
                             (Markered_Data_Map, Current_Subp);
 
-                        if MD_Cur /= Markered_Data_Maps.No_Element then
-                           --  Using corresponding dangling test
-
-                           MD.TR_Text.Clear;
-                           MD.TR_Text :=
-                             Markered_Data_Maps.Element (MD_Cur).TR_Text;
-
-                           --  also need to copy Commented_Out since
-                           --  the test can be dangling for a long time
-                           --  or just become dangling
-                           MD.Commented_Out :=
-                             Markered_Data_Maps.Element (MD_Cur).Commented_Out;
-
-                           Markered_Data_Map.Delete (MD_Cur);
-                           MD.Issue_Warning := True;
-                        end if;
+                        Handle_Subprogram;
 
                      end if;
 
@@ -5497,7 +5515,9 @@ package body Test.Skeleton is
             for MD_Cur in Markered_Data_Map.Iterate loop
                MD := Markered_Data_Map.Constant_Reference (MD_Cur);
 
-               if Markered_Data_Maps.Key (MD_Cur).Hash.all /= "02" then
+               if Markered_Data_Maps.Key (MD_Cur).Hash.all /= "02"
+                 and then not Is_Unimplemented_Test (MD.TR_Text)
+               then
                   declare
                      Stub : Subp_Info;
                   begin
@@ -6303,22 +6323,7 @@ package body Test.Skeleton is
                           Find_Same_Short_Name
                             (Markered_Data_Map, Current_Subp);
 
-                        if MD_Cur /= Markered_Data_Maps.No_Element then
-                           --  Using corresponding dangling test
-
-                           MD.TR_Text.Clear;
-                           MD.TR_Text :=
-                             Markered_Data_Maps.Element (MD_Cur).TR_Text;
-
-                           --  also need to copy Commented_Out since
-                           --  the test can be dangling for a long time
-                           --  or just become dangling
-                           MD.Commented_Out :=
-                             Markered_Data_Maps.Element (MD_Cur).Commented_Out;
-
-                           Markered_Data_Map.Delete (MD_Cur);
-                           MD.Issue_Warning := True;
-                        end if;
+                        Handle_Subprogram;
 
                      end if;
 
@@ -6556,7 +6561,9 @@ package body Test.Skeleton is
             for MD_Cur in Markered_Data_Map.Iterate loop
                MD := Markered_Data_Map.Constant_Reference (MD_Cur);
 
-               if Markered_Data_Maps.Key (MD_Cur).Hash.all /= "02" then
+               if Markered_Data_Maps.Key (MD_Cur).Hash.all /= "02"
+                 and then not Is_Unimplemented_Test (MD.TR_Text)
+               then
                   declare
                      Stub : Subp_Info;
                   begin
@@ -6709,9 +6716,8 @@ package body Test.Skeleton is
       package TGen_JSON_TC_IO renames TGen.JSON.Test_Cases.IO;
       use type TGen_JSON_TC.Subprogram_Test_Case;
 
-      --  ??? TODO: Clean leftover generated tests if the hash of a given
-      --  subprogram fails, also investigate possibility to have tests not be
-      --  overwritten if the hash hasn't changed.
+      --  ??? TODO: investigate possibility to have tests not be overwritten
+      --  if the hash hasn't changed.
 
       JSON_Unit_File : constant Virtual_File :=
         GNATCOLL.VFS.Create (+Test.Common.JSON_Test_Dir.all)
@@ -6742,8 +6748,32 @@ package body Test.Skeleton is
       Output_Dir : constant String :=
         Get_Source_Output_Dir (Data.Unit_File_Name.all);
 
+      Generated_Test_File_Prefix : constant String :=
+        Unit_To_File_Name (Data.Unit_Full_Name.all) & "-test_data-test_";
+      --  Prefix of the generated test files, used to find leftover test
+      --  from previous runs after a signature change.
+
+      Generated_Suite_File_Prefix : constant String :=
+        Unit_To_File_Name (Data.Unit_Short_Name.all) & "-test_data-test_";
+      --  Prefix of the harness "-suite" wrapper files.
+
+      Expected_Test_Files : Test.Common.String_Set.Set;
+      --  Full-Name-based stems of the test files generated this run.
+
+      Expected_Suite_Files : Test.Common.String_Set.Set;
+      --  Short-Name-based stems of the suite files generated this run.
+
       function Escape (Input_String : String) return String;
       --  Escape every double quote inside Input_String
+
+      procedure Remove_Obsolete_Generated_Tests
+        (Dir         : String;
+         Prefix      : String;
+         Expected    : Test.Common.String_Set.Set;
+         Unit_Suffix : String := "");
+      --  Delete files under Dir that start with Prefix, end with
+      --  Unit_Suffix, and have no matching entry in Expected. Prefix and
+      --  Expected must use the same naming namespace.
 
       ------------
       -- Escape --
@@ -6760,6 +6790,76 @@ package body Test.Skeleton is
          end loop;
          return +Result;
       end Escape;
+
+      --------------------------------------
+      -- Remove_Obsolete_Generated_Tests --
+      --------------------------------------
+
+      procedure Remove_Obsolete_Generated_Tests
+        (Dir         : String;
+         Prefix      : String;
+         Expected    : Test.Common.String_Set.Set;
+         Unit_Suffix : String := "")
+      is
+
+         function Strip_Suffix (Name, Suffix : String) return String;
+         --  Return Name with Suffix stripped off, or "" if Name does not end
+         --  with Suffix.
+
+         ------------------
+         -- Strip_Suffix --
+         ------------------
+
+         function Strip_Suffix (Name, Suffix : String) return String is
+         begin
+            if Name'Length > Suffix'Length
+              and then
+                Name (Name'Last - Suffix'Length + 1 .. Name'Last) = Suffix
+            then
+               return Name (Name'First .. Name'Last - Suffix'Length);
+            else
+               return "";
+            end if;
+         end Strip_Suffix;
+
+         Dir_Entries : File_Array_Access :=
+           (if GNAT.OS_Lib.Is_Directory (Dir)
+            then Read_Dir (Create (+Dir), Files_Only)
+            else null);
+
+      begin
+         if Dir_Entries = null then
+            return;
+         end if;
+
+         for Entry_File of Dir_Entries.all loop
+            declare
+               Base        : constant String := +Entry_File.Base_Name;
+               Without_Ext : constant String :=
+                 (if Strip_Suffix (Base, Spec_Suffix.all) /= ""
+                  then Strip_Suffix (Base, Spec_Suffix.all)
+                  else Strip_Suffix (Base, Body_Suffix.all));
+               Root        : constant String :=
+                 (if Unit_Suffix = ""
+                  then Without_Ext
+                  else Strip_Suffix (Without_Ext, Unit_Suffix));
+            begin
+               if Root'Length > Prefix'Length
+                 and then
+                   Root (Root'First .. Root'First + Prefix'Length - 1) = Prefix
+                 and then not Expected.Contains (Root)
+               then
+                  declare
+                     Success : Boolean;
+                  begin
+                     GNAT.OS_Lib.Delete_File (+Entry_File.Full_Name, Success);
+                  end;
+               end if;
+            end;
+         end loop;
+
+         Unchecked_Free (Dir_Entries);
+      end Remove_Obsolete_Generated_Tests;
 
    begin
       --  We do not support non-instanciated generic packages
@@ -6863,6 +6963,16 @@ package body Test.Skeleton is
               & Subp.Subp_Mangle_Name.all;
             Test_Unit_File_Name : constant String :=
               Unit_To_File_Name (Test_Unit_Name);
+
+            Test_Unit_Short_File_Name : constant String :=
+              Unit_To_File_Name
+                (Data.Unit_Short_Name.all
+                 & Test_Unit_Name
+                     (Test_Unit_Name'First
+                      + Data.Unit_Full_Name.all'Length
+                      .. Test_Unit_Name'Last));
+            --  Physical stem of this test package's harness "-suite" file,
+            --  which is built from Unit_Short_Name rather than Unit_Full_Name.
 
             Spec_VF : constant Virtual_File :=
               Create (+Output_Dir)
@@ -7085,6 +7195,285 @@ package body Test.Skeleton is
                   & """");
             end Pp_JSON_Object_Lit;
 
+            function Current_Parameter_Name (Index : Positive) return String;
+            --  Return the name of the Index-th (1-based) parameter of Subp
+
+            function Current_Parameter_Number return Natural;
+            --  Return the number of formal parameters of Subp's current
+            --  declaration.
+
+            function Matches_Current_Profile
+              (Values : TGen_JSON_TC.Subprogram_Parameter_Vector)
+               return Boolean;
+            --  A test vector's hash doesn't depend on parameter names, so a
+            --  rename can leave Values carrying a name absent from Subp's
+            --  current parameters, or a change in parameter number can leave
+            --  Values with more or fewer entries than Subp currently takes.
+            --  Checks that the arities match and that names correspond
+            --  one-to-one, rather than by position, since Values isn't
+            --  guaranteed to list parameters in declaration order.
+
+            function Current_Global_Names return Test.Common.String_Set.Set;
+            --  Fully qualified names of the globals TGen currently treats
+            --  as inputs of Subp: unmoded, or listed as Input or In_Out.
+            --  Output, Proof_In and constants are excluded, matching
+            --  TGen.Types.Translation.Translate_Globals.
+
+            function Matches_Current_Globals
+              (Values : TGen_JSON_TC.Subprogram_Parameter_Vector)
+               return Boolean;
+            --  True iff Values names exactly the current input globals.
+            --  Rejects a stale vector whose globals were renamed, removed,
+            --  or turned into Output, and also a vector that predates a
+            --  newly added or newly input global.
+
+            -----------------------------
+            -- Current_Parameter_Name --
+            -----------------------------
+
+            function Current_Parameter_Name (Index : Positive) return String is
+               Remaining : Natural := Index;
+            begin
+               for Param of
+                 Subp
+                   .Subp_Declaration
+                   .As_Basic_Decl
+                   .P_Subp_Spec_Or_Null
+                   .P_Params
+               loop
+                  for Id of Param.F_Ids loop
+                     Remaining := Remaining - 1;
+                     if Remaining = 0 then
+                        return Node_Image (Id);
+                     end if;
+                  end loop;
+               end loop;
+
+               raise Program_Error with "parameter index out of range";
+            end Current_Parameter_Name;
+
+            -------------------------------
+            -- Current_Parametrer_Number --
+            -------------------------------
+
+            function Current_Parameter_Number return Natural is
+               Count : Natural := 0;
+            begin
+               for Param of
+                 Subp
+                   .Subp_Declaration
+                   .As_Basic_Decl
+                   .P_Subp_Spec_Or_Null
+                   .P_Params
+               loop
+                  for Id of Param.F_Ids loop
+                     Count := Count + 1;
+                  end loop;
+               end loop;
+
+               return Count;
+            end Current_Parameter_Number;
+
+            -----------------------------
+            -- Matches_Current_Profile --
+            -----------------------------
+
+            function Matches_Current_Profile
+              (Values : TGen_JSON_TC.Subprogram_Parameter_Vector)
+               return Boolean
+            is
+               Param_Nb : constant Natural :=
+                 TGen_JSON_TC.Subprogram_Parameter_Vector_Length (Values);
+            begin
+               if Param_Nb /= Current_Parameter_Number then
+                  return False;
+               end if;
+
+               declare
+                  Matched : array (1 .. Param_Nb) of Boolean :=
+                    [others => False];
+               begin
+                  for I in Values loop
+                     declare
+                        JSON_Name : constant String :=
+                          To_Lower
+                            (TGen_JSON_TC.Get_Parameter_Name
+                               (TGen_JSON_TC
+                                  .Subprogram_Parameter_Vector_Element
+                                     (Values, I)));
+                        Found     : Boolean := False;
+                     begin
+                        for J in 1 .. Param_Nb loop
+                           if not Matched (J)
+                             and then
+                               To_Lower (Current_Parameter_Name (J))
+                               = JSON_Name
+                           then
+                              Matched (J) := True;
+                              Found := True;
+                              exit;
+                           end if;
+                        end loop;
+                        if not Found then
+                           return False;
+                        end if;
+                     end;
+                  end loop;
+                  return True;
+               end;
+            end Matches_Current_Profile;
+
+            ---------------------------
+            -- Current_Global_Names --
+            ---------------------------
+
+            function Current_Global_Names return Test.Common.String_Set.Set is
+               Global_Aspect_Name :
+                 constant Langkit_Support.Text.Unbounded_Text_Type :=
+                   Langkit_Support.Text.To_Unbounded_Text ("Global");
+
+               Subp_Decl : constant Basic_Decl :=
+                 Subp.Subp_Declaration.As_Basic_Decl;
+
+               Names : Test.Common.String_Set.Set;
+
+               procedure Collect_Name (Item : Ada_Node'Class);
+               --  Resolve a single global name and record its fully
+               --  qualified name, unless it fails to resolve or denotes a
+               --  constant. Mirrors Translate_Globals.Process_Global.
+
+               procedure Collect (N : Ada_Node'Class);
+               --  Walk the Global aspect's expression and hand each
+               --  unmoded, Input or In_Out global to Collect_Name. Skips
+               --  Output and Proof_In globals. Mirrors Translate_Globals.
+
+               ------------------
+               -- Collect_Name --
+               ------------------
+
+               procedure Collect_Name (Item : Ada_Node'Class) is
+               begin
+                  if Item.Kind not in Libadalang.Common.Ada_Name then
+                     return;
+                  end if;
+
+                  declare
+                     Ref : constant Basic_Decl :=
+                       Item.As_Name.P_Referenced_Decl;
+                  begin
+                     if Ref.Is_Null
+                       or else Ref.Kind /= Libadalang.Common.Ada_Object_Decl
+                       or else Ref.As_Object_Decl.F_Has_Constant
+                     then
+                        return;
+                     end if;
+
+                     Names.Include
+                       (To_Lower
+                          (Langkit_Support.Text.Image
+                             (Item
+                                .As_Name
+                                .P_Referenced_Defining_Name
+                                .P_Fully_Qualified_Name)));
+                  exception
+                     when others =>
+                        null;
+                  end;
+               end Collect_Name;
+
+               -------------
+               -- Collect --
+               -------------
+
+               procedure Collect (N : Ada_Node'Class) is
+               begin
+                  case N.Kind is
+                     when Libadalang.Common.Ada_Aggregate    =>
+                        for Assoc of N.As_Aggregate.F_Assocs loop
+                           if Assoc.Kind
+                             = Libadalang.Common.Ada_Aggregate_Assoc
+                           then
+                              declare
+                                 AA          : constant Aggregate_Assoc :=
+                                   Assoc.As_Aggregate_Assoc;
+                                 Designators : constant Alternatives_List :=
+                                   AA.F_Designators;
+                              begin
+                                 if Designators.Children_Count = 0 then
+
+                                    --  Positional item: unmoded, input.
+
+                                    Collect (AA.F_R_Expr);
+                                 else
+                                    declare
+                                       Mode : constant String :=
+                                         To_Lower
+                                           (Node_Image
+                                              (Designators.Child (1)));
+                                    begin
+                                       if Mode in "input" | "in_out" then
+                                          Collect (AA.F_R_Expr);
+                                       end if;
+                                    end;
+                                 end if;
+                              end;
+                           end if;
+                        end loop;
+
+                     when Libadalang.Common.Ada_Null_Literal =>
+                        null;
+
+                     when others                             =>
+
+                        --  A single bare name: one unmoded global.
+
+                        Collect_Name (N);
+                  end case;
+               end Collect;
+
+            begin
+               if Subp_Decl.P_Has_Aspect (Global_Aspect_Name) then
+                  Collect (Subp_Decl.P_Get_Aspect (Global_Aspect_Name).Value);
+               end if;
+               return Names;
+            end Current_Global_Names;
+
+            -----------------------------
+            -- Matches_Current_Globals --
+            -----------------------------
+
+            function Matches_Current_Globals
+              (Values : TGen_JSON_TC.Subprogram_Parameter_Vector)
+               return Boolean
+            is
+               Current_Globals : constant Test.Common.String_Set.Set :=
+                 Current_Global_Names;
+
+               Seen : Test.Common.String_Set.Set;
+            begin
+               --  Every global in Values must be a current global.
+
+               for I in Values loop
+                  declare
+                     Name : constant String :=
+                       To_Lower
+                         (TGen_JSON_TC.Get_Parameter_Name
+                            (TGen_JSON_TC.Subprogram_Parameter_Vector_Element
+                               (Values, I)));
+                  begin
+                     if not Current_Globals.Contains (Name) then
+                        return False;
+                     end if;
+                     Seen.Include (Name);
+                  end;
+               end loop;
+
+               --  And every current global must be in Values, or a newly
+               --  added or newly input global would go uninitialized.
+
+               return Natural (Seen.Length) = Natural (Current_Globals.Length);
+            end Matches_Current_Globals;
+
          begin
 
             if Spec_VF.Is_Regular_File then
@@ -7097,21 +7486,6 @@ package body Test.Skeleton is
             else
                Create (Files (Body_Kind), Out_File, +Body_VF.Full_Name);
             end if;
-
-            --  Create a test type for this test package
-
-            Suite_Data_List.Test_Types.Append
-              (Test_Type_Info_Wrapper'
-                 (TT_Info       =>
-                    Test.Harness.Test_Type_Info'
-                      (Test_Type             => No_Ada_Node,
-                       Test_Type_Name        => new String'("Test"),
-                       Good_For_Substitution => False,
-                       Max_Inheritance_Depth => 0,
-                       Nesting               => new String'(Test_Unit_Name),
-                       Tested_Type           => No_Ada_Node),
-                  Test_Package  => new String'(Test_Unit_Name),
-                  Original_Type => No_Ada_Node));
 
             Put_Line (Spec_Kind, "with GNATtest_Generated;");
             New_Line (Spec_Kind);
@@ -7169,6 +7543,22 @@ package body Test.Skeleton is
 
             for Test_Vec of Subp_Vectors loop
 
+               Param_Values :=
+                 TGen_JSON_TC.Get_Subprogram_Parameters (Test_Vec);
+               Global_Values :=
+                 (if TGen_JSON_TC.Has_Global_Values (Test_Vec)
+                  then TGen_JSON_TC.Get_Subprogram_Global_Values (Test_Vec)
+                  else TGen_JSON_TC.Empty_Parameter_Vector);
+
+               if not Matches_Current_Profile (Param_Values)
+                 or else not Matches_Current_Globals (Global_Values)
+               then
+                  --  This test vector was generated for a previous, now
+                  --  stale, parameter or global profile: drop it instead
+                  --  of generating a test for it.
+                  goto Skip_Stale_Test_Vec;
+               end if;
+
                Test_Routine_Name :=
                  +"Gen_"
                  & Subp.Subp_Mangle_Name.all
@@ -7196,13 +7586,6 @@ package body Test.Skeleton is
                   Test_Time         => "modified",
                   Origin            => Test_Case_Generated,
                   Subp              => Subp);
-
-               Param_Values :=
-                 TGen_JSON_TC.Get_Subprogram_Parameters (Test_Vec);
-               Global_Values :=
-                 (if TGen_JSON_TC.Has_Global_Values (Test_Vec)
-                  then TGen_JSON_TC.Get_Subprogram_Global_Values (Test_Vec)
-                  else TGen_JSON_TC.Empty_Parameter_Vector);
 
                Put_Line
                  (Spec_Kind,
@@ -7536,7 +7919,32 @@ package body Test.Skeleton is
                      From_Generic  => False));
 
                Test_Count := Test_Count + 1;
+
+               <<Skip_Stale_Test_Vec>>
             end loop;
+
+            --  Only keep this test package if at least one test vector
+            --  was actually accepted. Otherwise, letting it survive as an
+            --  expected file would leave a stale "-suite" file
+            --  referencing test routines that this rewrite just dropped.
+
+            if Test_Count > 1 then
+               Expected_Test_Files.Include (Test_Unit_File_Name);
+               Expected_Suite_Files.Include (Test_Unit_Short_File_Name);
+
+               Suite_Data_List.Test_Types.Append
+                 (Test_Type_Info_Wrapper'
+                    (TT_Info       =>
+                       Test.Harness.Test_Type_Info'
+                         (Test_Type             => No_Ada_Node,
+                          Test_Type_Name        => new String'("Test"),
+                          Good_For_Substitution => False,
+                          Max_Inheritance_Depth => 0,
+                          Nesting               => new String'(Test_Unit_Name),
+                          Tested_Type           => No_Ada_Node),
+                     Test_Package  => new String'(Test_Unit_Name),
+                     Original_Type => No_Ada_Node));
+            end if;
 
             Put_Line (Spec_Kind, "end " & Test_Unit_Name & ";");
             Put_Line (Body_Kind, "end " & Test_Unit_Name & ";");
@@ -7559,6 +7967,14 @@ package body Test.Skeleton is
 
          <<Continue>>
       end loop;
+
+      Remove_Obsolete_Generated_Tests
+        (Output_Dir, Generated_Test_File_Prefix, Expected_Test_Files);
+      Remove_Obsolete_Generated_Tests
+        (Harness_Dir_Str.all,
+         Generated_Suite_File_Prefix,
+         Expected_Suite_Files,
+         Unit_Suffix => "-suite");
 
       GNAT.Strings.Free (Unit_Raw_Content);
       return True;
