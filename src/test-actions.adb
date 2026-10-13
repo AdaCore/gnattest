@@ -1632,11 +1632,11 @@ package body Test.Actions is
       Put
         (" --stubs-dir=dirname    - Stub files are put in subdirs of dirname\n");
       Put
-        (" --shorten-package      - Reduce the name's length of the packages that are tested\n");
+        (" --shorten-package      - Reduce the  length of the packages named used to in the generated filenames\n");
       Put
-        (" --package-max-len      - The maximum size of a test package before being shortened\n");
+        (" --package-max-len      - The maximum length of a test package before being shortened\n");
       Put
-        (" --package-hash-len     - The size the max-package-len that will be replaced by a shortened name\n");
+        (" --package-hash-len     - The number of characters of max-package-len that will be replaced by a hash\n");
       Put
         ("                          The package-hash-len must be strictely lower than max-package-len\n");
       Put ("\n");
