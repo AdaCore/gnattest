@@ -441,6 +441,34 @@ Switches for ``gnattest`` in framework generation mode
   placed accordingly.
 
 
+  .. index:: --shorten-package (gnattest)
+
+:switch:`--shorten-package`
+  Reduce the length of the filenames generated using a package name. 
+  To do that, it keeps `package-max-len` minus `package-hash-len` characters 
+  from the full package name and appends the first `package-hash-len` characters 
+  of a hash generated from the full package name.
+  Defaults to false.
+
+
+  .. index:: --package-max-len (gnattest)
+  
+:switch:`--package-max-len={max-lenght}`
+  The maximum length a package name will be when used in a filename.
+  This length must be greater than `package-hash-len` as the hash 
+  characters count toward the overall package name length.
+  Defaults to 20.
+
+  
+  .. index:: --package-hash-len (gnattest)
+
+:switch:`--package-hash-len={hash-lenght}`
+  The size of the hash that will be suffixed to the shortened package name.
+  This length must be lower than `package-max-len` as the hash 
+  characters count toward the overall package name length.
+  Defaults to 5.
+
+
   .. index:: --exclude-from-stubbing (gnattest)
 
 :switch:`--exclude-from-stubbing={filename}`
