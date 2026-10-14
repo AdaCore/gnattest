@@ -283,3 +283,24 @@ install-gtest:
 	cp -r "$(GTEST_SRC)/googletest/include" "$(DESTDIR)/share/gtest/"
 	cp -r "$(GTEST_SRC)/googletest/src"     "$(DESTDIR)/share/gtest/"
 	cp "$(GTEST_SRC)/LICENSE" "$(DESTDIR)/share/gtest/"
+
+# Path to the Unity source tree shipped with gnattest. Override via
+# UNITY_SRC to build against a local checkout during development. The C
+# test drivers link Unity with gnattest's own support (share/unity_support).
+UNITY_SRC ?= share/unity
+
+.PHONY: install-unity
+install-unity:
+	@if [ ! -f "$(UNITY_SRC)/src/unity.c" ] ; then \
+		echo "error: Unity sources not found at $(UNITY_SRC)" ; \
+		echo "Either initialize the submodule:" ; \
+		echo "    git submodule update --init $(UNITY_SRC)" ; \
+		echo "or point UNITY_SRC at a local Unity checkout:" ; \
+		echo "    make install-unity UNITY_SRC=/path/to/unity DESTDIR=..." ; \
+		exit 1 ; \
+	fi
+	mkdir -p "$(DESTDIR)/share/unity/src"
+	cp "$(UNITY_SRC)/src/unity.c" "$(UNITY_SRC)/src/unity.h" \
+	   "$(UNITY_SRC)/src/unity_internals.h" share/unity_support/* \
+	   "$(DESTDIR)/share/unity/src/"
+	cp "$(UNITY_SRC)/LICENSE.txt" "$(DESTDIR)/share/unity/"

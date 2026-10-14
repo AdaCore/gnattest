@@ -6,3 +6,7 @@
 	path = share/googletest
 	url = https://github.com/google/googletest
 	branch = main
+[submodule "share/unity"]
+	path = share/unity
+	url = https://github.com/ThrowTheSwitch/Unity
+	branch = master

@@ -202,6 +202,22 @@ package body Test.Setup is
    --  Install the gtest headers, library and its gtest.gpr project under the
    --  chosen prefix, so the generated harness can "with" it.
 
+   function Source_Unity_Dir return String;
+   --  Read-only Unity source tree shipped with gnattest, with gnattest's
+   --  support for it, at <gnattest_prefix>/share/unity (populated by "make
+   --  install-unity").
+
+   function Unity_Supported (Opts : Setup_Options) return Boolean;
+   --  True when Unity can be built for this configuration: native mode and
+   --  the sources actually shipped with this gnattest.
+
+   procedure Run_Build_Unity (Opts : Setup_Options; Build_Dir : String);
+   --  Build libgnattest_unity.a from the sources staged in Build_Dir
+
+   procedure Install_Unity (Opts : Setup_Options; Build_Dir : String);
+   --  Install the Unity headers, library and its gnattest_unity.gpr project
+   --  under the chosen prefix, so the generated C test driver can "with" it.
+
    --  Controlled wrapper that creates a unique build directory under the
    --  system temp dir and removes it on scope exit (unless Save_Temps was
    --  requested).
@@ -249,9 +265,10 @@ package body Test.Setup is
       Put_Line ("Usage: gnattest setup [options]");
       New_Line;
       Put_Line ("Build and install the bundled AUnit library for a given");
-      Put_Line ("target / RTS combination. In native mode with the full");
-      Put_Line ("runtime, also build and install the TGen runtime and the");
-      Put_Line ("Google Test library used by the C/C++ test harness.");
+      Put_Line ("target / RTS combination. In native mode, also build and");
+      Put_Line ("install the Unity library used by the C test driver and,");
+      Put_Line ("with the full runtime, the TGen runtime and the Google Test");
+      Put_Line ("library.");
       New_Line;
       Put_Line ("Options:");
       Put_Line ("  --target=<triplet>  Cross-compilation target");
@@ -895,6 +912,144 @@ package body Test.Setup is
       end;
    end Install_GTest;
 
+   ----------------------
+   -- Source_Unity_Dir --
+   ----------------------
+
+   function Source_Unity_Dir return String is
+      use Ada.Directories;
+   begin
+      return Compose (Compose (Gnattest_Prefix, "share"), "unity");
+   end Source_Unity_Dir;
+
+   ---------------------
+   -- Unity_Supported --
+   ---------------------
+
+   function Unity_Supported (Opts : Setup_Options) return Boolean
+   is (Is_Native (Opts)
+       and then
+         Ada.Directories.Exists
+           (Ada.Directories.Compose
+              (Ada.Directories.Compose (Source_Unity_Dir, "src"),
+               "unity",
+               Extension => "c")));
+
+   ---------------------
+   -- Run_Build_Unity --
+   ---------------------
+
+   procedure Run_Build_Unity (Opts : Setup_Options; Build_Dir : String) is
+      use Ada.Directories;
+      Staged   : constant String := Compose (Build_Dir, "unity");
+      GPR_Path : constant String :=
+        Compose (Staged, "unity_build", Extension => "gpr");
+      Cmd      : GNATCOLL.OS.Process.Argument_List;
+   begin
+      declare
+         use Ada.Text_IO;
+         F : File_Type;
+      begin
+         Create (F, Out_File, GPR_Path);
+         Put_Line (F, "library project Unity_Build is");
+         Put_Line (F, "   for Languages use (""C"");");
+         Put_Line (F, "   for Source_Dirs use (""src"");");
+         Put_Line (F, "   for Object_Dir use ""obj"";");
+         Put_Line (F, "   for Library_Name use ""gnattest_unity"";");
+         Put_Line (F, "   for Library_Dir use ""lib"";");
+         Put_Line (F, "   for Library_Kind use ""static"";");
+         --  The tests get the same configuration through gnattest_unity.h.
+         Put_Line (F, "   package Compiler is");
+         Put_Line
+           (F,
+            "      for Default_Switches (""C"") use "
+            & "(""-g"", ""-DUNITY_INCLUDE_CONFIG_H"");");
+         Put_Line (F, "   end Compiler;");
+         Put_Line (F, "end Unity_Build;");
+         Close (F);
+      end;
+
+      Cmd.Append ("gprbuild");
+      Cmd.Append ("-p");
+      Cmd.Append ("-P");
+      Cmd.Append (GPR_Path);
+      if Opts.Quiet then
+         Cmd.Append ("-q");
+      end if;
+      if Length (Opts.Config) > 0 then
+         Cmd.Append ("--config=" & To_String (Opts.Config));
+      end if;
+      for G of Opts.Gargs loop
+         Cmd.Append (G);
+      end loop;
+      Test.Subprocess.Run (Cmd, What => "gprbuild");
+   end Run_Build_Unity;
+
+   -------------------
+   -- Install_Unity --
+   -------------------
+
+   procedure Install_Unity (Opts : Setup_Options; Build_Dir : String) is
+      use Ada.Directories;
+      Prefix      : constant String :=
+        (if Length (Opts.Prefix) > 0
+         then To_String (Opts.Prefix)
+         else Gnattest_Prefix);
+      Staged      : constant String := Compose (Build_Dir, "unity");
+      Dest_Share  : constant String :=
+        Compose (Compose (Prefix, "share"), "unity");
+      Dest_Header : constant String := Compose (Dest_Share, "include");
+      Dest_GPR    : constant String :=
+        Compose
+          (Compose (Compose (Prefix, "share"), "gpr"),
+           "gnattest_unity",
+           Extension => "gpr");
+      Search      : Search_Type;
+      Header      : Directory_Entry_Type;
+   begin
+      --  Only the headers: the sources stay out of the installed project, or
+      --  its consumers could pick them up.
+
+      if Exists (Dest_Header) then
+         Delete_Tree (Dest_Header);
+      end if;
+      if Exists (Compose (Dest_Share, "lib")) then
+         Delete_Tree (Compose (Dest_Share, "lib"));
+      end if;
+      Create_Path (Dest_Header);
+      Create_Path (Containing_Directory (Dest_GPR));
+
+      Start_Search
+        (Search,
+         Compose (Staged, "src"),
+         "*.h",
+         Filter => (Ordinary_File => True, others => False));
+      while More_Entries (Search) loop
+         Get_Next_Entry (Search, Header);
+         Copy_File
+           (Full_Name (Header), Compose (Dest_Header, Simple_Name (Header)));
+      end loop;
+      End_Search (Search);
+
+      Copy_Sources (Src => Compose (Staged, "lib"), Dst_Parent => Dest_Share);
+
+      declare
+         use Ada.Text_IO;
+         F : File_Type;
+      begin
+         Create (F, Out_File, Dest_GPR);
+         Put_Line (F, "library project Gnattest_Unity is");
+         Put_Line (F, "   for Languages use (""C"");");
+         Put_Line (F, "   for Source_Dirs use (""../unity/include"");");
+         Put_Line (F, "   for Library_Name use ""gnattest_unity"";");
+         Put_Line (F, "   for Library_Dir use ""../unity/lib"";");
+         Put_Line (F, "   for Library_Kind use ""static"";");
+         Put_Line (F, "   for Externally_Built use ""True"";");
+         Put_Line (F, "end Gnattest_Unity;");
+         Close (F);
+      end;
+   end Install_Unity;
+
    ---------
    -- Run --
    ---------
@@ -1100,6 +1255,21 @@ package body Test.Setup is
                Ada.Text_IO.Put_Line
                  ("gnattest setup: skipping Google Test (only supported for"
                   & " the native full runtime).");
+            end if;
+
+            --  Unity, used by the C test driver
+
+            if Unity_Supported (Opts) then
+               if Opts.Verbose then
+                  Ada.Text_IO.Put_Line ("gnattest setup: also building Unity");
+               end if;
+               Copy_Sources (Src => Source_Unity_Dir, Dst_Parent => Build_Dir);
+               Run_Build_Unity (Opts, Build_Dir);
+               Install_Unity (Opts, Build_Dir);
+            elsif Opts.Verbose then
+               Ada.Text_IO.Put_Line
+                 ("gnattest setup: skipping Unity (only supported in native"
+                  & " mode, with the sources shipped with gnattest).");
             end if;
          end;
 
