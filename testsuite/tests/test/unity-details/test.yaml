@@ -1,0 +1,4 @@
+description: Isolate Unity details between tests and suite fixtures.
+driver: python_script
+control:
+  - [SKIP, "not native", "Builds and runs a native Unity driver"]

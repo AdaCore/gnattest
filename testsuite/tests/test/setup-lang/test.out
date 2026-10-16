@@ -1,0 +1,14 @@
+gnattest setup: --lang: unknown language "foo", expected ada, c or c++
+status: 1
+gnattest setup: --lang: empty language name in "c,"
+status: 1
+gnattest setup: --tgen: the TGen runtime needs ada in --lang
+status: 1
+gnattest setup: --lang: cannot set up c++: Google Test is only supported for the native full runtime, with the sources shipped with gnattest
+status: 1
+status: 0
+['gnattest_unity.gpr', 'gtest.gpr']
+status: 0
+['aunit.gpr']
+status: 0
+['aunit.gpr', 'gnattest_unity.gpr']

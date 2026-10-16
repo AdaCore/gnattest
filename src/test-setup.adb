@@ -21,6 +21,7 @@
 -- <http://www.gnu.org/licenses/>.                                          --
 ------------------------------------------------------------------------------
 
+with Ada.Characters.Handling;
 with Ada.Command_Line;
 with Ada.Directories;
 with Ada.Environment_Variables;
@@ -63,9 +64,14 @@ package body Test.Setup is
    --  The runtime-profile enum and its --rts-profile switch live in
    --  Test.Command_Lines so the framework can parse the switch directly.
 
-   --  Whether to build the TGen runtime: forced on/off with --tgen /
-   --  --no-tgen, or decided by probing the compiler for Ada 2022 support.
+   --  --tgen requests the TGen runtime and --no-tgen skips it. Building
+   --  the runtime always requires a successful Ada 2022 compiler probe.
    type Tgen_Mode_Type is (Tgen_Auto, Tgen_Build, Tgen_Skip);
+
+   --  The languages whose test libraries setup builds: AUnit and TGen for
+   --  Ada, Unity for C, Google Test for C++.
+   type Setup_Language is (Lang_Ada, Lang_C, Lang_Cpp);
+   type Language_Set is array (Setup_Language) of Boolean;
 
    type Setup_Options is record
       Target  : Unbounded_String;
@@ -82,7 +88,24 @@ package body Test.Setup is
       --  into Prefix early in Run.
 
       Tgen_Mode : Tgen_Mode_Type := Tgen_Auto;
+
+      Languages : Language_Set := [others => True];
+
+      Explicit_Languages : Boolean := False;
+      --  Whether --lang was passed. Only an explicitly requested language
+      --  that cannot be built is an error. By default, setup builds what the
+      --  configuration supports, so that a cross or light runtime setup
+      --  still succeeds without C or C++ support.
    end record;
+
+   function Parse_Languages (Value : String) return Language_Set;
+   --  Parse the comma-separated, case-insensitive list of --lang. Fail on
+   --  an empty list or an unknown language.
+
+   function Requested
+     (Opts : Setup_Options; Lang : Setup_Language) return Boolean
+   is (Opts.Explicit_Languages and then Opts.Languages (Lang));
+   --  Whether Lang was named in --lang, so failing to build it is an error
 
    --  Local helpers
 
@@ -110,8 +133,9 @@ package body Test.Setup is
    --  Return the install prefix of gnattest
 
    function Compiler_Install_Prefix (Opts : Setup_Options) return String;
-   --  Return the install prefix of the Ada compiler that will build the
-   --  library according to Opts.
+   --  Return the install prefix of the compiler that will build the
+   --  libraries according to Opts: the Ada compiler, or without Ada in
+   --  --lang, the compiler of the first selected language.
 
    function Build_Command
      (Opts         : Setup_Options;
@@ -211,8 +235,10 @@ package body Test.Setup is
    --  True when Unity can be built for this configuration: native mode and
    --  the sources actually shipped with this gnattest.
 
-   procedure Run_Build_Unity (Opts : Setup_Options; Build_Dir : String);
-   --  Build libgnattest_unity.a from the sources staged in Build_Dir
+   function Run_Build_Unity
+     (Opts : Setup_Options; Build_Dir : String) return Boolean;
+   --  Build libgnattest_unity.a from the sources staged in Build_Dir. Return
+   --  whether it succeeded: the configuration may have no C compiler.
 
    procedure Install_Unity (Opts : Setup_Options; Build_Dir : String);
    --  Install the Unity headers, library and its gnattest_unity.gpr project
@@ -255,6 +281,47 @@ package body Test.Setup is
       end if;
    end Deref;
 
+   ---------------------
+   -- Parse_Languages --
+   ---------------------
+
+   function Parse_Languages (Value : String) return Language_Set is
+      Result : Language_Set := [others => False];
+      First  : Positive := Value'First;
+      Last   : Natural;
+   begin
+      loop
+         Last := Ada.Strings.Fixed.Index (Value (First .. Value'Last), ",");
+         Last := (if Last = 0 then Value'Last else Last - 1);
+
+         declare
+            Name : constant String :=
+              Ada.Characters.Handling.To_Lower
+                (Ada.Strings.Fixed.Trim
+                   (Value (First .. Last), Ada.Strings.Both));
+         begin
+            if Name = "" then
+               Fail ("--lang: empty language name in """ & Value & """");
+            elsif Name = "ada" then
+               Result (Lang_Ada) := True;
+            elsif Name = "c" then
+               Result (Lang_C) := True;
+            elsif Name = "c++" then
+               Result (Lang_Cpp) := True;
+            else
+               Fail
+                 ("--lang: unknown language """
+                  & Name
+                  & """, expected ada, c or c++");
+            end if;
+         end;
+
+         exit when Last >= Value'Last;
+         First := Last + 2;
+      end loop;
+      return Result;
+   end Parse_Languages;
+
    ----------------
    -- Print_Help --
    ----------------
@@ -264,11 +331,10 @@ package body Test.Setup is
    begin
       Put_Line ("Usage: gnattest setup [options]");
       New_Line;
-      Put_Line ("Build and install the bundled AUnit library for a given");
-      Put_Line ("target / RTS combination. In native mode, also build and");
-      Put_Line ("install the Unity library used by the C test driver and,");
-      Put_Line ("with the full runtime, the TGen runtime and the Google Test");
-      Put_Line ("library.");
+      Put_Line ("Build and install the bundled test libraries for a given");
+      Put_Line ("target / RTS combination: AUnit and the TGen runtime for");
+      Put_Line ("Ada, Unity for C (native only) and Google Test for C++");
+      Put_Line ("(native full runtime only).");
       New_Line;
       Put_Line ("Options:");
       Put_Line ("  --target=<triplet>  Cross-compilation target");
@@ -280,10 +346,14 @@ package body Test.Setup is
       Put_Line ("  --rts-profile=<p>   auto | full | zfp | zfp-cross |");
       Put_Line ("                      ravenscar | ravenscar-cert | cert");
       Put_Line ("                      (default: auto, from --RTS/--target)");
-      Put_Line ("  --tgen / --no-tgen  Force or skip building the TGen");
-      Put_Line ("                      runtime. By default it is built in");
-      Put_Line ("                      native mode, if the compiler supports");
-      Put_Line ("                      Ada 2022.");
+      Put_Line ("  --lang=<list>       Languages to set up, comma-separated:");
+      Put_Line ("                      ada, c, c++ (case insensitive).");
+      Put_Line ("                      Default: all of them.");
+      Put_Line ("  --tgen / --no-tgen  Request or skip building the TGen");
+      Put_Line
+        ("                      runtime. It is skipped if the Ada 2022");
+      Put_Line
+        ("                      compiler probe fails, even with --tgen.");
       Put_Line ("  -q                  Quiet mode");
       Put_Line ("  -v                  Verbose mode (echo invoked commands)");
       Put_Line ("  -gargs ...          Pass remaining args to gprbuild");
@@ -356,8 +426,27 @@ package body Test.Setup is
 
       Target : constant String := To_String (Opts.Target);
 
-      --  A minimal Ada project so that loading it autoconfigures the Ada
-      --  compiler for the requested target/RTS. We then read the resulting
+      --  A C-only setup must not require an Ada compiler
+
+      Lang      : constant Setup_Language :=
+        (if Opts.Languages (Lang_Ada)
+         then Lang_Ada
+         elsif Opts.Languages (Lang_C)
+         then Lang_C
+         else Lang_Cpp);
+      Lang_Name : constant String :=
+        (case Lang is
+           when Lang_Ada => "Ada",
+           when Lang_C   => "C",
+           when Lang_Cpp => "C++");
+      Lang_Id   : constant GPR2.Language_Id :=
+        (case Lang is
+           when Lang_Ada => GPR2.Ada_Language,
+           when Lang_C   => GPR2.C_Language,
+           when Lang_Cpp => GPR2.CPP_Language);
+
+      --  A minimal project so that loading it autoconfigures the compiler
+      --  for the requested target/RTS. We then read the resulting
       --  configuration rather than assuming any particular driver name.
 
       Prj_Name : constant String :=
@@ -372,7 +461,7 @@ package body Test.Setup is
          Create (F, Out_File, Prj_Name);
          Put_Line (F, "project Gnattest_Setup is");
          Put_Line (F, "   for Source_Dirs use ();");
-         Put_Line (F, "   for Languages use (""Ada"");");
+         Put_Line (F, "   for Languages use (""" & Lang_Name & """);");
          Put_Line (F, "end Gnattest_Setup;");
          Close (F);
       end;
@@ -409,11 +498,13 @@ package body Test.Setup is
          Attr : constant GPR2.Project.Attribute.Object :=
            View.Attribute
              (Name  => GPR2.Project.Registry.Attribute.Compiler.Driver,
-              Index =>
-                GPR2.Project.Attribute_Index.Create (GPR2.Ada_Language));
+              Index => GPR2.Project.Attribute_Index.Create (Lang_Id));
       begin
          if not Attr.Is_Defined then
-            Fail ("--compiler-prefix: no Ada compiler driver in config");
+            Fail
+              ("--compiler-prefix: no "
+               & Lang_Name
+               & " compiler driver in config");
          end if;
 
          --  Compilers are installed in <prefix>/bin, so the prefix is the
@@ -939,7 +1030,9 @@ package body Test.Setup is
    -- Run_Build_Unity --
    ---------------------
 
-   procedure Run_Build_Unity (Opts : Setup_Options; Build_Dir : String) is
+   function Run_Build_Unity
+     (Opts : Setup_Options; Build_Dir : String) return Boolean
+   is
       use Ada.Directories;
       Staged   : constant String := Compose (Build_Dir, "unity");
       GPR_Path : constant String :=
@@ -982,7 +1075,7 @@ package body Test.Setup is
       for G of Opts.Gargs loop
          Cmd.Append (G);
       end loop;
-      Test.Subprocess.Run (Cmd, What => "gprbuild");
+      return Test.Subprocess.Run_Status (Cmd) = 0;
    end Run_Build_Unity;
 
    -------------------
@@ -1125,6 +1218,11 @@ package body Test.Setup is
             then Tgen_Build
             else Tgen_Skip);
 
+         if Present (Arg (Cmd, Lang)) then
+            Opts.Languages := Parse_Languages (Arg (Cmd, Lang).all);
+            Opts.Explicit_Languages := True;
+         end if;
+
          --  Resolve --compiler-prefix into an explicit install prefix
 
          if Opts.Compiler_Prefix then
@@ -1138,12 +1236,30 @@ package body Test.Setup is
             then Infer_Profile (Opts)
             else Opts.Profile);
 
-         if Opts.Tgen_Mode = Tgen_Build
-           and then not TGen_Supports_Profile (Profile)
+         if Opts.Tgen_Mode = Tgen_Build then
+            if not Opts.Languages (Lang_Ada) then
+               Fail ("--tgen: the TGen runtime needs ada in --lang");
+            elsif not TGen_Supports_Profile (Profile) then
+               Fail
+                 ("--tgen: the TGen runtime only supports full and embedded"
+                  & " Ada runtime profiles");
+            end if;
+         end if;
+
+         --  Reject an unsupported language before building anything
+
+         if Requested (Opts, Lang_C) and then not Unity_Supported (Opts) then
+            Fail
+              ("--lang: cannot set up c: Unity is only supported in native"
+               & " mode, with the sources shipped with gnattest");
+         end if;
+         if Requested (Opts, Lang_Cpp)
+           and then not GTest_Supported (Opts, Profile)
          then
             Fail
-              ("--tgen: the TGen runtime only supports full and embedded Ada"
-               & " runtime profiles");
+              ("--lang: cannot set up c++: Google Test is only supported for"
+               & " the native full runtime, with the sources shipped with"
+               & " gnattest");
          end if;
 
          --  Stage sources into the temp build directory. We never build in
@@ -1151,87 +1267,95 @@ package body Test.Setup is
          --  artifacts, and concurrent setups for different targets/profiles
          --  must not collide.
 
-         Copy_Sources
-           (Src => Source_AUnit_Dir, Dst_Parent => To_String (Build.Path));
-
          declare
             Build_Dir : constant String := To_String (Build.Path);
-            Aunit_GPR : constant String := Build_AUnit_GPR (Build_Dir);
          begin
             if Opts.Verbose then
                Ada.Text_IO.Put_Line
-                 ("gnattest setup: AUnit profile = "
-                  & Setup_Profile_Image (Profile));
-               Ada.Text_IO.Put_Line
                  ("gnattest setup: build dir     = " & Build_Dir);
-               Ada.Text_IO.Put_Line
-                 ("gnattest setup: AUnit project = " & Aunit_GPR);
             end if;
 
-            --  Make aunit_shared.gpr discoverable to gprbuild via the
-            --  directory containing the staged aunit.gpr.
+            if Opts.Languages (Lang_Ada) then
+               Copy_Sources (Src => Source_AUnit_Dir, Dst_Parent => Build_Dir);
 
-            declare
-               use Ada.Environment_Variables;
-               Lib_Gnat_Dir : constant String :=
-                 Ada.Directories.Containing_Directory (Aunit_GPR);
-               Existing     : constant String :=
-                 (if Exists ("GPR_PROJECT_PATH")
-                  then Value ("GPR_PROJECT_PATH")
-                  else "");
-               New_Value    : constant String :=
-                 (if Existing = ""
-                  then Lib_Gnat_Dir
-                  else Lib_Gnat_Dir & GNAT.OS_Lib.Path_Separator & Existing);
-            begin
-               Set ("GPR_PROJECT_PATH", New_Value);
-            end;
-
-            Run_Build_AUnit (Opts, Profile, Build_Dir);
-            Run_Install_AUnit (Opts, Profile, Build_Dir);
-
-            --  In native mode, also stage and build/install the TGen
-            --  runtimes, unless --no-tgen was passed or the compiler lacks
-            --  the Ada 2022 support they require (--tgen skips the probe
-            --  and forces the build).
-
-            declare
-               Build_TGen : Boolean :=
-                 Opts.Tgen_Mode = Tgen_Build
-                 or else
-                   (Opts.Tgen_Mode = Tgen_Auto
-                    and then TGen_Supports_Profile (Profile));
-            begin
-               if Build_TGen
-                 and then Opts.Tgen_Mode = Tgen_Auto
-                 and then not Compiler_Supports_Ada_2022 (Opts, Build_Dir)
-               then
-                  Build_TGen := False;
-                  if not Opts.Quiet then
-                     Ada.Text_IO.Put_Line
-                       ("gnattest setup: the compiler does not support Ada"
-                        & " 2022; skipping the TGen runtime (pass --tgen to"
-                        & " force building it)");
-                  end if;
-               end if;
-
-               if Build_TGen then
+               declare
+                  Aunit_GPR : constant String := Build_AUnit_GPR (Build_Dir);
+               begin
                   if Opts.Verbose then
                      Ada.Text_IO.Put_Line
-                       ("gnattest setup: also building TGen runtime");
+                       ("gnattest setup: AUnit profile = "
+                        & Setup_Profile_Image (Profile));
+                     Ada.Text_IO.Put_Line
+                       ("gnattest setup: AUnit project = " & Aunit_GPR);
                   end if;
-                  Copy_Sources
-                    (Src => Source_TGen_Dir, Dst_Parent => Build_Dir);
-                  Run_Build_TGen (Opts, Build_Dir);
-                  Run_Install_TGen (Opts, Build_Dir);
-               end if;
-            end;
+
+                  --  Make aunit_shared.gpr discoverable to gprbuild via the
+                  --  directory containing the staged aunit.gpr.
+
+                  declare
+                     use Ada.Environment_Variables;
+                     Lib_Gnat_Dir : constant String :=
+                       Ada.Directories.Containing_Directory (Aunit_GPR);
+                     Existing     : constant String :=
+                       (if Exists ("GPR_PROJECT_PATH")
+                        then Value ("GPR_PROJECT_PATH")
+                        else "");
+                     New_Value    : constant String :=
+                       (if Existing = ""
+                        then Lib_Gnat_Dir
+                        else
+                          Lib_Gnat_Dir
+                          & GNAT.OS_Lib.Path_Separator
+                          & Existing);
+                  begin
+                     Set ("GPR_PROJECT_PATH", New_Value);
+                  end;
+               end;
+
+               Run_Build_AUnit (Opts, Profile, Build_Dir);
+               Run_Install_AUnit (Opts, Profile, Build_Dir);
+
+               --  The TGen runtime needs Ada 2022 support, including when
+               --  explicitly requested with --tgen.
+
+               declare
+                  Build_TGen : Boolean :=
+                    Opts.Tgen_Mode = Tgen_Build
+                    or else
+                      (Opts.Tgen_Mode = Tgen_Auto
+                       and then TGen_Supports_Profile (Profile));
+               begin
+                  if Build_TGen
+                    and then not Compiler_Supports_Ada_2022 (Opts, Build_Dir)
+                  then
+                     Build_TGen := False;
+                     if not Opts.Quiet then
+                        Ada.Text_IO.Put_Line
+                          ("gnattest setup: Ada 2022 probe failed; skipping"
+                           & " the TGen runtime");
+                     end if;
+                  end if;
+
+                  if Build_TGen then
+                     if Opts.Verbose then
+                        Ada.Text_IO.Put_Line
+                          ("gnattest setup: also building TGen runtime");
+                     end if;
+                     Copy_Sources
+                       (Src => Source_TGen_Dir, Dst_Parent => Build_Dir);
+                     Run_Build_TGen (Opts, Build_Dir);
+                     Run_Install_TGen (Opts, Build_Dir);
+                  end if;
+               end;
+            end if;
 
             --  Google Test, for C++ tests. Native + full runtime only: it
-            --  needs a hosted C++ runtime. Optional, as no C++ test can be
-            --  generated yet.
+            --  needs a hosted C++ runtime. Unless c++ is in --lang, a
+            --  toolchain without a C++ compiler only skips it.
 
-            if GTest_Supported (Opts, Profile) then
+            if not Opts.Languages (Lang_Cpp) then
+               null;
+            elsif GTest_Supported (Opts, Profile) then
                if Opts.Verbose then
                   Ada.Text_IO.Put_Line
                     ("gnattest setup: also building Google Test");
@@ -1239,6 +1363,10 @@ package body Test.Setup is
                Copy_Sources (Src => Source_GTest_Dir, Dst_Parent => Build_Dir);
                if Run_Build_GTest (Opts, Build_Dir) then
                   Install_GTest (Opts, Build_Dir);
+               elsif Requested (Opts, Lang_Cpp) then
+                  Fail
+                    ("--lang: cannot set up c++: could not build Google Test,"
+                     & " which needs a C++ compiler");
                elsif not Opts.Quiet then
                   Ada.Text_IO.Put_Line
                     ("gnattest setup: could not build Google Test, which"
@@ -1259,13 +1387,24 @@ package body Test.Setup is
 
             --  Unity, used by the C test driver
 
-            if Unity_Supported (Opts) then
+            if not Opts.Languages (Lang_C) then
+               null;
+            elsif Unity_Supported (Opts) then
                if Opts.Verbose then
                   Ada.Text_IO.Put_Line ("gnattest setup: also building Unity");
                end if;
                Copy_Sources (Src => Source_Unity_Dir, Dst_Parent => Build_Dir);
-               Run_Build_Unity (Opts, Build_Dir);
-               Install_Unity (Opts, Build_Dir);
+               if Run_Build_Unity (Opts, Build_Dir) then
+                  Install_Unity (Opts, Build_Dir);
+               elsif Requested (Opts, Lang_C) then
+                  Fail
+                    ("--lang: cannot set up c: could not build Unity, which"
+                     & " needs a C compiler");
+               elsif not Opts.Quiet then
+                  Ada.Text_IO.Put_Line
+                    ("gnattest setup: could not build Unity, which needs a C"
+                     & " compiler; skipping it.");
+               end if;
             elsif Opts.Verbose then
                Ada.Text_IO.Put_Line
                  ("gnattest setup: skipping Unity (only supported in native"

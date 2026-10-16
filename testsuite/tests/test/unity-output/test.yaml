@@ -1,0 +1,4 @@
+description: Preserve literal Unity escapes and NUL bytes in captured output.
+driver: python_script
+control:
+  - [SKIP, "not native", "Requires hosted stdout capture"]
