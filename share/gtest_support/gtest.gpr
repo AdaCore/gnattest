@@ -1,0 +1,38 @@
+library project GTest is
+   type Target_Type is ("Windows_NT", "unix", "osx");
+   Target : Target_Type := external ("OS", "unix");
+
+   for Languages use ("C++");
+   --  gtest-all.cc includes the implementation through src/... paths.
+   for Source_Dirs use
+     ("../googletest/googletest", "../googletest/googletest/src",
+      "../googletest/googletest/include");
+   for Source_Files use ("gtest-all.cc");
+   for Object_Dir use "obj";
+   for Library_Name use "gtest";
+   for Library_Dir use "lib";
+   for Library_Kind use "static";
+
+   package Naming is
+      for Body_Suffix ("C++") use ".cc";
+   end Naming;
+
+   package Compiler is
+      for Default_Switches ("C++") use ("-std=c++17");
+   end Compiler;
+
+   package Linker is
+      case Target is
+         when "Windows_NT" =>
+            for Linker_Options use ("-lstdc++");
+         when others =>
+            for Linker_Options use ("-lstdc++", "-pthread");
+      end case;
+   end Linker;
+
+   package Install is
+      for Sources_Subdir use "include";
+      --  Preserve the hierarchy used by #include <gtest/gtest.h>.
+      for Artifacts ("include") use ("../googletest/googletest/include/gtest");
+   end Install;
+end GTest;

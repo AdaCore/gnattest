@@ -40,6 +40,19 @@ thistest.fail_if(os.path.exists("bad"), "a rejected setup installed something")
 # The names are case insensitive, and no Ada library is built without ada
 print(installed(setup("c_cpp", "--lang=C,c++")))
 
+# The generated installed project must expose the complete header tree and
+# link a consumer, rather than depending on the staged build directory.
+for name in ("gtest", "gnattest_unity"):
+    thistest.fail_if(
+        not os.path.exists(os.path.join("c_cpp", "share", "gpr", "manifests", name)),
+        f"missing gprinstall manifest for {name}",
+    )
+run_wrapper(
+    ["gprbuild", "-q", "-p", "-Pcheck.gpr", "-aPc_cpp/share/gpr"],
+    output_in_baseline=False,
+)
+run_wrapper(["check"], output_in_baseline=False)
+
 # No C or C++ library is built without c and c++
 print(installed(setup("ada", "--lang=ada", "--no-tgen")))
 

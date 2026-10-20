@@ -13,8 +13,14 @@
  *                                                                          *
  ****************************************************************************/
 
+/* GNATTEST_HOSTED is defined by the build for a target with an operating
+   system, which "gnattest setup" assumes of native builds only.  The driver
+   can then capture what a test prints and time each test.  Elsewhere it
+   needs nothing but putchar.
+   Compiler macros cannot tell: some bareboard compilers define __unix__.  */
+
 /* For dup and fileno under a strict C standard.  */
-#if (defined(__unix__) || defined(__APPLE__)) && !defined(_XOPEN_SOURCE)
+#if defined(GNATTEST_HOSTED) && !defined(_WIN32) && !defined(_XOPEN_SOURCE)
 #define _XOPEN_SOURCE 700
 #endif
 
@@ -23,10 +29,7 @@
 
 #include "gnattest_unity.h"
 
-/* A hosted target lets the driver capture what a test prints and time each
-   test.  Elsewhere the driver needs nothing but putchar.  */
-#if defined(__unix__) || defined(__APPLE__) || defined(_WIN32)
-#define GNATTEST_HOSTED 1
+#ifdef GNATTEST_HOSTED
 #include <stdlib.h>
 #include <time.h>
 #ifdef _WIN32

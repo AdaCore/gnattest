@@ -231,9 +231,9 @@ package body Test.Setup is
    --  support for it, at <gnattest_prefix>/share/unity (populated by "make
    --  install-unity").
 
-   function Unity_Supported (Opts : Setup_Options) return Boolean;
-   --  True when Unity can be built for this configuration: native mode and
-   --  the sources actually shipped with this gnattest.
+   function Unity_Supported return Boolean;
+   --  True when the Unity sources are shipped with this gnattest. Unity needs
+   --  nothing but a C compiler and its library, so any target is supported.
 
    function Run_Build_Unity
      (Opts : Setup_Options; Build_Dir : String) return Boolean;
@@ -333,8 +333,8 @@ package body Test.Setup is
       New_Line;
       Put_Line ("Build and install the bundled test libraries for a given");
       Put_Line ("target / RTS combination: AUnit and the TGen runtime for");
-      Put_Line ("Ada, Unity for C (native only) and Google Test for C++");
-      Put_Line ("(native full runtime only).");
+      Put_Line ("Ada, Unity for C and Google Test for C++ (native full");
+      Put_Line ("runtime only).");
       New_Line;
       Put_Line ("Options:");
       Put_Line ("  --target=<triplet>  Cross-compilation target");
@@ -874,7 +874,11 @@ package body Test.Setup is
        and then
          Ada.Directories.Exists
            (Ada.Directories.Compose
-              (Ada.Directories.Compose (Source_GTest_Dir, "src"),
+              (Ada.Directories.Compose
+                 (Ada.Directories.Compose
+                    (Ada.Directories.Compose (Source_GTest_Dir, "googletest"),
+                     "googletest"),
+                  "src"),
                "gtest-all",
                Extension => "cc")));
 
@@ -882,49 +886,16 @@ package body Test.Setup is
    -- Run_Build_GTest --
    ---------------------
 
-   --  Google Test is shipped as a "source drop": gtest-all.cc #includes the
-   --  rest of the implementation, so only that one file is compiled, with
-   --  the source root (for its "src/..." includes) and include/ on the
-   --  search path. We write a throwaway library project into the staged
-   --  tree rather than shipping one, since it is never installed as-is.
-
    function Run_Build_GTest
      (Opts : Setup_Options; Build_Dir : String) return Boolean
    is
       use Ada.Directories;
       Staged   : constant String := Compose (Build_Dir, "gtest");
       GPR_Path : constant String :=
-        Compose (Staged, "gtest_build", Extension => "gpr");
+        Compose
+          (Compose (Staged, "gtest_support"), "gtest", Extension => "gpr");
       Cmd      : GNATCOLL.OS.Process.Argument_List;
    begin
-      declare
-         use Ada.Text_IO;
-         F : File_Type;
-      begin
-         Create (F, Out_File, GPR_Path);
-         Put_Line (F, "library project GTest_Build is");
-         Put_Line (F, "   for Languages use (""C++"");");
-         Put_Line (F, "   for Source_Dirs use (""."", ""src"", ""include"");");
-         Put_Line (F, "   for Source_Files use (""gtest-all.cc"");");
-         Put_Line (F, "   for Object_Dir use ""obj"";");
-         Put_Line (F, "   for Library_Name use ""gtest"";");
-         Put_Line (F, "   for Library_Dir use ""lib"";");
-         Put_Line (F, "   for Library_Kind use ""static"";");
-         --  gtest uses the .cc body suffix, which gprbuild's default C++
-         --  configuration does not necessarily recognize.
-         Put_Line (F, "   package Naming is");
-         Put_Line (F, "      for Body_Suffix (""C++"") use "".cc"";");
-         Put_Line (F, "   end Naming;");
-         Put_Line (F, "   package Compiler is");
-         Put_Line
-           (F,
-            "      for Default_Switches (""C++"") use "
-            & "(""-std=c++17"", ""-DGTEST_HAS_PTHREAD=1"");");
-         Put_Line (F, "   end Compiler;");
-         Put_Line (F, "end GTest_Build;");
-         Close (F);
-      end;
-
       Cmd.Append ("gprbuild");
       Cmd.Append ("-p");
       Cmd.Append ("-P");
@@ -946,61 +917,20 @@ package body Test.Setup is
    ------------------
 
    procedure Install_GTest (Opts : Setup_Options; Build_Dir : String) is
-      use Ada.Directories;
-      Prefix     : constant String :=
-        (if Length (Opts.Prefix) > 0
-         then To_String (Opts.Prefix)
-         else Gnattest_Prefix);
-      Staged     : constant String := Compose (Build_Dir, "gtest");
-      Dest_Share : constant String :=
-        Compose (Compose (Prefix, "share"), "gtest");
-      Dest_GPR   : constant String :=
-        Compose
-          (Compose (Compose (Prefix, "share"), "gpr"),
-           "gtest",
-           Extension => "gpr");
+      C_Opts : Setup_Options := Opts;
+      Extra  : GNATCOLL.OS.Process.Argument_List;
    begin
-      --  Install the headers verbatim (gprinstall would flatten the
-      --  gtest/ and gtest/internal/ prefixes that #include <gtest/gtest.h>
-      --  relies on) and the freshly built library.
-
-      if Exists (Compose (Dest_Share, "include")) then
-         Delete_Tree (Compose (Dest_Share, "include"));
-      end if;
-      if Exists (Compose (Dest_Share, "lib")) then
-         Delete_Tree (Compose (Dest_Share, "lib"));
-      end if;
-      Create_Path (Dest_Share);
-      Create_Path (Containing_Directory (Dest_GPR));
-
-      Copy_Sources
-        (Src => Compose (Staged, "include"), Dst_Parent => Dest_Share);
-      Copy_Sources (Src => Compose (Staged, "lib"), Dst_Parent => Dest_Share);
-
-      --  Externally-built library project, discovered by the harness through
-      --  GPR_PROJECT_PATH like aunit.gpr / tgen_rts.gpr. Its source dir gives
-      --  consumers the include path for <gtest/gtest.h>; its Linker_Options
-      --  pull in the C++ runtime and pthreads needed by the Ada-main harness.
-
-      declare
-         use Ada.Text_IO;
-         F : File_Type;
-      begin
-         Create (F, Out_File, Dest_GPR);
-         Put_Line (F, "library project GTest is");
-         Put_Line (F, "   for Languages use (""C++"");");
-         Put_Line (F, "   for Source_Dirs use (""../gtest/include"");");
-         Put_Line (F, "   for Library_Name use ""gtest"";");
-         Put_Line (F, "   for Library_Dir use ""../gtest/lib"";");
-         Put_Line (F, "   for Library_Kind use ""static"";");
-         Put_Line (F, "   for Externally_Built use ""True"";");
-         Put_Line (F, "   package Linker is");
-         Put_Line
-           (F, "      for Linker_Options use (""-lstdc++"", ""-pthread"");");
-         Put_Line (F, "   end Linker;");
-         Put_Line (F, "end GTest;");
-         Close (F);
-      end;
+      --  C libraries do not use the Ada runtime selected by --RTS.
+      C_Opts.RTS := Null_Unbounded_String;
+      Extra.Append ("-m");
+      Run_Install
+        (C_Opts,
+         Ada.Directories.Compose
+           (Ada.Directories.Compose
+              (Ada.Directories.Compose (Build_Dir, "gtest"), "gtest_support"),
+            "gtest",
+            Extension => "gpr"),
+         Extra);
    end Install_GTest;
 
    ----------------------
@@ -1017,14 +947,13 @@ package body Test.Setup is
    -- Unity_Supported --
    ---------------------
 
-   function Unity_Supported (Opts : Setup_Options) return Boolean
-   is (Is_Native (Opts)
-       and then
-         Ada.Directories.Exists
-           (Ada.Directories.Compose
-              (Ada.Directories.Compose (Source_Unity_Dir, "src"),
-               "unity",
-               Extension => "c")));
+   function Unity_Supported return Boolean
+   is (Ada.Directories.Exists
+         (Ada.Directories.Compose
+            (Ada.Directories.Compose
+               (Ada.Directories.Compose (Source_Unity_Dir, "unity"), "src"),
+             "unity",
+             Extension => "c")));
 
    ---------------------
    -- Run_Build_Unity --
@@ -1034,40 +963,30 @@ package body Test.Setup is
      (Opts : Setup_Options; Build_Dir : String) return Boolean
    is
       use Ada.Directories;
+      Target   : constant String := To_String (Opts.Target);
       Staged   : constant String := Compose (Build_Dir, "unity");
       GPR_Path : constant String :=
-        Compose (Staged, "unity_build", Extension => "gpr");
+        Compose
+          (Compose (Staged, "unity_support"),
+           "gnattest_unity",
+           Extension => "gpr");
       Cmd      : GNATCOLL.OS.Process.Argument_List;
    begin
-      declare
-         use Ada.Text_IO;
-         F : File_Type;
-      begin
-         Create (F, Out_File, GPR_Path);
-         Put_Line (F, "library project Unity_Build is");
-         Put_Line (F, "   for Languages use (""C"");");
-         Put_Line (F, "   for Source_Dirs use (""src"");");
-         Put_Line (F, "   for Object_Dir use ""obj"";");
-         Put_Line (F, "   for Library_Name use ""gnattest_unity"";");
-         Put_Line (F, "   for Library_Dir use ""lib"";");
-         Put_Line (F, "   for Library_Kind use ""static"";");
-         --  The tests get the same configuration through gnattest_unity.h.
-         Put_Line (F, "   package Compiler is");
-         Put_Line
-           (F,
-            "      for Default_Switches (""C"") use "
-            & "(""-g"", ""-DUNITY_INCLUDE_CONFIG_H"");");
-         Put_Line (F, "   end Compiler;");
-         Put_Line (F, "end Unity_Build;");
-         Close (F);
-      end;
-
       Cmd.Append ("gprbuild");
       Cmd.Append ("-p");
       Cmd.Append ("-P");
       Cmd.Append (GPR_Path);
+      Cmd.Append
+        ("-XGNATTEST_UNITY_HOSTED="
+         & (if Is_Native (Opts) then "true" else "false"));
       if Opts.Quiet then
          Cmd.Append ("-q");
+      end if;
+
+      --  Unity is C only: --RTS, which names an Ada runtime, does not apply
+
+      if not Is_Native (Opts) then
+         Cmd.Append ("--target=" & Target);
       end if;
       if Length (Opts.Config) > 0 then
          Cmd.Append ("--config=" & To_String (Opts.Config));
@@ -1083,64 +1002,23 @@ package body Test.Setup is
    -------------------
 
    procedure Install_Unity (Opts : Setup_Options; Build_Dir : String) is
-      use Ada.Directories;
-      Prefix      : constant String :=
-        (if Length (Opts.Prefix) > 0
-         then To_String (Opts.Prefix)
-         else Gnattest_Prefix);
-      Staged      : constant String := Compose (Build_Dir, "unity");
-      Dest_Share  : constant String :=
-        Compose (Compose (Prefix, "share"), "unity");
-      Dest_Header : constant String := Compose (Dest_Share, "include");
-      Dest_GPR    : constant String :=
-        Compose
-          (Compose (Compose (Prefix, "share"), "gpr"),
-           "gnattest_unity",
-           Extension => "gpr");
-      Search      : Search_Type;
-      Header      : Directory_Entry_Type;
+      C_Opts : Setup_Options := Opts;
+      Extra  : GNATCOLL.OS.Process.Argument_List;
    begin
-      --  Only the headers: the sources stay out of the installed project, or
-      --  its consumers could pick them up.
-
-      if Exists (Dest_Header) then
-         Delete_Tree (Dest_Header);
-      end if;
-      if Exists (Compose (Dest_Share, "lib")) then
-         Delete_Tree (Compose (Dest_Share, "lib"));
-      end if;
-      Create_Path (Dest_Header);
-      Create_Path (Containing_Directory (Dest_GPR));
-
-      Start_Search
-        (Search,
-         Compose (Staged, "src"),
-         "*.h",
-         Filter => (Ordinary_File => True, others => False));
-      while More_Entries (Search) loop
-         Get_Next_Entry (Search, Header);
-         Copy_File
-           (Full_Name (Header), Compose (Dest_Header, Simple_Name (Header)));
-      end loop;
-      End_Search (Search);
-
-      Copy_Sources (Src => Compose (Staged, "lib"), Dst_Parent => Dest_Share);
-
-      declare
-         use Ada.Text_IO;
-         F : File_Type;
-      begin
-         Create (F, Out_File, Dest_GPR);
-         Put_Line (F, "library project Gnattest_Unity is");
-         Put_Line (F, "   for Languages use (""C"");");
-         Put_Line (F, "   for Source_Dirs use (""../unity/include"");");
-         Put_Line (F, "   for Library_Name use ""gnattest_unity"";");
-         Put_Line (F, "   for Library_Dir use ""../unity/lib"";");
-         Put_Line (F, "   for Library_Kind use ""static"";");
-         Put_Line (F, "   for Externally_Built use ""True"";");
-         Put_Line (F, "end Gnattest_Unity;");
-         Close (F);
-      end;
+      --  C libraries do not use the Ada runtime selected by --RTS.
+      C_Opts.RTS := Null_Unbounded_String;
+      Extra.Append ("-m");
+      Extra.Append
+        ("-XGNATTEST_UNITY_HOSTED="
+         & (if Is_Native (Opts) then "true" else "false"));
+      Run_Install
+        (C_Opts,
+         Ada.Directories.Compose
+           (Ada.Directories.Compose
+              (Ada.Directories.Compose (Build_Dir, "unity"), "unity_support"),
+            "gnattest_unity",
+            Extension => "gpr"),
+         Extra);
    end Install_Unity;
 
    ---------
@@ -1248,10 +1126,10 @@ package body Test.Setup is
 
          --  Reject an unsupported language before building anything
 
-         if Requested (Opts, Lang_C) and then not Unity_Supported (Opts) then
+         if Requested (Opts, Lang_C) and then not Unity_Supported then
             Fail
-              ("--lang: cannot set up c: Unity is only supported in native"
-               & " mode, with the sources shipped with gnattest");
+              ("--lang: cannot set up c: the Unity sources are not shipped"
+               & " with this gnattest");
          end if;
          if Requested (Opts, Lang_Cpp)
            and then not GTest_Supported (Opts, Profile)
@@ -1389,7 +1267,7 @@ package body Test.Setup is
 
             if not Opts.Languages (Lang_C) then
                null;
-            elsif Unity_Supported (Opts) then
+            elsif Unity_Supported then
                if Opts.Verbose then
                   Ada.Text_IO.Put_Line ("gnattest setup: also building Unity");
                end if;
@@ -1407,8 +1285,8 @@ package body Test.Setup is
                end if;
             elsif Opts.Verbose then
                Ada.Text_IO.Put_Line
-                 ("gnattest setup: skipping Unity (only supported in native"
-                  & " mode, with the sources shipped with gnattest).");
+                 ("gnattest setup: skipping Unity (sources not shipped with"
+                  & " this gnattest).");
             end if;
          end;
 

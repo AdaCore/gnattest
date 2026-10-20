@@ -137,8 +137,9 @@ to skip both the runtime and the probe. Since test input generation needs
 that runtime, skipping it means the :ref:`automatic test case generation
 <Automatic_testcase_generation>` features will not be usable.
 
-Unity is only built in native mode, and Google Test only in native mode with
-the ``full`` runtime profile and a C++ compiler. Without :switch:`--lang`,
+Unity is built for the requested target, native or cross, with its C
+compiler. Google Test is only built in native mode with the ``full`` runtime
+profile and a C++ compiler. Without :switch:`--lang`,
 ``gnattest setup`` skips the libraries that the configuration does not
 support. A language named in :switch:`--lang` that cannot be set up is an
 error, and so is :switch:`--tgen` without ``ada``.

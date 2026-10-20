@@ -279,10 +279,13 @@ install-gtest:
 		echo "    make install-gtest GTEST_SRC=/path/to/googletest DESTDIR=..." ; \
 		exit 1 ; \
 	fi
-	mkdir -p "$(DESTDIR)/share/gtest"
-	cp -r "$(GTEST_SRC)/googletest/include" "$(DESTDIR)/share/gtest/"
-	cp -r "$(GTEST_SRC)/googletest/src"     "$(DESTDIR)/share/gtest/"
-	cp "$(GTEST_SRC)/LICENSE" "$(DESTDIR)/share/gtest/"
+	mkdir -p "$(DESTDIR)/share/gtest/gtest_support"
+	mkdir -p "$(DESTDIR)/share/gtest/googletest/googletest"
+	cp -r "$(GTEST_SRC)/googletest/include" \
+	   "$(GTEST_SRC)/googletest/src" \
+	   "$(DESTDIR)/share/gtest/googletest/googletest/"
+	cp "$(GTEST_SRC)/LICENSE" "$(DESTDIR)/share/gtest/googletest/"
+	cp share/gtest_support/gtest.gpr "$(DESTDIR)/share/gtest/gtest_support/"
 
 # Path to the Unity source tree shipped with gnattest. Override via
 # UNITY_SRC to build against a local checkout during development. The C
@@ -299,8 +302,11 @@ install-unity:
 		echo "    make install-unity UNITY_SRC=/path/to/unity DESTDIR=..." ; \
 		exit 1 ; \
 	fi
-	mkdir -p "$(DESTDIR)/share/unity/src"
+	mkdir -p "$(DESTDIR)/share/unity/unity/src"
+	mkdir -p "$(DESTDIR)/share/unity/unity_support"
 	cp "$(UNITY_SRC)/src/unity.c" "$(UNITY_SRC)/src/unity.h" \
-	   "$(UNITY_SRC)/src/unity_internals.h" share/unity_support/* \
-	   "$(DESTDIR)/share/unity/src/"
-	cp "$(UNITY_SRC)/LICENSE.txt" "$(DESTDIR)/share/unity/"
+	   "$(UNITY_SRC)/src/unity_internals.h" \
+	   "$(DESTDIR)/share/unity/unity/src/"
+	cp share/unity_support/*.[ch] share/unity_support/gnattest_unity.gpr \
+	   "$(DESTDIR)/share/unity/unity_support/"
+	cp "$(UNITY_SRC)/LICENSE.txt" "$(DESTDIR)/share/unity/unity/"
