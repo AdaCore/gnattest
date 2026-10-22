@@ -240,7 +240,7 @@ package body TGen.Wrappers is
                      & Param_Type.all.FQN (No_Std => True)
                      & " ");
                   if Param_Name /= F.Param_Order.Last_Element then
-                     Append (Result, " ; ");
+                     Append (Result, " ; " & ASCII.LF);
                   end if;
                end;
             end loop;
@@ -315,7 +315,7 @@ package body TGen.Wrappers is
       for Param_Name of Subprogram.Param_Order loop
          Append (Call_To_User_Subp, Param_Name);
          if Param_Name /= Subprogram.Param_Order.Last_Element then
-            Append (Call_To_User_Subp, ", ");
+            Append (Call_To_User_Subp, ", " & ASCII.LF);
          end if;
       end loop;
       if Subprogram.Param_Order.Length > 0 then
