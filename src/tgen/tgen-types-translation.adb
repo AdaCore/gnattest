@@ -76,6 +76,12 @@ package body TGen.Types.Translation is
 
    package Text renames Langkit_Support.Text;
 
+   function Bound_Text (Node : Expr'Class) return Unbounded_Text_Type;
+   --  Qualify integer expressions so that appending 'Image produces a legal
+   --  attribute reference even when the expression is not a name. Use the
+   --  base type to avoid imposing additional subtype range checks. Convert
+   --  enumeration values to positions, since constraints store integers.
+
    function Get_From_Cache
      (Ctx : in out Translation_Ctx;
       FQN : Ada_Qualified_Name;
@@ -1569,7 +1575,7 @@ package body TGen.Types.Translation is
                            Min_Static := True;
                         else
                            Min_Static := False;
-                           Min_Text := +Range_Exp.As_Bin_Op.F_Left.Text;
+                           Min_Text := Bound_Text (Range_Exp.As_Bin_Op.F_Left);
                         end if;
                         if Range_Exp.As_Bin_Op.F_Right.P_Is_Static_Expr then
                            Constraint_Max :=
@@ -1579,7 +1585,8 @@ package body TGen.Types.Translation is
                            Max_Static := True;
                         else
                            Max_Static := False;
-                           Max_Text := +Range_Exp.As_Bin_Op.F_Right.Text;
+                           Max_Text :=
+                             Bound_Text (Range_Exp.As_Bin_Op.F_Right);
                         end if;
                      else
                         if Range_Exp
@@ -3070,11 +3077,13 @@ package body TGen.Types.Translation is
                Disc_Name =>
                  +Low_Bound (Rng).As_Name.P_Referenced_Defining_Name.Text);
          else
-            Low_Bnd := (Kind => Non_Static, Text => +Low_Bound (Rng).Text);
+            Low_Bnd :=
+              (Kind => Non_Static, Text => +Bound_Text (Low_Bound (Rng)));
          end if;
       exception
          when Non_Static_Error =>
-            Low_Bnd := (Kind => Non_Static, Text => +Low_Bound (Rng).Text);
+            Low_Bnd :=
+              (Kind => Non_Static, Text => +Bound_Text (Low_Bound (Rng)));
       end;
 
       begin
@@ -3101,11 +3110,13 @@ package body TGen.Types.Translation is
                Disc_Name =>
                  +High_Bound (Rng).As_Name.P_Referenced_Defining_Name.Text);
          else
-            High_Bnd := (Kind => Non_Static, Text => +High_Bound (Rng).Text);
+            High_Bnd :=
+              (Kind => Non_Static, Text => +Bound_Text (High_Bound (Rng)));
          end if;
       exception
          when Non_Static_Error =>
-            High_Bnd := (Kind => Non_Static, Text => +High_Bound (Rng).Text);
+            High_Bnd :=
+              (Kind => Non_Static, Text => +Bound_Text (High_Bound (Rng)));
       end;
 
       return (Low_Bnd, High_Bnd);
@@ -3686,6 +3697,30 @@ package body TGen.Types.Translation is
         Extract_Proxy_From_Node_List
           (N, Candidates, Ctx, Dummy_Failure_Reason);
    end Find_Proxy_By_Xref;
+
+   -----------------
+   -- Bound_Text  --
+   -----------------
+
+   function Bound_Text (Node : Expr'Class) return Unbounded_Text_Type is
+      Typ : constant Base_Type_Decl := Node.P_Expression_Type;
+   begin
+      if not Typ.Is_Null and then Typ.P_Is_Int_Type then
+         return
+           +(Text.Image (Typ.P_Fully_Qualified_Name)
+             & "'Base'("
+             & Text.Image (Node.Text)
+             & ")");
+      elsif not Typ.Is_Null and then Typ.P_Is_Enum_Type then
+         return
+           +(Text.Image (Typ.P_Fully_Qualified_Name)
+             & "'Pos ("
+             & Text.Image (Node.Text)
+             & ")");
+      else
+         return +Node.Text;
+      end if;
+   end Bound_Text;
 
    ---------------
    -- Translate --
