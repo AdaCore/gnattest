@@ -1736,7 +1736,7 @@ package body TGen.Types.Translation is
                          (Low_Bound  =>
                             (Kind => Non_Static, Text => +Min_Text),
                           High_Bound =>
-                            (Kind => Static, Int_Val => Constraint_Min)));
+                            (Kind => Static, Int_Val => Constraint_Max)));
                elsif Min_Static and not Max_Static then
                   Res_Typ.Index_Constraints (Current_Index) :=
                     new Index_Constraint'
@@ -1745,7 +1745,7 @@ package body TGen.Types.Translation is
                          (High_Bound =>
                             (Kind => Non_Static, Text => +Max_Text),
                           Low_Bound  =>
-                            (Kind => Static, Int_Val => Constraint_Max)));
+                            (Kind => Static, Int_Val => Constraint_Min)));
                elsif not (Max_Static and then Min_Static) then
                   Res_Typ.Index_Constraints (Current_Index) :=
                     new Index_Constraint'
