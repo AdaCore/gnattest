@@ -1,0 +1,5 @@
+description: Check generation and execution for arrays with mixed static and
+  non-static bounds, including arithmetic expressions, wide integer indices,
+  and enumeration indices.
+driver: gnattest_tgen
+suppress_test_dump: True
