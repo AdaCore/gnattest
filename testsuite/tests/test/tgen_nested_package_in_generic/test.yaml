@@ -1,0 +1,4 @@
+description: |
+  Check that TGen rejects a procedure in a nested package inside a generic
+  package instantiated at library level without crashing.
+driver: shell_script

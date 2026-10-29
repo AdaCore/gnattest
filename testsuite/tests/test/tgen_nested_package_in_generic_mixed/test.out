@@ -1,0 +1,18 @@
+gnattest: Error while processing <| SubpDecl ["Put"] generic_holder.ads:6:7-6:39 [holder_a.ads:2:1] |>:
+Subprograms declared in nested packages inside generic packages are not supported
+
+gnattest: Error while processing <| SubpDecl ["Put"] generic_holder.ads:9:10-9:42 [holder_a.ads:2:1] |>:
+Subprograms declared in nested packages inside generic packages are not supported
+
+holder_a.ads:3:4: info: corresponding test PASSED
+holder_a.ads:3:4: info: corresponding test PASSED
+holder_a.ads:3:4: info: corresponding test PASSED
+holder_a.ads:3:4: info: corresponding test PASSED
+holder_a.ads:3:4: info: corresponding test PASSED
+ordinary.ads:3:7: info: corresponding test PASSED
+ordinary.ads:3:7: info: corresponding test PASSED
+ordinary.ads:3:7: info: corresponding test PASSED
+ordinary.ads:3:7: info: corresponding test PASSED
+ordinary.ads:3:7: info: corresponding test PASSED
+ordinary.ads:3:7: info: corresponding test PASSED
+11 tests run: 11 passed; 0 failed; 0 crashed.

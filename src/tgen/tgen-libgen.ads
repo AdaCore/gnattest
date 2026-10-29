@@ -131,6 +131,9 @@ package TGen.Libgen is
    --  otherwise return an Unsupported_Typ with the reason why it is not
    --  supported inlined in the Unsupported_Typ.Reason field.
    --
+   --  Subprograms declared in nested packages inside generic packages are
+   --  unsupported, regardless of their profile.
+   --
    --  The translation performed uses (and populates) the translation cache
    --  held by Ctx.
 
@@ -152,7 +155,8 @@ package TGen.Libgen is
    --  library for all the registered types.
    --
    --  Returns False if there is an error translating some of the parameter
-   --  types, or if some of the types are unsupported for marshalling,
+   --  types, if some of the types are unsupported for marshalling, or if
+   --  Subp is declared in a nested package inside a generic package,
    --  and report diagnostics in Diags. In that case, the context is not
    --  modified. Otherwise, Diags should be ignored.
    --
