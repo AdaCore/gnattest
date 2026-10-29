@@ -1,0 +1,7 @@
+description: |
+  Check that TGen skips subprograms nested one and two package levels inside
+  a generic while generating tests for direct declarations in that generic
+  and for nested packages outside generics.
+driver: gnattest_tgen
+suppress_test_dump: True
+extra_gnattest_args: ["--skeleton-default=pass"]
