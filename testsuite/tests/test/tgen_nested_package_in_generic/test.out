@@ -1,0 +1,4 @@
+gnattest: Error while processing <| SubpDecl ["Put"] generic_holder.ads:4:7-4:39 [holder_a.ads:2:1] |>:
+Subprograms declared in nested packages inside generic packages are not supported
+
+gnattest: cannot create main suite and test runner
