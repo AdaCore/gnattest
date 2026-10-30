@@ -88,6 +88,11 @@ package body TGen.Libgen is
    --  generated as child packages of the original package, but as child
    --  packages of a generated wrapper package.
 
+   function Is_In_Nested_Package_In_Generic
+     (Subp : Basic_Decl'Class) return Boolean;
+   --  Return whether Subp is declared in a regular package nested inside a
+   --  generic package, which is not supported for test input generation.
+
    procedure Generate_Marshalling_Library
      (Ctx                       : Libgen_Context;
       Pkg_Name                  : Ada_Qualified_Name;
@@ -1013,6 +1018,35 @@ package body TGen.Libgen is
            Relevant_Units  => Ctx.Unit_List_CB);
    end Make_Translation_Context;
 
+   -------------------------------------
+   -- Is_In_Nested_Package_In_Generic --
+   -------------------------------------
+
+   function Is_In_Nested_Package_In_Generic
+     (Subp : Basic_Decl'Class) return Boolean
+   is
+      use Libadalang.Common;
+
+      Ancestor           : Ada_Node := Subp.Parent;
+      Has_Nested_Package : Boolean := False;
+   begin
+      --  Inspect the declaration's syntax, including when Subp carries
+      --  rebindings from a generic instantiation. A regular package between
+      --  the subprogram and a generic package makes it unsupported.
+
+      while not Ancestor.Is_Null loop
+         if Ancestor.Kind = Ada_Package_Decl then
+            Has_Nested_Package := True;
+         elsif Ancestor.Kind = Ada_Generic_Package_Internal
+           and then Has_Nested_Package
+         then
+            return True;
+         end if;
+         Ancestor := Ancestor.Parent;
+      end loop;
+      return False;
+   end Is_In_Nested_Package_In_Generic;
+
    --------------------------
    -- Supported_Subprogram --
    --------------------------
@@ -1021,10 +1055,7 @@ package body TGen.Libgen is
      (Ctx : in out Libgen_Context; Subp : LAL.Basic_Decl'Class)
       return Typ_Access
    is
-      Diags     : String_Vectors.Vector;
-      Trans_Ctx : Translation_Ctx := Make_Translation_Context (Ctx);
-      Trans_Res : constant Translation_Result :=
-        Translate (Subp.As_Basic_Decl, Trans_Ctx);
+      Diags : String_Vectors.Vector;
 
       procedure Append_Wrapper_Diagnostic (Trans_Typ : Typ_Access);
       --  Appends diagnostic if wrappers are not supported for the given type.
@@ -1043,14 +1074,27 @@ package body TGen.Libgen is
       end Append_Wrapper_Diagnostic;
    begin
       Array_Limit_Frozen := True;
-      if Trans_Res.Success then
-         Diags := Trans_Res.Res.all.Get_Diagnostics;
-         if Diags.Is_Empty then
-            Append_Wrapper_Diagnostic (Trans_Res.Res);
-            return Trans_Res.Res;
-         end if;
+
+      if Is_In_Nested_Package_In_Generic (Subp) then
+         Diags.Append
+           (+"Subprograms declared in nested packages inside generic packages"
+            & " are not supported");
       else
-         Diags := String_Vectors.To_Vector (Trans_Res.Diagnostics, 1);
+         declare
+            Trans_Ctx : Translation_Ctx := Make_Translation_Context (Ctx);
+            Trans_Res : constant Translation_Result :=
+              Translate (Subp.As_Basic_Decl, Trans_Ctx);
+         begin
+            if Trans_Res.Success then
+               Diags := Trans_Res.Res.all.Get_Diagnostics;
+               if Diags.Is_Empty then
+                  Append_Wrapper_Diagnostic (Trans_Res.Res);
+                  return Trans_Res.Res;
+               end if;
+            else
+               Diags := String_Vectors.To_Vector (Trans_Res.Diagnostics, 1);
+            end if;
+         end;
       end if;
       declare
          Typ_Res : constant Typ_Access :=
