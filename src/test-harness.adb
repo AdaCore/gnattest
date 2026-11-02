@@ -3689,7 +3689,7 @@ package body Test.Harness is
                   & " need to be adjusted to fit your coverage needs.");
                S_Put
                  (0,
-                  "SWITCHES_COVERAGE=-cstmt -axcov+,dhtml "
+                  "SWITCHES_COVERAGE=-cstmt -axcov+,html "
                   & "--output-dir="
                   & Root_Prj.Object_Directory.String_Value);
             end Default_Coverage_Switches;
