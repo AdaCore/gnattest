@@ -1,0 +1,6 @@
+gen.ads:7:4: instance at user.ads:4:4: info: corresponding test PASSED
+gen.ads:4:4: instance at user.ads:4:4: info: corresponding test PASSED
+2 tests run: 2 passed; 0 failed; 0 crashed.
+gen.ads:7:4: instance at user.ads:4:4: info: corresponding test PASSED
+gen.ads:4:4: instance at user.ads:4:4: info: corresponding test PASSED
+2 tests run: 2 passed; 0 failed; 0 crashed.
