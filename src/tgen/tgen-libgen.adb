@@ -1179,6 +1179,10 @@ package body TGen.Libgen is
       if Trans_Res.all.Kind = Unsupported then
          Diags := Trans_Res.all.Get_Diagnostics;
          return False;
+      else
+         --  Initialize an empty vector even if there's no diags.
+         --  Some calls may check the vector instead of the return value.
+         Diags := TGen.Strings.String_Vectors.Empty_Vector;
       end if;
 
       --  Check whether the subprogram meets the expected level of IO support
@@ -1220,22 +1224,16 @@ package body TGen.Libgen is
          --  If it has a private part, we can't generate tests from it because
          --  there's no way to access private elements of a generic package.
 
-         declare
-            Package_Internal : constant Generic_Package_Internal :=
-              Subp.Parent.Parent.Parent.As_Generic_Package_Internal;
-         begin
-            if not Package_Internal.F_Private_Part.Is_Null
-              and then
-                Package_Internal.F_Private_Part.F_Decls.First_Child
-                /= No_Ada_Node
-            then
-               Put_Line
-                 ("warning (TGen): generic package "
-                  & Image (Package_Internal.P_Fully_Qualified_Name)
+         if TGen.LAL_Utils.Is_Declared_In_Private_Part (Subp) then
+            Diags.Append
+              (To_Unbounded_String
+                 ("generic package "
+                  & TGen.LAL_Utils.Ultimate_Enclosing_Compilation_Unit (Subp)
+                      .Image
                   & " with private declarations"
-                  & " is not supported.");
-            end if;
-         end;
+                  & " is not supported."));
+            return False;
+         end if;
 
          --  If this belongs to a top level generic package instantiation,
          --  store this information in Ctx.Generic_Package_Instantiations.

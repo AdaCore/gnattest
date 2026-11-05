@@ -126,4 +126,8 @@ package TGen.LAL_Utils is
    --  can support. In practice, only extended floats on x86 are
    --  unsupported.
 
+   function Is_Declared_In_Private_Part
+     (Decl : LAL.Basic_Decl'Class) return Boolean;
+   --  Returns if `Decl` is part of a private declaration part.
+
 end TGen.LAL_Utils;

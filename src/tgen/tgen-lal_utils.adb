@@ -365,4 +365,25 @@ package body TGen.LAL_Utils is
       end if;
    end Max_Float_Precision;
 
+   function Is_Declared_In_Private_Part
+     (Decl : LAL.Basic_Decl'Class) return Boolean
+   is
+      Current : LAL.Ada_Node := Decl.Parent;
+   begin
+
+      while not Current.Is_Null
+        and then Current.Kind not in Libadalang.Common.Ada_Private_Part_Range
+      loop
+         Current := Current.Parent;
+      end loop;
+
+      --  If we manage to find a parent node which is a private declaration
+      --  part  then `Decl` is a private declaration.
+
+      return
+        not Current.Is_Null
+        and then Current.Kind in Libadalang.Common.Ada_Private_Part_Range;
+
+   end Is_Declared_In_Private_Part;
+
 end TGen.LAL_Utils;

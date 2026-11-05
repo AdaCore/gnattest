@@ -1,4 +1,3 @@
-warning (TGen): generic package Bar with private declarations is not supported.
 bar.ads:4:4: info: corresponding test PASSED
 bar.ads:4:4: info: corresponding test PASSED
 bar.ads:4:4: info: corresponding test PASSED
