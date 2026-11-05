@@ -1,0 +1,6 @@
+description: |
+  Check that generic test fixtures refer to their parent's current instance,
+  including when a subprogram has the same name as the generic package.
+  Exercise ordinary and tagged-type fixtures, then regenerate the harness.
+
+driver: python_script

@@ -3963,6 +3963,23 @@ package body Test.Skeleton is
       --  Put with and use clauses for Stub_Data packages of units stubbed
       --  for current UUT.
 
+      function Tested_Type_Name return String;
+      --  Name the tested type from its fixture, using direct visibility in
+      --  a generic to avoid selecting the declaration through Standard.
+
+      function Tested_Type_Name return String is
+      begin
+         if Current_Pack.Is_Generic then
+            return Current_Type.Main_Type_Text_Name.all;
+         else
+            return
+              "GNATtest_Generated.GNATtest_Standard."
+              & Current_Type.Nesting.all
+              & "."
+              & Current_Type.Main_Type_Text_Name.all;
+         end if;
+      end Tested_Type_Name;
+
       procedure Handle_Subprogram is
       begin
          if MD_Cur /= Markered_Data_Maps.No_Element then
@@ -4420,10 +4437,7 @@ package body Test.Skeleton is
                      "type "
                      & Current_Type.Main_Type_Text_Name.all
                      & "_Access is access all "
-                     & "GNATtest_Generated.GNATtest_Standard."
-                     & Current_Type.Nesting.all
-                     & "."
-                     & Current_Type.Main_Type_Text_Name.all
+                     & Tested_Type_Name
                      & "'Class;");
                   Put_New_Line;
 
@@ -4553,10 +4567,7 @@ package body Test.Skeleton is
                      "--  Local_"
                      & Current_Type.Main_Type_Text_Name.all
                      & " : aliased "
-                     & "GNATtest_Generated.GNATtest_Standard."
-                     & Current_Type.Nesting.all
-                     & "."
-                     & Current_Type.Main_Type_Text_Name.all
+                     & Tested_Type_Name
                      & ";");
                else
                   S_Put_Line
@@ -4564,10 +4575,7 @@ package body Test.Skeleton is
                      "Local_"
                      & Current_Type.Main_Type_Text_Name.all
                      & " : aliased "
-                     & "GNATtest_Generated.GNATtest_Standard."
-                     & Current_Type.Nesting.all
-                     & "."
-                     & Current_Type.Main_Type_Text_Name.all
+                     & Tested_Type_Name
                      & ";");
                end if;
             end if;
@@ -4884,7 +4892,17 @@ package body Test.Skeleton is
                S_Put_Line (0, " is new");
             end if;
 
-            if Data.Unit_Full_Name.all = Current_Type.Nesting.all then
+            if Current_Pack.Is_Generic then
+               --  Use the parent's current instance rather than selecting
+               --  the generic declaration through Standard.
+               S_Put_Line
+                 (5,
+                  Current_Type.Main_Type_Text_Name.all
+                  & Test_Data_Unit_Name_Suff
+                  & ".Test_"
+                  & Current_Type.Main_Type_Text_Name.all
+                  & " with null record;");
+            elsif Data.Unit_Full_Name.all = Current_Type.Nesting.all then
                S_Put_Line
                  (5,
                   "GNATtest_Generated.GNATtest_Standard."
@@ -5959,11 +5977,17 @@ package body Test.Skeleton is
          if Current_Pack.Data_Kind = Declaration_Data
            or Data.Is_Top_Level_Generic_Instantiation
          then
-            S_Put_Line
-              (3,
-               "type Test is new GNATtest_Generated.GNATtest_Standard."
-               & Data_Unit_Name.all
-               & ".Test");
+            if Current_Pack.Is_Generic then
+               --  Refer directly to the parent's current instance.
+               S_Put_Line
+                 (3, "type Test is new " & Test_Data_Unit_Name & ".Test");
+            else
+               S_Put_Line
+                 (3,
+                  "type Test is new GNATtest_Generated.GNATtest_Standard."
+                  & Data_Unit_Name.all
+                  & ".Test");
+            end if;
 
          else
             S_Put_Line
