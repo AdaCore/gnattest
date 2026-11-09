@@ -8,14 +8,14 @@ cp src2/simple.adb src/simple.adb
 gnattest -P prj.gpr --gen-test-vectors -q
 
 # Check that there is only one spec file for test_add_*.
-if [ "$(ls obj/gnattest/tests/simple-test_data-test_add_*.ads | wc -l)" != "1" ]; then
+if [ "$(ls obj/gnattest/tests/simple-test_data-test_add_*.ads | wc -l)" -ne 1 ]; then
    echo "expected exactly one generated test package for Add, got:"
    ls obj/gnattest/tests/simple-test_data-test_add_*.ads
    exit 1
 fi
 
 # Check that the old generated suite package in the harness dir has been removed.
-if [ "$(ls obj/gnattest/harness/simple-test_data-test_add_*-suite.ads | wc -l)" != "1" ]; then
+if [ "$(ls obj/gnattest/harness/simple-test_data-test_add_*-suite.ads | wc -l)" -ne 1 ]; then
    echo "expected exactly one generated suite package for Add, got:"
    ls obj/gnattest/harness/simple-test_data-test_add_*-suite.ads
    exit 1
