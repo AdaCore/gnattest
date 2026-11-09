@@ -10,7 +10,6 @@ abstract project Gnattest_Common is
    --     Additional_Source_Dirs :=
    --       (Gnattest_Common'Project_Dir & "../common-tests");
    Additional_Source_Dirs := (Gnattest_Common'Project_Dir & "../../../shared");
-   for Target use "x86_64-linux";
 
    type TD_Compilation_Type is ("contract-checks","no-contract-checks", "no-config-file");
    TD_Compilation : TD_Compilation_Type := external ("TEST_DRIVER_BUILD_MODE", "no-config-file");
