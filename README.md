@@ -36,7 +36,8 @@ stable releases of Libadalang and Langkit.
 Build
 -----
 
-From the top of the repository:
+From the top of the repository, after `git submodule update --init` to fetch
+the bundled AUnit, Unity and Google Test sources:
 
 ```sh
 # Build gnattest, its library, and the testsuite drivers.
@@ -47,6 +48,11 @@ make install-bin-strip DESTDIR=local
 
 # Install the TGen support files (runtime sources and templates) into ./local.
 make install-tgen DESTDIR=local
+
+# Install the sources of the bundled test libraries into ./local.
+make install-aunit DESTDIR=local
+make install-unity DESTDIR=local
+make install-gtest DESTDIR=local
 ```
 
 By default this produces a development build (`BUILD_MODE=dev`). For a
@@ -64,7 +70,10 @@ gprbuild   -P local/share/tgen/tgen_rts/tgen_rts.gpr
 gprinstall -P local/share/tgen/tgen_rts/tgen_rts.gpr -p
 ```
 
-After installation, the `gnattest` executable lives in `local/bin/`.
+After installation, the `gnattest` executable lives in `local/bin/`. Run
+`local/bin/gnattest setup` to build and install the test libraries for your
+toolchain; `--lang` restricts it to some of Ada, C and C++ (see
+`gnattest setup --help`).
 
 
 Testing

@@ -263,3 +263,50 @@ install-aunit:
 	mkdir -p "$(DESTDIR)/share/aunit"
 	cp -r "$(AUNIT_SRC)/include" "$(DESTDIR)/share/aunit/"
 	cp -r "$(AUNIT_SRC)/lib"     "$(DESTDIR)/share/aunit/"
+
+# Path to the Google Test source tree shipped with gnattest. When the
+# submodule is wired up this points to share/googletest. Override via
+# GTEST_SRC to build against a local checkout during development.
+GTEST_SRC ?= share/googletest
+
+.PHONY: install-gtest
+install-gtest:
+	@if [ ! -f "$(GTEST_SRC)/googletest/src/gtest-all.cc" ] ; then \
+		echo "error: Google Test sources not found at $(GTEST_SRC)" ; \
+		echo "Either initialize the submodule:" ; \
+		echo "    git submodule update --init $(GTEST_SRC)" ; \
+		echo "or point GTEST_SRC at a local googletest checkout:" ; \
+		echo "    make install-gtest GTEST_SRC=/path/to/googletest DESTDIR=..." ; \
+		exit 1 ; \
+	fi
+	mkdir -p "$(DESTDIR)/share/gtest/gtest_support"
+	mkdir -p "$(DESTDIR)/share/gtest/googletest/googletest"
+	cp -r "$(GTEST_SRC)/googletest/include" \
+	   "$(GTEST_SRC)/googletest/src" \
+	   "$(DESTDIR)/share/gtest/googletest/googletest/"
+	cp "$(GTEST_SRC)/LICENSE" "$(DESTDIR)/share/gtest/googletest/"
+	cp share/gtest_support/gtest.gpr "$(DESTDIR)/share/gtest/gtest_support/"
+
+# Path to the Unity source tree shipped with gnattest. Override via
+# UNITY_SRC to build against a local checkout during development. The C
+# test drivers link Unity with gnattest's own support (share/unity_support).
+UNITY_SRC ?= share/unity
+
+.PHONY: install-unity
+install-unity:
+	@if [ ! -f "$(UNITY_SRC)/src/unity.c" ] ; then \
+		echo "error: Unity sources not found at $(UNITY_SRC)" ; \
+		echo "Either initialize the submodule:" ; \
+		echo "    git submodule update --init $(UNITY_SRC)" ; \
+		echo "or point UNITY_SRC at a local Unity checkout:" ; \
+		echo "    make install-unity UNITY_SRC=/path/to/unity DESTDIR=..." ; \
+		exit 1 ; \
+	fi
+	mkdir -p "$(DESTDIR)/share/unity/unity/src"
+	mkdir -p "$(DESTDIR)/share/unity/unity_support"
+	cp "$(UNITY_SRC)/src/unity.c" "$(UNITY_SRC)/src/unity.h" \
+	   "$(UNITY_SRC)/src/unity_internals.h" \
+	   "$(DESTDIR)/share/unity/unity/src/"
+	cp share/unity_support/*.[ch] share/unity_support/gnattest_unity.gpr \
+	   "$(DESTDIR)/share/unity/unity_support/"
+	cp "$(UNITY_SRC)/LICENSE.txt" "$(DESTDIR)/share/unity/unity/"

@@ -2,3 +2,11 @@
 	path = share/aunit
 	url = https://github.com/AdaCore/aunit
 	branch = master
+[submodule "share/googletest"]
+	path = share/googletest
+	url = https://github.com/google/googletest
+	branch = main
+[submodule "share/unity"]
+	path = share/unity
+	url = https://github.com/ThrowTheSwitch/Unity
+	branch = master
