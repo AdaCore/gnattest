@@ -1601,23 +1601,23 @@ package body Test.Actions is
       Put
         ("                                      The test value is not compatible with light runtime profiles.\n");
       Put
-        (" --exclude-from-stubbing=file       - List of sources whose bodies should not\n");
+        (" --exclude-from-stubbing=file       - File listing the specs, one simple name\n");
+      Put
+        ("                                      per line, of units whose bodies should\n");
+      Put ("                                      not be stubbed\n");
+      Put
+        (" --exclude-from-stubbing=spec:file  - Same, only when testing the unit whose\n");
+      Put
+        ("                                      specification is located in file spec\n");
+      Put
+        (" --include-for-stubbing=file        - File listing the specs, one simple name\n");
+      Put
+        ("                                      per line, of units whose bodies should\n");
       Put ("                                      be stubbed\n");
       Put
-        (" --exclude-from-stubbing=spec:file  - List of sources whose bodies should not\n");
+        (" --include-for-stubbing=spec:file   - Same, only when testing the unit whose\n");
       Put
-        ("                                        be stubbed when testing unit whose\n");
-      Put
-        ("                                        specification is located in file spec\n");
-      Put
-        (" --include-for-stubbing=file         - List of sources whose bodies should\n");
-      Put ("                                      be stubbed\n");
-      Put
-        (" --include-for-stubbing=spec:file    - List of sources whose bodies should\n");
-      Put
-        ("                                        be stubbed when testing unit whose\n");
-      Put
-        ("                                        specification is located in file spec\n");
+        ("                                      specification is located in file spec\n");
       Put ("\n");
 
       Put (" --harness-dir=dirname  - Output dir for test harness\n");
@@ -1855,29 +1855,107 @@ package body Test.Actions is
    is
       use Ada.Text_IO;
       use Ada.Strings.Fixed;
+      use Ada.Strings.Unbounded;
+      use Test.Common.Unbounded_String_Vectors;
+
       First     : constant Natural := Value'First;
       Colon_Idx : constant Natural := Index (Value, ":");
-
-      F : File_Type;
 
       UUT_Specific : constant Boolean :=
         Value'Length > 3 and then Colon_Idx > First + 1;
       --  For the new interface (=spec:file instead of :spec=file), the equal
       --  sign is eaten by the argument processing.
 
-      S : String_Access;
-
       function Is_Comment (S : String) return Boolean
       is (S'Length >= 2 and then S (S'First .. S'First + 1) = "--");
+
+      function Is_Visible_Spec (Name : String) return Boolean;
+      --  Whether Name is the simple name of an Ada spec visible from the root
+      --  project. Stub lists are matched against spec names only, so any
+      --  other entry would be silently ignored.
+
+      function Read_Stub_List (F_Path, List_Name : String) return Vector;
+      --  Return the entries of F_Path that name a visible spec, and warn
+      --  about the others. When none is valid, the file is most likely not a
+      --  list at all, such as a source passed by mistake. Warn once about the
+      --  file instead of about each of its lines.
+
+      ---------------------
+      -- Is_Visible_Spec --
+      ---------------------
+
+      function Is_Visible_Spec (Name : String) return Boolean is
+         Source : GPR2.Build.Source.Object;
+      begin
+         --  Converting a path to Simple_Name would fail its predicate
+
+         if not GPR2.Is_Simple_Name (GPR2.Filename_Optional (Name)) then
+            return False;
+         end if;
+
+         Source :=
+           Project_Tree.Root_Project.Visible_Source (GPR2.Simple_Name (Name));
+         return
+           Source.Is_Defined
+           and then Source.Has_Units
+           and then Source.Unit.Kind = GPR2.S_Spec;
+      end Is_Visible_Spec;
+
+      --------------------
+      -- Read_Stub_List --
+      --------------------
+
+      function Read_Stub_List (F_Path, List_Name : String) return Vector is
+         F       : File_Type;
+         Valid   : Vector;
+         Invalid : Vector;
+      begin
+         Open (F, In_File, F_Path);
+         while not End_Of_File (F) loop
+            declare
+               Line : constant String := Get_Line (F);
+            begin
+               if Trim (Line, Ada.Strings.Both)'Length = 0
+                 or else Is_Comment (Line)
+               then
+                  null;
+               elsif Is_Visible_Spec (Line) then
+                  Valid.Append (To_Unbounded_String (Line));
+               else
+                  Invalid.Append (To_Unbounded_String (Line));
+               end if;
+            end;
+         end loop;
+         Close (F);
+
+         if Valid.Is_Empty and then not Invalid.Is_Empty then
+            Test.Common.Report_Std
+              ("warning: (gnattest) "
+               & List_Name
+               & " does not list any spec file of the project, ignoring it");
+         else
+            for Entry_Name of Invalid loop
+               Test.Common.Report_Std
+                 ("warning: (gnattest) "
+                  & List_Name
+                  & ": "
+                  & To_String (Entry_Name)
+                  & " is not a spec file of the project, ignoring it");
+            end loop;
+         end if;
+
+         return Valid;
+      end Read_Stub_List;
 
       use Test.Common;
    begin
       if UUT_Specific then
          declare
-            Unit   : constant String := Value (First .. Colon_Idx - 1);
-            F_Path : constant String :=
+            Unit      : constant String := Value (First .. Colon_Idx - 1);
+            List_Name : constant String := Value (Colon_Idx + 1 .. Value'Last);
+            F_Path    : constant String :=
               Normalize_Pathname
-                (Name           => Value (Colon_Idx + 1 .. Value'Last),
+                (Name           => List_Name,
                  Resolve_Links  => False,
                  Case_Sensitive => False);
          begin
@@ -1889,15 +1967,18 @@ package body Test.Actions is
                return;
             end if;
 
-            Open (F, In_File, F_Path);
-            while not End_Of_File (F) loop
-               S := new String'(Get_Line (F));
-               if not Is_Comment (S.all) then
-                  Test.Common.Store_Stub (Unit, S.all, Status);
-               end if;
-               Free (S);
+            if not Is_Visible_Spec (Unit) then
+               Report_Std
+                 ("warning: (gnattest) "
+                  & Unit
+                  & " is not a spec file of the project, ignoring "
+                  & List_Name);
+               return;
+            end if;
+
+            for Entry_Name of Read_Stub_List (F_Path, List_Name) loop
+               Store_Stub (Unit, To_String (Entry_Name), Status);
             end loop;
-            Close (F);
          end;
          return;
       end if;
@@ -1914,15 +1995,10 @@ package body Test.Actions is
          if not Is_Regular_File (F_Path) then
             Cmd_Error_No_Help ("cannot find " & F_Path);
          end if;
-         Open (F, In_File, F_Path);
-         while not End_Of_File (F) loop
-            S := new String'(Get_Line (F));
-            if not Is_Comment (S.all) then
-               Test.Common.Store_Default_Stub (S.all, Status);
-            end if;
-            Free (S);
+
+         for Entry_Name of Read_Stub_List (F_Path, Value) loop
+            Store_Default_Stub (To_String (Entry_Name), Status);
          end loop;
-         Close (F);
       end;
    end Process_Stub_List;
 
