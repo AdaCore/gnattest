@@ -538,6 +538,35 @@ gnattest rejects cases of using both options with the same granularity level.
   this capability.
 
 
+  .. index:: --include-subp-name (gnattest)
+
+:switch:`--include-subp-name`
+  Include the name of the tested subprogram in test results. This is disabled
+  by default, except when implied by the ``xml`` or ``junit`` reporter.
+
+
+  .. index:: --test-filtering (gnattest)
+  .. index:: --no-test-filtering (gnattest)
+
+:switch:`--test-filtering`, :switch:`--no-test-filtering`
+  Enable or disable support for :switch:`--routines` in the generated test
+  driver. Filtering is enabled by default; see :ref:`Selecting_Tests_to_Run`
+  for usage examples. It requires command line support in the selected runtime
+  and is not generated with :switch:`--no-command-line` or
+  :switch:`--harness-only`.
+
+
+  .. index:: --test-filtering-file-io (gnattest)
+  .. index:: --no-test-filtering-file-io (gnattest)
+
+:switch:`--test-filtering-file-io`, :switch:`--no-test-filtering-file-io`
+  Enable or disable reading selections from a file with
+  :switch:`--routines=@{filename}`. File-based selection is enabled by default
+  when filtering and command line support are enabled and the selected runtime
+  provides file I/O. Disabling it leaves direct :switch:`--routines={file:line}`
+  selection available.
+
+
   .. index:: --test-duration (gnattest)
 
 :switch:`--test-duration`
@@ -873,8 +902,9 @@ The switch may be repeated to select several subprograms:
 
       $ test_runner --routines=my_unit.ads:7 --routines=other.ads:10
 
-The list of source locations may also be read from a file, one ``file:line``
-entry per line, by prefixing its name with ``@``:
+When file-based selection is enabled, the list of source locations may also be
+read from a file, one ``file:line`` entry per line, by prefixing its name with
+``@``:
 
   ::
 
@@ -1562,8 +1592,28 @@ Generating test inputs
 
 ``gnattest`` provides a ``--gen-test-vectors`` switch that can be used to
 automatically generate test cases for all of the supported subprogram profiles.
-The number of generated test cases can be configured through the
-``--gen-test-num`` switch.
+The number of generated test cases per subprogram can be configured through
+the ``--gen-test-num`` switch, which defaults to 5 and requires
+``--gen-test-vectors``.
+
+  .. index:: --gen-test-subprograms (gnattest)
+
+:switch:`--gen-test-subprograms={file:line,...}`
+  Restrict input generation to a comma-separated list of subprogram declaration
+  locations. This switch requires :switch:`--gen-test-vectors`. Each location
+  uses the spec filename and the line where the declaration starts. Simple
+  filenames, relative paths and absolute paths are accepted; matching uses
+  the simple filename and line number. For example:
+
+  ::
+
+      $ gnattest -P my_project.gpr --gen-test-vectors --gen-test-subprograms=my_unit.ads:7,src/other.ads:10
+
+  Without this switch, inputs are generated for all supported subprograms in
+  the sources being processed. This controls which inputs are generated;
+  :switch:`--routines` instead selects which existing tests the generated driver
+  runs (see :ref:`Selecting_Tests_to_Run`).
+
 
 As mentioned in section :ref:`Tgen_Env`, test input generation requires
 executing code to determine some of the characteristics of the types at hand.
@@ -1650,8 +1700,12 @@ possible shapes of the record (i.e. explore all variants). Otherwise, these are
 generated as any other scalar component.
 
 
-The generated test cases are then stored in a ad-hoc (and yet to be specified)
-JSON format, in files under the ``<obj_dir>/gnattest/tests/JSON_Tests`` directory.
+Storing and reusing test inputs
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+By default, generated test cases are stored in an ad-hoc (and yet to be
+specified) JSON format. Files are placed in a ``JSON_Tests`` subdirectory of
+the test package directory, normally ``<obj_dir>/gnattest/tests/JSON_Tests``.
 The generated JSON files are preserved through a ``gnattest`` rerun. The user is
 thus free to modify them, to e.g. fill in expected return values, though
 backward compatibility of the format is not guaranteed at this stage.
@@ -1668,6 +1722,110 @@ The content of these files are re-generated each time ``gnattest`` is invoked,
 independently of the presence of the ``--gen-test-vectors`` switch on the
 command line. It is thus not necessary to re-invoke ``gnattest`` with that
 switch more than once, unless the goal is to generate additional test inputs.
+
+  .. index:: --serialized-test-dir (gnattest)
+
+:switch:`--serialized-test-dir={dir}`
+  Override the directory where generated inputs are stored and existing JSON
+  inputs are read. Relative paths are resolved against the current working
+  directory, rather than the project's object directory. Specify the same
+  directory on subsequent invocations to reuse its JSON inputs, including
+  invocations without :switch:`--gen-test-vectors`.
+
+
+  .. index:: --gen-test-binary (gnattest)
+
+:switch:`--gen-test-binary`
+  Generate inputs as individual binary files instead of JSON files. This
+  experimental option requires :switch:`--gen-test-vectors` and is supported
+  only for native configurations. Binary input generation is rejected for
+  cross configurations. The JSON editing and harness regeneration workflow
+  described above applies to JSON inputs.
+
+  For example, to generate binary inputs into a directory relative to the
+  current working directory:
+
+  ::
+
+      $ gnattest -P my_project.gpr --gen-test-vectors --gen-test-binary --serialized-test-dir=bin-tests
+
+
+Looking up a subprogram hash
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+  .. index:: --dump-subp-hash (gnattest)
+
+:switch:`--dump-subp-hash={file:line}`
+  Print the hash identifying the subprogram whose declaration starts at the
+  specified line. Simple filenames, relative paths and absolute paths are
+  accepted; matching uses the simple filename and line number. For example:
+
+  ::
+
+      $ gnattest -P my_project.gpr --dump-subp-hash=src/my_unit.ads:7
+
+  The hash is written to standard output and can be used to identify the
+  subprogram's entry in generated JSON test files. A project is still required
+  and the source must be among those selected for processing. GNATtest returns
+  after processing the sources, without generating the test skeletons or
+  harness. This is a lookup operation, so invoke it separately from generation.
+
+
+Minimizing generated test suites
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+  .. index:: --minimize (gnattest)
+
+:switch:`--minimize`
+  Reduce the generated JSON inputs using structural coverage analysis. This
+  experimental feature retains inputs that contribute additional coverage at
+  the selected coverage level, taking coverage from manual tests into account.
+  Manual tests are retained. Minimization does not guarantee the smallest
+  possible test suite.
+
+  GNATcoverage (``gnatcov``), ``gprbuild`` and the toolchain and runtime libraries
+  needed to build and run the harness must be available. GNATtest sets up a
+  coverage runtime, instruments and builds the harness, then executes it to
+  collect coverage traces. Use a single test driver (without :switch:`--stub`
+  or :switch:`--separate-drivers`) that can be executed on the host. Applying a
+  minimization filter also requires support for :switch:`--routines`.
+
+  For example, to minimize previously generated JSON inputs:
+
+  ::
+
+      $ gnattest -P my_project.gpr --minimize --cov-level=stmt
+
+  Minimization rewrites the stored JSON test files, removing redundant inputs,
+  and regenerates the harness from the reduced suite. If inputs are stored in
+  a custom directory, also pass :switch:`--serialized-test-dir`. If the harness
+  contains no generated tests, GNATtest reports that there is nothing to
+  minimize.
+
+
+  .. index:: --minimization-filter (gnattest)
+
+:switch:`--minimization-filter={file:line}`
+  With :switch:`--minimize`, minimize only the inputs for the subprogram whose
+  declaration starts at the specified line. Use the simple spec filename,
+  without a directory component. Inputs for other subprograms are retained.
+  For example:
+
+  ::
+
+      $ gnattest -P my_project.gpr --minimize --cov-level=stmt --minimization-filter=my_unit.ads:7
+
+
+  .. index:: --cov-level (gnattest)
+
+:switch:`--cov-level={level}`
+  Select the structural coverage level used for minimization, for example
+  ``stmt`` or ``stmt+decision``. See the GNATcoverage documentation for supported
+  levels. This option takes precedence over the level in the root project's
+  ``Coverage`` package. Without it, GNATtest looks for a level in
+  ``Coverage.Switches ("coverage")``, then in ``Coverage.Switches ("*")``.
+  If none is specified, GNATtest leaves the level selection to GNATcoverage.
+
 
 .. _proxy_generation:
 
