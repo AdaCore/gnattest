@@ -1631,6 +1631,22 @@ test input generation is defined under
 copy and modify it, and feed the modified mapping to GNATtest using the
 ``--tgen-target-config=FILE`` command line option.
 
+.. warning::
+
+  GNATtest does not attempt to detect whether generating inputs for a given
+  subprogram and subsequently executing it with the generated inputs could
+  result in unexpected outcomes. If the project under test contains subprograms
+  that delete, write or send files, start processes or drive hardware these
+  might be invoked with any value the test input generation engine will
+  produce.
+
+  The test execution harness is not isolated in any way from the rest of the
+  system, it is the responsibility of the user to ensure the test driver is
+  either well isolated, or to review the generated test inputs to make sure no
+  problematic values are present in the test harness. This is also specially
+  true for test inputs imported from a fuzzing campaign, as described in the
+  :ref:`Gnattest_Gnatfuzz` section.
+
 .. _supported_tgen_types:
 
 Supported types
