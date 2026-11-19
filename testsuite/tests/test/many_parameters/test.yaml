@@ -9,3 +9,4 @@ suppress_test_dump: True
 
 control:
   - [SKIP, "'ppc-elf' in suite_discs", "Value generation exhausts the embedded runtime heap"]
+  - [SKIP, "'riscv64-elf' in suite_discs", "Generation harness exceeds the PolarFireSoC RTS jump range"]
